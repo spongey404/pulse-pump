@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct MoreTabView: View {
+    @Bindable var tutorialViewModel: TutorialViewModel
+
     var body: some View {
         List {
             Section {
@@ -47,9 +49,8 @@ struct MoreTabView: View {
             }
 
             Section {
-                NavigationLink {
-                    // TODO: Tutorial
-                    Text("Tutorial — Coming Soon")
+                Button {
+                    tutorialViewModel.start()
                 } label: {
                     Label("Tutorial / Help", systemImage: "questionmark.circle")
                 }

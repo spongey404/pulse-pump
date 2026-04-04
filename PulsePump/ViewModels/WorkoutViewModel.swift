@@ -268,6 +268,9 @@ class WorkoutViewModel {
             }
         }
 
+        // Update widget data
+        WidgetDataService.updateWidgetData(modelContext: modelContext)
+
         showCompletionSummary = true
         isActive = false
     }

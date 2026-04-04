@@ -3,59 +3,77 @@ import SwiftData
 
 struct ContentView: View {
     @State private var workoutViewModel = WorkoutViewModel()
+    @State private var tutorialViewModel = TutorialViewModel()
+    @State private var selectedTab = 2
     @Environment(\.modelContext) private var modelContext
     @Query private var users: [User]
 
     private var user: User? { users.first }
 
     var body: some View {
-        TabView {
-            NavigationStack {
-                ProgramsTabView(onStartFromTemplate: startFromTemplate)
-            }
-            .tabItem {
-                Label("Programs", systemImage: "list.bullet.clipboard")
-            }
-
-            NavigationStack {
-                SocialTabView()
-            }
-            .tabItem {
-                Label("Social", systemImage: "person.2")
-            }
-
-            NavigationStack {
-                HomeTabView(workoutViewModel: workoutViewModel)
-            }
-            .tabItem {
-                Label("Home", systemImage: "house")
-            }
-
-            NavigationStack {
-                BodyMapTabView()
-            }
-            .tabItem {
-                Label("Body Map", systemImage: "figure.stand")
-            }
-
-            NavigationStack {
-                MoreTabView()
-            }
-            .tabItem {
-                Label("More", systemImage: "ellipsis")
-            }
-        }
-        .fullScreenCover(isPresented: $workoutViewModel.isActive) {
-            ActiveWorkoutView(viewModel: workoutViewModel)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .startWorkoutFromWidget)) { _ in
-            startBlankWorkout()
-        }
-        .sheet(isPresented: $workoutViewModel.showCompletionSummary) {
-            if let data = workoutViewModel.completionData {
-                WorkoutCompletionView(data: data) {
-                    workoutViewModel.reset()
+        ZStack {
+            TabView(selection: $selectedTab) {
+                NavigationStack {
+                    ProgramsTabView(onStartFromTemplate: startFromTemplate)
                 }
+                .tabItem {
+                    Label("Programs", systemImage: "list.bullet.clipboard")
+                }
+                .tag(0)
+
+                NavigationStack {
+                    SocialTabView()
+                }
+                .tabItem {
+                    Label("Social", systemImage: "person.2")
+                }
+                .tag(1)
+
+                NavigationStack {
+                    HomeTabView(workoutViewModel: workoutViewModel)
+                }
+                .tabItem {
+                    Label("Home", systemImage: "house")
+                }
+                .tag(2)
+
+                NavigationStack {
+                    BodyMapTabView()
+                }
+                .tabItem {
+                    Label("Body Map", systemImage: "figure.stand")
+                }
+                .tag(3)
+
+                NavigationStack {
+                    MoreTabView(tutorialViewModel: tutorialViewModel)
+                }
+                .tabItem {
+                    Label("More", systemImage: "ellipsis")
+                }
+                .tag(4)
+            }
+            .fullScreenCover(isPresented: $workoutViewModel.isActive) {
+                ActiveWorkoutView(viewModel: workoutViewModel)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .startWorkoutFromWidget)) { _ in
+                startBlankWorkout()
+            }
+            .sheet(isPresented: $workoutViewModel.showCompletionSummary) {
+                if let data = workoutViewModel.completionData {
+                    WorkoutCompletionView(data: data) {
+                        workoutViewModel.reset()
+                    }
+                }
+            }
+
+            if tutorialViewModel.isActive {
+                CoachMarkOverlay(viewModel: tutorialViewModel, selectedTab: $selectedTab)
+            }
+        }
+        .onAppear {
+            if UserDefaults.standard.bool(forKey: "wantsTutorial") {
+                tutorialViewModel.start()
             }
         }
     }
