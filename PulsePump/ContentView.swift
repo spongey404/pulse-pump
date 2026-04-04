@@ -64,12 +64,27 @@ struct HomeTabView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(spacing: 16) {
                 StartWorkoutView(viewModel: workoutViewModel)
+
+                QuickAnalyticsView()
+                    .padding(.horizontal)
+
+                RecentWorkoutsWidget()
+                    .padding(.horizontal)
             }
             .padding(.top)
         }
         .navigationTitle("Home")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                NavigationLink {
+                    GlobalSearchView()
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                }
+            }
+        }
     }
 }
 
