@@ -12,50 +12,50 @@
 			containerPortal = 3884EC102F800A5900DEC87C /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 3884EC172F800A5900DEC87C;
-			remoteInfo = Pump;
+			remoteInfo = PulsePump;
 		};
 		3884EC342F800A5A00DEC87C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 3884EC102F800A5900DEC87C /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 3884EC172F800A5900DEC87C;
-			remoteInfo = Pump;
+			remoteInfo = PulsePump;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		3884EC182F800A5900DEC87C /* Pump.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pump.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		3884EC292F800A5A00DEC87C /* PumpTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PumpTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		3884EC332F800A5A00DEC87C /* PumpUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PumpUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3884EC182F800A5900DEC87C /* PulsePump.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PulsePump.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3884EC292F800A5A00DEC87C /* PulsePumpTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PulsePumpTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3884EC332F800A5A00DEC87C /* PulsePumpUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PulsePumpUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		3884EC3B2F800A5A00DEC87C /* Exceptions for "Pump" folder in "Pump" target */ = {
+		3884EC3B2F800A5A00DEC87C /* Exceptions for "PulsePump" folder in "PulsePump" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 3884EC172F800A5900DEC87C /* Pump */;
+			target = 3884EC172F800A5900DEC87C /* PulsePump */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		3884EC1A2F800A5900DEC87C /* Pump */ = {
+		3884EC1A2F800A5900DEC87C /* PulsePump */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				3884EC3B2F800A5A00DEC87C /* Exceptions for "Pump" folder in "Pump" target */,
+				3884EC3B2F800A5A00DEC87C /* Exceptions for "PulsePump" folder in "PulsePump" target */,
 			);
-			path = Pump;
+			path = PulsePump;
 			sourceTree = "<group>";
 		};
-		3884EC2C2F800A5A00DEC87C /* PumpTests */ = {
+		3884EC2C2F800A5A00DEC87C /* PulsePumpTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = PumpTests;
+			path = PulsePumpTests;
 			sourceTree = "<group>";
 		};
-		3884EC362F800A5A00DEC87C /* PumpUITests */ = {
+		3884EC362F800A5A00DEC87C /* PulsePumpUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = PumpUITests;
+			path = PulsePumpUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -88,9 +88,9 @@
 		3884EC0F2F800A5900DEC87C = {
 			isa = PBXGroup;
 			children = (
-				3884EC1A2F800A5900DEC87C /* Pump */,
-				3884EC2C2F800A5A00DEC87C /* PumpTests */,
-				3884EC362F800A5A00DEC87C /* PumpUITests */,
+				3884EC1A2F800A5900DEC87C /* PulsePump */,
+				3884EC2C2F800A5A00DEC87C /* PulsePumpTests */,
+				3884EC362F800A5A00DEC87C /* PulsePumpUITests */,
 				3884EC192F800A5900DEC87C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -98,9 +98,9 @@
 		3884EC192F800A5900DEC87C /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				3884EC182F800A5900DEC87C /* Pump.app */,
-				3884EC292F800A5A00DEC87C /* PumpTests.xctest */,
-				3884EC332F800A5A00DEC87C /* PumpUITests.xctest */,
+				3884EC182F800A5900DEC87C /* PulsePump.app */,
+				3884EC292F800A5A00DEC87C /* PulsePumpTests.xctest */,
+				3884EC332F800A5A00DEC87C /* PulsePumpUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -108,9 +108,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		3884EC172F800A5900DEC87C /* Pump */ = {
+		3884EC172F800A5900DEC87C /* PulsePump */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 3884EC3C2F800A5A00DEC87C /* Build configuration list for PBXNativeTarget "Pump" */;
+			buildConfigurationList = 3884EC3C2F800A5A00DEC87C /* Build configuration list for PBXNativeTarget "PulsePump" */;
 			buildPhases = (
 				3884EC142F800A5900DEC87C /* Sources */,
 				3884EC152F800A5900DEC87C /* Frameworks */,
@@ -121,18 +121,18 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				3884EC1A2F800A5900DEC87C /* Pump */,
+				3884EC1A2F800A5900DEC87C /* PulsePump */,
 			);
-			name = Pump;
+			name = PulsePump;
 			packageProductDependencies = (
 			);
-			productName = Pump;
-			productReference = 3884EC182F800A5900DEC87C /* Pump.app */;
+			productName = PulsePump;
+			productReference = 3884EC182F800A5900DEC87C /* PulsePump.app */;
 			productType = "com.apple.product-type.application";
 		};
-		3884EC282F800A5A00DEC87C /* PumpTests */ = {
+		3884EC282F800A5A00DEC87C /* PulsePumpTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 3884EC412F800A5A00DEC87C /* Build configuration list for PBXNativeTarget "PumpTests" */;
+			buildConfigurationList = 3884EC412F800A5A00DEC87C /* Build configuration list for PBXNativeTarget "PulsePumpTests" */;
 			buildPhases = (
 				3884EC252F800A5A00DEC87C /* Sources */,
 				3884EC262F800A5A00DEC87C /* Frameworks */,
@@ -144,18 +144,18 @@
 				3884EC2B2F800A5A00DEC87C /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				3884EC2C2F800A5A00DEC87C /* PumpTests */,
+				3884EC2C2F800A5A00DEC87C /* PulsePumpTests */,
 			);
-			name = PumpTests;
+			name = PulsePumpTests;
 			packageProductDependencies = (
 			);
-			productName = PumpTests;
-			productReference = 3884EC292F800A5A00DEC87C /* PumpTests.xctest */;
+			productName = PulsePumpTests;
+			productReference = 3884EC292F800A5A00DEC87C /* PulsePumpTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		3884EC322F800A5A00DEC87C /* PumpUITests */ = {
+		3884EC322F800A5A00DEC87C /* PulsePumpUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 3884EC442F800A5A00DEC87C /* Build configuration list for PBXNativeTarget "PumpUITests" */;
+			buildConfigurationList = 3884EC442F800A5A00DEC87C /* Build configuration list for PBXNativeTarget "PulsePumpUITests" */;
 			buildPhases = (
 				3884EC2F2F800A5A00DEC87C /* Sources */,
 				3884EC302F800A5A00DEC87C /* Frameworks */,
@@ -167,13 +167,13 @@
 				3884EC352F800A5A00DEC87C /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				3884EC362F800A5A00DEC87C /* PumpUITests */,
+				3884EC362F800A5A00DEC87C /* PulsePumpUITests */,
 			);
-			name = PumpUITests;
+			name = PulsePumpUITests;
 			packageProductDependencies = (
 			);
-			productName = PumpUITests;
-			productReference = 3884EC332F800A5A00DEC87C /* PumpUITests.xctest */;
+			productName = PulsePumpUITests;
+			productReference = 3884EC332F800A5A00DEC87C /* PulsePumpUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -199,7 +199,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 3884EC132F800A5900DEC87C /* Build configuration list for PBXProject "Pump" */;
+			buildConfigurationList = 3884EC132F800A5900DEC87C /* Build configuration list for PBXProject "PulsePump" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -213,9 +213,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				3884EC172F800A5900DEC87C /* Pump */,
-				3884EC282F800A5A00DEC87C /* PumpTests */,
-				3884EC322F800A5A00DEC87C /* PumpUITests */,
+				3884EC172F800A5900DEC87C /* PulsePump */,
+				3884EC282F800A5A00DEC87C /* PulsePumpTests */,
+				3884EC322F800A5A00DEC87C /* PulsePumpUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -271,12 +271,12 @@
 /* Begin PBXTargetDependency section */
 		3884EC2B2F800A5A00DEC87C /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 3884EC172F800A5900DEC87C /* Pump */;
+			target = 3884EC172F800A5900DEC87C /* PulsePump */;
 			targetProxy = 3884EC2A2F800A5A00DEC87C /* PBXContainerItemProxy */;
 		};
 		3884EC352F800A5A00DEC87C /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 3884EC172F800A5900DEC87C /* Pump */;
+			target = 3884EC172F800A5900DEC87C /* PulsePump */;
 			targetProxy = 3884EC342F800A5A00DEC87C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -287,12 +287,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Pump/Pump.entitlements;
+				CODE_SIGN_ENTITLEMENTS = PulsePump/PulsePump.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Pump/Info.plist;
+				INFOPLIST_FILE = PulsePump/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -303,7 +303,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.Pump;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PulsePump;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -320,12 +320,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Pump/Pump.entitlements;
+				CODE_SIGN_ENTITLEMENTS = PulsePump/PulsePump.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Pump/Info.plist;
+				INFOPLIST_FILE = PulsePump/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -336,7 +336,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.Pump;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PulsePump;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -476,7 +476,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PumpTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PulsePumpTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -484,7 +484,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Pump.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Pump";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PulsePump.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PulsePump";
 			};
 			name = Debug;
 		};
@@ -497,7 +497,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PumpTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PulsePumpTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -505,7 +505,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Pump.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Pump";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PulsePump.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PulsePump";
 			};
 			name = Release;
 		};
@@ -516,7 +516,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PumpUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PulsePumpUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -524,7 +524,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = Pump;
+				TEST_TARGET_NAME = PulsePump;
 			};
 			name = Debug;
 		};
@@ -535,7 +535,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PumpUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PulsePumpUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -543,14 +543,14 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = Pump;
+				TEST_TARGET_NAME = PulsePump;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		3884EC132F800A5900DEC87C /* Build configuration list for PBXProject "Pump" */ = {
+		3884EC132F800A5900DEC87C /* Build configuration list for PBXProject "PulsePump" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3884EC3F2F800A5A00DEC87C /* Debug */,
@@ -559,7 +559,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		3884EC3C2F800A5A00DEC87C /* Build configuration list for PBXNativeTarget "Pump" */ = {
+		3884EC3C2F800A5A00DEC87C /* Build configuration list for PBXNativeTarget "PulsePump" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3884EC3D2F800A5A00DEC87C /* Debug */,
@@ -568,7 +568,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		3884EC412F800A5A00DEC87C /* Build configuration list for PBXNativeTarget "PumpTests" */ = {
+		3884EC412F800A5A00DEC87C /* Build configuration list for PBXNativeTarget "PulsePumpTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3884EC422F800A5A00DEC87C /* Debug */,
@@ -577,7 +577,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		3884EC442F800A5A00DEC87C /* Build configuration list for PBXNativeTarget "PumpUITests" */ = {
+		3884EC442F800A5A00DEC87C /* Build configuration list for PBXNativeTarget "PulsePumpUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3884EC452F800A5A00DEC87C /* Debug */,

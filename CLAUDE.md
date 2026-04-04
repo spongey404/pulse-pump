@@ -1,0 +1,89 @@
+# Pulse Pump
+
+iOS workout logging app. Part of the Pulse ecosystem.
+
+## Tech Stack
+
+- **Language:** Swift
+- **UI:** SwiftUI
+- **Data:** SwiftData (local-first, cloud sync planned for Pulse+)
+- **Target:** iOS 17+
+- **Xcode:** 26.4
+
+## Project Structure
+
+```
+PulsePump/
+├── App/                  # App entry point
+│   └── PulsePumpApp.swift
+├── Models/               # SwiftData models
+│   ├── Enums/            # All enum types
+│   ├── User.swift
+│   ├── Exercise.swift
+│   ├── WorkoutTemplate.swift
+│   ├── Workout.swift
+│   ├── ExerciseLog.swift
+│   ├── SetLog.swift
+│   ├── Split.swift
+│   ├── EquipmentProfile.swift
+│   ├── UserProfile.swift
+│   └── Challenge.swift
+├── Views/                # SwiftUI views
+├── ViewModels/           # View models
+├── Services/             # Business logic services
+├── Utilities/            # Helpers
+├── Extensions/           # Swift extensions
+├── ContentView.swift     # Root tab view
+├── Assets.xcassets/      # App assets
+├── Info.plist
+└── PulsePump.entitlements
+```
+
+## Naming
+
+- **Xcode project:** PulsePump
+- **Display name (on device):** Pump
+- **Bundle ID:** com.pulse.PulsePump
+
+## Branch Strategy
+
+- `main` — stable, release-ready
+- `develop` — integration branch
+- `feature/*` — feature branches
+- `fix/*` — bug fix branches
+
+## Commit Convention
+
+Lowercase prefixes, present tense:
+- `feature: add ...`
+- `sys: ...`
+- `test: ...`
+- `refactor: ...`
+- `fix: ...`
+
+## Build Order (from spec)
+
+1. ~~Core Data Models & Local Storage~~ (done)
+2. Onboarding Flow
+3. Exercise Library
+4. Workout Logging
+5. Programs & Templates
+6. Body Map Tab
+7. Home Screen
+8. Workout History
+9. Social Features
+10. Utility Features
+11. Shareable Summary Cards
+12. Settings
+13. Calorie Burn & Ecosystem Integration
+14. Pulse+ Subscription System
+15. iOS Platform Features
+
+## Architecture Decisions
+
+- Using SwiftData over Core Data for modern Swift integration
+- All models have UUID identifiers for future cloud sync
+- All mutable models have createdAt/updatedAt timestamps
+- Enums are `Codable` + `CaseIterable` + `Identifiable` for easy use in SwiftUI
+- TemplateExercise, SplitDay, BarConfig, LeaderboardEntry are value types (structs) stored as JSON in their parent models
+- Tab bar: Programs | Social | Home (center) | Body Map | More

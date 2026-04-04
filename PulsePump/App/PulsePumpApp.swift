@@ -1,18 +1,20 @@
-//
-//  PumpApp.swift
-//  Pump
-//
-//  Created by Vasanth Santosh on 4/4/2026.
-//
-
 import SwiftUI
 import SwiftData
 
 @main
-struct PumpApp: App {
+struct PulsePumpApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            User.self,
+            Exercise.self,
+            WorkoutTemplate.self,
+            Workout.self,
+            ExerciseLog.self,
+            SetLog.self,
+            Split.self,
+            EquipmentProfile.self,
+            UserProfile.self,
+            Challenge.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
