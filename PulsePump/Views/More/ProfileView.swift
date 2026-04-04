@@ -87,24 +87,6 @@ struct ProfileView: View {
     }
 
     private func currentStreak(from workouts: [Workout]) -> Int {
-        let calendar = Calendar.current
-        let sortedDates = workouts.map { calendar.startOfDay(for: $0.date) }.sorted(by: >)
-        guard var current = sortedDates.first else { return 0 }
-        let today = calendar.startOfDay(for: Date())
-        guard calendar.isDate(current, inSameDayAs: today) ||
-              calendar.isDate(current, inSameDayAs: calendar.date(byAdding: .day, value: -1, to: today)!)
-        else { return 0 }
-
-        var streak = 1
-        for date in sortedDates.dropFirst() {
-            let expected = calendar.date(byAdding: .day, value: -1, to: current)!
-            if calendar.isDate(date, inSameDayAs: expected) {
-                streak += 1
-                current = date
-            } else if !calendar.isDate(date, inSameDayAs: current) {
-                break
-            }
-        }
-        return streak
+        StreakCalculator.currentStreak(from: workouts.map(\.date))
     }
 }

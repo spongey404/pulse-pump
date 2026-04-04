@@ -15,7 +15,7 @@ struct WidgetDataService {
         guard let workouts = try? modelContext.fetch(descriptor) else { return }
 
         // Streak
-        let streak = calculateStreak(from: workouts)
+        let streak = StreakCalculator.currentStreak(from: workouts.map(\.date))
         defaults.set(streak, forKey: "widget_streak")
 
         // Last workout
@@ -37,24 +37,7 @@ struct WidgetDataService {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    private static func calculateStreak(from workouts: [Workout]) -> Int {
-        let calendar = Calendar.current
-        var streak = 0
-        var checkDate = calendar.startOfDay(for: Date())
 
-        let workoutDays = Set(workouts.map { calendar.startOfDay(for: $0.date) })
-
-        if !workoutDays.contains(checkDate) {
-            checkDate = calendar.date(byAdding: .day, value: -1, to: checkDate) ?? checkDate
-            if !workoutDays.contains(checkDate) { return 0 }
-        }
-
-        while workoutDays.contains(checkDate) {
-            streak += 1
-            checkDate = calendar.date(byAdding: .day, value: -1, to: checkDate) ?? checkDate
-        }
-        return streak
-    }
 }
 
 // DTO for encoding to UserDefaults (shared with widget via same key)
