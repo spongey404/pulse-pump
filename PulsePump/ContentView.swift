@@ -48,6 +48,9 @@ struct ContentView: View {
         .fullScreenCover(isPresented: $workoutViewModel.isActive) {
             ActiveWorkoutView(viewModel: workoutViewModel)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .startWorkoutFromWidget)) { _ in
+            startBlankWorkout()
+        }
         .sheet(isPresented: $workoutViewModel.showCompletionSummary) {
             if let data = workoutViewModel.completionData {
                 WorkoutCompletionView(data: data) {
@@ -60,6 +63,11 @@ struct ContentView: View {
     private func startFromTemplate(_ template: WorkoutTemplate) {
         guard let user else { return }
         workoutViewModel.startWorkout(modelContext: modelContext, user: user, template: template)
+    }
+
+    private func startBlankWorkout() {
+        guard let user else { return }
+        workoutViewModel.startWorkout(modelContext: modelContext, user: user)
     }
 }
 

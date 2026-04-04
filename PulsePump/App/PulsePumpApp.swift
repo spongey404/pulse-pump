@@ -43,9 +43,27 @@ struct PulsePumpApp: App {
         WindowGroup {
             RootView()
                 .onOpenURL { url in
-                    GIDSignIn.sharedInstance.handle(url)
+                    if url.scheme == "pulsepump" {
+                        handleDeepLink(url)
+                    } else {
+                        GIDSignIn.sharedInstance.handle(url)
+                    }
                 }
         }
         .modelContainer(sharedModelContainer)
     }
+
+    private func handleDeepLink(_ url: URL) {
+        guard url.scheme == "pulsepump" else { return }
+        switch url.host {
+        case "start-workout":
+            NotificationCenter.default.post(name: .startWorkoutFromWidget, object: nil)
+        default:
+            break
+        }
+    }
+}
+
+extension Notification.Name {
+    static let startWorkoutFromWidget = Notification.Name("startWorkoutFromWidget")
 }

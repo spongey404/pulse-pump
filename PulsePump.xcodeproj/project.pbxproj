@@ -12,6 +12,7 @@
 		38AB00072F80B00000DEC87C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 38AB00032F80B00000DEC87C /* GoogleSignIn */; };
 		38AB00082F80B00000DEC87C /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 38AB00042F80B00000DEC87C /* GoogleSignInSwift */; };
 		38AB00092F80B00000DEC87C /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 38AB000A2F80B00000DEC87C /* FirebaseFirestore */; };
+		38WG000D2F80C00000DEC87C /* PulsePumpWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 38WG00012F80C00000DEC87C /* PulsePumpWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -29,12 +30,34 @@
 			remoteGlobalIDString = 3884EC172F800A5900DEC87C;
 			remoteInfo = PulsePump;
 		};
+		38WG000A2F80C00000DEC87C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3884EC102F800A5900DEC87C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 38WG00022F80C00000DEC87C;
+			remoteInfo = PulsePumpWidgetExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		38WG000C2F80C00000DEC87C /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				38WG000D2F80C00000DEC87C /* PulsePumpWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		3884EC182F800A5900DEC87C /* PulsePump.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PulsePump.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3884EC292F800A5A00DEC87C /* PulsePumpTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PulsePumpTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3884EC332F800A5A00DEC87C /* PulsePumpUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PulsePumpUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		38WG00012F80C00000DEC87C /* PulsePumpWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PulsePumpWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -66,6 +89,11 @@
 			path = PulsePumpUITests;
 			sourceTree = "<group>";
 		};
+		38WG00062F80C00000DEC87C /* PulsePumpWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PulsePumpWidget;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -95,6 +123,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		38WG00042F80C00000DEC87C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -102,6 +137,7 @@
 			isa = PBXGroup;
 			children = (
 				3884EC1A2F800A5900DEC87C /* PulsePump */,
+				38WG00062F80C00000DEC87C /* PulsePumpWidget */,
 				3884EC2C2F800A5A00DEC87C /* PulsePumpTests */,
 				3884EC362F800A5A00DEC87C /* PulsePumpUITests */,
 				3884EC192F800A5900DEC87C /* Products */,
@@ -114,6 +150,7 @@
 				3884EC182F800A5900DEC87C /* PulsePump.app */,
 				3884EC292F800A5A00DEC87C /* PulsePumpTests.xctest */,
 				3884EC332F800A5A00DEC87C /* PulsePumpUITests.xctest */,
+				38WG00012F80C00000DEC87C /* PulsePumpWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -128,10 +165,12 @@
 				3884EC142F800A5900DEC87C /* Sources */,
 				3884EC152F800A5900DEC87C /* Frameworks */,
 				3884EC162F800A5900DEC87C /* Resources */,
+				38WG000C2F80C00000DEC87C /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				38WG000B2F80C00000DEC87C /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				3884EC1A2F800A5900DEC87C /* PulsePump */,
@@ -194,6 +233,26 @@
 			productReference = 3884EC332F800A5A00DEC87C /* PulsePumpUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		38WG00022F80C00000DEC87C /* PulsePumpWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 38WG00092F80C00000DEC87C /* Build configuration list for PBXNativeTarget "PulsePumpWidgetExtension" */;
+			buildPhases = (
+				38WG00032F80C00000DEC87C /* Sources */,
+				38WG00042F80C00000DEC87C /* Frameworks */,
+				38WG00052F80C00000DEC87C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				38WG00062F80C00000DEC87C /* PulsePumpWidget */,
+			);
+			name = PulsePumpWidgetExtension;
+			productName = PulsePumpWidgetExtension;
+			productReference = 38WG00012F80C00000DEC87C /* PulsePumpWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -214,6 +273,9 @@
 					3884EC322F800A5A00DEC87C = {
 						CreatedOnToolsVersion = 26.4;
 						TestTargetID = 3884EC172F800A5900DEC87C;
+					};
+					38WG00022F80C00000DEC87C = {
+						CreatedOnToolsVersion = 26.4;
 					};
 				};
 			};
@@ -236,6 +298,7 @@
 			projectRoot = "";
 			targets = (
 				3884EC172F800A5900DEC87C /* PulsePump */,
+				38WG00022F80C00000DEC87C /* PulsePumpWidgetExtension */,
 				3884EC282F800A5A00DEC87C /* PulsePumpTests */,
 				3884EC322F800A5A00DEC87C /* PulsePumpUITests */,
 			);
@@ -258,6 +321,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		3884EC312F800A5A00DEC87C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		38WG00052F80C00000DEC87C /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -288,6 +358,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		38WG00032F80C00000DEC87C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -300,6 +377,11 @@
 			isa = PBXTargetDependency;
 			target = 3884EC172F800A5900DEC87C /* PulsePump */;
 			targetProxy = 3884EC342F800A5A00DEC87C /* PBXContainerItemProxy */;
+		};
+		38WG000B2F80C00000DEC87C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 38WG00022F80C00000DEC87C /* PulsePumpWidgetExtension */;
+			targetProxy = 38WG000A2F80C00000DEC87C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -571,6 +653,64 @@
 			};
 			name = Release;
 		};
+		38WG00072F80C00000DEC87C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = PulsePumpWidget/PulsePumpWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = PulsePumpWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PulsePump.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		38WG00082F80C00000DEC87C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = PulsePumpWidget/PulsePumpWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = PulsePumpWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PulsePump.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -606,6 +746,15 @@
 			buildConfigurations = (
 				3884EC452F800A5A00DEC87C /* Debug */,
 				3884EC462F800A5A00DEC87C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		38WG00092F80C00000DEC87C /* Build configuration list for PBXNativeTarget "PulsePumpWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				38WG00072F80C00000DEC87C /* Debug */,
+				38WG00082F80C00000DEC87C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
