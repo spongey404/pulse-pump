@@ -93,3 +93,24 @@ Lowercase prefixes, present tense:
 - StoreKit 2 for subscriptions (no server-side receipt validation yet)
 - UserDefaults for lightweight settings (rest timer mode, calorie formula, notifications)
 - CalorieEstimationService is swappable between basic (set-based) and MET-based formulas
+- `StreakCalculator` (Utilities/) is the single source of truth for streak logic — gap-based, 3-day expiry
+- Feed caching via `lastFeedFetch` timestamp in `SocialViewModel` — 5-min TTL, force-refreshable
+- `TemplateExercise.targetReps` is `Int?` — nil means no target reps, sets always required
+- `WorkoutActivityAttributes` is defined in both the main app (`LiveActivityService.swift`) and widget extension (`WorkoutLiveActivity.swift`) — must be kept in sync manually until a shared framework is added
+
+## Key Files Added Post-V1
+
+| File | Purpose |
+|------|---------|
+| `Utilities/StreakCalculator.swift` | Shared streak logic (gap-based, 3-day expiry) |
+| `Views/Social/FeedBodyMapView.swift` | Compact front/back body silhouette for feed posts |
+| `PulsePumpWidget/WorkoutLiveActivity.swift` | Dynamic Island + lock screen Live Activity for workouts |
+| `Models/Enums/MuscleSubRegion.swift` | 35 anatomical sub-regions across all muscle groups |
+
+## UI Patterns
+
+- Bottom docked bars use `.safeAreaInset(edge: .bottom)` — used for Start Workout dock (Home) and WorkoutBottomBar (active workout)
+- Swipe-to-delete on List rows uses `.swipeActions(edge: .trailing, allowsFullSwipe: true)`
+- `.swipeActions` only works inside `List` — not `ScrollView`/`LazyVStack`
+- Program cards use `navigationDestination(item: $selectedTemplate)` + `Button` to avoid `NavigationLink`'s `>` chevron
+- Body map uses `TabView(.page)` to swipe between front/back views

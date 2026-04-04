@@ -345,6 +345,67 @@ Pulse+ is a unified subscription across the Pulse ecosystem. Users choose how ma
 
 ---
 
+## Post-V1 Improvements (Implemented)
+
+These were built after the initial 15-phase spec was complete.
+
+### UX Improvements
+
+**Active Workout**
+- Bottom search bar + floating `+` FAB (`WorkoutBottomBar`) so one hand can reach both without stretching
+- Notes moved into the `⋯` menu ("Add Note" / "Edit Note"); last session's note shown read-only in the same menu
+- Swipe left on an exercise card to delete it (title row is a swipeable List row)
+- Exercise cards for barbell and EZ bar exercises show an inline plate calculator that updates live as weight is typed (`InlinePlateView`)
+
+**Programs Tab**
+- Templates displayed directly as cards — no separate nested Templates page
+- New templates start from a preset picker sheet (blank, PPL, Upper/Lower, Full Body) opened by the `+` button
+- Swipe left on a program card to delete; `⋯` menu on each card with Edit and Delete
+- No `>` disclosure chevron on cards (uses `navigationDestination(item:)` instead of `NavigationLink`)
+- Target reps are optional when creating or editing a program — sets always required, reps can be omitted and added later
+
+**Home Screen**
+- Start Workout button docked at bottom via `safeAreaInset` for one-handed thumb reach
+
+**Body Map Tab**
+- Front and back views separated into swipeable pages (`TabView(.page)` with dot indicators)
+- Legend and nudges scroll below the pager
+
+**Social Feed**
+- Caption field on the post-workout completion screen; caption shown in feed posts
+- `FeedBodyMapView` — compact front/back silhouette in feed posts and detail sheet, worked muscles highlighted with `pumpPrimary.opacity(0.55)`
+- Feed cached for 5 minutes; cached items shown immediately on revisit; pull-to-refresh forces a network fetch
+
+### Visual Polish
+
+- `medal.fill` (yellow) used for all PR badges throughout the app (completion screen, feed, share cards, feed detail)
+- `flame.fill` (orange) used for streak indicator
+- Program card list rows have `listRowBackground(.clear)` — no gray border when swiping to delete
+
+### Data & Logic
+
+**Streak calculation** (`StreakCalculator` utility, single source of truth for all 4 call sites):
+- Gap between workouts counts toward streak (workout day 1, next day 3 → streak = 3)
+- Streak expires if last workout was more than 3 days ago
+
+**SF Symbols on enums:**
+- `MovementPattern.sfSymbol` — mapped for push, pull, hinge, squat, carry, rotation, isolation
+- `EquipmentType.sfSymbol` — mapped for barbell, dumbbell, cable, machine, bodyweight, etc.
+- `SetType.shortName` — compact labels (STD, WU, SS, DROP, RP, AMRAP, FAIL)
+
+**MuscleSubRegion enum** — 35 anatomical sub-regions across all major muscle groups
+
+**TemplateExercise.targetReps** — changed to `Int?`; nil means no target reps set
+
+### Live Activity & Dynamic Island
+
+- `WorkoutActivityAttributes.ContentState` extended with `restSecondsRemaining: Int`
+- When rest timer is active: Dynamic Island compact trailing and expanded leading show rest countdown in red; lock screen banner shows "Rest" label in red
+- When rest ends: automatically reverts to elapsed workout time
+- `NSSupportsLiveActivities` and `NSSupportsLiveActivitiesFrequentUpdates` enabled in Info.plist
+
+---
+
 ## Things NOT to Build in V1
 
 Do not build any of these. They are noted for future versions:
