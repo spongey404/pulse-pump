@@ -305,14 +305,34 @@ struct SettingsView: View {
     private var workoutRemindersBinding: Binding<Bool> {
         Binding(
             get: { UserDefaults.standard.bool(forKey: "workoutReminders") },
-            set: { UserDefaults.standard.set($0, forKey: "workoutReminders") }
+            set: { newValue in
+                UserDefaults.standard.set(newValue, forKey: "workoutReminders")
+                Task {
+                    let granted = await NotificationService.shared.requestPermission()
+                    if granted {
+                        await NotificationService.shared.scheduleWorkoutReminders(split: user?.selectedSplit)
+                    } else if !newValue {
+                        NotificationService.shared.cancelWorkoutReminders()
+                    }
+                }
+            }
         )
     }
 
     private var restDayAlertsBinding: Binding<Bool> {
         Binding(
             get: { UserDefaults.standard.bool(forKey: "restDayAlerts") },
-            set: { UserDefaults.standard.set($0, forKey: "restDayAlerts") }
+            set: { newValue in
+                UserDefaults.standard.set(newValue, forKey: "restDayAlerts")
+                Task {
+                    let granted = await NotificationService.shared.requestPermission()
+                    if granted {
+                        await NotificationService.shared.scheduleRestDayAlerts(split: user?.selectedSplit)
+                    } else if !newValue {
+                        NotificationService.shared.cancelRestDayAlerts()
+                    }
+                }
+            }
         )
     }
 
@@ -451,5 +471,9 @@ struct SplitConfigView: View {
         modelContext.insert(split)
         user.selectedSplit = split
         user.updatedAt = Date()
+        // Reschedule notifications for new split
+        Task {
+            await NotificationService.shared.reschedule(split: split)
+        }
     }
 }
