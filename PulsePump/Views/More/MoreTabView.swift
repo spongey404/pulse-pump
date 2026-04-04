@@ -55,8 +55,7 @@ struct MoreTabView: View {
                 }
 
                 NavigationLink {
-                    // TODO: Pulse+ (Phase 14)
-                    Text("Pulse+ — Coming Soon")
+                    PulsePlusView()
                 } label: {
                     Label("Pulse+", systemImage: "star.circle")
                 }
