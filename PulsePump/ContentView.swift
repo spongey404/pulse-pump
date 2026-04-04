@@ -443,6 +443,13 @@ struct ProgramsTabView: View {
                         TemplateCard(template: template, onStart: { onStartFromTemplate(template) })
                     }
                     .buttonStyle(.plain)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            modelContext.delete(template)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
                 }
             }
             .padding()
@@ -456,6 +463,12 @@ struct TemplateCard: View {
     let template: WorkoutTemplate
     let onStart: () -> Void
     @Environment(\.modelContext) private var modelContext
+    @State private var showEditSheet = false
+    @State private var showDeleteConfirmation = false
+
+    func delete() {
+        modelContext.delete(template)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -464,6 +477,25 @@ struct TemplateCard: View {
                     .font(.headline)
                     .foregroundStyle(.primary)
                 Spacer()
+                Menu {
+                    Button {
+                        showEditSheet = true
+                    } label: {
+                        Label("Edit", systemImage: "pencil")
+                    }
+                    Button(role: .destructive) {
+                        showDeleteConfirmation = true
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 32, height: 32)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
                 Button {
                     onStart()
                 } label: {
@@ -509,6 +541,13 @@ struct TemplateCard: View {
         .padding()
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        .sheet(isPresented: $showEditSheet) {
+            EditTemplateView(template: template)
+        }
+        .confirmationDialog("Delete \"\(template.name)\"?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) { delete() }
+            Button("Cancel", role: .cancel) {}
+        }
     }
 }
 
