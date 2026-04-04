@@ -167,6 +167,62 @@ struct ExerciseCardView: View {
 
     var body: some View {
         Section {
+            // Exercise title row — swipe left to delete
+            HStack {
+                Text(entry.exerciseName)
+                    .font(.subheadline.weight(.semibold))
+                if !entry.notes.trimmingCharacters(in: .whitespaces).isEmpty {
+                    Image(systemName: "circle.fill")
+                        .font(.system(size: 5))
+                        .foregroundStyle(Color.pumpPrimary)
+                }
+                Spacer()
+                Menu {
+                    if let lastNote = lastSessionNote {
+                        Section("Last session note") {
+                            Text(lastNote)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Button {
+                        showNoteEditor = true
+                    } label: {
+                        Label(entry.notes.trimmingCharacters(in: .whitespaces).isEmpty ? "Add Note" : "Edit Note",
+                              systemImage: "note.text")
+                    }
+                    Button {
+                        showSubstitutionSheet = true
+                    } label: {
+                        Label("Replace Exercise", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    Button {
+                        restOverrideSeconds = RestTimerService.perExerciseOverride(exerciseId: entry.exerciseId) ?? 90
+                        showRestOverride = true
+                    } label: {
+                        Label("Rest Timer Override", systemImage: "timer")
+                    }
+                    Button(role: .destructive) {
+                        viewModel.removeExercise(at: exerciseIndex)
+                    } label: {
+                        Label("Remove Exercise", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 32, height: 32)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                    viewModel.removeExercise(at: exerciseIndex)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+
             // Set header — adapts to exercise type
             HStack(spacing: 0) {
                 Text("Set")
@@ -248,54 +304,6 @@ struct ExerciseCardView: View {
                         .lineLimit(2)
                 }
                 .onTapGesture { showNoteEditor = true }
-            }
-        } header: {
-            HStack {
-                Text(entry.exerciseName)
-                    .font(.subheadline.weight(.semibold))
-                // Note indicator dot
-                if !entry.notes.trimmingCharacters(in: .whitespaces).isEmpty {
-                    Image(systemName: "circle.fill")
-                        .font(.system(size: 5))
-                        .foregroundStyle(Color.pumpPrimary)
-                }
-                Spacer()
-                Menu {
-                    // Last session note (read-only context)
-                    if let lastNote = lastSessionNote {
-                        Section("Last session note") {
-                            Text(lastNote)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    Button {
-                        showNoteEditor = true
-                    } label: {
-                        Label(entry.notes.trimmingCharacters(in: .whitespaces).isEmpty ? "Add Note" : "Edit Note",
-                              systemImage: "note.text")
-                    }
-                    Button {
-                        showSubstitutionSheet = true
-                    } label: {
-                        Label("Replace Exercise", systemImage: "arrow.triangle.2.circlepath")
-                    }
-                    Button {
-                        restOverrideSeconds = RestTimerService.perExerciseOverride(exerciseId: entry.exerciseId) ?? 90
-                        showRestOverride = true
-                    } label: {
-                        Label("Rest Timer Override", systemImage: "timer")
-                    }
-                    Button(role: .destructive) {
-                        viewModel.removeExercise(at: exerciseIndex)
-                    } label: {
-                        Label("Remove Exercise", systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .foregroundStyle(.secondary)
-                }
             }
         }
         .task {
