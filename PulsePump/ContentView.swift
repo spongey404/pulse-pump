@@ -1,12 +1,17 @@
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
     @State private var workoutViewModel = WorkoutViewModel()
+    @Environment(\.modelContext) private var modelContext
+    @Query private var users: [User]
+
+    private var user: User? { users.first }
 
     var body: some View {
         TabView {
             NavigationStack {
-                ProgramsTabView()
+                ProgramsTabView(onStartFromTemplate: startFromTemplate)
             }
             .tabItem {
                 Label("Programs", systemImage: "list.bullet.clipboard")
@@ -45,6 +50,11 @@ struct ContentView: View {
             }
         }
     }
+
+    private func startFromTemplate(_ template: WorkoutTemplate) {
+        guard let user else { return }
+        workoutViewModel.startWorkout(modelContext: modelContext, user: user, template: template)
+    }
 }
 
 struct HomeTabView: View {
@@ -62,15 +72,16 @@ struct HomeTabView: View {
 }
 
 struct ProgramsTabView: View {
+    let onStartFromTemplate: (WorkoutTemplate) -> Void
+
     var body: some View {
         List {
             NavigationLink("Exercise Library") {
                 ExerciseLibraryView()
             }
 
-            Section("Templates") {
-                Text("Coming soon")
-                    .foregroundStyle(.secondary)
+            NavigationLink("Templates") {
+                TemplateListView(onStartWorkout: onStartFromTemplate)
             }
         }
         .navigationTitle("Programs")
