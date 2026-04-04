@@ -6,6 +6,7 @@ struct BodyModelView: View {
     let exerciseLogs: [ExerciseLog]
     var colorScheme: HeatmapColorScheme = .cool
     var detailedMode: Bool = false
+    var side: Side = .both
     let onMuscleTap: (MuscleGroup) -> Void
     var onSubRegionTap: ((MuscleSubRegion) -> Void)?
 
@@ -61,14 +62,27 @@ struct BodyModelView: View {
         (.semitendinosus,   CGPoint(x: 0.46, y: 0.58), CGSize(width: 0.06, height: 0.12)),
     ]
 
+    enum Side { case front, back, both }
+
     var body: some View {
-        HStack(spacing: 24) {
+        switch side {
+        case .front:
             muscleMapColumn(title: "Front", muscles: frontMuscles,
                             subRegionZones: frontSubRegions,
                             detailedGroups: Self.detailedFrontGroups)
+        case .back:
             muscleMapColumn(title: "Back", muscles: backMuscles,
                             subRegionZones: backSubRegions,
                             detailedGroups: Self.detailedBackGroups)
+        case .both:
+            HStack(spacing: 24) {
+                muscleMapColumn(title: "Front", muscles: frontMuscles,
+                                subRegionZones: frontSubRegions,
+                                detailedGroups: Self.detailedFrontGroups)
+                muscleMapColumn(title: "Back", muscles: backMuscles,
+                                subRegionZones: backSubRegions,
+                                detailedGroups: Self.detailedBackGroups)
+            }
         }
     }
 

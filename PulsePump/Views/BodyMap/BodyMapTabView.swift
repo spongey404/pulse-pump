@@ -123,60 +123,69 @@ struct BodyMapTabView: View {
             }
             .padding(.horizontal)
 
-            ScrollView {
-                let isDetailed = pulsePlusService.isSubscribed &&
-                    !(UserDefaults.standard.bool(forKey: "simpleBodyMap"))
+            let isDetailed = pulsePlusService.isSubscribed &&
+                !(UserDefaults.standard.bool(forKey: "simpleBodyMap"))
 
-                BodyModelView(
-                    heatmapMode: heatmapMode,
-                    exerciseLogs: exerciseLogs,
-                    colorScheme: colorScheme,
-                    detailedMode: isDetailed,
-                    onMuscleTap: { muscle in
-                        selectedSubRegion = nil
-                        selectedMuscle = muscle
-                    },
-                    onSubRegionTap: { subRegion in
-                        selectedSubRegion = subRegion
-                        selectedMuscle = subRegion.parentGroup
-                    }
-                )
-                .padding()
-
-                HeatmapLegend(mode: heatmapMode, colorScheme: colorScheme)
-                    .padding(.horizontal)
-
-                // Neglected muscle nudges (Pulse+ only)
-                if pulsePlusService.isSubscribed {
-                    let neglected = neglectedMuscles
-                    if !neglected.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Neglected Muscles")
-                                .font(.subheadline.weight(.semibold))
-
-                            ForEach(neglected, id: \.self) { muscle in
-                                HStack(spacing: 8) {
-                                    Image(systemName: "exclamationmark.triangle")
-                                        .font(.caption)
-                                        .foregroundStyle(.orange)
-                                    Text("\(muscle.displayName) — not trained in 7+ days")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
+            VStack(spacing: 0) {
+                TabView {
+                    ForEach([BodyModelView.Side.front, .back], id: \.self) { side in
+                        BodyModelView(
+                            heatmapMode: heatmapMode,
+                            exerciseLogs: exerciseLogs,
+                            colorScheme: colorScheme,
+                            detailedMode: isDetailed,
+                            side: side,
+                            onMuscleTap: { muscle in
+                                selectedSubRegion = nil
+                                selectedMuscle = muscle
+                            },
+                            onSubRegionTap: { subRegion in
+                                selectedSubRegion = subRegion
+                                selectedMuscle = subRegion.parentGroup
                             }
-                        }
-                        .padding()
-                        .background(Color(.secondarySystemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        )
                         .padding(.horizontal)
                     }
-
-                    // Balance analysis
-                    MuscleBalanceView(exerciseLogs: exerciseLogs)
-                        .padding(.horizontal)
                 }
+                .tabViewStyle(.page(indexDisplayMode: .always))
+                .indexViewStyle(.page(backgroundDisplayMode: .always))
+                .frame(height: 420)
 
-                Spacer(minLength: 32)
+                ScrollView {
+                    VStack(spacing: 12) {
+                        HeatmapLegend(mode: heatmapMode, colorScheme: colorScheme)
+                            .padding(.horizontal)
+
+                        if pulsePlusService.isSubscribed {
+                            let neglected = neglectedMuscles
+                            if !neglected.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Neglected Muscles")
+                                        .font(.subheadline.weight(.semibold))
+                                    ForEach(neglected, id: \.self) { muscle in
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "exclamationmark.triangle")
+                                                .font(.caption)
+                                                .foregroundStyle(.orange)
+                                            Text("\(muscle.displayName) — not trained in 7+ days")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                                .padding()
+                                .background(Color(.secondarySystemBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .padding(.horizontal)
+                            }
+
+                            MuscleBalanceView(exerciseLogs: exerciseLogs)
+                                .padding(.horizontal)
+                        }
+
+                        Spacer(minLength: 32)
+                    }
+                }
             }
         }
     }
