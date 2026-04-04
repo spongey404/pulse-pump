@@ -28,7 +28,7 @@ struct ActivityFeedView: View {
         }
         .listStyle(.plain)
         .refreshable {
-            await viewModel.loadFeed()
+            await viewModel.loadFeed(forceRefresh: true)
         }
         .task {
             await viewModel.loadFeed()

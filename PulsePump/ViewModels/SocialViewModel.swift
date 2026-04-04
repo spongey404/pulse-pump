@@ -10,6 +10,8 @@ class SocialViewModel {
     // Feed
     var feedItems: [WorkoutFeedItem] = []
     var isLoadingFeed = false
+    private var lastFeedFetch: Date?
+    private static let cacheTTL: TimeInterval = 5 * 60  // 5 minutes
 
     // Friends
     var friends: [FirestoreUserProfile] = []
@@ -27,9 +29,20 @@ class SocialViewModel {
 
     // MARK: - Feed
 
-    func loadFeed() async {
+    func loadFeed(forceRefresh: Bool = false) async {
         guard let uid = currentUid else { return }
-        isLoadingFeed = true
+
+        // If cache is fresh and we have items, skip the network call
+        if !forceRefresh,
+           let last = lastFeedFetch,
+           Date().timeIntervalSince(last) < Self.cacheTTL,
+           !feedItems.isEmpty {
+            return
+        }
+
+        // Only show the spinner when there's nothing to display yet
+        if feedItems.isEmpty { isLoadingFeed = true }
+
         do {
             let friendUids = try await firestoreService.fetchFriendUids(for: uid)
             if friendUids.isEmpty {
@@ -38,8 +51,9 @@ class SocialViewModel {
                 let allUids = friendUids + [uid]
                 feedItems = try await firestoreService.fetchFeed(friendUids: allUids)
             }
+            lastFeedFetch = Date()
         } catch {
-            feedItems = []
+            if feedItems.isEmpty { feedItems = [] }
         }
         isLoadingFeed = false
     }
