@@ -434,7 +434,8 @@ class WorkoutViewModel {
                     elapsedSeconds: self.elapsedSeconds,
                     currentExercise: currentExercise,
                     completedSets: completed,
-                    totalSets: total
+                    totalSets: total,
+                    restSecondsRemaining: self.restTimer.isRunning ? self.restTimer.remainingSeconds : 0
                 )}
             }
         }

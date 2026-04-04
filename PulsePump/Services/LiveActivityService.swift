@@ -7,6 +7,7 @@ struct WorkoutActivityAttributes: ActivityAttributes {
         var currentExercise: String
         var completedSets: Int
         var totalSets: Int
+        var restSecondsRemaining: Int
     }
 
     var workoutName: String
@@ -28,7 +29,8 @@ class LiveActivityService {
             elapsedSeconds: 0,
             currentExercise: "Starting...",
             completedSets: 0,
-            totalSets: 0
+            totalSets: 0,
+            restSecondsRemaining: 0
         )
         let content = ActivityContent(state: initialState, staleDate: nil)
 
@@ -43,14 +45,15 @@ class LiveActivityService {
         }
     }
 
-    func updateLiveActivity(elapsedSeconds: Int, currentExercise: String, completedSets: Int, totalSets: Int) async {
+    func updateLiveActivity(elapsedSeconds: Int, currentExercise: String, completedSets: Int, totalSets: Int, restSecondsRemaining: Int = 0) async {
         guard let activity = currentActivity else { return }
 
         let updatedState = WorkoutActivityAttributes.ContentState(
             elapsedSeconds: elapsedSeconds,
             currentExercise: currentExercise,
             completedSets: completedSets,
-            totalSets: totalSets
+            totalSets: totalSets,
+            restSecondsRemaining: restSecondsRemaining
         )
         let content = ActivityContent(state: updatedState, staleDate: nil)
         await activity.update(content)
@@ -63,7 +66,8 @@ class LiveActivityService {
             elapsedSeconds: 0,
             currentExercise: "Complete",
             completedSets: 0,
-            totalSets: 0
+            totalSets: 0,
+            restSecondsRemaining: 0
         )
         let content = ActivityContent(state: finalState, staleDate: nil)
         await activity.end(content, dismissalPolicy: .default)

@@ -9,6 +9,7 @@ struct WorkoutActivityAttributes: ActivityAttributes {
         var currentExercise: String
         var completedSets: Int
         var totalSets: Int
+        var restSecondsRemaining: Int
     }
 
     var workoutName: String
@@ -38,16 +39,28 @@ struct WorkoutLiveActivity: Widget {
                     Text(context.attributes.workoutName)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
-                    Text(formatDuration(context.state.elapsedSeconds))
-                        .font(.title2.monospacedDigit().weight(.bold))
+                    if context.state.restSecondsRemaining > 0 {
+                        Text(formatDuration(context.state.restSecondsRemaining))
+                            .font(.title2.monospacedDigit().weight(.bold))
+                            .foregroundStyle(.red)
+                    } else {
+                        Text(formatDuration(context.state.elapsedSeconds))
+                            .font(.title2.monospacedDigit().weight(.bold))
+                    }
                 }
 
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(context.state.currentExercise)
-                        .font(.caption.weight(.medium))
-                        .lineLimit(1)
+                    if context.state.restSecondsRemaining > 0 {
+                        Text("Rest")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.red)
+                    } else {
+                        Text(context.state.currentExercise)
+                            .font(.caption.weight(.medium))
+                            .lineLimit(1)
+                    }
                     if context.state.totalSets > 0 {
                         Text("\(context.state.completedSets)/\(context.state.totalSets) sets")
                             .font(.caption2)
@@ -67,8 +80,14 @@ struct WorkoutLiveActivity: Widget {
                         Text(context.attributes.workoutName)
                             .font(.caption2)
                             .foregroundStyle(.secondary)
-                        Text(formatDuration(context.state.elapsedSeconds))
-                            .font(.title3.monospacedDigit().weight(.bold))
+                        if context.state.restSecondsRemaining > 0 {
+                            Text(formatDuration(context.state.restSecondsRemaining))
+                                .font(.title3.monospacedDigit().weight(.bold))
+                                .foregroundStyle(.red)
+                        } else {
+                            Text(formatDuration(context.state.elapsedSeconds))
+                                .font(.title3.monospacedDigit().weight(.bold))
+                        }
                     }
                     .padding(.leading, 4)
                 }
@@ -97,12 +116,19 @@ struct WorkoutLiveActivity: Widget {
                     .padding(.horizontal, 4)
                 }
             } compactLeading: {
-                Image(systemName: "dumbbell.fill")
+                Image(systemName: context.state.restSecondsRemaining > 0 ? "timer" : "dumbbell.fill")
                     .font(.caption2)
+                    .foregroundStyle(context.state.restSecondsRemaining > 0 ? .red : .white)
             } compactTrailing: {
-                Text(formatDuration(context.state.elapsedSeconds))
-                    .font(.caption2.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(.white)
+                if context.state.restSecondsRemaining > 0 {
+                    Text(formatDuration(context.state.restSecondsRemaining))
+                        .font(.caption2.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(.red)
+                } else {
+                    Text(formatDuration(context.state.elapsedSeconds))
+                        .font(.caption2.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(.white)
+                }
             } minimal: {
                 Image(systemName: "dumbbell.fill")
                     .font(.caption2)
