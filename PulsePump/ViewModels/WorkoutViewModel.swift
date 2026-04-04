@@ -212,9 +212,32 @@ class WorkoutViewModel {
             }
         }
 
-        // Basic calorie estimate
+        // Calorie estimate using CalorieEstimationService
         let totalSets = exerciseEntries.flatMap(\.sets).filter(\.isCompleted).count
-        workout.calorieBurnEstimate = Double(totalSets) * 8.0
+        var compoundSets = 0
+        var isolationSets = 0
+        for entry in exerciseEntries {
+            let completedCount = entry.sets.filter(\.isCompleted).count
+            let eid = entry.exerciseId
+            let desc = FetchDescriptor<Exercise>(predicate: #Predicate { $0.id == eid })
+            if let exercise = try? modelContext.fetch(desc).first, exercise.movementPattern.isCompound {
+                compoundSets += completedCount
+            } else {
+                isolationSets += completedCount
+            }
+        }
+        let userWeight = workout.user?.weight ?? 0
+        let durationMinutes = workout.duration / 60.0
+        let formula = CalorieFormula(rawValue: UserDefaults.standard.string(forKey: "calorieFormula") ?? "") ?? .basic
+        workout.calorieBurnEstimate = CalorieEstimationService.estimate(
+            formula: formula,
+            totalSets: totalSets,
+            compoundSets: compoundSets,
+            isolationSets: isolationSets,
+            bodyWeightKg: userWeight,
+            durationMinutes: durationMinutes,
+            intensity: .moderate
+        )
 
         completionData = WorkoutCompletionData(
             duration: workout.duration,

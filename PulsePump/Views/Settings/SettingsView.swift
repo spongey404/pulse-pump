@@ -81,6 +81,12 @@ struct SettingsView: View {
 
     private var workoutSection: some View {
         Section("Workout") {
+            Picker("Calorie Formula", selection: calorieFormulaBinding) {
+                ForEach(CalorieFormula.allCases) { formula in
+                    Text(formula.displayName).tag(formula)
+                }
+            }
+
             Picker("Rest Timer Mode", selection: restTimerModeBinding) {
                 ForEach(RestTimerMode.allCases) { mode in
                     Text(mode.displayName).tag(mode)
@@ -166,6 +172,13 @@ struct SettingsView: View {
     }
 
     // MARK: - UserDefaults Bindings
+
+    private var calorieFormulaBinding: Binding<CalorieFormula> {
+        Binding(
+            get: { CalorieFormula(rawValue: UserDefaults.standard.string(forKey: "calorieFormula") ?? "") ?? .basic },
+            set: { UserDefaults.standard.set($0.rawValue, forKey: "calorieFormula") }
+        )
+    }
 
     private var restTimerModeBinding: Binding<RestTimerMode> {
         Binding(
