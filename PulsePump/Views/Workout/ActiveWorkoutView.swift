@@ -157,16 +157,24 @@ struct ExerciseCardView: View {
 
     var body: some View {
         Section {
-            // Set header
+            // Set header — adapts to exercise type
             HStack(spacing: 0) {
                 Text("Set")
-                    .frame(width: 36, alignment: .leading)
-                Text("Weight")
-                    .frame(maxWidth: .infinity)
-                Text("Reps")
-                    .frame(maxWidth: .infinity)
+                    .frame(width: 50, alignment: .leading)
+                switch entry.exerciseType {
+                case .timeBased:
+                    Text("Seconds").frame(maxWidth: .infinity)
+                case .distanceBased:
+                    Text("Distance").frame(maxWidth: .infinity)
+                case .bodyweight:
+                    Text("+Weight").frame(maxWidth: .infinity)
+                    Text("Reps").frame(maxWidth: .infinity)
+                default:
+                    Text("Weight").frame(maxWidth: .infinity)
+                    Text("Reps").frame(maxWidth: .infinity)
+                }
                 Text("RIR")
-                    .frame(width: 50)
+                    .frame(width: 44)
                 Text("")
                     .frame(width: 44)
             }
@@ -183,6 +191,8 @@ struct ExerciseCardView: View {
                         set: { entry.sets[setIndex] = $0 }
                     ),
                     setNumber: setIndex + 1,
+                    exerciseType: entry.exerciseType,
+                    isUnilateral: entry.isUnilateral,
                     ghostText: viewModel.ghostText(for: entry.exerciseId, setIndex: setIndex, modelContext: modelContext),
                     isCompound: true,
                     onLog: {
@@ -378,44 +388,75 @@ struct ExerciseSubstitutionView: View {
 struct SetRowView: View {
     @Binding var setEntry: SetEntry
     let setNumber: Int
+    var exerciseType: ExerciseType = .weighted
+    var isUnilateral: Bool = false
     let ghostText: (weight: String, reps: String)?
     let isCompound: Bool
     let onLog: () -> Void
     var smartSuggestion: String? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 0) {
-                Text("\(setNumber)")
-                    .font(.callout.weight(.medium))
-                    .foregroundStyle(setEntry.isCompleted ? Color.pumpPrimary : .secondary)
-                    .frame(width: 36, alignment: .leading)
+                // Set number + type pill
+                setNumberAndType
 
-                TextField(ghostText?.weight ?? "0", text: $setEntry.weight)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.center)
-                    .font(.callout.monospacedDigit())
-                    .frame(maxWidth: .infinity)
-                    .foregroundStyle(setEntry.isCompleted ? .secondary : .primary)
+                // Input fields depend on exercise type
+                switch exerciseType {
+                case .timeBased:
+                    TextField("0", text: $setEntry.duration)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.center)
+                        .font(.callout.monospacedDigit())
+                        .frame(maxWidth: .infinity)
+                        .foregroundStyle(setEntry.isCompleted ? .secondary : .primary)
 
-                TextField(ghostText?.reps ?? "0", text: $setEntry.reps)
-                    .keyboardType(.numberPad)
-                    .multilineTextAlignment(.center)
-                    .font(.callout.monospacedDigit())
-                    .frame(maxWidth: .infinity)
-                    .foregroundStyle(setEntry.isCompleted ? .secondary : .primary)
+                case .distanceBased:
+                    TextField("0", text: $setEntry.distance)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.center)
+                        .font(.callout.monospacedDigit())
+                        .frame(maxWidth: .infinity)
+                        .foregroundStyle(setEntry.isCompleted ? .secondary : .primary)
+
+                case .bodyweight:
+                    TextField("+kg", text: $setEntry.weight)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.center)
+                        .font(.callout.monospacedDigit())
+                        .frame(maxWidth: .infinity)
+                        .foregroundStyle(setEntry.isCompleted ? .secondary : .primary)
+                    TextField(ghostText?.reps ?? "0", text: $setEntry.reps)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.center)
+                        .font(.callout.monospacedDigit())
+                        .frame(maxWidth: .infinity)
+                        .foregroundStyle(setEntry.isCompleted ? .secondary : .primary)
+
+                default:
+                    TextField(ghostText?.weight ?? "0", text: $setEntry.weight)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.center)
+                        .font(.callout.monospacedDigit())
+                        .frame(maxWidth: .infinity)
+                        .foregroundStyle(setEntry.isCompleted ? .secondary : .primary)
+                    TextField(ghostText?.reps ?? "0", text: $setEntry.reps)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.center)
+                        .font(.callout.monospacedDigit())
+                        .frame(maxWidth: .infinity)
+                        .foregroundStyle(setEntry.isCompleted ? .secondary : .primary)
+                }
 
                 TextField("-", text: $setEntry.rir)
                     .keyboardType(.numberPad)
                     .multilineTextAlignment(.center)
                     .font(.callout.monospacedDigit())
-                    .frame(width: 50)
+                    .frame(width: 44)
                     .foregroundStyle(setEntry.isCompleted ? .secondary : .primary)
 
                 Button {
-                    if !setEntry.isCompleted {
-                        onLog()
-                    }
+                    if !setEntry.isCompleted { onLog() }
                 } label: {
                     Image(systemName: setEntry.isCompleted ? "checkmark.circle.fill" : "circle")
                         .foregroundStyle(setEntry.isCompleted ? Color.pumpPrimary : .secondary)
@@ -425,18 +466,62 @@ struct SetRowView: View {
                 .buttonStyle(.plain)
             }
 
-            // Smart suggestion (Pulse+ only, shown when field is empty)
-            if let suggestion = smartSuggestion, setEntry.weight.isEmpty, !setEntry.isCompleted {
+            // Side picker for unilateral exercises
+            if isUnilateral {
+                Picker("Side", selection: $setEntry.side) {
+                    Text("L").tag(Side.left)
+                    Text("R").tag(Side.right)
+                    Text("Both").tag(Side.both)
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 160)
+                .padding(.leading, 50)
+                .scaleEffect(0.85, anchor: .leading)
+            }
+
+            // Smart suggestion (Pulse+ only)
+            if let suggestion = smartSuggestion, setEntry.weight.isEmpty, !setEntry.isCompleted,
+               exerciseType == .weighted || exerciseType == .bodyweight {
                 Button {
                     setEntry.weight = suggestion
                 } label: {
                     Text("Suggested: \(suggestion)")
                         .font(.caption2)
                         .foregroundStyle(Color.pumpPrimary.opacity(0.7))
-                        .padding(.leading, 36)
+                        .padding(.leading, 50)
                 }
                 .buttonStyle(.plain)
             }
         }
+    }
+
+    private var setNumberAndType: some View {
+        Menu {
+            ForEach(SetType.allCases) { type in
+                Button {
+                    setEntry.setType = type
+                } label: {
+                    HStack {
+                        Text(type.displayName)
+                        if setEntry.setType == type {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            VStack(spacing: 1) {
+                Text("\(setNumber)")
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(setEntry.isCompleted ? Color.pumpPrimary : .secondary)
+                if setEntry.setType != .standard {
+                    Text(setEntry.setType.shortName)
+                        .font(.system(size: 8).weight(.semibold))
+                        .foregroundStyle(Color.pumpPrimary)
+                }
+            }
+            .frame(width: 50, alignment: .leading)
+        }
+        .buttonStyle(.plain)
     }
 }

@@ -33,18 +33,17 @@ struct WorkoutCompletionView: View {
                     }
                     .padding(.horizontal)
 
-                    // PRs
+                    // PRs — subtle inline highlight, no icons or gamification
                     if data.prCount > 0 {
-                        HStack(spacing: 8) {
-                            Image(systemName: "trophy")
+                        HStack(spacing: 6) {
+                            Text("\(data.prCount) PR\(data.prCount == 1 ? "" : "s")")
+                                .font(.subheadline.weight(.medium))
                                 .foregroundStyle(Color.pumpPrimary)
-                            Text("\(data.prCount) PR\(data.prCount == 1 ? "" : "s") hit")
-                                .font(.body.weight(.medium))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(Color.pumpPrimary.opacity(0.12))
+                                .clipShape(Capsule())
                         }
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.pumpPrimary.opacity(0.1))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
                         .padding(.horizontal)
                     }
 

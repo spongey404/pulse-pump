@@ -88,18 +88,19 @@ struct FeedItemView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                    // PRs and improvement
-                    HStack(spacing: 16) {
+                    // PRs and improvement — subtle, no icons
+                    HStack(spacing: 8) {
                         if item.prCount > 0 {
-                            HStack(spacing: 4) {
-                                Image(systemName: "trophy")
-                                    .foregroundStyle(.yellow)
-                                Text("\(item.prCount) PR\(item.prCount == 1 ? "" : "s")")
-                            }
-                            .font(.caption.weight(.medium))
+                            Text("\(item.prCount) PR\(item.prCount == 1 ? "" : "s")")
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(Color.pumpPrimary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .background(Color.pumpPrimary.opacity(0.12))
+                                .clipShape(Capsule())
                         }
                         if item.totalExercises > 0 {
-                            Text("Improved on \(item.improvedCount)/\(item.totalExercises)")
+                            Text("Improved \(item.improvedCount)/\(item.totalExercises)")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }

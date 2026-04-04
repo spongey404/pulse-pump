@@ -39,7 +39,8 @@ struct CalorieEstimationService {
         return met * bodyWeightKg * hours
     }
 
-    /// Choose formula based on user preference, with fallback
+    /// Choose formula based on user preference, with fallback.
+    /// MET formula is Pulse+ only — pass isSubscribed=true for Pulse+ users.
     static func estimate(
         formula: CalorieFormula,
         totalSets: Int,
@@ -47,13 +48,15 @@ struct CalorieEstimationService {
         isolationSets: Int,
         bodyWeightKg: Double,
         durationMinutes: Double,
-        intensity: WorkoutIntensity
+        intensity: WorkoutIntensity,
+        isSubscribed: Bool = false
     ) -> Double {
         switch formula {
         case .basic:
             return basicEstimate(totalSets: totalSets, compoundSets: compoundSets, isolationSets: isolationSets)
         case .met:
-            guard bodyWeightKg > 0, durationMinutes > 0 else {
+            // Fall back to basic for free users or missing data
+            guard isSubscribed, bodyWeightKg > 0, durationMinutes > 0 else {
                 return basicEstimate(totalSets: totalSets, compoundSets: compoundSets, isolationSets: isolationSets)
             }
             return metEstimate(bodyWeightKg: bodyWeightKg, durationMinutes: durationMinutes, intensity: intensity)

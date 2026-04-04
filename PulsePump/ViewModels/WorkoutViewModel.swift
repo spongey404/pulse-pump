@@ -39,13 +39,20 @@ class WorkoutViewModel {
 
         if let template {
             for templateExercise in template.templateExercises.sorted(by: { $0.order < $1.order }) {
-                let entry = ExerciseEntry(
+                // Look up exercise to get type + unilateral flag
+                let exId = templateExercise.exerciseId
+                let exDesc = FetchDescriptor<Exercise>(predicate: #Predicate { $0.id == exId })
+                let exercise = try? modelContext.fetch(exDesc).first
+
+                var entry = ExerciseEntry(
                     exerciseId: templateExercise.exerciseId,
                     exerciseName: templateExercise.exerciseName,
                     sets: (0..<templateExercise.targetSets).map { i in
                         SetEntry(order: i, targetReps: templateExercise.targetReps, targetRIR: templateExercise.targetRIR)
                     }
                 )
+                entry.exerciseType = exercise?.exerciseType ?? .weighted
+                entry.isUnilateral = exercise?.isUnilateral ?? false
                 exerciseEntries.append(entry)
             }
         }
@@ -62,7 +69,7 @@ class WorkoutViewModel {
 
         for log in workout.exerciseLogs.sorted(by: { $0.order < $1.order }) {
             guard let exercise = log.exercise else { continue }
-            let entry = ExerciseEntry(
+            var entry = ExerciseEntry(
                 exerciseId: exercise.id,
                 exerciseName: exercise.name,
                 sets: log.sets.sorted(by: { $0.order < $1.order }).map { setLog in
@@ -71,12 +78,16 @@ class WorkoutViewModel {
                         weight: setLog.weight > 0 ? String(format: "%g", setLog.weight) : "",
                         reps: setLog.reps > 0 ? "\(setLog.reps)" : "",
                         rir: setLog.rir.map { "\($0)" } ?? "",
+                        duration: setLog.duration.map { "\(Int($0))" } ?? "",
+                        distance: setLog.distance.map { String(format: "%g", $0) } ?? "",
                         setType: setLog.setType,
                         side: setLog.side
                     )
                 },
                 notes: log.notes
             )
+            entry.exerciseType = exercise.exerciseType
+            entry.isUnilateral = exercise.isUnilateral
             exerciseEntries.append(entry)
         }
 
@@ -87,11 +98,13 @@ class WorkoutViewModel {
     // MARK: - Exercise Management
 
     func addExercise(_ exercise: Exercise) {
-        let entry = ExerciseEntry(
+        var entry = ExerciseEntry(
             exerciseId: exercise.id,
             exerciseName: exercise.name,
             sets: [SetEntry(order: 0)]
         )
+        entry.exerciseType = exercise.exerciseType
+        entry.isUnilateral = exercise.isUnilateral
         exerciseEntries.append(entry)
     }
 
@@ -220,12 +233,16 @@ class WorkoutViewModel {
                 let weight = Double(setEntry.weight) ?? 0
                 let reps = Int(setEntry.reps) ?? 0
                 let rir = Int(setEntry.rir)
+                let duration: TimeInterval? = Double(setEntry.duration).map { TimeInterval($0) }
+                let distance: Double? = Double(setEntry.distance)
 
                 let setLog = SetLog(
                     order: j,
                     weight: weight,
                     reps: reps,
                     rir: rir,
+                    duration: duration,
+                    distance: distance,
                     setType: setEntry.setType,
                     side: setEntry.side
                 )
@@ -443,6 +460,8 @@ struct ExerciseEntry: Identifiable {
     let id = UUID()
     var exerciseId: UUID
     var exerciseName: String
+    var exerciseType: ExerciseType = .weighted
+    var isUnilateral: Bool = false
     var sets: [SetEntry]
     var notes: String = ""
 }
@@ -453,6 +472,8 @@ struct SetEntry: Identifiable {
     var weight: String = ""
     var reps: String = ""
     var rir: String = ""
+    var duration: String = ""   // seconds, for time-based exercises
+    var distance: String = ""   // meters/feet, for distance-based exercises
     var setType: SetType = .standard
     var side: Side = .both
     var isCompleted: Bool = false
@@ -460,12 +481,15 @@ struct SetEntry: Identifiable {
     var targetRIR: Int?
 
     init(order: Int, weight: String = "", reps: String = "", rir: String = "",
+         duration: String = "", distance: String = "",
          setType: SetType = .standard, side: Side = .both,
          targetReps: Int? = nil, targetRIR: Int? = nil) {
         self.order = order
         self.weight = weight
         self.reps = reps
         self.rir = rir
+        self.duration = duration
+        self.distance = distance
         self.setType = setType
         self.side = side
         self.targetReps = targetReps

@@ -29,8 +29,10 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var users: [User]
     @Query private var splits: [Split]
+    @State private var pulsePlusService = PulsePlusService()
 
     private var user: User? { users.first }
+    private var hasPulsePlus: Bool { pulsePlusService.isSubscribed || pulsePlusService.isInFreeTrial }
 
     var body: some View {
         List {
@@ -47,6 +49,9 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("Settings")
+        .task {
+            await pulsePlusService.refreshSubscriptionStatus()
+        }
     }
 
     // MARK: - Account
@@ -124,9 +129,14 @@ struct SettingsView: View {
     private var workoutSection: some View {
         Section("Workout") {
             Picker("Calorie Formula", selection: calorieFormulaBinding) {
-                ForEach(CalorieFormula.allCases) { formula in
+                ForEach(hasPulsePlus ? CalorieFormula.allCases : [.basic]) { formula in
                     Text(formula.displayName).tag(formula)
                 }
+            }
+            if !hasPulsePlus {
+                Text("MET-Based formula requires Pulse+")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Picker("Rest Timer Mode", selection: restTimerModeBinding) {

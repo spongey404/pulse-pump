@@ -22,4 +22,16 @@ enum SetType: String, Codable, CaseIterable, Identifiable {
         case .failureSet: "Failure"
         }
     }
+
+    var shortName: String {
+        switch self {
+        case .standard: "STD"
+        case .warmup: "WU"
+        case .superset: "SS"
+        case .dropset: "DROP"
+        case .restPause: "RP"
+        case .amrap: "AMRAP"
+        case .failureSet: "FAIL"
+        }
+    }
 }
