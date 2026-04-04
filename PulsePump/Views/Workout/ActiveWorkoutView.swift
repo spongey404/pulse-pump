@@ -36,16 +36,14 @@ struct ActiveWorkoutView: View {
                     .onMove(perform: searchText.isEmpty ? { source, dest in
                         viewModel.moveExercise(from: source, to: dest)
                     } : nil)
-
-                    Button {
-                        showExercisePicker = true
-                    } label: {
-                        Label("Add Exercise", systemImage: "plus.circle")
-                            .foregroundStyle(Color.pumpPrimary)
-                    }
                 }
                 .listStyle(.plain)
-                .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search exercises")
+                .safeAreaInset(edge: .bottom) {
+                    WorkoutBottomBar(
+                        searchText: $searchText,
+                        onAddExercise: { showExercisePicker = true }
+                    )
+                }
             }
             .navigationTitle("Workout")
             .navigationBarTitleDisplayMode(.inline)
@@ -388,6 +386,48 @@ struct NoteEditorSheet: View {
             .onAppear { focused = true }
         }
         .presentationDetents([.medium])
+    }
+}
+
+// MARK: - Workout Bottom Bar
+
+struct WorkoutBottomBar: View {
+    @Binding var searchText: String
+    let onAddExercise: () -> Void
+    @FocusState private var searchFocused: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                    .font(.subheadline)
+                TextField("Search exercises...", text: $searchText)
+                    .focused($searchFocused)
+                if !searchText.isEmpty {
+                    Button { searchText = "" } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(Color(.tertiarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            Button(action: onAddExercise) {
+                Image(systemName: "plus")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(Color.pumpPrimary)
+                    .clipShape(Circle())
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(.ultraThinMaterial)
     }
 }
 

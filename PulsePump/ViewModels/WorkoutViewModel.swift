@@ -22,6 +22,9 @@ class WorkoutViewModel {
     // Rest timer
     let restTimer = RestTimerService()
 
+    // Live Activity
+    private let liveActivity = LiveActivityService()
+
     // Live calorie estimate
     var liveCalories: Double = 0
 
@@ -61,6 +64,7 @@ class WorkoutViewModel {
         isActive = true
         startTime = Date()
         startDurationTimer()
+        liveActivity.startLiveActivity(workoutName: workout?.template?.name ?? "Workout")
     }
 
     func resumeDraft(workout: Workout, modelContext: ModelContext) {
@@ -421,6 +425,17 @@ class WorkoutViewModel {
             MainActor.assumeIsolated {
                 guard let self, let start = self.startTime else { return }
                 self.elapsedSeconds = Int(Date().timeIntervalSince(start))
+                let currentExercise = self.exerciseEntries.first(where: {
+                    $0.sets.contains { !$0.isCompleted }
+                })?.exerciseName ?? "Rest"
+                let completed = self.exerciseEntries.flatMap(\.sets).filter(\.isCompleted).count
+                let total = self.exerciseEntries.flatMap(\.sets).count
+                Task { await self.liveActivity.updateLiveActivity(
+                    elapsedSeconds: self.elapsedSeconds,
+                    currentExercise: currentExercise,
+                    completedSets: completed,
+                    totalSets: total
+                )}
             }
         }
         durationTimer = timerInstance
@@ -429,6 +444,7 @@ class WorkoutViewModel {
     private func stopDurationTimer() {
         durationTimer?.invalidate()
         durationTimer = nil
+        Task { await liveActivity.endLiveActivity() }
     }
 
     var formattedDuration: String {
