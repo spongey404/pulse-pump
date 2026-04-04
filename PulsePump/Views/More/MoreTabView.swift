@@ -40,8 +40,7 @@ struct MoreTabView: View {
                 }
 
                 NavigationLink {
-                    // TODO: Settings view (Phase 12)
-                    Text("Settings — Coming Soon")
+                    SettingsView()
                 } label: {
                     Label("Settings", systemImage: "gear")
                 }
