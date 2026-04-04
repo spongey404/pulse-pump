@@ -383,7 +383,7 @@ struct ProgramsTabView: View {
             }
         }
         .navigationTitle("Programs")
-        .navigationDestination(for: WorkoutTemplate.self) { template in
+        .navigationDestination(item: $selectedTemplate) { template in
             TemplateDetailView(template: template, onStartWorkout: onStartFromTemplate)
         }
         .toolbar {
@@ -438,7 +438,9 @@ struct ProgramsTabView: View {
     private var templateGrid: some View {
         List {
             ForEach(templates) { template in
-                NavigationLink(value: template) {
+                Button {
+                    selectedTemplate = template
+                } label: {
                     TemplateCard(template: template, onStart: { onStartFromTemplate(template) })
                 }
                 .buttonStyle(.plain)
