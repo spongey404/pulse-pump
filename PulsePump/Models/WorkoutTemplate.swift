@@ -30,7 +30,7 @@ struct TemplateExercise: Codable, Identifiable {
     var exerciseName: String
     var order: Int
     var targetSets: Int
-    var targetReps: Int
+    var targetReps: Int?
     var targetRIR: Int?
 
     init(
@@ -38,7 +38,7 @@ struct TemplateExercise: Codable, Identifiable {
         exerciseName: String,
         order: Int,
         targetSets: Int = 3,
-        targetReps: Int = 10,
+        targetReps: Int? = nil,
         targetRIR: Int? = nil
     ) {
         self.id = UUID()

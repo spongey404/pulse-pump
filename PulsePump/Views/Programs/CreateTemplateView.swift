@@ -22,13 +22,33 @@ struct CreateTemplateView: View {
                             Text(entry.exerciseName)
                                 .font(.body.weight(.medium))
 
-                            HStack(spacing: 16) {
-                                Stepper("Sets: \(exercises[index].targetSets)", value: $exercises[index].targetSets, in: 1...10)
+                            Stepper("Sets: \(exercises[index].targetSets)", value: $exercises[index].targetSets, in: 1...10)
+                                .font(.caption)
+
+                            if let reps = exercises[index].targetReps {
+                                HStack {
+                                    Stepper("Reps: \(reps)", value: Binding(
+                                        get: { exercises[index].targetReps ?? 10 },
+                                        set: { exercises[index].targetReps = $0 }
+                                    ), in: 1...50)
                                     .font(.caption)
-                            }
-                            HStack(spacing: 16) {
-                                Stepper("Reps: \(exercises[index].targetReps)", value: $exercises[index].targetReps, in: 1...50)
-                                    .font(.caption)
+                                    Button {
+                                        exercises[index].targetReps = nil
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            } else {
+                                Button {
+                                    exercises[index].targetReps = 10
+                                } label: {
+                                    Label("Add target reps", systemImage: "plus")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                     }
@@ -97,5 +117,5 @@ struct TemplateExerciseEntry: Identifiable {
     var exerciseId: UUID
     var exerciseName: String
     var targetSets: Int = 3
-    var targetReps: Int = 10
+    var targetReps: Int? = nil
 }

@@ -13,7 +13,7 @@ struct TemplateDetailView: View {
             var dict: [String: Any] = [
                 "name": ex.exerciseName,
                 "sets": ex.targetSets,
-                "reps": ex.targetReps
+                "reps": ex.targetReps as Any
             ]
             if let rir = ex.targetRIR { dict["rir"] = rir }
             return dict
@@ -52,7 +52,9 @@ struct TemplateDetailView: View {
                                 .font(.body)
                             HStack(spacing: 8) {
                                 Text("\(exercise.targetSets) sets")
-                                Text("\(exercise.targetReps) reps")
+                                if let reps = exercise.targetReps {
+                                    Text("\(reps) reps")
+                                }
                                 if let rir = exercise.targetRIR {
                                     Text("\(rir) RIR")
                                 }
