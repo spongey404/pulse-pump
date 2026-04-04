@@ -29,10 +29,12 @@ struct ContentView: View {
                 Label("Home", systemImage: "house")
             }
 
-            Text("Body Map")
-                .tabItem {
-                    Label("Body Map", systemImage: "figure.stand")
-                }
+            NavigationStack {
+                BodyMapTabView()
+            }
+            .tabItem {
+                Label("Body Map", systemImage: "figure.stand")
+            }
 
             Text("More")
                 .tabItem {
