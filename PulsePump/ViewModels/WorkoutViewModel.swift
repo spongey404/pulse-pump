@@ -53,6 +53,7 @@ class WorkoutViewModel {
                 )
                 entry.exerciseType = exercise?.exerciseType ?? .weighted
                 entry.isUnilateral = exercise?.isUnilateral ?? false
+                entry.equipmentType = exercise?.equipmentType ?? .barbell
                 exerciseEntries.append(entry)
             }
         }
@@ -88,6 +89,7 @@ class WorkoutViewModel {
             )
             entry.exerciseType = exercise.exerciseType
             entry.isUnilateral = exercise.isUnilateral
+            entry.equipmentType = exercise.equipmentType
             exerciseEntries.append(entry)
         }
 
@@ -105,6 +107,7 @@ class WorkoutViewModel {
         )
         entry.exerciseType = exercise.exerciseType
         entry.isUnilateral = exercise.isUnilateral
+        entry.equipmentType = exercise.equipmentType
         exerciseEntries.append(entry)
     }
 
@@ -462,6 +465,7 @@ struct ExerciseEntry: Identifiable {
     var exerciseName: String
     var exerciseType: ExerciseType = .weighted
     var isUnilateral: Bool = false
+    var equipmentType: EquipmentType = .barbell
     var sets: [SetEntry]
     var notes: String = ""
 }

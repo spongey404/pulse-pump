@@ -219,6 +219,11 @@ struct ExerciseCardView: View {
                 }
             }
 
+            // Inline plate calculator — barbell and EZ bar only
+            if entry.equipmentType == .barbell || entry.equipmentType == .ezBar {
+                InlinePlateView(entry: entry, equipmentType: entry.equipmentType)
+            }
+
             HStack {
                 Button {
                     viewModel.addSet(to: exerciseIndex)
@@ -375,6 +380,68 @@ struct NoteEditorSheet: View {
             .onAppear { focused = true }
         }
         .presentationDetents([.medium])
+    }
+}
+
+// MARK: - Inline Plate Calculator
+
+struct InlinePlateView: View {
+    let entry: ExerciseEntry
+    let equipmentType: EquipmentType
+
+    private var barWeight: Double {
+        equipmentType == .ezBar ? 10.0 : 20.0
+    }
+
+    private var availablePlates: [Double] {
+        if let data = UserDefaults.standard.data(forKey: "customPlates"),
+           let plates = try? JSONDecoder().decode([Double].self, from: data) {
+            return plates
+        }
+        return [1.25, 2.5, 5, 10, 15, 20, 25]
+    }
+
+    /// Most recently entered weight across all sets, falling back to first with any value.
+    private var currentWeight: Double? {
+        let weights = entry.sets.compactMap { Double($0.weight) }.filter { $0 > 0 }
+        return weights.last
+    }
+
+    private var platesPerSide: [(plate: Double, count: Int)] {
+        guard let target = currentWeight, target > barWeight else { return [] }
+        let perSide = (target - barWeight) / 2.0
+        var remaining = perSide
+        var counts: [Double: Int] = [:]
+        for plate in availablePlates.sorted(by: >) {
+            while remaining >= plate - 0.001 {
+                counts[plate, default: 0] += 1
+                remaining -= plate
+            }
+        }
+        return counts.sorted { $0.key > $1.key }.map { (plate: $0.key, count: $0.value) }
+    }
+
+    var body: some View {
+        if let weight = currentWeight, weight > barWeight, !platesPerSide.isEmpty {
+            HStack(spacing: 8) {
+                Image(systemName: "scalemass")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text("Per side:")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                ForEach(platesPerSide, id: \.plate) { entry in
+                    Text("\(String(format: "%g", entry.plate))×\(entry.count)")
+                        .font(.caption2.monospacedDigit())
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.pumpPrimary.opacity(0.12))
+                        .clipShape(Capsule())
+                }
+                Spacer()
+            }
+            .padding(.vertical, 2)
+        }
     }
 }
 
