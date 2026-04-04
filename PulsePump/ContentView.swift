@@ -3,10 +3,12 @@ import SwiftUI
 struct ContentView: View {
     var body: some View {
         TabView {
-            Text("Programs")
-                .tabItem {
-                    Label("Programs", systemImage: "list.bullet.clipboard")
-                }
+            NavigationStack {
+                ProgramsTabView()
+            }
+            .tabItem {
+                Label("Programs", systemImage: "list.bullet.clipboard")
+            }
 
             Text("Social")
                 .tabItem {
@@ -28,6 +30,22 @@ struct ContentView: View {
                     Label("More", systemImage: "ellipsis")
                 }
         }
+    }
+}
+
+struct ProgramsTabView: View {
+    var body: some View {
+        List {
+            NavigationLink("Exercise Library") {
+                ExerciseLibraryView()
+            }
+
+            Section("Templates") {
+                Text("Coming soon")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .navigationTitle("Programs")
     }
 }
 
