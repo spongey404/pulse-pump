@@ -36,8 +36,9 @@ struct WorkoutFeedItem: Codable, Identifiable {
     var date: Date
     var likes: [String]
     var commentCount: Int
+    var caption: String
 
-    init(id: String = UUID().uuidString, userId: String, username: String, templateName: String? = nil, exerciseCount: Int, durationSeconds: Int, caloriesBurned: Int, musclesWorked: [String], prCount: Int = 0, improvedCount: Int = 0, totalExercises: Int = 0, date: Date) {
+    init(id: String = UUID().uuidString, userId: String, username: String, templateName: String? = nil, exerciseCount: Int, durationSeconds: Int, caloriesBurned: Int, musclesWorked: [String], prCount: Int = 0, improvedCount: Int = 0, totalExercises: Int = 0, date: Date, caption: String = "") {
         self.id = id
         self.userId = userId
         self.username = username
@@ -52,6 +53,7 @@ struct WorkoutFeedItem: Codable, Identifiable {
         self.date = date
         self.likes = []
         self.commentCount = 0
+        self.caption = caption
     }
 }
 

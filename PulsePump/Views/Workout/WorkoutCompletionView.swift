@@ -1,10 +1,13 @@
 import SwiftUI
+import FirebaseAuth
 
 struct WorkoutCompletionView: View {
     let data: WorkoutCompletionData
     let onDismiss: () -> Void
     @State private var shareImage: UIImage?
     @State private var showShareSheet = false
+    @State private var caption = ""
+    @State private var showFeedShareConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -75,16 +78,38 @@ struct WorkoutCompletionView: View {
                         .padding(.horizontal)
                     }
 
-                    // Share card button
-                    Button {
-                        let card = ShareCardView(cardType: .postWorkout(data))
-                        shareImage = renderShareCard(card, size: CGSize(width: 360, height: 220))
-                        showShareSheet = shareImage != nil
-                    } label: {
-                        Label("Share Workout", systemImage: "square.and.arrow.up")
-                            .frame(maxWidth: .infinity)
+                    // Caption + share section
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Share")
+                            .font(.subheadline.weight(.semibold))
+
+                        TextField("Add a caption...", text: $caption, axis: .vertical)
+                            .lineLimit(1...3)
+                            .padding(10)
+                            .background(Color(.secondarySystemBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                        HStack(spacing: 12) {
+                            Button {
+                                showFeedShareConfirmation = true
+                            } label: {
+                                Label("Post to Feed", systemImage: "person.2")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Color.pumpPrimary)
+
+                            Button {
+                                let card = ShareCardView(cardType: .postWorkout(data))
+                                shareImage = renderShareCard(card, size: CGSize(width: 360, height: 220))
+                                showShareSheet = shareImage != nil
+                            } label: {
+                                Label("Share Card", systemImage: "square.and.arrow.up")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+                        }
                     }
-                    .buttonStyle(.bordered)
                     .padding(.horizontal)
 
                     Spacer(minLength: 32)
@@ -102,6 +127,33 @@ struct WorkoutCompletionView: View {
                         .presentationDetents([.medium, .large])
                 }
             }
+            .alert("Post to Feed", isPresented: $showFeedShareConfirmation) {
+                Button("Post") { postToFeed() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(caption.isEmpty ? "Share this workout with your friends?" : "Post with caption: \"\(caption)\"")
+            }
+        }
+    }
+
+    private func postToFeed() {
+        let muscles = data.musclesWorked.map(\.displayName)
+        Task {
+            let feedItem = WorkoutFeedItem(
+                userId: Auth.auth().currentUser?.uid ?? "",
+                username: Auth.auth().currentUser?.displayName ?? "User",
+                templateName: nil,
+                exerciseCount: data.exerciseCount,
+                durationSeconds: Int(data.duration),
+                caloriesBurned: Int(data.calories),
+                musclesWorked: muscles,
+                prCount: data.prCount,
+                improvedCount: data.improvedCount,
+                totalExercises: data.totalExercises,
+                date: Date(),
+                caption: caption
+            )
+            try? await FirestoreService().shareWorkoutToFeed(feedItem)
         }
     }
 }

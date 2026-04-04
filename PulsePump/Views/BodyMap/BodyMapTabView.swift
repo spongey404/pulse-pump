@@ -55,6 +55,7 @@ struct BodyMapTabView: View {
     @State private var mode: BodyMapMode = .bodyMap
     @State private var heatmapMode: HeatmapMode = .volume
     @State private var selectedMuscle: MuscleGroup?
+    @State private var selectedSubRegion: MuscleSubRegion?
     @State private var colorScheme: HeatmapColorScheme = {
         HeatmapColorScheme(rawValue: UserDefaults.standard.string(forKey: "heatmapColorScheme") ?? "") ?? .cool
     }()
@@ -81,7 +82,10 @@ struct BodyMapTabView: View {
         }
         .navigationTitle("Body Map")
         .sheet(item: $selectedMuscle) { muscle in
-            MuscleDetailSheet(muscle: muscle)
+            MuscleDetailSheet(muscle: muscle, subRegion: selectedSubRegion)
+        }
+        .onChange(of: selectedMuscle) { _, newValue in
+            if newValue == nil { selectedSubRegion = nil }
         }
         .task {
             await pulsePlusService.refreshSubscriptionStatus()
@@ -120,12 +124,21 @@ struct BodyMapTabView: View {
             .padding(.horizontal)
 
             ScrollView {
+                let isDetailed = pulsePlusService.isSubscribed &&
+                    !(UserDefaults.standard.bool(forKey: "simpleBodyMap"))
+
                 BodyModelView(
                     heatmapMode: heatmapMode,
                     exerciseLogs: exerciseLogs,
                     colorScheme: colorScheme,
+                    detailedMode: isDetailed,
                     onMuscleTap: { muscle in
+                        selectedSubRegion = nil
                         selectedMuscle = muscle
+                    },
+                    onSubRegionTap: { subRegion in
+                        selectedSubRegion = subRegion
+                        selectedMuscle = subRegion.parentGroup
                     }
                 )
                 .padding()

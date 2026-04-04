@@ -13,6 +13,8 @@ final class Exercise {
     var isCustom: Bool
     var isApproved: Bool
     var isUnilateral: Bool
+    var primarySubRegions: [MuscleSubRegion]
+    var secondarySubRegions: [MuscleSubRegion]
     var createdAt: Date
     var updatedAt: Date
 
@@ -27,7 +29,9 @@ final class Exercise {
         exerciseType: ExerciseType = .weighted,
         isCustom: Bool = false,
         isApproved: Bool = true,
-        isUnilateral: Bool = false
+        isUnilateral: Bool = false,
+        primarySubRegions: [MuscleSubRegion] = [],
+        secondarySubRegions: [MuscleSubRegion] = []
     ) {
         self.id = UUID()
         self.name = name
@@ -39,6 +43,8 @@ final class Exercise {
         self.isCustom = isCustom
         self.isApproved = isApproved
         self.isUnilateral = isUnilateral
+        self.primarySubRegions = primarySubRegions
+        self.secondarySubRegions = secondarySubRegions
         self.createdAt = Date()
         self.updatedAt = Date()
         self.logs = []

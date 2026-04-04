@@ -68,6 +68,17 @@ struct FeedItemView: View {
                 Spacer()
             }
 
+            // Caption
+            if !item.caption.isEmpty {
+                Text(item.caption)
+                    .font(.subheadline)
+            }
+
+            // Body map
+            if !item.musclesWorked.isEmpty {
+                FeedBodyMapView(muscleNames: item.musclesWorked)
+            }
+
             // Workout summary
             Button {
                 showDetail = true
@@ -178,8 +189,18 @@ struct FeedWorkoutDetailView: View {
                     }
                 }
 
+                if !item.caption.isEmpty {
+                    Section {
+                        Text(item.caption)
+                            .font(.subheadline)
+                    }
+                }
+
                 if !item.musclesWorked.isEmpty {
                     Section("Muscles Worked") {
+                        FeedBodyMapView(muscleNames: item.musclesWorked)
+                            .padding(.vertical, 8)
+
                         FlowLayout(spacing: 6) {
                             ForEach(item.musclesWorked.sorted(), id: \.self) { muscle in
                                 Text(muscle)

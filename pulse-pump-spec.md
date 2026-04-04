@@ -186,6 +186,13 @@ Color scheme is multi-colored, user-selectable. Include a legend mapping each co
 
 **Neglected muscle group nudges (Pulse+ only):** Quiet badge indicator (not a push notification) when a muscle group hasn't been trained in a while.
 
+**Detailed muscle sub-regions (Pulse+ only):** Free users see general muscle groups on the body map (e.g., "Chest", "Triceps"). Pulse+ users see anatomical sub-regions:
+- Large muscle groups (chest, quads, hamstrings, glutes, abs) get separate tappable sub-region zones on the silhouette (e.g., upper/lower chest, rectus femoris/vastus lateralis/vastus medialis).
+- Small muscle groups (biceps, triceps, forearms, traps, calves) keep their single zone on the map, but tapping opens a detail sheet with sub-region breakdown (e.g., long/lateral/medial head for triceps).
+- Sub-region tagging on exercises is available to ALL users when creating/editing exercises (optional — leaving empty means "general/all").
+- All 84 seeded exercises are pre-populated with sub-region tags.
+- Free users who don't want to see the Pulse+ upsell can enable "Simple Body Map" in Settings → Appearance.
+
 **Tapping a muscle group shows:**
 - Trend graphs at the top
 - Exercise list below: colored if the user has done them before, greyed out and at the bottom if they haven't
@@ -321,7 +328,8 @@ Pulse+ is a unified subscription across the Pulse ecosystem. Users choose how ma
 7. Deload week marking + tracking
 8. Detailed analytics + tips
 9. Advanced body model customization
-10. Additional home screen widget options
+10. Detailed muscle sub-regions on body map (anatomical breakdown for large + small muscle groups)
+11. Additional home screen widget options
 
 **Everything else is free.** Do not paywall: core logging, rest timer, exercise library, all templates, template sharing, basic analytics (trends, PRs, improvement score, streaks), body model heatmap (basic customization), social feed/following/likes/comments, plate calculator, warmup generator, exercise substitution (manual), shareable cards, equipment profiles, workout reminders, smart prediction, ghost text, global search, data import, basic widgets, Live Activity/Dynamic Island.
 

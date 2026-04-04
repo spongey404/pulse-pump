@@ -5,6 +5,13 @@ struct ActiveWorkoutView: View {
     @Bindable var viewModel: WorkoutViewModel
     @Environment(\.modelContext) private var modelContext
     @State private var showExercisePicker = false
+    @State private var searchText = ""
+
+    private var displayedEntries: [(index: Int, entry: ExerciseEntry)] {
+        let all = viewModel.exerciseEntries.enumerated().map { (index: $0.offset, entry: $0.element) }
+        guard !searchText.isEmpty else { return all }
+        return all.filter { $0.entry.exerciseName.localizedCaseInsensitiveContains(searchText) }
+    }
 
     var body: some View {
         NavigationStack {
@@ -16,19 +23,19 @@ struct ActiveWorkoutView: View {
                 }
 
                 List {
-                    ForEach(Array(viewModel.exerciseEntries.enumerated()), id: \.element.id) { index, entry in
+                    ForEach(displayedEntries, id: \.entry.id) { item in
                         ExerciseCardView(
                             entry: Binding(
-                                get: { viewModel.exerciseEntries[index] },
-                                set: { viewModel.exerciseEntries[index] = $0 }
+                                get: { viewModel.exerciseEntries[item.index] },
+                                set: { viewModel.exerciseEntries[item.index] = $0 }
                             ),
-                            exerciseIndex: index,
+                            exerciseIndex: item.index,
                             viewModel: viewModel
                         )
                     }
-                    .onMove { source, destination in
-                        viewModel.moveExercise(from: source, to: destination)
-                    }
+                    .onMove(perform: searchText.isEmpty ? { source, dest in
+                        viewModel.moveExercise(from: source, to: dest)
+                    } : nil)
 
                     Button {
                         showExercisePicker = true
@@ -38,6 +45,7 @@ struct ActiveWorkoutView: View {
                     }
                 }
                 .listStyle(.plain)
+                .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search exercises")
             }
             .navigationTitle("Workout")
             .navigationBarTitleDisplayMode(.inline)
@@ -151,7 +159,9 @@ struct ExerciseCardView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var showSubstitutionSheet = false
     @State private var showRestOverride = false
+    @State private var showNoteEditor = false
     @State private var restOverrideSeconds: Int = 90
+    @State private var lastSessionNote: String? = nil
     @State private var pulsePlusService = PulsePlusService()
     @State private var smartSuggestionsEnabled: Bool = UserDefaults.standard.object(forKey: "smartWeightSuggestions") as? Bool ?? true
 
@@ -219,29 +229,48 @@ struct ExerciseCardView: View {
                 }
 
                 Spacer()
-
-                if entry.notes.isEmpty {
-                    Button {
-                        entry.notes = " "
-                    } label: {
-                        Image(systemName: "note.text")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
             }
 
-            if !entry.notes.isEmpty {
-                TextField("Exercise notes...", text: $entry.notes, axis: .vertical)
-                    .font(.caption)
-                    .lineLimit(1...3)
+            // Note preview — shown inline when a note exists
+            if !entry.notes.trimmingCharacters(in: .whitespaces).isEmpty {
+                HStack(spacing: 6) {
+                    Image(systemName: "note.text")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Text(entry.notes.trimmingCharacters(in: .whitespaces))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                .onTapGesture { showNoteEditor = true }
             }
         } header: {
             HStack {
                 Text(entry.exerciseName)
                     .font(.subheadline.weight(.semibold))
+                // Note indicator dot
+                if !entry.notes.trimmingCharacters(in: .whitespaces).isEmpty {
+                    Image(systemName: "circle.fill")
+                        .font(.system(size: 5))
+                        .foregroundStyle(Color.pumpPrimary)
+                }
                 Spacer()
                 Menu {
+                    // Last session note (read-only context)
+                    if let lastNote = lastSessionNote {
+                        Section("Last session note") {
+                            Text(lastNote)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Button {
+                        showNoteEditor = true
+                    } label: {
+                        Label(entry.notes.trimmingCharacters(in: .whitespaces).isEmpty ? "Add Note" : "Edit Note",
+                              systemImage: "note.text")
+                    }
                     Button {
                         showSubstitutionSheet = true
                     } label: {
@@ -266,6 +295,19 @@ struct ExerciseCardView: View {
         }
         .task {
             await pulsePlusService.refreshSubscriptionStatus()
+            // Fetch most recent note for this exercise from past logs
+            let exId = entry.exerciseId
+            let desc = FetchDescriptor<ExerciseLog>(
+                predicate: #Predicate<ExerciseLog> { $0.exercise?.id == exId && !$0.notes.isEmpty },
+                sortBy: [SortDescriptor(\ExerciseLog.createdAt, order: .reverse)]
+            )
+            if let log = try? modelContext.fetch(desc).first,
+               !log.notes.trimmingCharacters(in: .whitespaces).isEmpty {
+                lastSessionNote = log.notes.trimmingCharacters(in: .whitespaces)
+            }
+        }
+        .sheet(isPresented: $showNoteEditor) {
+            NoteEditorSheet(notes: $entry.notes, exerciseName: entry.exerciseName)
         }
         .sheet(isPresented: $showSubstitutionSheet) {
             ExerciseSubstitutionView(
@@ -290,6 +332,49 @@ struct ExerciseCardView: View {
         } message: {
             Text("Set custom rest duration in seconds for \(entry.exerciseName)")
         }
+    }
+}
+
+// MARK: - Note Editor Sheet
+
+struct NoteEditorSheet: View {
+    @Binding var notes: String
+    let exerciseName: String
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 12) {
+                TextField("Add a note about this exercise...", text: $notes, axis: .vertical)
+                    .lineLimit(4...10)
+                    .focused($focused)
+                    .padding()
+                    .background(Color(.secondarySystemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal)
+                Spacer()
+            }
+            .padding(.top)
+            .navigationTitle(exerciseName)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .fontWeight(.semibold)
+                }
+                if !notes.trimmingCharacters(in: .whitespaces).isEmpty {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Clear", role: .destructive) {
+                            notes = ""
+                            dismiss()
+                        }
+                    }
+                }
+            }
+            .onAppear { focused = true }
+        }
+        .presentationDetents([.medium])
     }
 }
 
