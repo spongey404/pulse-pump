@@ -70,9 +70,12 @@ struct ShareCardView: View {
                 }
             }
             if data.prCount > 0 {
-                Text("\(data.prCount) PR\(data.prCount == 1 ? "" : "s")")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.pumpPrimary)
+                HStack(spacing: 4) {
+                    Image(systemName: "medal.fill")
+                        .foregroundStyle(.yellow)
+                    Text("\(data.prCount) PR\(data.prCount == 1 ? "" : "s")")
+                        .font(.subheadline.weight(.semibold))
+                }
             }
         }
     }

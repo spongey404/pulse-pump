@@ -102,13 +102,16 @@ struct FeedItemView: View {
                     // PRs and improvement — subtle, no icons
                     HStack(spacing: 8) {
                         if item.prCount > 0 {
-                            Text("\(item.prCount) PR\(item.prCount == 1 ? "" : "s")")
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(Color.pumpPrimary)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
-                                .background(Color.pumpPrimary.opacity(0.12))
-                                .clipShape(Capsule())
+                            HStack(spacing: 4) {
+                                Image(systemName: "medal.fill")
+                                    .foregroundStyle(.yellow)
+                                Text("\(item.prCount) PR\(item.prCount == 1 ? "" : "s")")
+                                    .font(.caption.weight(.medium))
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(Color.yellow.opacity(0.12))
+                            .clipShape(Capsule())
                         }
                         if item.totalExercises > 0 {
                             Text("Improved \(item.improvedCount)/\(item.totalExercises)")
@@ -182,7 +185,12 @@ struct FeedWorkoutDetailView: View {
                         LabeledContent("Calories", value: "\(item.caloriesBurned)")
                     }
                     if item.prCount > 0 {
-                        LabeledContent("PRs Hit", value: "\(item.prCount)")
+                        LabeledContent {
+                            Text("\(item.prCount)")
+                        } label: {
+                            Label("PRs Hit", systemImage: "medal.fill")
+                                .foregroundStyle(.yellow)
+                        }
                     }
                     if item.totalExercises > 0 {
                         LabeledContent("Improved", value: "\(item.improvedCount)/\(item.totalExercises) exercises")

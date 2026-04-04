@@ -39,14 +39,15 @@ struct WorkoutCompletionView: View {
                     // PRs — subtle inline highlight, no icons or gamification
                     if data.prCount > 0 {
                         HStack(spacing: 6) {
+                            Image(systemName: "medal.fill")
+                                .foregroundStyle(.yellow)
                             Text("\(data.prCount) PR\(data.prCount == 1 ? "" : "s")")
                                 .font(.subheadline.weight(.medium))
-                                .foregroundStyle(Color.pumpPrimary)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(Color.pumpPrimary.opacity(0.12))
-                                .clipShape(Capsule())
                         }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.yellow.opacity(0.12))
+                        .clipShape(Capsule())
                         .padding(.horizontal)
                     }
 
