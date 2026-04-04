@@ -152,6 +152,8 @@ struct ExerciseCardView: View {
     @State private var showSubstitutionSheet = false
     @State private var showRestOverride = false
     @State private var restOverrideSeconds: Int = 90
+    @State private var pulsePlusService = PulsePlusService()
+    @State private var smartSuggestionsEnabled: Bool = UserDefaults.standard.object(forKey: "smartWeightSuggestions") as? Bool ?? true
 
     var body: some View {
         Section {
@@ -172,6 +174,9 @@ struct ExerciseCardView: View {
             .foregroundStyle(.secondary)
 
             ForEach(Array(entry.sets.enumerated()), id: \.element.id) { setIndex, setEntry in
+                let suggestion: String? = (pulsePlusService.isSubscribed || pulsePlusService.isInFreeTrial) && smartSuggestionsEnabled
+                    ? viewModel.smartWeightSuggestion(for: entry.exerciseId, setIndex: setIndex, modelContext: modelContext)
+                    : nil
                 SetRowView(
                     setEntry: Binding(
                         get: { entry.sets[setIndex] },
@@ -182,7 +187,8 @@ struct ExerciseCardView: View {
                     isCompound: true,
                     onLog: {
                         viewModel.logSet(exerciseIndex: exerciseIndex, setIndex: setIndex, isCompound: true)
-                    }
+                    },
+                    smartSuggestion: suggestion
                 )
                 .swipeActions(edge: .trailing) {
                     Button(role: .destructive) {
@@ -247,6 +253,9 @@ struct ExerciseCardView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+        }
+        .task {
+            await pulsePlusService.refreshSubscriptionStatus()
         }
         .sheet(isPresented: $showSubstitutionSheet) {
             ExerciseSubstitutionView(
@@ -372,46 +381,62 @@ struct SetRowView: View {
     let ghostText: (weight: String, reps: String)?
     let isCompound: Bool
     let onLog: () -> Void
+    var smartSuggestion: String? = nil
 
     var body: some View {
-        HStack(spacing: 0) {
-            Text("\(setNumber)")
-                .font(.callout.weight(.medium))
-                .foregroundStyle(setEntry.isCompleted ? Color.pumpPrimary : .secondary)
-                .frame(width: 36, alignment: .leading)
-
-            TextField(ghostText?.weight ?? "0", text: $setEntry.weight)
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.center)
-                .font(.callout.monospacedDigit())
-                .frame(maxWidth: .infinity)
-                .foregroundStyle(setEntry.isCompleted ? .secondary : .primary)
-
-            TextField(ghostText?.reps ?? "0", text: $setEntry.reps)
-                .keyboardType(.numberPad)
-                .multilineTextAlignment(.center)
-                .font(.callout.monospacedDigit())
-                .frame(maxWidth: .infinity)
-                .foregroundStyle(setEntry.isCompleted ? .secondary : .primary)
-
-            TextField("-", text: $setEntry.rir)
-                .keyboardType(.numberPad)
-                .multilineTextAlignment(.center)
-                .font(.callout.monospacedDigit())
-                .frame(width: 50)
-                .foregroundStyle(setEntry.isCompleted ? .secondary : .primary)
-
-            Button {
-                if !setEntry.isCompleted {
-                    onLog()
-                }
-            } label: {
-                Image(systemName: setEntry.isCompleted ? "checkmark.circle.fill" : "circle")
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 0) {
+                Text("\(setNumber)")
+                    .font(.callout.weight(.medium))
                     .foregroundStyle(setEntry.isCompleted ? Color.pumpPrimary : .secondary)
-                    .font(.title3)
+                    .frame(width: 36, alignment: .leading)
+
+                TextField(ghostText?.weight ?? "0", text: $setEntry.weight)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.center)
+                    .font(.callout.monospacedDigit())
+                    .frame(maxWidth: .infinity)
+                    .foregroundStyle(setEntry.isCompleted ? .secondary : .primary)
+
+                TextField(ghostText?.reps ?? "0", text: $setEntry.reps)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.center)
+                    .font(.callout.monospacedDigit())
+                    .frame(maxWidth: .infinity)
+                    .foregroundStyle(setEntry.isCompleted ? .secondary : .primary)
+
+                TextField("-", text: $setEntry.rir)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.center)
+                    .font(.callout.monospacedDigit())
+                    .frame(width: 50)
+                    .foregroundStyle(setEntry.isCompleted ? .secondary : .primary)
+
+                Button {
+                    if !setEntry.isCompleted {
+                        onLog()
+                    }
+                } label: {
+                    Image(systemName: setEntry.isCompleted ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(setEntry.isCompleted ? Color.pumpPrimary : .secondary)
+                        .font(.title3)
+                }
+                .frame(width: 44)
+                .buttonStyle(.plain)
             }
-            .frame(width: 44)
-            .buttonStyle(.plain)
+
+            // Smart suggestion (Pulse+ only, shown when field is empty)
+            if let suggestion = smartSuggestion, setEntry.weight.isEmpty, !setEntry.isCompleted {
+                Button {
+                    setEntry.weight = suggestion
+                } label: {
+                    Text("Suggested: \(suggestion)")
+                        .font(.caption2)
+                        .foregroundStyle(Color.pumpPrimary.opacity(0.7))
+                        .padding(.leading, 36)
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 }

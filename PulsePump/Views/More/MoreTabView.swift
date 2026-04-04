@@ -35,8 +35,7 @@ struct MoreTabView: View {
                 }
 
                 NavigationLink {
-                    // TODO: Profile view (Phase 9 backend)
-                    Text("Profile — Coming Soon")
+                    ProfileView()
                 } label: {
                     Label("Profile", systemImage: "person.crop.circle")
                 }

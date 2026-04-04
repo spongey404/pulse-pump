@@ -3,6 +3,8 @@ import SwiftUI
 struct WorkoutCompletionView: View {
     let data: WorkoutCompletionData
     let onDismiss: () -> Void
+    @State private var shareImage: UIImage?
+    @State private var showShareSheet = false
 
     var body: some View {
         NavigationStack {
@@ -74,6 +76,18 @@ struct WorkoutCompletionView: View {
                         .padding(.horizontal)
                     }
 
+                    // Share card button
+                    Button {
+                        let card = ShareCardView(cardType: .postWorkout(data))
+                        shareImage = renderShareCard(card, size: CGSize(width: 360, height: 220))
+                        showShareSheet = shareImage != nil
+                    } label: {
+                        Label("Share Workout", systemImage: "square.and.arrow.up")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .padding(.horizontal)
+
                     Spacer(minLength: 32)
                 }
             }
@@ -83,9 +97,16 @@ struct WorkoutCompletionView: View {
                         .fontWeight(.semibold)
                 }
             }
+            .sheet(isPresented: $showShareSheet) {
+                if let image = shareImage {
+                    ShareSheet(items: [image])
+                        .presentationDetents([.medium, .large])
+                }
+            }
         }
     }
 }
+
 
 struct CompletionStatCard: View {
     let title: String

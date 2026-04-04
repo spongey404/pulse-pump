@@ -102,10 +102,13 @@ class RestTimerService {
 
     private func playAlert() {
         switch alertType {
-        case .sound, .both:
+        case .sound:
             AudioServicesPlaySystemSound(1005)
         case .vibration:
-            break
+            AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+        case .both:
+            AudioServicesPlaySystemSound(1005)
+            AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
         case .silent:
             break
         }

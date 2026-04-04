@@ -7,6 +7,8 @@ struct GlobalSearchView: View {
     private var workouts: [Workout]
 
     @State private var searchText = ""
+    @State private var friendResults: [FirestoreUserProfile] = []
+    private let firestoreService = FirestoreService()
 
     private var matchingExercises: [Exercise] {
         guard !searchText.isEmpty else { return [] }
@@ -32,11 +34,35 @@ struct GlobalSearchView: View {
                 ContentUnavailableView(
                     "Search",
                     systemImage: "magnifyingglass",
-                    description: Text("Search exercises and workout history.")
+                    description: Text("Search exercises, workouts, and friends.")
                 )
-            } else if matchingExercises.isEmpty && matchingWorkouts.isEmpty {
+            } else if matchingExercises.isEmpty && matchingWorkouts.isEmpty && friendResults.isEmpty {
                 ContentUnavailableView.search(text: searchText)
             } else {
+                if !friendResults.isEmpty {
+                    Section("People") {
+                        ForEach(friendResults, id: \.uid) { profile in
+                            HStack(spacing: 12) {
+                                Circle()
+                                    .fill(Color(.systemGray4))
+                                    .frame(width: 36, height: 36)
+                                    .overlay(
+                                        Image(systemName: "person.fill")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    )
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(profile.displayName)
+                                        .font(.body)
+                                    Text("@\(profile.username)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if !matchingExercises.isEmpty {
                     Section("Exercises") {
                         ForEach(matchingExercises) { exercise in
@@ -71,10 +97,19 @@ struct GlobalSearchView: View {
                 }
             }
         }
-        .searchable(text: $searchText, prompt: "Exercises, workouts...")
+        .searchable(text: $searchText, prompt: "Exercises, workouts, people...")
         .navigationTitle("Search")
         .navigationDestination(for: Exercise.self) { exercise in
             ExerciseDetailView(exercise: exercise)
+        }
+        .onChange(of: searchText) { _, newValue in
+            guard !newValue.isEmpty else {
+                friendResults = []
+                return
+            }
+            Task {
+                friendResults = (try? await firestoreService.searchUsers(query: newValue)) ?? []
+            }
         }
     }
 }

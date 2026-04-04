@@ -114,6 +114,8 @@ struct SettingsView: View {
                     Text(theme.displayName).tag(theme)
                 }
             }
+
+            Toggle("Simple Body Map", isOn: simpleBodyMapBinding)
         }
     }
 
@@ -156,6 +158,8 @@ struct SettingsView: View {
                 Stepper("", value: isolationRestBinding, in: 30...600, step: 15)
                     .labelsHidden()
             }
+
+            Toggle("Smart Weight Suggestions", isOn: smartSuggestionsBinding)
         }
     }
 
@@ -337,6 +341,20 @@ struct SettingsView: View {
         Binding(
             get: { UserDefaults.standard.object(forKey: "autoShareToFeed") as? Bool ?? true },
             set: { UserDefaults.standard.set($0, forKey: "autoShareToFeed") }
+        )
+    }
+
+    private var simpleBodyMapBinding: Binding<Bool> {
+        Binding(
+            get: { UserDefaults.standard.bool(forKey: "simpleBodyMap") },
+            set: { UserDefaults.standard.set($0, forKey: "simpleBodyMap") }
+        )
+    }
+
+    private var smartSuggestionsBinding: Binding<Bool> {
+        Binding(
+            get: { UserDefaults.standard.object(forKey: "smartWeightSuggestions") as? Bool ?? true },
+            set: { UserDefaults.standard.set($0, forKey: "smartWeightSuggestions") }
         )
     }
 

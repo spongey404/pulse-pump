@@ -129,6 +129,23 @@ class SocialViewModel {
         }
     }
 
+    // MARK: - Comments
+
+    func fetchComments(postId: String) async -> [FeedComment] {
+        (try? await firestoreService.fetchComments(postId: postId)) ?? []
+    }
+
+    func postComment(postId: String, text: String) async {
+        guard let uid = currentUid, !text.isEmpty else { return }
+        let username = Auth.auth().currentUser?.displayName ?? "User"
+        let comment = FeedComment(userId: uid, username: username, text: text)
+        try? await firestoreService.addComment(postId: postId, comment: comment)
+        // Update local comment count
+        if let index = feedItems.firstIndex(where: { $0.id == postId }) {
+            feedItems[index].commentCount += 1
+        }
+    }
+
     // MARK: - Challenges
 
     func loadChallenges() async {

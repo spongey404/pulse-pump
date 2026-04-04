@@ -126,6 +126,24 @@ class FirestoreService {
         ])
     }
 
+    // MARK: - Comments
+
+    func addComment(postId: String, comment: FeedComment) async throws {
+        let ref = db.collection("feed").document(postId).collection("comments").document(comment.id)
+        try ref.setData(from: comment)
+        try await db.collection("feed").document(postId).updateData([
+            "commentCount": FieldValue.increment(Int64(1))
+        ])
+    }
+
+    func fetchComments(postId: String) async throws -> [FeedComment] {
+        let snapshot = try await db.collection("feed").document(postId).collection("comments")
+            .order(by: "date", descending: false)
+            .limit(to: 50)
+            .getDocuments()
+        return snapshot.documents.compactMap { try? $0.data(as: FeedComment.self) }
+    }
+
     // MARK: - Challenges
 
     func createChallenge(_ challenge: FirestoreChallenge) async throws -> String {

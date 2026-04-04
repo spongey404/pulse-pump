@@ -41,6 +41,7 @@ struct FeedItemView: View {
     let currentUid: String
     let onLike: () -> Void
     @State private var showDetail = false
+    @State private var showComments = false
 
     private var isLiked: Bool { item.likes.contains(currentUid) }
 
@@ -132,15 +133,23 @@ struct FeedItemView: View {
                     .font(.caption)
                     .foregroundStyle(isLiked ? Color.pumpPrimary : .secondary)
                 }
-                Label("\(item.commentCount)", systemImage: "bubble.right")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Button {
+                    showComments = true
+                } label: {
+                    Label("\(item.commentCount == 0 ? "Comment" : "\(item.commentCount)")", systemImage: "bubble.right")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
                 Spacer()
             }
         }
         .padding(.vertical, 4)
         .sheet(isPresented: $showDetail) {
             FeedWorkoutDetailView(item: item)
+        }
+        .sheet(isPresented: $showComments) {
+            CommentsView(postId: item.id)
         }
     }
 }
