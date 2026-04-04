@@ -139,7 +139,7 @@ struct SettingsView: View {
             }
 
             NavigationLink {
-                Text("Import / Export — Coming Soon")
+                DataExportView()
             } label: {
                 Text("Import / Export Data")
             }
