@@ -122,18 +122,21 @@ struct HomeTabView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                // Predicted workout + start button always pinned at top
-                StartWorkoutView(viewModel: workoutViewModel)
-
-                // Configurable widgets
+                // Configurable widgets scroll freely
                 ForEach(widgetOrder) { widgetType in
                     if !disabledWidgets.contains(widgetType.rawValue) {
                         homeWidget(for: widgetType)
                             .padding(.horizontal)
                     }
                 }
+                // Bottom padding so content doesn't hide behind start button
+                Color.clear.frame(height: 100)
             }
             .padding(.top)
+        }
+        // Start button docked at bottom for one-handed reach
+        .safeAreaInset(edge: .bottom) {
+            StartWorkoutDock(viewModel: workoutViewModel)
         }
         .navigationTitle("Home")
         .toolbar {
@@ -178,6 +181,77 @@ struct HomeTabView: View {
             UserDefaults.standard.set(data, forKey: "homeWidgetOrder")
         }
         UserDefaults.standard.set(Array(disabledWidgets), forKey: "homeDisabledWidgets")
+    }
+}
+
+// MARK: - Start Workout Bottom Dock
+
+struct StartWorkoutDock: View {
+    @Bindable var viewModel: WorkoutViewModel
+    @Environment(\.modelContext) private var modelContext
+    @Query private var users: [User]
+    @Query(filter: #Predicate<Workout> { $0.isDraft }, sort: \Workout.updatedAt, order: .reverse)
+    private var drafts: [Workout]
+
+    private var user: User? { users.first }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Draft pills — compact, above the button
+            if !drafts.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(drafts.prefix(3)) { draft in
+                            Button {
+                                if let user {
+                                    draft.user = user
+                                    viewModel.resumeDraft(workout: draft, modelContext: modelContext)
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "clock.arrow.circlepath")
+                                        .font(.caption2)
+                                    Text(draft.date, style: .relative)
+                                        .font(.caption)
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color(.secondarySystemBackground))
+                                .foregroundStyle(.secondary)
+                                .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                .padding(.top, 8)
+            }
+
+            // Main start button
+            if let user {
+                let prediction = viewModel.predictNextWorkout(user: user)
+                Button {
+                    viewModel.startWorkout(modelContext: modelContext, user: user)
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "play.fill")
+                            .font(.body.weight(.semibold))
+                        Text(prediction.map { "Start \($0)" } ?? "Start Workout")
+                            .font(.body.weight(.semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(Color.pumpPrimary)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal)
+                .padding(.vertical, 12)
+            }
+        }
+        .background(.ultraThinMaterial)
     }
 }
 
@@ -294,18 +368,230 @@ struct BodyMapMiniWidget: View {
 
 struct ProgramsTabView: View {
     let onStartFromTemplate: (WorkoutTemplate) -> Void
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \WorkoutTemplate.name) private var templates: [WorkoutTemplate]
+    @State private var showPresetPicker = false
+    @State private var showCreateBlank = false
+    @State private var selectedTemplate: WorkoutTemplate?
 
     var body: some View {
-        List {
-            NavigationLink("Exercise Library") {
-                ExerciseLibraryView()
-            }
-
-            NavigationLink("Templates") {
-                TemplateListView(onStartWorkout: onStartFromTemplate)
+        Group {
+            if templates.isEmpty {
+                emptyState
+            } else {
+                templateGrid
             }
         }
         .navigationTitle("Programs")
+        .navigationDestination(for: WorkoutTemplate.self) { template in
+            TemplateDetailView(template: template, onStartWorkout: onStartFromTemplate)
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showPresetPicker = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
+            ToolbarItem(placement: .secondaryAction) {
+                NavigationLink {
+                    ExerciseLibraryView()
+                } label: {
+                    Label("Exercise Library", systemImage: "books.vertical")
+                }
+            }
+        }
+        .sheet(isPresented: $showPresetPicker) {
+            PresetTemplatePicker(onSelectPreset: { preset in
+                let copy = WorkoutTemplate(name: preset.name, templateExercises: preset.templateExercises)
+                modelContext.insert(copy)
+                showPresetPicker = false
+                selectedTemplate = copy
+            }, onBlank: {
+                showPresetPicker = false
+                showCreateBlank = true
+            })
+        }
+        .sheet(isPresented: $showCreateBlank) {
+            CreateTemplateView()
+        }
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            Image(systemName: "list.bullet.clipboard")
+                .font(.system(size: 56))
+                .foregroundStyle(Color(.systemGray3))
+            Text("No programs yet")
+                .font(.title3.weight(.semibold))
+            Text("Tap + to add a preset or create your own.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Spacer()
+        }
+        .padding()
+    }
+
+    private var templateGrid: some View {
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                ForEach(templates) { template in
+                    NavigationLink(value: template) {
+                        TemplateCard(template: template, onStart: { onStartFromTemplate(template) })
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding()
+        }
+    }
+}
+
+// MARK: - Template Card
+
+struct TemplateCard: View {
+    let template: WorkoutTemplate
+    let onStart: () -> Void
+    @Environment(\.modelContext) private var modelContext
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(template.name)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Button {
+                    onStart()
+                } label: {
+                    Image(systemName: "play.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 36, height: 36)
+                        .background(Color.pumpPrimary)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+            }
+
+            HStack(spacing: 16) {
+                Label("\(template.templateExercises.count) exercises", systemImage: "figure.strengthtraining.traditional")
+                let sets = template.templateExercises.reduce(0) { $0 + $1.targetSets }
+                Label("\(sets) sets", systemImage: "repeat")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+
+            // Exercise name chips
+            if !template.templateExercises.isEmpty {
+                let exercises = template.templateExercises.sorted { $0.order < $1.order }.prefix(4)
+                FlowLayout(spacing: 6) {
+                    ForEach(Array(exercises)) { ex in
+                        Text(ex.exerciseName)
+                            .font(.caption2)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color(.tertiarySystemBackground))
+                            .clipShape(Capsule())
+                            .foregroundStyle(.secondary)
+                    }
+                    if template.templateExercises.count > 4 {
+                        Text("+\(template.templateExercises.count - 4) more")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+// MARK: - Preset Template Picker
+
+struct PresetTemplatePicker: View {
+    let onSelectPreset: (WorkoutTemplate) -> Void
+    let onBlank: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    private let groups: [(name: String, templates: [WorkoutTemplate])] = [
+        ("Push / Pull / Legs", TemplateSeedService.pplTemplates),
+        ("Upper / Lower", TemplateSeedService.upperLowerTemplates),
+        ("Full Body", TemplateSeedService.fullBodyTemplates),
+    ]
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Button {
+                        onBlank()
+                    } label: {
+                        HStack(spacing: 14) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color(.tertiarySystemBackground))
+                                    .frame(width: 44, height: 44)
+                                Image(systemName: "plus")
+                                    .foregroundStyle(.secondary)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Blank template")
+                                    .font(.body.weight(.medium))
+                                    .foregroundStyle(.primary)
+                                Text("Build your own from scratch")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+
+                ForEach(groups, id: \.name) { group in
+                    Section(group.name) {
+                        ForEach(group.templates) { template in
+                            Button {
+                                onSelectPreset(template)
+                            } label: {
+                                HStack(spacing: 14) {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(Color.pumpPrimary.opacity(0.12))
+                                            .frame(width: 44, height: 44)
+                                        Image(systemName: "list.bullet.clipboard")
+                                            .foregroundStyle(Color.pumpPrimary)
+                                    }
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(template.name)
+                                            .font(.body.weight(.medium))
+                                            .foregroundStyle(.primary)
+                                        Text("\(template.templateExercises.count) exercises · \(template.templateExercises.reduce(0) { $0 + $1.targetSets }) sets")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Choose a Program")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
     }
 }
 

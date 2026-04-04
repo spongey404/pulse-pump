@@ -23,12 +23,22 @@ struct ExercisePickerView: View {
                 Button {
                     onSelect(exercise)
                 } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(exercise.name)
-                            .foregroundStyle(.primary)
-                        Text(exercise.primaryMuscleGroups.map(\.displayName).joined(separator: ", "))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.pumpPrimary.opacity(0.12))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: exercise.movementPattern.sfSymbol)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(Color.pumpPrimary)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(exercise.name)
+                                .foregroundStyle(.primary)
+                            Text(exercise.primaryMuscleGroups.map(\.displayName).joined(separator: ", "))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }

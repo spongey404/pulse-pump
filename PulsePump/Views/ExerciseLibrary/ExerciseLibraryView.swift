@@ -120,33 +120,43 @@ struct ExerciseRowView: View {
     let exercise: Exercise
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(exercise.name)
-                    .font(.body)
-                if exercise.isCustom {
-                    Text("Custom")
-                        .font(.caption2)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.pumpPrimary.opacity(0.15))
-                        .foregroundStyle(Color.pumpPrimary)
-                        .clipShape(Capsule())
-                }
+        HStack(spacing: 12) {
+            // Movement pattern icon
+            ZStack {
+                Circle()
+                    .fill(Color.pumpPrimary.opacity(0.12))
+                    .frame(width: 40, height: 40)
+                Image(systemName: exercise.movementPattern.sfSymbol)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Color.pumpPrimary)
             }
 
-            HStack(spacing: 4) {
-                Text(exercise.primaryMuscleGroups.map(\.displayName).joined(separator: ", "))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(exercise.name)
+                        .font(.body)
+                    if exercise.isCustom {
+                        Text("Custom")
+                            .font(.caption2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.pumpPrimary.opacity(0.15))
+                            .foregroundStyle(Color.pumpPrimary)
+                            .clipShape(Capsule())
+                    }
+                }
 
-                Text("·")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-
-                Text(exercise.equipmentType.displayName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 4) {
+                    Text(exercise.primaryMuscleGroups.map(\.displayName).joined(separator: ", "))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text("·")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                    Text(exercise.equipmentType.displayName)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
     }

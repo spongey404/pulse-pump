@@ -31,4 +31,16 @@ enum MovementPattern: String, Codable, CaseIterable, Identifiable {
             return false
         }
     }
+
+    var sfSymbol: String {
+        switch self {
+        case .push: "arrow.up.forward"
+        case .pull: "arrow.down.backward"
+        case .hinge: "figure.cooldown"
+        case .squat: "figure.stand"
+        case .carry: "figure.walk"
+        case .rotation: "arrow.trianglehead.2.clockwise.rotate.90"
+        case .isolation: "circle.dotted"
+        }
+    }
 }

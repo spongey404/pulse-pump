@@ -32,4 +32,21 @@ enum EquipmentType: String, Codable, CaseIterable, Identifiable {
         case .other: "Other"
         }
     }
+
+    var sfSymbol: String {
+        switch self {
+        case .barbell: "scalemass"
+        case .dumbbell: "dumbbell"
+        case .cable: "arrow.up.and.down"
+        case .machine: "gearshape"
+        case .bodyweight: "figure.strengthtraining.functional"
+        case .kettlebell: "drop.circle"
+        case .band: "waveform"
+        case .ezBar: "alternatingcurrent"
+        case .trapBar: "trapezoid.and.line.horizontal"
+        case .smithMachine: "gearshape.2"
+        case .plate: "circle.fill"
+        case .other: "questionmark.circle"
+        }
+    }
 }

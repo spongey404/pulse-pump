@@ -19,7 +19,7 @@ struct TemplateSeedService {
 
     // MARK: - PPL
 
-    private static var pplTemplates: [WorkoutTemplate] {
+    static var pplTemplates: [WorkoutTemplate] {
         [
             WorkoutTemplate(name: "Push Day", templateExercises: [
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Barbell Bench Press", order: 0, targetSets: 4, targetReps: 8),
@@ -50,7 +50,7 @@ struct TemplateSeedService {
 
     // MARK: - Upper/Lower
 
-    private static var upperLowerTemplates: [WorkoutTemplate] {
+    static var upperLowerTemplates: [WorkoutTemplate] {
         [
             WorkoutTemplate(name: "Upper Body", templateExercises: [
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Barbell Bench Press", order: 0, targetSets: 4, targetReps: 8),
@@ -74,7 +74,7 @@ struct TemplateSeedService {
 
     // MARK: - Full Body
 
-    private static var fullBodyTemplates: [WorkoutTemplate] {
+    static var fullBodyTemplates: [WorkoutTemplate] {
         [
             WorkoutTemplate(name: "Full Body A", templateExercises: [
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Barbell Squat", order: 0, targetSets: 3, targetReps: 8),
