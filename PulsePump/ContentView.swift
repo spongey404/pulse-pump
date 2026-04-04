@@ -36,10 +36,12 @@ struct ContentView: View {
                 Label("Body Map", systemImage: "figure.stand")
             }
 
-            Text("More")
-                .tabItem {
-                    Label("More", systemImage: "ellipsis")
-                }
+            NavigationStack {
+                MoreTabView()
+            }
+            .tabItem {
+                Label("More", systemImage: "ellipsis")
+            }
         }
         .fullScreenCover(isPresented: $workoutViewModel.isActive) {
             ActiveWorkoutView(viewModel: workoutViewModel)
