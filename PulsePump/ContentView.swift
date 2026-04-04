@@ -436,24 +436,24 @@ struct ProgramsTabView: View {
     }
 
     private var templateGrid: some View {
-        ScrollView {
-            LazyVStack(spacing: 12) {
-                ForEach(templates) { template in
-                    NavigationLink(value: template) {
-                        TemplateCard(template: template, onStart: { onStartFromTemplate(template) })
-                    }
-                    .buttonStyle(.plain)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            modelContext.delete(template)
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
+        List {
+            ForEach(templates) { template in
+                NavigationLink(value: template) {
+                    TemplateCard(template: template, onStart: { onStartFromTemplate(template) })
+                }
+                .buttonStyle(.plain)
+                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                .listRowSeparator(.hidden)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        modelContext.delete(template)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
                     }
                 }
             }
-            .padding()
         }
+        .listStyle(.plain)
     }
 }
 
