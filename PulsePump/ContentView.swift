@@ -17,10 +17,12 @@ struct ContentView: View {
                 Label("Programs", systemImage: "list.bullet.clipboard")
             }
 
-            Text("Social")
-                .tabItem {
-                    Label("Social", systemImage: "person.2")
-                }
+            NavigationStack {
+                SocialTabView()
+            }
+            .tabItem {
+                Label("Social", systemImage: "person.2")
+            }
 
             NavigationStack {
                 HomeTabView(workoutViewModel: workoutViewModel)
