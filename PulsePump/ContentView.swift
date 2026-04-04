@@ -446,6 +446,7 @@ struct ProgramsTabView: View {
                 .buttonStyle(.plain)
                 .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                 .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
                         modelContext.delete(template)
