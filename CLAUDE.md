@@ -64,20 +64,20 @@ Lowercase prefixes, present tense:
 ## Build Order (from spec)
 
 1. ~~Core Data Models & Local Storage~~ (done)
-2. Onboarding Flow
-3. Exercise Library
-4. Workout Logging
-5. Programs & Templates
-6. Body Map Tab
-7. Home Screen
-8. Workout History
-9. Social Features
-10. Utility Features
-11. Shareable Summary Cards
-12. Settings
-13. Calorie Burn & Ecosystem Integration
-14. Pulse+ Subscription System
-15. iOS Platform Features
+2. ~~Onboarding Flow~~ (done — Firebase Auth: Apple, Google, Email)
+3. ~~Exercise Library~~ (done — 84 seeded exercises, search, filters, create custom)
+4. ~~Workout Logging~~ (done — active workout, rest timer, ghost text, PR detection)
+5. ~~Programs & Templates~~ (done — 7 seed templates, create/edit/start)
+6. ~~Body Map Tab~~ (done — muscle heatmap, volume/recency modes, analytics charts)
+7. ~~Home Screen~~ (done — quick analytics, recent workouts, global search)
+8. ~~Workout History~~ (done — list/calendar view, detail, duplicate)
+9. ~~Social Features~~ (done — activity feed, friends, challenges stubs)
+10. ~~Utility Features~~ (done — plate calculator, warmup generator, equipment profiles)
+11. ~~Shareable Summary Cards~~ (done — post-workout, weekly/monthly recap, milestone)
+12. ~~Settings~~ (done — profile edit, units, rest timer, calorie formula, notifications)
+13. ~~Calorie Burn & Ecosystem Integration~~ (done — basic + MET formulas, swappable)
+14. ~~Pulse+ Subscription System~~ (done — StoreKit 2, paywall, feature gating)
+15. ~~iOS Platform Features~~ (done — data export JSON/CSV, Live Activity service)
 
 ## Architecture Decisions
 
@@ -87,3 +87,9 @@ Lowercase prefixes, present tense:
 - Enums are `Codable` + `CaseIterable` + `Identifiable` for easy use in SwiftUI
 - TemplateExercise, SplitDay, BarConfig, LeaderboardEntry are value types (structs) stored as JSON in their parent models
 - Tab bar: Programs | Social | Home (center) | Body Map | More
+- `@Observable` macro (not `ObservableObject`) for Swift 6 concurrency
+- `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` — all types implicitly MainActor
+- Firebase Auth via SPM (FirebaseAuth, GoogleSignIn)
+- StoreKit 2 for subscriptions (no server-side receipt validation yet)
+- UserDefaults for lightweight settings (rest timer mode, calorie formula, notifications)
+- CalorieEstimationService is swappable between basic (set-based) and MET-based formulas
