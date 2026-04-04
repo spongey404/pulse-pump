@@ -45,8 +45,32 @@ struct ExerciseLibraryView: View {
         return count
     }
 
+    private var pendingSubmissions: [Exercise] {
+        exercises.filter { $0.isCustom && !$0.isApproved }
+    }
+
     var body: some View {
         List {
+            if !pendingSubmissions.isEmpty && searchText.isEmpty {
+                Section("Pending Submissions") {
+                    ForEach(pendingSubmissions) { exercise in
+                        NavigationLink(value: exercise) {
+                            HStack {
+                                ExerciseRowView(exercise: exercise)
+                                Spacer()
+                                Text("Pending")
+                                    .font(.caption2)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.orange.opacity(0.15))
+                                    .foregroundStyle(.orange)
+                                    .clipShape(Capsule())
+                            }
+                        }
+                    }
+                }
+            }
+
             ForEach(filteredExercises) { exercise in
                 NavigationLink(value: exercise) {
                     ExerciseRowView(exercise: exercise)

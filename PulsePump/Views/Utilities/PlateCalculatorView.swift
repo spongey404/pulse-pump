@@ -3,8 +3,16 @@ import SwiftUI
 struct PlateCalculatorView: View {
     @State private var targetWeight = ""
     @State private var barWeight: Double = 20
-    @State private var availablePlates: [Double] = [1.25, 2.5, 5, 10, 15, 20, 25]
+    @State private var availablePlates: [Double] = {
+        if let data = UserDefaults.standard.data(forKey: "customPlates"),
+           let plates = try? JSONDecoder().decode([Double].self, from: data) {
+            return plates
+        }
+        return [1.25, 2.5, 5, 10, 15, 20, 25]
+    }()
     @State private var unit: UnitPreference = .kg
+    @State private var showPlateConfig = false
+    @State private var newPlateWeight = ""
 
     private var platesPerSide: [Double] {
         guard let target = Double(targetWeight), target > barWeight else { return [] }
@@ -65,9 +73,34 @@ struct PlateCalculatorView: View {
                 ForEach(availablePlates.sorted(), id: \.self) { plate in
                     Text("\(String(format: "%g", plate)) \(unit.abbreviation)")
                 }
+                .onDelete { indices in
+                    let sorted = availablePlates.sorted()
+                    let toRemove = indices.map { sorted[$0] }
+                    availablePlates.removeAll { toRemove.contains($0) }
+                    savePlates()
+                }
+
+                HStack {
+                    TextField("Add plate", text: $newPlateWeight)
+                        .keyboardType(.decimalPad)
+                    Button("Add") {
+                        if let weight = Double(newPlateWeight), weight > 0, !availablePlates.contains(weight) {
+                            availablePlates.append(weight)
+                            savePlates()
+                            newPlateWeight = ""
+                        }
+                    }
+                    .disabled(newPlateWeight.isEmpty)
+                }
             }
         }
         .navigationTitle("Plate Calculator")
+    }
+
+    private func savePlates() {
+        if let data = try? JSONEncoder().encode(availablePlates) {
+            UserDefaults.standard.set(data, forKey: "customPlates")
+        }
     }
 
     private var plateCounts: [(plate: Double, count: Int)] {

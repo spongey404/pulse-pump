@@ -15,6 +15,7 @@ class SocialViewModel {
     var friends: [FirestoreUserProfile] = []
     var pendingRequests: [(docId: String, friendship: FriendshipDoc, profile: FirestoreUserProfile?)] = []
     var searchResults: [FirestoreUserProfile] = []
+    var contactMatches: [FirestoreUserProfile] = []
     var isSearching = false
 
     // Challenges
@@ -111,6 +112,21 @@ class SocialViewModel {
     func removeFriend(docId: String) async {
         try? await firestoreService.removeFriend(docId: docId)
         await loadFriends()
+    }
+
+    func findFriendsFromContacts(emails: [String]) async {
+        // Search for each email — in a real app this would be a batch query
+        var matches: [FirestoreUserProfile] = []
+        for email in emails.prefix(50) {
+            if let results = try? await firestoreService.searchUsers(query: email), !results.isEmpty {
+                matches.append(contentsOf: results)
+            }
+        }
+        // Filter out self and existing friends
+        let friendUids = Set(friends.map(\.uid))
+        contactMatches = matches.filter { profile in
+            profile.uid != currentUid && !friendUids.contains(profile.uid)
+        }
     }
 
     // MARK: - Challenges

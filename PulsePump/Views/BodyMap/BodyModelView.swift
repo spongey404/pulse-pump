@@ -4,6 +4,7 @@ import SwiftData
 struct BodyModelView: View {
     let heatmapMode: HeatmapMode
     let exerciseLogs: [ExerciseLog]
+    var colorScheme: HeatmapColorScheme = .cool
     let onMuscleTap: (MuscleGroup) -> Void
 
     private let frontMuscles: [(MuscleGroup, CGPoint, CGSize)] = [
@@ -138,10 +139,7 @@ struct BodyModelView: View {
     }
 
     private func heatmapColor(intensity: Double) -> Color {
-        if intensity <= 0 { return .clear }
-        if intensity < 0.33 { return .blue }
-        if intensity < 0.66 { return .green }
-        return Color.pumpPrimary
+        colorScheme.color(for: intensity)
     }
 }
 
@@ -149,6 +147,7 @@ struct BodyModelView: View {
 
 struct HeatmapLegend: View {
     let mode: HeatmapMode
+    var colorScheme: HeatmapColorScheme = .cool
 
     var body: some View {
         HStack(spacing: 12) {
@@ -158,9 +157,9 @@ struct HeatmapLegend: View {
 
             HStack(spacing: 2) {
                 ForEach(0..<5, id: \.self) { i in
-                    let intensity = Double(i) / 4.0
+                    let intensity = max(0.1, Double(i) / 4.0)
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(legendColor(intensity: intensity))
+                        .fill(colorScheme.color(for: intensity))
                         .frame(width: 20, height: 8)
                 }
             }
@@ -169,12 +168,5 @@ struct HeatmapLegend: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
-    }
-
-    private func legendColor(intensity: Double) -> Color {
-        if intensity < 0.25 { return .blue.opacity(0.3) }
-        if intensity < 0.5 { return .blue }
-        if intensity < 0.75 { return .green }
-        return Color.pumpPrimary
     }
 }

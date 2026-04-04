@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Charts
 
 struct ExerciseDetailView: View {
     let exercise: Exercise
@@ -40,6 +41,8 @@ struct ExerciseDetailView: View {
                     .listRowBackground(Color.clear)
                 } else {
                     ExerciseStatsSection(exercise: exercise)
+                    ExerciseTrendChart(exercise: exercise)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                 }
             }
 
@@ -93,14 +96,71 @@ struct ExerciseStatsSection: View {
         return weight * (1.0 + Double(reps) / 30.0)
     }
 
+    private var volumePR: Double {
+        exercise.logs.map { log in
+            log.sets.reduce(0.0) { $0 + $1.weight * Double($1.reps) }
+        }.max() ?? 0
+    }
+
     var body: some View {
-        HStack(spacing: 16) {
-            StatCard(title: "Weight PR", value: String(format: "%.1f", weightPR))
-            StatCard(title: "Rep PR", value: "\(repsPR)")
-            StatCard(title: "Est. 1RM", value: String(format: "%.1f", estimated1RM))
+        VStack(spacing: 8) {
+            HStack(spacing: 16) {
+                StatCard(title: "Weight PR", value: String(format: "%.1f", weightPR))
+                StatCard(title: "Rep PR", value: "\(repsPR)")
+                StatCard(title: "Est. 1RM", value: String(format: "%.1f", estimated1RM))
+            }
+            if volumePR > 0 {
+                HStack(spacing: 16) {
+                    StatCard(title: "Volume PR", value: String(format: "%.0f", volumePR))
+                }
+            }
         }
         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
         .listRowBackground(Color.clear)
+    }
+}
+
+// MARK: - Trend Chart
+
+struct ExerciseTrendChart: View {
+    let exercise: Exercise
+
+    private var dataPoints: [(date: Date, maxWeight: Double)] {
+        exercise.logs
+            .compactMap { log -> (Date, Double)? in
+                guard let date = log.workout?.date else { return nil }
+                let maxW = log.sets.map(\.weight).max() ?? 0
+                guard maxW > 0 else { return nil }
+                return (date, maxW)
+            }
+            .sorted { $0.0 < $1.0 }
+    }
+
+    var body: some View {
+        if dataPoints.count >= 2 {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Weight Over Time")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Chart {
+                    ForEach(Array(dataPoints.enumerated()), id: \.offset) { _, point in
+                        LineMark(
+                            x: .value("Date", point.date),
+                            y: .value("Weight", point.maxWeight)
+                        )
+                        .foregroundStyle(Color.pumpPrimary)
+                        PointMark(
+                            x: .value("Date", point.date),
+                            y: .value("Weight", point.maxWeight)
+                        )
+                        .foregroundStyle(Color.pumpPrimary)
+                    }
+                }
+                .frame(height: 160)
+                .chartYScale(domain: .automatic(includesZero: false))
+            }
+        }
     }
 }
 

@@ -22,6 +22,9 @@ class WorkoutViewModel {
     // Rest timer
     let restTimer = RestTimerService()
 
+    // Live calorie estimate
+    var liveCalories: Double = 0
+
     // Completion summary data
     var completionData: WorkoutCompletionData?
 
@@ -120,10 +123,43 @@ class WorkoutViewModel {
               exerciseEntries[exerciseIndex].sets.indices.contains(setIndex) else { return }
         exerciseEntries[exerciseIndex].sets[setIndex].isCompleted = true
 
+        updateLiveCalories()
+
         if restTimer.mode == .autoStart || restTimer.mode == .autoStartWithDismiss {
-            let duration = restTimer.restDuration(isCompound: isCompound)
+            let exerciseId = exerciseEntries[exerciseIndex].exerciseId
+            let duration = restTimer.restDuration(isCompound: isCompound, exerciseId: exerciseId)
             restTimer.start(seconds: duration)
         }
+    }
+
+    func updateLiveCalories() {
+        var compoundSets = 0
+        var isolationSets = 0
+        let totalCompleted = exerciseEntries.flatMap(\.sets).filter(\.isCompleted).count
+        // Approximate: treat sets as compound if exercise name contains common compound keywords
+        for entry in exerciseEntries {
+            let completed = entry.sets.filter(\.isCompleted).count
+            let name = entry.exerciseName.lowercased()
+            let isCompound = name.contains("squat") || name.contains("bench") || name.contains("deadlift") ||
+                name.contains("press") || name.contains("row") || name.contains("pull-up") || name.contains("chin-up")
+            if isCompound {
+                compoundSets += completed
+            } else {
+                isolationSets += completed
+            }
+        }
+        let formula = CalorieFormula(rawValue: UserDefaults.standard.string(forKey: "calorieFormula") ?? "") ?? .basic
+        let durationMinutes = Double(elapsedSeconds) / 60.0
+        let bodyWeight = workout?.user?.weight ?? 0
+        liveCalories = CalorieEstimationService.estimate(
+            formula: formula,
+            totalSets: totalCompleted,
+            compoundSets: compoundSets,
+            isolationSets: isolationSets,
+            bodyWeightKg: bodyWeight,
+            durationMinutes: durationMinutes,
+            intensity: .moderate
+        )
     }
 
     // MARK: - Ghost Text
@@ -251,8 +287,9 @@ class WorkoutViewModel {
             musclesWorked: collectMusclesWorked(modelContext: modelContext)
         )
 
-        // Post to social feed (fire-and-forget)
-        if let data = completionData, let user = workout.user {
+        // Post to social feed (fire-and-forget) if auto-share is enabled
+        let autoShare = UserDefaults.standard.object(forKey: "autoShareToFeed") as? Bool ?? true
+        if autoShare, let data = completionData, let user = workout.user {
             let feedItem = WorkoutFeedItem(
                 userId: Auth.auth().currentUser?.uid ?? "",
                 username: user.name,
@@ -261,6 +298,9 @@ class WorkoutViewModel {
                 durationSeconds: Int(workout.duration),
                 caloriesBurned: Int(data.calories),
                 musclesWorked: data.musclesWorked.map(\.displayName),
+                prCount: data.prCount,
+                improvedCount: data.improvedCount,
+                totalExercises: data.totalExercises,
                 date: workout.date
             )
             Task {
@@ -302,6 +342,41 @@ class WorkoutViewModel {
         startTime = nil
         completionData = nil
         showCompletionSummary = false
+    }
+
+    // MARK: - Smart Weight Suggestion (Pulse+)
+
+    func smartWeightSuggestion(for exerciseId: UUID, setIndex: Int, modelContext: ModelContext) -> String? {
+        // Look at last 3 sessions, if weight increased consistently, suggest next increment
+        let descriptor = FetchDescriptor<ExerciseLog>(
+            predicate: #Predicate<ExerciseLog> { log in
+                log.exercise?.id == exerciseId
+            },
+            sortBy: [SortDescriptor(\ExerciseLog.createdAt, order: .reverse)]
+        )
+        guard let recentLogs = try? modelContext.fetch(descriptor),
+              recentLogs.count >= 2 else { return nil }
+
+        let lastWeights = recentLogs.prefix(3).compactMap { log -> Double? in
+            let sorted = log.sets.sorted { $0.order < $1.order }
+            guard setIndex < sorted.count else { return nil }
+            return sorted[setIndex].weight
+        }
+
+        guard let lastWeight = lastWeights.first, lastWeight > 0 else { return nil }
+
+        // If user has been increasing weight, suggest next increment
+        if lastWeights.count >= 2 {
+            let prevWeight = lastWeights[1]
+            if lastWeight > prevWeight {
+                let increment = lastWeight - prevWeight
+                let suggested = lastWeight + increment
+                return String(format: "%g", suggested)
+            }
+        }
+
+        // Otherwise suggest same weight
+        return String(format: "%g", lastWeight)
     }
 
     // MARK: - Smart Prediction

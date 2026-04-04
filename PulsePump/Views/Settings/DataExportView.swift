@@ -4,12 +4,19 @@ import UniformTypeIdentifiers
 
 struct DataExportView: View {
     @Environment(\.modelContext) private var modelContext
+    @Query private var users: [User]
     @State private var exportedJSON: Data?
     @State private var exportedCSV: String?
     @State private var showShareSheet = false
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var exportURL: URL?
+    @State private var showImportPicker = false
+    @State private var selectedImportSource: DataImportService.ImportSource = .strong
+    @State private var showImportSuccess = false
+    @State private var importedCount = 0
+
+    private var user: User? { users.first }
 
     var body: some View {
         List {
@@ -34,7 +41,16 @@ struct DataExportView: View {
             }
 
             Section("Import") {
-                Text("Import from other apps — Coming Soon")
+                ForEach(DataImportService.ImportSource.allCases) { source in
+                    Button {
+                        selectedImportSource = source
+                        showImportPicker = true
+                    } label: {
+                        Label("Import from \(source.displayName)", systemImage: "square.and.arrow.down")
+                    }
+                }
+                Text("Export a CSV from \(selectedImportSource.displayName) and select it here.")
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
@@ -44,10 +60,45 @@ struct DataExportView: View {
                 ShareSheet(items: [url])
             }
         }
+        .fileImporter(isPresented: $showImportPicker, allowedContentTypes: [.commaSeparatedText, .plainText]) { result in
+            handleImport(result)
+        }
         .alert("Export Error", isPresented: $showError) {
             Button("OK") {}
         } message: {
             Text(errorMessage)
+        }
+        .alert("Import Complete", isPresented: $showImportSuccess) {
+            Button("OK") {}
+        } message: {
+            Text("Successfully imported \(importedCount) workouts from \(selectedImportSource.displayName).")
+        }
+    }
+
+    private func handleImport(_ result: Result<URL, Error>) {
+        switch result {
+        case .success(let url):
+            guard url.startAccessingSecurityScopedResource() else { return }
+            defer { url.stopAccessingSecurityScopedResource() }
+
+            do {
+                let csvString = try String(contentsOf: url, encoding: .utf8)
+                guard let user else { return }
+
+                switch selectedImportSource {
+                case .strong:
+                    importedCount = try DataImportService.importStrongCSV(csvString, modelContext: modelContext, user: user)
+                case .hevy:
+                    importedCount = try DataImportService.importHevyCSV(csvString, modelContext: modelContext, user: user)
+                }
+                showImportSuccess = true
+            } catch {
+                errorMessage = error.localizedDescription
+                showError = true
+            }
+        case .failure(let error):
+            errorMessage = error.localizedDescription
+            showError = true
         }
     }
 

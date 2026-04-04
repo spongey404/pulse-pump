@@ -15,9 +15,12 @@ struct StartWorkoutView: View {
             // Smart prediction
             if let user, let prediction = viewModel.predictNextWorkout(user: user) {
                 VStack(spacing: 8) {
-                    Text("Today's Workout")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    HStack {
+                        Text("Today's Workout")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        HintButton(hint: .startWorkout)
+                    }
 
                     Button {
                         viewModel.startWorkout(modelContext: modelContext, user: user)

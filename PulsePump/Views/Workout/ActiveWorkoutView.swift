@@ -89,12 +89,24 @@ struct ActiveWorkoutView: View {
 
             if !viewModel.exerciseEntries.isEmpty {
                 let totalSets = viewModel.exerciseEntries.flatMap(\.sets).filter(\.isCompleted).count
-                VStack(alignment: .trailing, spacing: 2) {
+                VStack(alignment: .center, spacing: 2) {
                     Text("\(totalSets)")
                         .font(.title3.weight(.semibold))
                     Text("Sets")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                if viewModel.liveCalories > 0 {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("\(Int(viewModel.liveCalories))")
+                            .font(.title3.weight(.semibold))
+                        Text("cal")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }
@@ -137,6 +149,9 @@ struct ExerciseCardView: View {
     let exerciseIndex: Int
     let viewModel: WorkoutViewModel
     @Environment(\.modelContext) private var modelContext
+    @State private var showSubstitutionSheet = false
+    @State private var showRestOverride = false
+    @State private var restOverrideSeconds: Int = 90
 
     var body: some View {
         Section {
@@ -211,6 +226,17 @@ struct ExerciseCardView: View {
                     .font(.subheadline.weight(.semibold))
                 Spacer()
                 Menu {
+                    Button {
+                        showSubstitutionSheet = true
+                    } label: {
+                        Label("Replace Exercise", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    Button {
+                        restOverrideSeconds = RestTimerService.perExerciseOverride(exerciseId: entry.exerciseId) ?? 90
+                        showRestOverride = true
+                    } label: {
+                        Label("Rest Timer Override", systemImage: "timer")
+                    }
                     Button(role: .destructive) {
                         viewModel.removeExercise(at: exerciseIndex)
                     } label: {
@@ -220,6 +246,119 @@ struct ExerciseCardView: View {
                     Image(systemName: "ellipsis")
                         .foregroundStyle(.secondary)
                 }
+            }
+        }
+        .sheet(isPresented: $showSubstitutionSheet) {
+            ExerciseSubstitutionView(
+                currentExerciseId: entry.exerciseId,
+                onSelect: { newExercise in
+                    entry.exerciseId = newExercise.id
+                    entry.exerciseName = newExercise.name
+                    showSubstitutionSheet = false
+                }
+            )
+        }
+        .alert("Rest Timer Override", isPresented: $showRestOverride) {
+            TextField("Seconds", value: $restOverrideSeconds, format: .number)
+                .keyboardType(.numberPad)
+            Button("Save") {
+                RestTimerService.setPerExerciseOverride(exerciseId: entry.exerciseId, seconds: restOverrideSeconds)
+            }
+            Button("Reset to Default", role: .destructive) {
+                RestTimerService.setPerExerciseOverride(exerciseId: entry.exerciseId, seconds: nil)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Set custom rest duration in seconds for \(entry.exerciseName)")
+        }
+    }
+}
+
+// MARK: - Exercise Substitution
+
+struct ExerciseSubstitutionView: View {
+    let currentExerciseId: UUID
+    let onSelect: (Exercise) -> Void
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @Query private var allExercises: [Exercise]
+    @State private var searchText = ""
+    @State private var pulsePlusService = PulsePlusService()
+
+    private var currentExercise: Exercise? {
+        allExercises.first { $0.id == currentExerciseId }
+    }
+
+    private var smartSuggestions: [Exercise] {
+        guard let current = currentExercise else { return [] }
+        return allExercises.filter { exercise in
+            exercise.id != currentExerciseId &&
+            !Set(exercise.primaryMuscleGroups).intersection(current.primaryMuscleGroups).isEmpty
+        }
+        .sorted { a, b in
+            let aMatch = Set(a.primaryMuscleGroups).intersection(currentExercise?.primaryMuscleGroups ?? []).count
+            let bMatch = Set(b.primaryMuscleGroups).intersection(currentExercise?.primaryMuscleGroups ?? []).count
+            return aMatch > bMatch
+        }
+    }
+
+    private var filteredExercises: [Exercise] {
+        if searchText.isEmpty { return allExercises.filter { $0.id != currentExerciseId } }
+        return allExercises.filter {
+            $0.id != currentExerciseId &&
+            $0.name.localizedCaseInsensitiveContains(searchText)
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if pulsePlusService.isSubscribed && !smartSuggestions.isEmpty && searchText.isEmpty {
+                    Section("Smart Suggestions") {
+                        ForEach(smartSuggestions.prefix(5)) { exercise in
+                            Button {
+                                onSelect(exercise)
+                            } label: {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(exercise.name)
+                                        .font(.body)
+                                    Text(exercise.primaryMuscleGroups.map(\.displayName).joined(separator: ", "))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .foregroundStyle(.primary)
+                        }
+                    }
+                }
+
+                Section("All Exercises") {
+                    ForEach(filteredExercises) { exercise in
+                        Button {
+                            onSelect(exercise)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(exercise.name)
+                                    .font(.body)
+                                Text(exercise.primaryMuscleGroups.map(\.displayName).joined(separator: ", "))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .foregroundStyle(.primary)
+                    }
+                }
+            }
+            .searchable(text: $searchText, prompt: "Search exercises")
+            .navigationTitle("Replace Exercise")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+            .task {
+                await pulsePlusService.refreshSubscriptionStatus()
             }
         }
     }

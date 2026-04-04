@@ -2,13 +2,49 @@ import Foundation
 import StoreKit
 import Observation
 
-enum PulsePlusFeature {
+enum PulsePlusFeature: String, CaseIterable, Identifiable {
     case advancedAnalytics
     case customChallenges
     case cloudSync
     case prioritySupport
     case exportData
     case unlimitedEquipmentProfiles
+    case smartWeightSuggestions
+    case advancedSubstitutions
+    case advancedBodyCustomization
+    case additionalWidgets
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .advancedAnalytics: "Advanced Analytics + Tips"
+        case .customChallenges: "Challenges / Competitions"
+        case .cloudSync: "Cloud Sync"
+        case .prioritySupport: "Priority Support"
+        case .exportData: "Data Export"
+        case .unlimitedEquipmentProfiles: "Unlimited Equipment Profiles"
+        case .smartWeightSuggestions: "Smart Weight Suggestions"
+        case .advancedSubstitutions: "Smart Exercise Substitutions"
+        case .advancedBodyCustomization: "Advanced Body Customization"
+        case .additionalWidgets: "Additional Home Widgets"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .advancedAnalytics: "chart.bar.xaxis"
+        case .customChallenges: "trophy"
+        case .cloudSync: "icloud"
+        case .prioritySupport: "headphones"
+        case .exportData: "square.and.arrow.up"
+        case .unlimitedEquipmentProfiles: "dumbbell"
+        case .smartWeightSuggestions: "brain.head.profile"
+        case .advancedSubstitutions: "arrow.triangle.2.circlepath"
+        case .advancedBodyCustomization: "figure.stand"
+        case .additionalWidgets: "rectangle.3.group"
+        }
+    }
 }
 
 @MainActor
@@ -89,8 +125,24 @@ class PulsePlusService {
         isSubscribed = foundActive
     }
 
+    var isInFreeTrial: Bool {
+        guard let installDate = UserDefaults.standard.object(forKey: "appInstallDate") as? Date else {
+            // First launch — record install date
+            UserDefaults.standard.set(Date(), forKey: "appInstallDate")
+            return true
+        }
+        let daysSinceInstall = Calendar.current.dateComponents([.day], from: installDate, to: Date()).day ?? 0
+        return daysSinceInstall <= 14
+    }
+
+    var trialDaysRemaining: Int {
+        guard let installDate = UserDefaults.standard.object(forKey: "appInstallDate") as? Date else { return 14 }
+        let daysSinceInstall = Calendar.current.dateComponents([.day], from: installDate, to: Date()).day ?? 0
+        return max(0, 14 - daysSinceInstall)
+    }
+
     func hasAccess(to feature: PulsePlusFeature) -> Bool {
-        isSubscribed
+        isSubscribed || isInFreeTrial
     }
 
     // MARK: - Private

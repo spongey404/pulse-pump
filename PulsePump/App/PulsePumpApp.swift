@@ -39,9 +39,16 @@ struct PulsePumpApp: App {
         }
     }()
 
+    @AppStorage("appTheme") private var appTheme: String = AppTheme.system.rawValue
+
+    private var preferredColorScheme: ColorScheme? {
+        AppTheme(rawValue: appTheme)?.colorScheme
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
+                .preferredColorScheme(preferredColorScheme)
                 .onOpenURL { url in
                     if url.scheme == "pulsepump" {
                         handleDeepLink(url)
@@ -58,6 +65,12 @@ struct PulsePumpApp: App {
         switch url.host {
         case "start-workout":
             NotificationCenter.default.post(name: .startWorkoutFromWidget, object: nil)
+        case "template":
+            if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+               let dataParam = components.queryItems?.first(where: { $0.name == "data" })?.value,
+               let decoded = Data(base64Encoded: dataParam) {
+                NotificationCenter.default.post(name: .importTemplate, object: decoded)
+            }
         default:
             break
         }
@@ -66,4 +79,5 @@ struct PulsePumpApp: App {
 
 extension Notification.Name {
     static let startWorkoutFromWidget = Notification.Name("startWorkoutFromWidget")
+    static let importTemplate = Notification.Name("importTemplate")
 }

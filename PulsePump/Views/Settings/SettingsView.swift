@@ -1,9 +1,34 @@
 import SwiftUI
 import SwiftData
 
+enum AppTheme: String, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .system: "System"
+        case .light: "Light"
+        case .dark: "Dark"
+        }
+    }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: nil
+        case .light: .light
+        case .dark: .dark
+        }
+    }
+}
+
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var users: [User]
+    @Query private var splits: [Split]
 
     private var user: User? { users.first }
 
@@ -12,7 +37,10 @@ struct SettingsView: View {
             if let user {
                 accountSection(user: user)
                 measurementsSection(user: user)
+                appearanceSection
                 workoutSection
+                postWorkoutSection
+                splitSection(user: user)
                 notificationSection
                 dataSection
                 aboutSection
@@ -77,6 +105,18 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Appearance
+
+    private var appearanceSection: some View {
+        Section("Appearance") {
+            Picker("Theme", selection: themeBinding) {
+                ForEach(AppTheme.allCases) { theme in
+                    Text(theme.displayName).tag(theme)
+                }
+            }
+        }
+    }
+
     // MARK: - Workout
 
     private var workoutSection: some View {
@@ -119,12 +159,54 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Post-Workout
+
+    private var postWorkoutSection: some View {
+        Section("Post-Workout") {
+            Toggle("Auto-Share to Feed", isOn: autoShareBinding)
+            NavigationLink {
+                PostWorkoutCustomizationView()
+            } label: {
+                Text("Summary Customization")
+            }
+        }
+    }
+
+    // MARK: - Split Configuration
+
+    private func splitSection(user: User) -> some View {
+        Section("Training Split") {
+            if let split = user.selectedSplit {
+                HStack {
+                    Text("Current Split")
+                    Spacer()
+                    Text(split.name)
+                        .foregroundStyle(.secondary)
+                }
+
+                NavigationLink {
+                    SplitConfigView(user: user)
+                } label: {
+                    Text("Change Split")
+                }
+            } else {
+                NavigationLink {
+                    SplitConfigView(user: user)
+                } label: {
+                    Text("Set Up Training Split")
+                }
+            }
+        }
+    }
+
     // MARK: - Notifications
 
     private var notificationSection: some View {
         Section("Notifications") {
             Toggle("Workout Reminders", isOn: workoutRemindersBinding)
             Toggle("Rest Day Alerts", isOn: restDayAlertsBinding)
+            Toggle("Social Activity", isOn: socialNotificationsBinding)
+            Toggle("Challenge Updates", isOn: challengeNotificationsBinding)
         }
     }
 
@@ -230,9 +312,126 @@ struct SettingsView: View {
         )
     }
 
+    private var socialNotificationsBinding: Binding<Bool> {
+        Binding(
+            get: { UserDefaults.standard.object(forKey: "socialNotifications") as? Bool ?? true },
+            set: { UserDefaults.standard.set($0, forKey: "socialNotifications") }
+        )
+    }
+
+    private var challengeNotificationsBinding: Binding<Bool> {
+        Binding(
+            get: { UserDefaults.standard.object(forKey: "challengeNotifications") as? Bool ?? true },
+            set: { UserDefaults.standard.set($0, forKey: "challengeNotifications") }
+        )
+    }
+
+    private var themeBinding: Binding<AppTheme> {
+        Binding(
+            get: { AppTheme(rawValue: UserDefaults.standard.string(forKey: "appTheme") ?? "") ?? .system },
+            set: { UserDefaults.standard.set($0.rawValue, forKey: "appTheme") }
+        )
+    }
+
+    private var autoShareBinding: Binding<Bool> {
+        Binding(
+            get: { UserDefaults.standard.object(forKey: "autoShareToFeed") as? Bool ?? true },
+            set: { UserDefaults.standard.set($0, forKey: "autoShareToFeed") }
+        )
+    }
+
     // MARK: - Actions
 
     private func signOut() {
         try? FirebaseAuthService().signOut()
+    }
+}
+
+// MARK: - Post-Workout Summary Customization
+
+struct PostWorkoutCustomizationView: View {
+    @State private var showDuration = UserDefaults.standard.object(forKey: "summary_showDuration") as? Bool ?? true
+    @State private var showCalories = UserDefaults.standard.object(forKey: "summary_showCalories") as? Bool ?? true
+    @State private var showMuscles = UserDefaults.standard.object(forKey: "summary_showMuscles") as? Bool ?? true
+    @State private var showPRs = UserDefaults.standard.object(forKey: "summary_showPRs") as? Bool ?? true
+    @State private var showImprovement = UserDefaults.standard.object(forKey: "summary_showImprovement") as? Bool ?? true
+
+    var body: some View {
+        List {
+            Section("Visible on Post-Workout Summary") {
+                Toggle("Duration", isOn: $showDuration)
+                Toggle("Calories Burned", isOn: $showCalories)
+                Toggle("Muscles Worked", isOn: $showMuscles)
+                Toggle("PRs Hit", isOn: $showPRs)
+                Toggle("Improvement Count", isOn: $showImprovement)
+            }
+        }
+        .navigationTitle("Summary Display")
+        .onChange(of: showDuration) { _, v in UserDefaults.standard.set(v, forKey: "summary_showDuration") }
+        .onChange(of: showCalories) { _, v in UserDefaults.standard.set(v, forKey: "summary_showCalories") }
+        .onChange(of: showMuscles) { _, v in UserDefaults.standard.set(v, forKey: "summary_showMuscles") }
+        .onChange(of: showPRs) { _, v in UserDefaults.standard.set(v, forKey: "summary_showPRs") }
+        .onChange(of: showImprovement) { _, v in UserDefaults.standard.set(v, forKey: "summary_showImprovement") }
+    }
+}
+
+// MARK: - Split Configuration
+
+struct SplitConfigView: View {
+    let user: User
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedType: SplitType = .ppl
+
+    var body: some View {
+        List {
+            Section("Select Split Type") {
+                ForEach(SplitType.allCases) { splitType in
+                    Button {
+                        selectedType = splitType
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(splitType.displayName)
+                                    .font(.body)
+                                if let days = splitType.daysPerWeek {
+                                    Text("\(days) days/week")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            Spacer()
+                            if selectedType == splitType {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Color.pumpPrimary)
+                            }
+                        }
+                    }
+                    .foregroundStyle(.primary)
+                }
+            }
+
+            Section {
+                Button("Save") {
+                    applySplit()
+                    dismiss()
+                }
+                .frame(maxWidth: .infinity)
+                .foregroundStyle(Color.pumpPrimary)
+            }
+        }
+        .navigationTitle("Training Split")
+        .onAppear {
+            if let current = user.selectedSplit {
+                selectedType = current.type
+            }
+        }
+    }
+
+    private func applySplit() {
+        let split = Split(type: selectedType)
+        modelContext.insert(split)
+        user.selectedSplit = split
+        user.updatedAt = Date()
     }
 }

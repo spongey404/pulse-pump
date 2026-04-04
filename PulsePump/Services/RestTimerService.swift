@@ -49,8 +49,28 @@ class RestTimerService {
         stop()
     }
 
-    func restDuration(isCompound: Bool) -> Int {
-        isCompound ? Self.defaultCompoundSeconds : Self.defaultIsolationSeconds
+    func restDuration(isCompound: Bool, exerciseId: UUID? = nil) -> Int {
+        // Check per-exercise override first
+        if let exerciseId,
+           let override = UserDefaults.standard.object(forKey: "restOverride_\(exerciseId.uuidString)") as? Int {
+            return override
+        }
+        // Fall back to global compound/isolation setting
+        let compound = UserDefaults.standard.object(forKey: "compoundRestSeconds") as? Int ?? Self.defaultCompoundSeconds
+        let isolation = UserDefaults.standard.object(forKey: "isolationRestSeconds") as? Int ?? Self.defaultIsolationSeconds
+        return isCompound ? compound : isolation
+    }
+
+    static func setPerExerciseOverride(exerciseId: UUID, seconds: Int?) {
+        if let seconds {
+            UserDefaults.standard.set(seconds, forKey: "restOverride_\(exerciseId.uuidString)")
+        } else {
+            UserDefaults.standard.removeObject(forKey: "restOverride_\(exerciseId.uuidString)")
+        }
+    }
+
+    static func perExerciseOverride(exerciseId: UUID) -> Int? {
+        UserDefaults.standard.object(forKey: "restOverride_\(exerciseId.uuidString)") as? Int
     }
 
     var formattedTime: String {

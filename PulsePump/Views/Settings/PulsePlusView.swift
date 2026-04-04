@@ -48,6 +48,10 @@ struct PulsePlusView: View {
                 Label("Active", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
                     .font(.subheadline.weight(.medium))
+            } else if service.isInFreeTrial {
+                Text("\(service.trialDaysRemaining) days left in free trial")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.orange)
             } else {
                 Text("Unlock the full Pulse experience")
                     .font(.subheadline)
@@ -63,12 +67,9 @@ struct PulsePlusView: View {
             Text("What's Included")
                 .font(.headline)
 
-            FeatureRow(icon: "chart.bar.xaxis.ascending", title: "Advanced Analytics", description: "Deeper insights into your training")
-            FeatureRow(icon: "trophy", title: "Custom Challenges", description: "Create and share challenges with friends")
-            FeatureRow(icon: "icloud", title: "Cloud Sync", description: "Sync your data across all devices")
-            FeatureRow(icon: "square.and.arrow.up", title: "Data Export", description: "Export your workout history")
-            FeatureRow(icon: "dumbbell", title: "Unlimited Equipment Profiles", description: "No limit on gym profiles")
-            FeatureRow(icon: "headset", title: "Priority Support", description: "Get help faster when you need it")
+            ForEach(PulsePlusFeature.allCases) { feature in
+                FeatureRow(icon: feature.icon, title: feature.displayName, description: "")
+            }
         }
         .padding()
         .background(Color(.secondarySystemBackground))
