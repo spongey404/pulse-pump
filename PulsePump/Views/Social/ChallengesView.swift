@@ -1,30 +1,98 @@
 import SwiftUI
-import SwiftData
 
 struct ChallengesView: View {
-    @Query(sort: \Challenge.startDate, order: .reverse) private var challenges: [Challenge]
+    @Bindable var viewModel: SocialViewModel
+    @State private var showCreateChallenge = false
+    @State private var selectedSortField: LeaderboardSortField = .score
 
     var body: some View {
         List {
-            if challenges.isEmpty {
+            if viewModel.isLoadingChallenges {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                    Spacer()
+                }
+            } else if viewModel.myChallenges.isEmpty && viewModel.activeChallenges.isEmpty {
                 ContentUnavailableView(
                     "No Challenges",
                     systemImage: "trophy",
-                    description: Text("Challenges are a Pulse+ feature. Create or join challenges to compete with friends.")
+                    description: Text("Create or join challenges to compete with friends.")
                 )
             } else {
-                ForEach(challenges) { challenge in
-                    ChallengeRowView(challenge: challenge)
+                if !viewModel.myChallenges.isEmpty {
+                    Section("My Challenges") {
+                        ForEach(viewModel.myChallenges) { challenge in
+                            ChallengeCardView(challenge: challenge, sortField: selectedSortField)
+                        }
+                    }
+                }
+
+                if !viewModel.activeChallenges.isEmpty {
+                    Section("Active Challenges") {
+                        ForEach(viewModel.activeChallenges) { challenge in
+                            VStack(alignment: .leading, spacing: 6) {
+                                ChallengeCardView(challenge: challenge, sortField: selectedSortField)
+
+                                if let uid = viewModel.currentUid,
+                                   !challenge.participantIds.contains(uid) {
+                                    Button("Join Challenge") {
+                                        Task { await viewModel.joinChallenge(id: challenge.id, username: "") }
+                                    }
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Color.pumpPrimary)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
         .listStyle(.plain)
-        // TODO: Pulse+ gate — only Pulse+ users can create challenges
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showCreateChallenge = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
+            ToolbarItem(placement: .secondaryAction) {
+                Menu("Sort Leaderboard") {
+                    Button("By Score") { selectedSortField = .score }
+                    Button("By Username") { selectedSortField = .username }
+                }
+            }
+        }
+        .sheet(isPresented: $showCreateChallenge) {
+            CreateChallengeView(viewModel: viewModel)
+        }
+        .refreshable {
+            await viewModel.loadChallenges()
+        }
+        .task {
+            await viewModel.loadChallenges()
+        }
     }
 }
 
-struct ChallengeRowView: View {
-    let challenge: Challenge
+enum LeaderboardSortField {
+    case score
+    case username
+}
+
+struct ChallengeCardView: View {
+    let challenge: FirestoreChallenge
+    let sortField: LeaderboardSortField
+
+    private var sortedLeaderboard: [LeaderboardEntry] {
+        switch sortField {
+        case .score:
+            challenge.leaderboard.sorted { $0.score > $1.score }
+        case .username:
+            challenge.leaderboard.sorted { $0.username < $1.username }
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -43,7 +111,7 @@ struct ChallengeRowView: View {
                 }
             }
 
-            Text(challenge.metric.displayName)
+            Text(challenge.metric)
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -57,12 +125,11 @@ struct ChallengeRowView: View {
                     .foregroundStyle(.secondary)
             }
 
-            // Leaderboard preview
-            if !challenge.leaderboard.isEmpty {
+            if !sortedLeaderboard.isEmpty {
                 VStack(spacing: 4) {
-                    ForEach(challenge.leaderboard.prefix(3)) { entry in
+                    ForEach(Array(sortedLeaderboard.prefix(3).enumerated()), id: \.offset) { rank, entry in
                         HStack {
-                            Text("#\(entry.rank)")
+                            Text("#\(rank + 1)")
                                 .font(.caption.weight(.semibold))
                                 .frame(width: 24, alignment: .leading)
                             Text(entry.username)
@@ -74,6 +141,71 @@ struct ChallengeRowView: View {
                     }
                 }
                 .padding(.top, 4)
+            }
+        }
+    }
+}
+
+struct CreateChallengeView: View {
+    @Bindable var viewModel: SocialViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var name = ""
+    @State private var description = ""
+    @State private var metric: ChallengeMetric = .totalVolume
+    @State private var winCondition: ChallengeWinCondition = .highest
+    @State private var startDate = Date()
+    @State private var endDate = Date().addingTimeInterval(7 * 24 * 3600)
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Details") {
+                    TextField("Challenge Name", text: $name)
+                    TextField("Description (optional)", text: $description)
+                }
+
+                Section("Rules") {
+                    Picker("Metric", selection: $metric) {
+                        ForEach(ChallengeMetric.allCases) { m in
+                            Text(m.displayName).tag(m)
+                        }
+                    }
+
+                    Picker("Win Condition", selection: $winCondition) {
+                        ForEach(ChallengeWinCondition.allCases) { w in
+                            Text(w.displayName).tag(w)
+                        }
+                    }
+                }
+
+                Section("Dates") {
+                    DatePicker("Start", selection: $startDate, displayedComponents: .date)
+                    DatePicker("End", selection: $endDate, displayedComponents: .date)
+                }
+            }
+            .navigationTitle("New Challenge")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Create") {
+                        Task {
+                            await viewModel.createChallenge(
+                                name: name,
+                                description: description,
+                                metric: metric,
+                                winCondition: winCondition,
+                                startDate: startDate,
+                                endDate: endDate
+                            )
+                            dismiss()
+                        }
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
             }
         }
     }

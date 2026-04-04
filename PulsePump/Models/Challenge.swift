@@ -6,8 +6,8 @@ final class Challenge {
     var id: UUID
     var name: String
     var challengeDescription: String
-    var creatorId: UUID
-    var participantIds: [UUID]
+    var creatorId: String
+    var participantIds: [String]
     var rules: String
     var metric: ChallengeMetric
     var winCondition: ChallengeWinCondition
@@ -21,7 +21,7 @@ final class Challenge {
     init(
         name: String,
         challengeDescription: String = "",
-        creatorId: UUID,
+        creatorId: String,
         rules: String = "",
         metric: ChallengeMetric = .totalVolume,
         winCondition: ChallengeWinCondition = .highest,
@@ -85,13 +85,13 @@ enum ChallengeWinCondition: String, Codable, CaseIterable, Identifiable {
 
 struct LeaderboardEntry: Codable, Identifiable {
     var id: UUID
-    var userId: UUID
+    var userId: String
     var username: String
     var score: Double
     var rank: Int
     var updatedAt: Date
 
-    init(userId: UUID, username: String, score: Double = 0, rank: Int = 0) {
+    init(userId: String, username: String, score: Double = 0, rank: Int = 0) {
         self.id = UUID()
         self.userId = userId
         self.username = username

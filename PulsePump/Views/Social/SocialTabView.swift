@@ -1,8 +1,8 @@
 import SwiftUI
-import SwiftData
 
 struct SocialTabView: View {
     @State private var selectedTab = 0
+    @State private var viewModel = SocialViewModel()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -17,11 +17,11 @@ struct SocialTabView: View {
 
             switch selectedTab {
             case 0:
-                ActivityFeedView()
+                ActivityFeedView(viewModel: viewModel)
             case 1:
-                FriendsListView()
+                FriendsListView(viewModel: viewModel)
             default:
-                ChallengesView()
+                ChallengesView(viewModel: viewModel)
             }
         }
         .navigationTitle("Social")

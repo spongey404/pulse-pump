@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import AuthenticationServices
+import FirebaseAuth
 import Observation
 
 enum OnboardingStep: Int, CaseIterable {
@@ -130,6 +131,19 @@ class OnboardingViewModel {
 
         modelContext.insert(user)
         UserDefaults.standard.set(wantsTutorial, forKey: "wantsTutorial")
+
+        // Sync user profile to Firestore
+        if let uid = Auth.auth().currentUser?.uid {
+            let username = name.trimmingCharacters(in: .whitespaces).lowercased().replacingOccurrences(of: " ", with: "")
+            let profile = FirestoreUserProfile(
+                uid: uid,
+                username: username,
+                displayName: name.trimmingCharacters(in: .whitespaces)
+            )
+            Task {
+                try? await FirestoreService().createOrUpdateUserProfile(profile)
+            }
+        }
     }
 
     // MARK: - Apple Sign In

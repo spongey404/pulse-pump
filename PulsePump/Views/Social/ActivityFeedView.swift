@@ -1,30 +1,47 @@
 import SwiftUI
-import SwiftData
+import FirebaseAuth
 
 struct ActivityFeedView: View {
-    @Query(filter: #Predicate<Workout> { !$0.isDraft }, sort: \Workout.date, order: .reverse)
-    private var workouts: [Workout]
+    @Bindable var viewModel: SocialViewModel
 
     var body: some View {
         List {
-            if workouts.isEmpty {
+            if viewModel.isLoadingFeed {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                    Spacer()
+                }
+            } else if viewModel.feedItems.isEmpty {
                 ContentUnavailableView(
                     "No Activity",
                     systemImage: "person.2",
-                    description: Text("Complete workouts to see activity here. Friends' workouts will also appear in your feed.")
+                    description: Text("Complete workouts to see activity here. Add friends to see their workouts too.")
                 )
             } else {
-                ForEach(workouts.prefix(20), id: \.id) { workout in
-                    FeedPostView(workout: workout)
+                ForEach(viewModel.feedItems) { item in
+                    FeedItemView(item: item, currentUid: viewModel.currentUid ?? "") {
+                        Task { await viewModel.toggleLike(postId: item.id) }
+                    }
                 }
             }
         }
         .listStyle(.plain)
+        .refreshable {
+            await viewModel.loadFeed()
+        }
+        .task {
+            await viewModel.loadFeed()
+        }
     }
 }
 
-struct FeedPostView: View {
-    let workout: Workout
+struct FeedItemView: View {
+    let item: WorkoutFeedItem
+    let currentUid: String
+    let onLike: () -> Void
+
+    private var isLiked: Bool { item.likes.contains(currentUid) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -40,9 +57,9 @@ struct FeedPostView: View {
                     )
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(workout.user?.name ?? "You")
+                    Text(item.username)
                         .font(.subheadline.weight(.semibold))
-                    Text(workout.date, style: .relative)
+                    Text(item.date, style: .relative)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -51,27 +68,26 @@ struct FeedPostView: View {
 
             // Workout summary
             VStack(alignment: .leading, spacing: 6) {
-                if let template = workout.template {
-                    Text(template.name)
+                if let template = item.templateName {
+                    Text(template)
                         .font(.body.weight(.medium))
                 }
 
                 HStack(spacing: 16) {
-                    Label("\(workout.exerciseLogs.count) exercises", systemImage: "figure.strengthtraining.traditional")
-                    Label(formatDuration(workout.duration), systemImage: "clock")
-                    if workout.calorieBurnEstimate > 0 {
-                        Label("\(Int(workout.calorieBurnEstimate)) cal", systemImage: "flame")
+                    Label("\(item.exerciseCount) exercises", systemImage: "figure.strengthtraining.traditional")
+                    Label("\(item.durationSeconds / 60) min", systemImage: "clock")
+                    if item.caloriesBurned > 0 {
+                        Label("\(item.caloriesBurned) cal", systemImage: "flame")
                     }
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
                 // Muscles worked tags
-                let muscles = musclesWorked
-                if !muscles.isEmpty {
+                if !item.musclesWorked.isEmpty {
                     FlowLayout(spacing: 4) {
-                        ForEach(muscles.sorted(by: { $0.displayName < $1.displayName }), id: \.self) { muscle in
-                            Text(muscle.displayName)
+                        ForEach(item.musclesWorked.sorted(), id: \.self) { muscle in
+                            Text(muscle)
                                 .font(.caption2)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
@@ -82,36 +98,22 @@ struct FeedPostView: View {
                 }
             }
 
-            // Interaction bar placeholder
+            // Interaction bar
             HStack(spacing: 20) {
-                Button {} label: {
-                    Label("Like", systemImage: "heart")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                Button(action: onLike) {
+                    Label(
+                        item.likes.isEmpty ? "Like" : "\(item.likes.count)",
+                        systemImage: isLiked ? "heart.fill" : "heart"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(isLiked ? Color.pumpPrimary : .secondary)
                 }
-                Button {} label: {
-                    Label("Comment", systemImage: "bubble.right")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Label("\(item.commentCount)", systemImage: "bubble.right")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 Spacer()
             }
         }
         .padding(.vertical, 4)
-    }
-
-    private var musclesWorked: [MuscleGroup] {
-        var muscles = Set<MuscleGroup>()
-        for log in workout.exerciseLogs {
-            if let exercise = log.exercise {
-                muscles.formUnion(exercise.primaryMuscleGroups)
-            }
-        }
-        return Array(muscles)
-    }
-
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        let m = Int(duration) / 60
-        return "\(m) min"
     }
 }

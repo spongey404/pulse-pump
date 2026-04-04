@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import Observation
+import FirebaseAuth
 
 @MainActor
 @Observable
@@ -249,6 +250,23 @@ class WorkoutViewModel {
             totalExercises: exerciseEntries.count,
             musclesWorked: collectMusclesWorked(modelContext: modelContext)
         )
+
+        // Post to social feed (fire-and-forget)
+        if let data = completionData, let user = workout.user {
+            let feedItem = WorkoutFeedItem(
+                userId: Auth.auth().currentUser?.uid ?? "",
+                username: user.name,
+                templateName: workout.template?.name,
+                exerciseCount: data.exerciseCount,
+                durationSeconds: Int(workout.duration),
+                caloriesBurned: Int(data.calories),
+                musclesWorked: data.musclesWorked.map(\.displayName),
+                date: workout.date
+            )
+            Task {
+                try? await FirestoreService().shareWorkoutToFeed(feedItem)
+            }
+        }
 
         showCompletionSummary = true
         isActive = false
