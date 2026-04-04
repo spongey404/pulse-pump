@@ -11,9 +11,29 @@ struct MoreTabView: View {
                 }
             }
 
+            Section("Tools") {
+                NavigationLink {
+                    PlateCalculatorView()
+                } label: {
+                    Label("Plate Calculator", systemImage: "scalemass")
+                }
+
+                NavigationLink {
+                    WarmupGeneratorView()
+                } label: {
+                    Label("Warmup Generator", systemImage: "flame")
+                }
+            }
+
             Section {
                 NavigationLink {
-                    // TODO: Profile view (Phase 9)
+                    EquipmentProfilesView()
+                } label: {
+                    Label("Equipment Profiles", systemImage: "dumbbell")
+                }
+
+                NavigationLink {
+                    // TODO: Profile view (Phase 9 backend)
                     Text("Profile — Coming Soon")
                 } label: {
                     Label("Profile", systemImage: "person.crop.circle")
@@ -25,18 +45,11 @@ struct MoreTabView: View {
                 } label: {
                     Label("Settings", systemImage: "gear")
                 }
-
-                NavigationLink {
-                    // TODO: Equipment profiles (Phase 10)
-                    Text("Equipment Profiles — Coming Soon")
-                } label: {
-                    Label("Equipment", systemImage: "dumbbell")
-                }
             }
 
             Section {
                 NavigationLink {
-                    // TODO: Tutorial (Phase 2 follow-up)
+                    // TODO: Tutorial
                     Text("Tutorial — Coming Soon")
                 } label: {
                     Label("Tutorial / Help", systemImage: "questionmark.circle")
