@@ -4,114 +4,109 @@ struct TutorialPromptStepView: View {
     var viewModel: OnboardingViewModel
     var onComplete: () -> Void
 
-    var body: some View {
-        if viewModel.experienceLevel == .experienced {
-            ExperiencedQuickStartView(viewModel: viewModel, onComplete: onComplete)
-        } else {
-            BeginnerTutorialView(viewModel: viewModel, onComplete: onComplete)
-        }
-    }
-}
-
-// MARK: - Beginner: Tutorial prompt
-
-private struct BeginnerTutorialView: View {
-    var viewModel: OnboardingViewModel
-    var onComplete: () -> Void
+    private var isExperienced: Bool { viewModel.experienceLevel == .experienced }
 
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
 
-            VStack(spacing: 16) {
-                Image(systemName: "questionmark.circle")
-                    .font(.system(size: 56))
-                    .foregroundStyle(Color.pumpPrimary)
+            VStack(alignment: .leading, spacing: 24) {
+                // Square checkmark icon
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.accentSoft)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .strokeBorder(Color.pumpAccent.opacity(0.27), lineWidth: 1)
+                        )
+                        .frame(width: 56, height: 56)
 
-                Text("Want a quick tutorial?")
-                    .font(.title2.weight(.bold))
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(Color.pumpAccent)
+                }
 
-                Text("We'll walk you through the main features step by step. Takes about 2 minutes.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("08 / ALMOST DONE")
+                        .font(.spaceMono(9))
+                        .tracking(1.5)
+                        .foregroundStyle(Color.inkMuted)
+                        .padding(.bottom, 8)
+
+                    Text(isExperienced
+                        ? "You're all set."
+                        : "Welcome, \(viewModel.name.isEmpty ? "there" : viewModel.name)."
+                    )
+                    .font(.archivo(32, weight: .light))
+                    .tracking(-0.5)
+                    .lineSpacing(2)
+                    .foregroundStyle(Color.inkPrimary)
+                    .padding(.bottom, 10)
+
+                    Text(isExperienced
+                        ? "We've set up a basic template based on your split. You know the drill — start logging and the app learns your patterns."
+                        : "Your program is ready. Want a quick tour of the key features before you start?"
+                    )
+                    .font(.archivo(13))
+                    .foregroundStyle(Color.inkMuted)
+                    .lineSpacing(4)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 24)
 
             Spacer()
 
-            VStack(spacing: 12) {
-                Button {
-                    viewModel.wantsTutorial = true
-                    onComplete()
-                } label: {
-                    Text("Yes, show me around")
-                        .font(.body.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(Color.pumpPrimary)
-                        .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+            VStack(spacing: 10) {
+                if isExperienced {
+                    ctaButton("START TRAINING", primary: true) {
+                        viewModel.wantsTutorial = false
+                        onComplete()
+                    }
+                } else {
+                    ctaButton("YES, SHOW ME AROUND", primary: true) {
+                        viewModel.wantsTutorial = true
+                        onComplete()
+                    }
+                    ctaButton("SKIP, I'LL EXPLORE MYSELF", primary: false) {
+                        viewModel.wantsTutorial = false
+                        onComplete()
+                    }
                 }
 
-                Button {
-                    viewModel.wantsTutorial = false
-                    onComplete()
-                } label: {
-                    Text("Skip, I'll figure it out")
-                        .font(.body.weight(.medium))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .foregroundStyle(.primary)
-                }
+                Text("TUTORIAL ALWAYS AVAILABLE IN MORE → HELP")
+                    .font(.spaceMono(9))
+                    .tracking(1)
+                    .foregroundStyle(Color.inkMuted)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 4)
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 20)
             .padding(.bottom, 32)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-}
 
-// MARK: - Experienced: Quick start
-
-private struct ExperiencedQuickStartView: View {
-    var viewModel: OnboardingViewModel
-    var onComplete: () -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
-
-            VStack(spacing: 16) {
-                Image(systemName: "bolt.fill")
-                    .font(.system(size: 56))
-                    .foregroundStyle(Color.pumpPrimary)
-
-                Text("You're all set.")
-                    .font(.title2.weight(.bold))
-
-                Text("You know the drill. Log your first workout and the app will adapt to your training style. Hints and tutorials are always available in the More tab.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal, 24)
-
-            Spacer()
-
-            Button {
-                viewModel.wantsTutorial = false
-                onComplete()
-            } label: {
-                Text("Start Training")
-                    .font(.body.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(Color.pumpPrimary)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 32)
+    private func ctaButton(_ label: String, primary: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.archivo(primary ? 19 : 17, weight: .black))
+                .tracking(2)
+                .foregroundStyle(primary ? .white : Color.inkPrimary)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(primary ? Color.pumpAccent : Color.surf)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    Group {
+                        if !primary {
+                            RoundedRectangle(cornerRadius: 12).strokeBorder(Color.inkFaint, lineWidth: 1)
+                        }
+                    }
+                )
+                .shadow(color: primary ? Color.pumpAccent.opacity(0.2) : .clear, radius: 10, y: 4)
         }
+        .buttonStyle(.plain)
     }
 }

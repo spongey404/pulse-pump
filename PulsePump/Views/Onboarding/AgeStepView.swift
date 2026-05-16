@@ -6,23 +6,32 @@ struct AgeStepView: View {
 
     var body: some View {
         OnboardingStepLayout(
+            label: "04 / BODY",
             title: "How old are you?",
-            subtitle: "Used for calorie and recovery estimates.",
+            subtitle: "Used to calibrate calorie estimates. Not shown publicly.",
             canContinue: viewModel.canContinue,
             onContinue: viewModel.advance
         ) {
-            HStack(spacing: 12) {
-                TextField("25", text: $viewModel.ageText)
-                    .font(.title2)
-                    .keyboardType(.numberPad)
-                    .focused($isFocused)
-                    .padding()
-                    .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .lastTextBaseline, spacing: 6) {
+                    TextField("—", text: $viewModel.ageText)
+                        .font(.archivo(56, weight: .black))
+                        .tracking(-1)
+                        .foregroundStyle(Color.inkPrimary)
+                        .tint(Color.pumpAccent)
+                        .keyboardType(.numberPad)
+                        .focused($isFocused)
+                        .frame(width: 160)
 
-                Text("years")
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
+                    Text("YRS")
+                        .font(.archivo(28, weight: .black))
+                        .tracking(0.5)
+                        .foregroundStyle(Color.inkMuted)
+                }
+
+                Rectangle()
+                    .fill(Color.dsHairLine)
+                    .frame(height: 1)
             }
         }
         .onAppear { isFocused = true }

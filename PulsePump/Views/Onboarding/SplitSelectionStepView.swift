@@ -3,50 +3,75 @@ import SwiftUI
 struct SplitSelectionStepView: View {
     var viewModel: OnboardingViewModel
 
-    private var splits: [SplitType] {
-        SplitType.allCases
-    }
+    private let splits: [(type: SplitType, label: String, meta: String)] = [
+        (.ppl,        "Push / Pull / Legs", "6 DAYS/WK · HIGH FREQUENCY · POPULAR"),
+        (.upperLower, "Upper / Lower",      "4 DAYS/WK · BALANCED · GREAT FOR MOST"),
+        (.fullBody,   "Full Body",          "3 DAYS/WK · EFFICIENT · GOOD FOR BEGINNERS"),
+        (.broSplit,   "Bro Split",          "5 DAYS/WK · ONE MUSCLE/DAY · CLASSIC"),
+        (.custom,     "Custom",             "DEFINE YOUR OWN DAYS AND FOCUS"),
+        (.none,       "No fixed split",     "TRAIN WHENEVER · LOG FREELY"),
+    ]
 
     var body: some View {
         OnboardingStepLayout(
-            title: "Training split?",
-            subtitle: "Pick a program structure or choose custom to build your own later.",
+            label: "07 / PROGRAM",
+            title: "How do you structure\nyour training?",
+            subtitle: "This sets up your first program template. Change it anytime.",
             canContinue: viewModel.canContinue,
+            scrollable: true,
             onContinue: viewModel.advance
         ) {
-            ScrollView {
-                VStack(spacing: 10) {
-                    ForEach(splits) { split in
-                        Button {
-                            viewModel.selectedSplitType = split
-                        } label: {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(split.displayName)
-                                        .font(.body.weight(.medium))
-                                    if let days = split.daysPerWeek {
-                                        Text("\(days) days/week")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                                Spacer()
-                                if viewModel.selectedSplitType == split {
-                                    Image(systemName: "checkmark")
-                                        .font(.body.weight(.semibold))
-                                        .foregroundStyle(Color.pumpPrimary)
-                                }
-                            }
-                            .padding()
-                            .background(viewModel.selectedSplitType == split
-                                ? Color.pumpPrimary.opacity(0.1)
-                                : Color(.secondarySystemBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                        .buttonStyle(.plain)
-                    }
+            VStack(spacing: 8) {
+                ForEach(splits, id: \.type) { item in
+                    splitRow(item)
                 }
             }
         }
+    }
+
+    private func splitRow(_ item: (type: SplitType, label: String, meta: String)) -> some View {
+        let selected = viewModel.selectedSplitType == item.type
+        return Button { viewModel.selectedSplitType = item.type } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .strokeBorder(
+                            selected ? Color.pumpAccent : Color.inkFaint,
+                            lineWidth: 2
+                        )
+                        .frame(width: 18, height: 18)
+                    if selected {
+                        Circle()
+                            .fill(Color.pumpAccent)
+                            .frame(width: 8, height: 8)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(item.label)
+                        .font(.archivo(14, weight: selected ? .semibold : .medium))
+                        .foregroundStyle(selected ? Color.pumpAccent : Color.inkPrimary)
+
+                    Text(item.meta)
+                        .font(.spaceMono(8))
+                        .tracking(0.5)
+                        .foregroundStyle(Color.inkMuted)
+                }
+
+                Spacer()
+            }
+            .frame(height: 56)
+            .padding(.horizontal, 16)
+            .background(selected ? Color.accentSoft : Color.surf)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12).strokeBorder(
+                    selected ? Color.pumpAccent : Color.inkFaint,
+                    lineWidth: 1
+                )
+            )
+        }
+        .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.08), value: selected)
     }
 }

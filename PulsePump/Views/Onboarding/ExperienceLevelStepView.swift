@@ -5,42 +5,72 @@ struct ExperienceLevelStepView: View {
 
     var body: some View {
         OnboardingStepLayout(
-            title: "Experience level?",
-            subtitle: "This helps us tailor your experience.",
+            label: "06 / EXPERIENCE",
+            title: "How long have you\nbeen lifting?",
+            subtitle: "This shapes how we set up your first program.",
             canContinue: viewModel.canContinue,
+            scrollable: true,
             onContinue: viewModel.advance
         ) {
             VStack(spacing: 10) {
                 ForEach(ExperienceLevel.allCases) { level in
-                    Button {
-                        viewModel.experienceLevel = level
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text(level.displayName)
-                                    .font(.body.weight(.medium))
-                                Spacer()
-                                if viewModel.experienceLevel == level {
-                                    Image(systemName: "checkmark")
-                                        .font(.body.weight(.semibold))
-                                        .foregroundStyle(Color.pumpPrimary)
-                                }
-                            }
-                            Text(level == .beginner
-                                ? "New to lifting or less than 6 months"
-                                : "Consistent training for 6+ months")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding()
-                        .background(viewModel.experienceLevel == level
-                            ? Color.pumpPrimary.opacity(0.1)
-                            : Color(.secondarySystemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
-                    .buttonStyle(.plain)
+                    experienceCard(level)
                 }
             }
         }
+    }
+
+    private func experienceCard(_ level: ExperienceLevel) -> some View {
+        let selected = viewModel.experienceLevel == level
+        return Button { viewModel.experienceLevel = level } label: {
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    Circle()
+                        .strokeBorder(
+                            selected ? Color.pumpAccent : Color.inkFaint,
+                            lineWidth: 2
+                        )
+                        .frame(width: 18, height: 18)
+                    if selected {
+                        Circle()
+                            .fill(Color.pumpAccent)
+                            .frame(width: 8, height: 8)
+                    }
+                }
+                .padding(.top, 2)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(level.displayName)
+                        .font(.archivo(15, weight: selected ? .semibold : .medium))
+                        .foregroundStyle(selected ? Color.pumpAccent : Color.inkPrimary)
+
+                    Text(level.sub)
+                        .font(.archivo(12))
+                        .foregroundStyle(Color.inkMuted)
+
+                    Text(level.detail)
+                        .font(.archivo(12))
+                        .foregroundStyle(Color.inkMuted.opacity(0.75))
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 2)
+                }
+
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(selected ? Color.accentSoft : Color.surf)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12).strokeBorder(
+                    selected ? Color.pumpAccent : Color.inkFaint,
+                    lineWidth: 1
+                )
+            )
+        }
+        .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.08), value: selected)
     }
 }
