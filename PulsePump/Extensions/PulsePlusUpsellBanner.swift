@@ -6,16 +6,16 @@ struct PulsePlusUpsellBanner: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: "lock.fill")
-                .font(.title3)
-                .foregroundStyle(Color.pumpPrimary)
+            Image(systemName: "bolt.fill")
+                .font(.display(20))
+                .foregroundStyle(Color.pumpAccent)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(feature)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.spaceMono(14, weight: .bold))
                 Text(description)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.archivo(11))
+                    .foregroundStyle(Color.inkMuted)
             }
 
             Spacer()
@@ -23,17 +23,18 @@ struct PulsePlusUpsellBanner: View {
             NavigationLink {
                 PulsePlusView()
             } label: {
-                Text("Unlock")
-                    .font(.caption.weight(.semibold))
+                Text("UNLOCK")
+                    .font(.spaceMono(11, weight: .bold))
+                    .tracking(1)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(Color.pumpPrimary)
+                    .background(Color.pumpAccent)
                     .foregroundStyle(.white)
-                    .clipShape(Capsule())
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
             }
         }
         .padding()
-        .background(Color(.secondarySystemBackground))
+        .background(Color.surf)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
@@ -44,31 +45,34 @@ struct PulsePlusBlurOverlay: View {
 
     var body: some View {
         ZStack {
-            Color(.systemBackground).opacity(0.8)
+            Color.canvasBg.opacity(0.85)
                 .blur(radius: 3)
 
             VStack(spacing: 12) {
-                Image(systemName: "star.circle.fill")
-                    .font(.largeTitle)
-                    .foregroundStyle(Color.pumpPrimary)
+                Image(systemName: "bolt.fill")
+                    .font(.display(34))
+                    .foregroundStyle(Color.pumpAccent)
 
-                Text("Unlock with Pulse+")
-                    .font(.headline)
+                Text("UNLOCK WITH PULSE+")
+                    .font(.spaceMono(16, weight: .bold))
+                    .tracking(1)
+                    .foregroundStyle(Color.inkPrimary)
 
                 Text(feature)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(.archivo(14))
+                    .foregroundStyle(Color.inkMuted)
 
                 NavigationLink {
                     PulsePlusView()
                 } label: {
-                    Text("Learn More")
-                        .font(.subheadline.weight(.semibold))
+                    Text("LEARN MORE")
+                        .font(.spaceMono(14, weight: .bold))
+                        .tracking(1)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 10)
-                        .background(Color.pumpPrimary)
+                        .background(Color.pumpAccent)
                         .foregroundStyle(.white)
-                        .clipShape(Capsule())
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
             }
         }
