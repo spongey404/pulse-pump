@@ -64,7 +64,7 @@ struct PlateCalculatorView: View {
                             .foregroundStyle(.secondary)
                         Spacer()
                         Text("\(String(format: "%g", achievableWeight)) \(unit.abbreviation)")
-                            .font(.body.weight(.semibold))
+                            .font(.mono(16, weight: .medium))
                     }
                 }
             }

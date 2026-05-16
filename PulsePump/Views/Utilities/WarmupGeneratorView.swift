@@ -58,22 +58,22 @@ struct WarmupGeneratorView: View {
                     ForEach(Array(warmupSets.enumerated()), id: \.offset) { index, set in
                         HStack {
                             Text("Set \(index + 1)")
-                                .font(.callout)
+                                .font(.mono(15))
                                 .foregroundStyle(.secondary)
                                 .frame(width: 50, alignment: .leading)
                             Text("\(String(format: "%g", set.weight)) \(unit.abbreviation)")
                                 .font(.callout.monospacedDigit().weight(.medium))
                             Spacer()
                             Text("\(set.reps) reps")
-                                .font(.callout)
+                                .font(.mono(15))
                                 .foregroundStyle(.secondary)
                         }
                     }
 
                     HStack {
                         Text("Working Set")
-                            .font(.callout.weight(.semibold))
-                            .foregroundStyle(Color.pumpPrimary)
+                            .font(.mono(15, weight: .medium))
+                            .foregroundStyle(Color.pumpAccent)
                         Spacer()
                         Text("\(workingWeight) \(unit.abbreviation)")
                             .font(.callout.monospacedDigit().weight(.semibold))
