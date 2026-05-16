@@ -18,7 +18,7 @@ struct ShareCardView: View {
             HStack {
                 Spacer()
                 Text("Pump by Pulse")
-                    .font(.caption2)
+                    .font(.mono(9))
                     .foregroundStyle(.tertiary)
             }
         }
@@ -45,27 +45,27 @@ struct ShareCardView: View {
     private func postWorkoutCard(data: WorkoutCompletionData) -> some View {
         VStack(spacing: 12) {
             Text("Workout Complete")
-                .font(.headline)
+                .font(.mono(16, weight: .medium))
             HStack(spacing: 24) {
                 VStack {
                     Text(data.formattedDuration)
-                        .font(.title3.weight(.bold))
+                        .font(.display(20))
                     Text("Duration")
-                        .font(.caption)
+                        .font(.mono(11))
                         .foregroundStyle(.secondary)
                 }
                 VStack {
                     Text("\(data.exerciseCount)")
-                        .font(.title3.weight(.bold))
+                        .font(.display(20))
                     Text("Exercises")
-                        .font(.caption)
+                        .font(.mono(11))
                         .foregroundStyle(.secondary)
                 }
                 VStack {
                     Text("\(data.totalSets)")
-                        .font(.title3.weight(.bold))
+                        .font(.display(20))
                     Text("Sets")
-                        .font(.caption)
+                        .font(.mono(11))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -74,7 +74,7 @@ struct ShareCardView: View {
                     Image(systemName: "medal.fill")
                         .foregroundStyle(.yellow)
                     Text("\(data.prCount) PR\(data.prCount == 1 ? "" : "s")")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.mono(14, weight: .medium))
                 }
             }
         }
@@ -83,27 +83,27 @@ struct ShareCardView: View {
     private func weeklyRecapCard(workouts: Int, sets: Int, streak: Int) -> some View {
         VStack(spacing: 12) {
             Text("Weekly Recap")
-                .font(.headline)
+                .font(.mono(16, weight: .medium))
             HStack(spacing: 24) {
                 VStack {
                     Text("\(workouts)")
-                        .font(.title3.weight(.bold))
+                        .font(.display(20))
                     Text("Workouts")
-                        .font(.caption)
+                        .font(.mono(11))
                         .foregroundStyle(.secondary)
                 }
                 VStack {
                     Text("\(sets)")
-                        .font(.title3.weight(.bold))
+                        .font(.display(20))
                     Text("Sets")
-                        .font(.caption)
+                        .font(.mono(11))
                         .foregroundStyle(.secondary)
                 }
                 VStack {
                     Text("\(streak)")
-                        .font(.title3.weight(.bold))
+                        .font(.display(20))
                     Text("Day Streak")
-                        .font(.caption)
+                        .font(.mono(11))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -113,27 +113,27 @@ struct ShareCardView: View {
     private func monthlyRecapCard(workouts: Int, prs: Int, consistency: Double) -> some View {
         VStack(spacing: 12) {
             Text("Monthly Recap")
-                .font(.headline)
+                .font(.mono(16, weight: .medium))
             HStack(spacing: 24) {
                 VStack {
                     Text("\(workouts)")
-                        .font(.title3.weight(.bold))
+                        .font(.display(20))
                     Text("Workouts")
-                        .font(.caption)
+                        .font(.mono(11))
                         .foregroundStyle(.secondary)
                 }
                 VStack {
                     Text("\(prs)")
-                        .font(.title3.weight(.bold))
+                        .font(.display(20))
                     Text("PRs")
-                        .font(.caption)
+                        .font(.mono(11))
                         .foregroundStyle(.secondary)
                 }
                 VStack {
                     Text(String(format: "%.0f%%", consistency * 100))
-                        .font(.title3.weight(.bold))
+                        .font(.display(20))
                     Text("Consistency")
-                        .font(.caption)
+                        .font(.mono(11))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -143,12 +143,12 @@ struct ShareCardView: View {
     private func milestoneCard(description: String) -> some View {
         VStack(spacing: 8) {
             Image(systemName: "trophy")
-                .font(.title)
-                .foregroundStyle(Color.pumpPrimary)
+                .font(.display(28))
+                .foregroundStyle(Color.pumpAccent)
             Text("New Milestone")
-                .font(.headline)
+                .font(.mono(16, weight: .medium))
             Text(description)
-                .font(.subheadline)
+                .font(.mono(14))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
