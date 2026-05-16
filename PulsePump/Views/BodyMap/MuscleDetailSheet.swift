@@ -32,13 +32,13 @@ struct MuscleDetailSheet: View {
                             let exercises = exercisesTargeting(subRegion: sub)
                             HStack {
                                 Circle()
-                                    .fill(subRegion == sub ? Color.pumpPrimary : Color.secondary.opacity(0.3))
+                                    .fill(subRegion == sub ? Color.pumpAccent : Color.secondary.opacity(0.3))
                                     .frame(width: 8, height: 8)
                                 Text(sub.displayName)
                                     .font(subRegion == sub ? .body.weight(.semibold) : .body)
                                 Spacer()
                                 Text("\(exercises.count) exercises")
-                                    .font(.caption)
+                                    .font(.mono(11))
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -53,13 +53,13 @@ struct MuscleDetailSheet: View {
                                 Spacer()
                                 VStack(alignment: .trailing, spacing: 2) {
                                     Text("\(exercise.logs.count) sessions")
-                                        .font(.caption)
+                                        .font(.mono(11))
                                         .foregroundStyle(.secondary)
                                     if pulsePlusService.isSubscribed {
                                         let subs = exerciseSubRegionLabels(exercise)
                                         if !subs.isEmpty {
                                             Text(subs)
-                                                .font(.caption2)
+                                                .font(.mono(9))
                                                 .foregroundStyle(.tertiary)
                                         }
                                     }
@@ -79,7 +79,7 @@ struct MuscleDetailSheet: View {
                                     let subs = exerciseSubRegionLabels(exercise)
                                     if !subs.isEmpty {
                                         Text(subs)
-                                            .font(.caption2)
+                                            .font(.mono(9))
                                             .foregroundStyle(.tertiary)
                                     }
                                 }

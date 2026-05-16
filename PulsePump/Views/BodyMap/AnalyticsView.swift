@@ -69,7 +69,7 @@ struct AnalyticsView: View {
                         DatePicker("To", selection: $customEndDate, in: customStartDate..., displayedComponents: .date)
                     }
                     .padding(.horizontal)
-                    .tint(Color.pumpPrimary)
+                    .tint(Color.pumpAccent)
                 }
 
                 if filteredWorkouts.isEmpty {
@@ -88,7 +88,7 @@ struct AnalyticsView: View {
                                     x: .value("Week", entry.week),
                                     y: .value("Workouts", entry.count)
                                 )
-                                .foregroundStyle(Color.pumpPrimary)
+                                .foregroundStyle(Color.pumpAccent)
                             }
                         }
                         .frame(height: 180)
@@ -99,7 +99,7 @@ struct AnalyticsView: View {
                         let data = improvementData
                         if data.isEmpty {
                             Text("Log more workouts to see improvement trends.")
-                                .font(.caption)
+                                .font(.mono(11))
                                 .foregroundStyle(.secondary)
                                 .frame(height: 100)
                         } else {
@@ -109,12 +109,12 @@ struct AnalyticsView: View {
                                         x: .value("Date", entry.date),
                                         y: .value("Improved", entry.improved)
                                     )
-                                    .foregroundStyle(Color.pumpPrimary)
+                                    .foregroundStyle(Color.pumpAccent)
                                     PointMark(
                                         x: .value("Date", entry.date),
                                         y: .value("Improved", entry.improved)
                                     )
-                                    .foregroundStyle(Color.pumpPrimary)
+                                    .foregroundStyle(Color.pumpAccent)
                                 }
                             }
                             .frame(height: 180)
@@ -129,7 +129,7 @@ struct AnalyticsView: View {
                         let data = muscleVolumeData
                         if data.isEmpty {
                             Text("No muscle group data available.")
-                                .font(.caption)
+                                .font(.mono(11))
                                 .foregroundStyle(.secondary)
                                 .frame(height: 100)
                         } else {
@@ -139,7 +139,7 @@ struct AnalyticsView: View {
                                         x: .value("Sets", entry.sets),
                                         y: .value("Muscle", entry.muscle)
                                     )
-                                    .foregroundStyle(Color.pumpPrimary)
+                                    .foregroundStyle(Color.pumpAccent)
                                 }
                             }
                             .frame(height: CGFloat(max(160, data.count * 32)))
@@ -154,7 +154,7 @@ struct AnalyticsView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             if exercisesWithLogs.isEmpty {
                                 Text("Complete workouts with tracked exercises to see progress.")
-                                    .font(.caption)
+                                    .font(.mono(11))
                                     .foregroundStyle(.secondary)
                             } else {
                                 Picker("Exercise", selection: $selectedExerciseForTrend) {
@@ -164,13 +164,13 @@ struct AnalyticsView: View {
                                     }
                                 }
                                 .pickerStyle(.menu)
-                                .tint(Color.pumpPrimary)
+                                .tint(Color.pumpAccent)
 
                                 if let exercise = selectedExerciseForTrend {
                                     let trendData = exerciseTrend(for: exercise)
                                     if trendData.isEmpty {
                                         Text("No data for this exercise in range.")
-                                            .font(.caption)
+                                            .font(.mono(11))
                                             .foregroundStyle(.secondary)
                                     } else {
                                         Chart {
@@ -179,12 +179,12 @@ struct AnalyticsView: View {
                                                     x: .value("Date", point.date),
                                                     y: .value("Weight", point.maxWeight)
                                                 )
-                                                .foregroundStyle(Color.pumpPrimary)
+                                                .foregroundStyle(Color.pumpAccent)
                                                 PointMark(
                                                     x: .value("Date", point.date),
                                                     y: .value("Weight", point.maxWeight)
                                                 )
-                                                .foregroundStyle(Color.pumpPrimary)
+                                                .foregroundStyle(Color.pumpAccent)
                                             }
                                         }
                                         .frame(height: 180)
@@ -226,7 +226,7 @@ struct AnalyticsView: View {
     private func analyticsCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.subheadline.weight(.semibold))
+                .font(.mono(14, weight: .medium))
                 .padding(.horizontal)
             content()
                 .padding(.horizontal)
@@ -315,14 +315,14 @@ struct AnalyticsStatCard: View {
     var body: some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(.title3.weight(.bold))
+                .font(.display(20))
             Text(title)
-                .font(.caption)
+                .font(.mono(11))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
-        .background(Color(.secondarySystemBackground))
+        .background(Color.surf)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
