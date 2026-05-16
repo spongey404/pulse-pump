@@ -25,15 +25,15 @@ struct CommentsView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
                                 Text("@\(comment.username)")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(Color.pumpPrimary)
+                                    .font(.mono(11, weight: .medium))
+                                    .foregroundStyle(Color.pumpAccent)
                                 Spacer()
                                 Text(comment.date, style: .relative)
-                                    .font(.caption2)
+                                    .font(.mono(9))
                                     .foregroundStyle(.tertiary)
                             }
                             Text(comment.text)
-                                .font(.subheadline)
+                                .font(.archivo(14))
                         }
                         .padding(.vertical, 2)
                     }
@@ -51,15 +51,15 @@ struct CommentsView: View {
                         postComment()
                     } label: {
                         Image(systemName: "arrow.up.circle.fill")
-                            .font(.title2)
+                            .font(.mono(22))
                             .foregroundStyle(newCommentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                ? Color(.systemGray3) : Color.pumpPrimary)
+                                ? Color.inkFaint : Color.pumpAccent)
                     }
                     .disabled(newCommentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 10)
-                .background(Color(.systemBackground))
+                .background(Color.canvasBg)
             }
             .navigationTitle("Comments")
             .navigationBarTitleDisplayMode(.inline)

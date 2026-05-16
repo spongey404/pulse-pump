@@ -39,8 +39,8 @@ struct ChallengesView: View {
                                     Button("Join Challenge") {
                                         Task { await viewModel.joinChallenge(id: challenge.id, username: "") }
                                     }
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(Color.pumpPrimary)
+                                    .font(.mono(11, weight: .medium))
+                                    .foregroundStyle(Color.pumpAccent)
                                 }
                             }
                         }
@@ -98,30 +98,30 @@ struct ChallengeCardView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(challenge.name)
-                    .font(.body.weight(.medium))
+                    .font(.mono(16, weight: .medium))
                 Spacer()
                 if challenge.isActive {
                     Text("Active")
-                        .font(.caption2.weight(.medium))
+                        .font(.mono(9, weight: .medium))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(Color.pumpPrimary.opacity(0.15))
-                        .foregroundStyle(Color.pumpPrimary)
+                        .background(Color.pumpAccent.opacity(0.15))
+                        .foregroundStyle(Color.pumpAccent)
                         .clipShape(Capsule())
                 }
             }
 
             Text(challenge.metric)
-                .font(.caption)
+                .font(.mono(11))
                 .foregroundStyle(.secondary)
 
             HStack {
                 Text("\(challenge.participantIds.count) participants")
-                    .font(.caption)
+                    .font(.mono(11))
                     .foregroundStyle(.secondary)
                 Spacer()
                 Text(challenge.endDate, style: .relative)
-                    .font(.caption)
+                    .font(.mono(11))
                     .foregroundStyle(.secondary)
             }
 
@@ -130,10 +130,10 @@ struct ChallengeCardView: View {
                     ForEach(Array(sortedLeaderboard.prefix(3).enumerated()), id: \.offset) { rank, entry in
                         HStack {
                             Text("#\(rank + 1)")
-                                .font(.caption.weight(.semibold))
+                                .font(.mono(11, weight: .medium))
                                 .frame(width: 24, alignment: .leading)
                             Text(entry.username)
-                                .font(.caption)
+                                .font(.mono(11))
                             Spacer()
                             Text(String(format: "%.0f", entry.score))
                                 .font(.caption.monospacedDigit())

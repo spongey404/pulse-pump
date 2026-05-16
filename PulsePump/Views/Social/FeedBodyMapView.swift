@@ -59,7 +59,7 @@ struct FeedBodyMapView: View {
                     RoundedRectangle(cornerRadius: 4)
                         .fill(
                             workedMuscles.contains(muscle)
-                                ? Color.pumpPrimary.opacity(0.55)
+                                ? Color.pumpAccent.opacity(0.55)
                                 : Color.clear
                         )
                         .frame(

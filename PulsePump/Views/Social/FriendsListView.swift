@@ -40,9 +40,9 @@ struct FriendsListView: View {
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(user.displayName)
-                                    .font(.body.weight(.medium))
+                                    .font(.mono(16, weight: .medium))
                                 Text("@\(user.username)")
-                                    .font(.caption)
+                                    .font(.mono(11))
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
@@ -63,9 +63,9 @@ struct FriendsListView: View {
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(request.profile?.displayName ?? "Unknown")
-                                    .font(.body.weight(.medium))
+                                    .font(.mono(16, weight: .medium))
                                 Text("@\(request.profile?.username ?? "")")
-                                    .font(.caption)
+                                    .font(.mono(11))
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
@@ -73,7 +73,7 @@ struct FriendsListView: View {
                                 Task { await viewModel.acceptFriendRequest(docId: request.docId) }
                             }
                             .buttonStyle(.borderedProminent)
-                            .tint(Color.pumpPrimary)
+                            .tint(Color.pumpAccent)
                             .controlSize(.small)
                         }
                     }
@@ -87,9 +87,9 @@ struct FriendsListView: View {
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(user.displayName)
-                                    .font(.body.weight(.medium))
+                                    .font(.mono(16, weight: .medium))
                                 Text("@\(user.username)")
-                                    .font(.caption)
+                                    .font(.mono(11))
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
@@ -115,26 +115,26 @@ struct FriendsListView: View {
                     ForEach(viewModel.friends) { friend in
                         HStack {
                             Circle()
-                                .fill(Color(.systemGray4))
+                                .fill(Color.inkFaint)
                                 .frame(width: 36, height: 36)
                                 .overlay(
                                     Image(systemName: "person.fill")
-                                        .font(.caption)
+                                        .font(.mono(11))
                                         .foregroundStyle(.secondary)
                                 )
                             VStack(alignment: .leading) {
                                 Text(friend.displayName)
-                                    .font(.body.weight(.medium))
+                                    .font(.mono(16, weight: .medium))
                                 Text("@\(friend.username)")
-                                    .font(.caption)
+                                    .font(.mono(11))
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
                             VStack(alignment: .trailing) {
                                 Text("\(friend.totalWorkouts)")
-                                    .font(.caption.weight(.semibold))
+                                    .font(.mono(11, weight: .medium))
                                 Text("workouts")
-                                    .font(.caption2)
+                                    .font(.mono(9))
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -182,14 +182,14 @@ struct ContactsPermissionView: View {
     var body: some View {
         VStack(spacing: 24) {
             Image(systemName: "person.crop.rectangle.stack")
-                .font(.largeTitle)
-                .foregroundStyle(Color.pumpPrimary)
+                .font(.display(34))
+                .foregroundStyle(Color.pumpAccent)
 
             Text("Find Friends from Contacts")
-                .font(.title3.weight(.semibold))
+                .font(.display(20))
 
             Text("We'll check if any of your contacts are already on Pump. We only use email addresses and never store your contacts.")
-                .font(.body)
+                .font(.mono(16))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
@@ -198,7 +198,7 @@ struct ContactsPermissionView: View {
                 dismiss()
             }
             .buttonStyle(.borderedProminent)
-            .tint(Color.pumpPrimary)
+            .tint(Color.pumpAccent)
 
             Button("Not Now") { dismiss() }
                 .foregroundStyle(.secondary)
