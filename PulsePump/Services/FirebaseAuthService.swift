@@ -44,7 +44,8 @@ class FirebaseAuthService: AuthServiceProtocol {
             return AuthResult(
                 userId: result.user.uid,
                 email: result.user.email ?? credential.email,
-                displayName: displayName
+                displayName: displayName,
+                isNewUser: result.additionalUserInfo?.isNewUser ?? true
             )
         } catch {
             throw AuthError.unknown(error.localizedDescription)
@@ -94,7 +95,8 @@ class FirebaseAuthService: AuthServiceProtocol {
             return AuthResult(
                 userId: authResult.user.uid,
                 email: authResult.user.email,
-                displayName: authResult.user.displayName
+                displayName: authResult.user.displayName,
+                isNewUser: authResult.additionalUserInfo?.isNewUser ?? true
             )
         } catch {
             throw AuthError.unknown(error.localizedDescription)

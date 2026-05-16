@@ -20,7 +20,8 @@ struct TemplateSeedService {
     // MARK: - PPL
 
     static var pplTemplates: [WorkoutTemplate] {
-        [
+        let rotation = ["P", "P", "L", "P", "P", "L"]
+        return [
             WorkoutTemplate(name: "Push Day", templateExercises: [
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Barbell Bench Press", order: 0, targetSets: 4, targetReps: 8),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Overhead Press", order: 1, targetSets: 3, targetReps: 10),
@@ -28,7 +29,7 @@ struct TemplateSeedService {
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Lateral Raise", order: 3, targetSets: 3, targetReps: 15),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Tricep Pushdown", order: 4, targetSets: 3, targetReps: 12),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Overhead Tricep Extension", order: 5, targetSets: 3, targetReps: 12),
-            ]),
+            ], splitDays: rotation),
             WorkoutTemplate(name: "Pull Day", templateExercises: [
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Barbell Row", order: 0, targetSets: 4, targetReps: 8),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Lat Pulldown", order: 1, targetSets: 3, targetReps: 10),
@@ -36,7 +37,7 @@ struct TemplateSeedService {
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Face Pull", order: 3, targetSets: 3, targetReps: 15),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Barbell Curl", order: 4, targetSets: 3, targetReps: 12),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Hammer Curl", order: 5, targetSets: 3, targetReps: 12),
-            ]),
+            ], splitDays: rotation),
             WorkoutTemplate(name: "Leg Day", templateExercises: [
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Barbell Squat", order: 0, targetSets: 4, targetReps: 8),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Romanian Deadlift", order: 1, targetSets: 3, targetReps: 10),
@@ -44,14 +45,15 @@ struct TemplateSeedService {
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Leg Curl", order: 3, targetSets: 3, targetReps: 12),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Leg Extension", order: 4, targetSets: 3, targetReps: 12),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Standing Calf Raise", order: 5, targetSets: 4, targetReps: 15),
-            ]),
+            ], splitDays: rotation),
         ]
     }
 
     // MARK: - Upper/Lower
 
     static var upperLowerTemplates: [WorkoutTemplate] {
-        [
+        let rotation = ["U", "L", "U", "L"]
+        return [
             WorkoutTemplate(name: "Upper Body", templateExercises: [
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Barbell Bench Press", order: 0, targetSets: 4, targetReps: 8),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Barbell Row", order: 1, targetSets: 4, targetReps: 8),
@@ -60,7 +62,7 @@ struct TemplateSeedService {
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Lateral Raise", order: 4, targetSets: 3, targetReps: 15),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Barbell Curl", order: 5, targetSets: 2, targetReps: 12),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Tricep Pushdown", order: 6, targetSets: 2, targetReps: 12),
-            ]),
+            ], splitDays: rotation),
             WorkoutTemplate(name: "Lower Body", templateExercises: [
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Barbell Squat", order: 0, targetSets: 4, targetReps: 8),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Romanian Deadlift", order: 1, targetSets: 3, targetReps: 10),
@@ -68,14 +70,15 @@ struct TemplateSeedService {
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Leg Curl", order: 3, targetSets: 3, targetReps: 12),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Hip Thrust", order: 4, targetSets: 3, targetReps: 10),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Standing Calf Raise", order: 5, targetSets: 4, targetReps: 15),
-            ]),
+            ], splitDays: rotation),
         ]
     }
 
     // MARK: - Full Body
 
     static var fullBodyTemplates: [WorkoutTemplate] {
-        [
+        let rotation = ["F", "F", "F"]
+        return [
             WorkoutTemplate(name: "Full Body A", templateExercises: [
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Barbell Squat", order: 0, targetSets: 3, targetReps: 8),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Barbell Bench Press", order: 1, targetSets: 3, targetReps: 8),
@@ -83,7 +86,7 @@ struct TemplateSeedService {
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Dumbbell Shoulder Press", order: 3, targetSets: 2, targetReps: 10),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Barbell Curl", order: 4, targetSets: 2, targetReps: 12),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Tricep Pushdown", order: 5, targetSets: 2, targetReps: 12),
-            ]),
+            ], splitDays: rotation),
             WorkoutTemplate(name: "Full Body B", templateExercises: [
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Conventional Deadlift", order: 0, targetSets: 3, targetReps: 6),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Incline Dumbbell Bench Press", order: 1, targetSets: 3, targetReps: 10),
@@ -91,7 +94,7 @@ struct TemplateSeedService {
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Lateral Raise", order: 3, targetSets: 3, targetReps: 15),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Leg Curl", order: 4, targetSets: 3, targetReps: 12),
                 TemplateExercise(exerciseId: UUID(), exerciseName: "Face Pull", order: 5, targetSets: 3, targetReps: 15),
-            ]),
+            ], splitDays: rotation),
         ]
     }
 }

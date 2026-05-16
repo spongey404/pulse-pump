@@ -4,6 +4,7 @@ struct AuthResult {
     let userId: String
     let email: String?
     let displayName: String?
+    var isNewUser: Bool = true
 }
 
 enum AuthError: LocalizedError {
