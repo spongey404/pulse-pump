@@ -69,7 +69,7 @@ struct HintButton: View {
             showHint = true
         } label: {
             Image(systemName: "questionmark.circle")
-                .font(.caption)
+                .font(.mono(11))
                 .foregroundStyle(.secondary)
         }
         .buttonStyle(.plain)
@@ -77,12 +77,12 @@ struct HintButton: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
                     Image(systemName: hint.icon)
-                        .foregroundStyle(Color.pumpPrimary)
+                        .foregroundStyle(Color.pumpAccent)
                     Text(hint.title)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.mono(14, weight: .medium))
                 }
                 Text(hint.message)
-                    .font(.caption)
+                    .font(.mono(11))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -106,10 +106,10 @@ struct InlineHint: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: "lightbulb")
-                    .font(.caption)
+                    .font(.mono(11))
                     .foregroundStyle(.orange)
                 Text(isRevealed ? hint.message : "Tap for a hint")
-                    .font(.caption)
+                    .font(.mono(11))
                     .foregroundStyle(.secondary)
                     .lineLimit(isRevealed ? nil : 1)
             }

@@ -23,7 +23,7 @@ struct CoachMarkOverlay: View {
                             .fill(Color.white.opacity(0.2))
                             .frame(height: 4)
                         Capsule()
-                            .fill(Color.pumpPrimary)
+                            .fill(Color.pumpAccent)
                             .frame(width: geo.size.width * viewModel.progress, height: 4)
                     }
                 }
@@ -31,18 +31,18 @@ struct CoachMarkOverlay: View {
 
                 // Icon
                 Image(systemName: viewModel.currentStep.icon)
-                    .font(.system(size: 40))
-                    .foregroundStyle(Color.pumpPrimary)
+                    .font(.mono(40))
+                    .foregroundStyle(Color.pumpAccent)
 
                 // Title
                 Text(viewModel.currentStep.title)
-                    .font(.title2.weight(.bold))
+                    .font(.display(22))
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
 
                 // Description
                 Text(viewModel.currentStep.description)
-                    .font(.body)
+                    .font(.mono(16))
                     .foregroundStyle(.white.opacity(0.85))
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -53,7 +53,7 @@ struct CoachMarkOverlay: View {
                         Button("Skip") {
                             viewModel.skip()
                         }
-                        .font(.subheadline)
+                        .font(.mono(14))
                         .foregroundStyle(.white.opacity(0.6))
                     }
 
@@ -73,11 +73,11 @@ struct CoachMarkOverlay: View {
                         }
                     } label: {
                         Text(viewModel.currentStep == .complete ? "Get Started" : "Next")
-                            .font(.subheadline.weight(.semibold))
+                            .font(.mono(14, weight: .medium))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 24)
                             .padding(.vertical, 10)
-                            .background(Color.pumpPrimary)
+                            .background(Color.pumpAccent)
                             .clipShape(Capsule())
                     }
                 }
