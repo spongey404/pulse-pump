@@ -6,6 +6,8 @@ final class WorkoutTemplate {
     var id: UUID
     var name: String
     var templateExercises: [TemplateExercise]
+    var splitDays: [String]
+    var notes: String = ""
     var createdAt: Date
     var updatedAt: Date
 
@@ -13,11 +15,13 @@ final class WorkoutTemplate {
 
     init(
         name: String,
-        templateExercises: [TemplateExercise] = []
+        templateExercises: [TemplateExercise] = [],
+        splitDays: [String] = []
     ) {
         self.id = UUID()
         self.name = name
         self.templateExercises = templateExercises
+        self.splitDays = splitDays
         self.createdAt = Date()
         self.updatedAt = Date()
         self.workouts = []
@@ -32,6 +36,8 @@ struct TemplateExercise: Codable, Identifiable {
     var targetSets: Int
     var targetReps: Int?
     var targetRIR: Int?
+    var restSeconds: Int?
+    var notes: String?
 
     init(
         exerciseId: UUID,
@@ -39,7 +45,9 @@ struct TemplateExercise: Codable, Identifiable {
         order: Int,
         targetSets: Int = 3,
         targetReps: Int? = nil,
-        targetRIR: Int? = nil
+        targetRIR: Int? = nil,
+        restSeconds: Int? = nil,
+        notes: String? = nil
     ) {
         self.id = UUID()
         self.exerciseId = exerciseId
@@ -48,5 +56,7 @@ struct TemplateExercise: Codable, Identifiable {
         self.targetSets = targetSets
         self.targetReps = targetReps
         self.targetRIR = targetRIR
+        self.restSeconds = restSeconds
+        self.notes = notes
     }
 }

@@ -21,6 +21,26 @@ struct FirestoreUserProfile: Codable, Identifiable {
     }
 }
 
+// MARK: - Feed exercise breakdown
+
+struct FeedSetLog: Codable {
+    var weight: Double   // 0 for bodyweight
+    var reps: Int
+    var duration: Int    // seconds, for time-based exercises (0 otherwise)
+    var distance: Double // metres/feet, for distance-based (0 otherwise)
+    var setType: String  // SetType.rawValue
+    var side: String?    // Side.rawValue, nil when bilateral
+}
+
+struct FeedExercise: Codable, Identifiable {
+    var id: String
+    var name: String
+    var sets: [FeedSetLog]
+    var improvementScore: Double = 0  // % 1RM gain vs previous session; 0 = no history
+}
+
+// MARK: - Feed post
+
 struct WorkoutFeedItem: Codable, Identifiable {
     var id: String
     var userId: String
@@ -37,8 +57,13 @@ struct WorkoutFeedItem: Codable, Identifiable {
     var likes: [String]
     var commentCount: Int
     var caption: String
+    var exercises: [FeedExercise]  // full exercise breakdown
 
-    init(id: String = UUID().uuidString, userId: String, username: String, templateName: String? = nil, exerciseCount: Int, durationSeconds: Int, caloriesBurned: Int, musclesWorked: [String], prCount: Int = 0, improvedCount: Int = 0, totalExercises: Int = 0, date: Date, caption: String = "") {
+    init(id: String = UUID().uuidString, userId: String, username: String,
+         templateName: String? = nil, exerciseCount: Int, durationSeconds: Int,
+         caloriesBurned: Int, musclesWorked: [String], prCount: Int = 0,
+         improvedCount: Int = 0, totalExercises: Int = 0, date: Date,
+         caption: String = "", exercises: [FeedExercise] = []) {
         self.id = id
         self.userId = userId
         self.username = username
@@ -54,6 +79,7 @@ struct WorkoutFeedItem: Codable, Identifiable {
         self.likes = []
         self.commentCount = 0
         self.caption = caption
+        self.exercises = exercises
     }
 }
 
