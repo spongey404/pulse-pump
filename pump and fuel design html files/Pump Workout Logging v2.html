@@ -247,42 +247,152 @@ function SetTypeSheet({ current='standard', onPick, onClose }) {
   );
 }
 
-function RestTimerModal({ secs=102, total=150, onClose }) {
-  const m = Math.floor(secs/60), s = String(secs%60).padStart(2,'0');
-  const pct = secs/total;
-  const r = 96, circ = 2*Math.PI*r;
-  const size = r*2 + 20;
+function PickerWheel({ values, value, onChange, fmt = v => String(v).padStart(2,'0'), width=86 }) {
+  const ref = React.useRef(null);
+  const timerRef = React.useRef();
+  const ITEM_H = 44;
+  const VISIBLE = 5; // odd → middle row is selected
+  const PAD = ((VISIBLE - 1) / 2) * ITEM_H;
+
+  // Set initial scroll without animation
+  React.useLayoutEffect(() => {
+    const el = ref.current; if (!el) return;
+    const idx = values.indexOf(value);
+    if (idx >= 0) el.scrollTop = idx * ITEM_H;
+  }, []); // mount only
+
+  // External value changes → scroll wheel into place (skip if already aligned)
+  React.useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const idx = values.indexOf(value); if (idx < 0) return;
+    const target = idx * ITEM_H;
+    if (Math.abs(el.scrollTop - target) > 4) {
+      el.scrollTo({ top: target, behavior: 'smooth' });
+    }
+  }, [value]);
+
+  const onScroll = (e) => {
+    const el = e.currentTarget;
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      const idx = Math.round(el.scrollTop / ITEM_H);
+      const v = values[Math.max(0, Math.min(values.length - 1, idx))];
+      if (v !== value) onChange(v);
+    }, 60);
+  };
+
   return (
-    <div style={{ position:'absolute', inset:0, zIndex:90, background:'rgba(31,28,25,0.6)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div onClick={onClose} style={{ position:'absolute', inset:0 }}/>
-      <div style={{ position:'relative', zIndex:1, background:L.bg, borderRadius:24, padding:'28px 24px 24px', width:300, boxShadow:'0 32px 64px rgba(0,0,0,0.28)', border:`1px solid ${L.hair2}` }}>
-        <div style={{ width:36, height:4, background:L.faint, borderRadius:2, margin:'0 auto 20px' }}/>
-        {/* Ring */}
-        <div style={{ position:'relative', width:size, height:size, margin:'0 auto 20px' }}>
-          <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-            <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={L.hair2} strokeWidth="7"/>
-            <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={L.accent} strokeWidth="7" strokeDasharray={circ} strokeDashoffset={circ*(1-pct)} strokeLinecap="round" transform={`rotate(-90 ${size/2} ${size/2})`}/>
-          </svg>
-          <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
-            <div style={{ fontFamily:'"Archivo",sans-serif', fontSize:68, color:L.ink, letterSpacing:2, lineHeight:1 }}>{m}:{s}</div>
-            <div style={{ fontFamily:'"Space Mono",monospace', fontSize:9, color:L.muted, letterSpacing:1.5, marginTop:6 }}>REST · TGT 2:30</div>
-          </div>
+    <div style={{ position:'relative', width, height: VISIBLE * ITEM_H }}>
+      <div ref={ref} onScroll={onScroll} className="picker-wheel" style={{
+        height:'100%', overflowY:'scroll', scrollSnapType:'y mandatory',
+        WebkitOverflowScrolling:'touch',
+        WebkitMaskImage:'linear-gradient(to bottom, transparent 0%, black 22%, black 78%, transparent 100%)',
+                maskImage:'linear-gradient(to bottom, transparent 0%, black 22%, black 78%, transparent 100%)',
+      }}>
+        <div style={{ paddingTop: PAD, paddingBottom: PAD }}>
+          {values.map((v, i) => {
+            const active = v === value;
+            return (
+              <div key={i} style={{
+                height: ITEM_H, display:'flex', alignItems:'center', justifyContent:'center',
+                scrollSnapAlign:'center',
+                fontFamily:'"Archivo",sans-serif', fontSize: 30, fontWeight: 800,
+                color: active ? L.ink : L.faint,
+                letterSpacing: 0.5, lineHeight: 1,
+                transition: 'color 0.15s ease',
+              }}>{fmt(v)}</div>
+            );
+          })}
         </div>
-        {/* Time adjust buttons */}
-        <div style={{ display:'flex', gap:6, justifyContent:'center', marginBottom:12 }}>
-          {['−15s','+15s','+30s','+1m'].map((label,i) => (
-            <div key={i} style={{ height:34, borderRadius:8, padding:'0 12px', background:L.surf, border:`1px solid ${L.hair2}`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'"Space Mono",monospace', fontSize:11, fontWeight:700, color:L.ink, letterSpacing:0.5 }}>{label}</div>
+      </div>
+      {/* Center highlight band */}
+      <div style={{
+        position:'absolute', left:-2, right:-2, top: PAD, height: ITEM_H,
+        background: L.accentSoft, borderRadius: 10,
+        pointerEvents:'none',
+      }}/>
+    </div>
+  );
+}
+
+function RestTimerModal({ exerciseName='Barbell Squat', initialSecs=90, onClose }) {
+  const PRESETS = [
+    { label:'OFF',   v:0    },
+    { label:'0:30',  v:30   },
+    { label:'1:00',  v:60   },
+    { label:'1:30',  v:90   },
+    { label:'2:00',  v:120  },
+    { label:'2:30',  v:150  },
+    { label:'3:00',  v:180  },
+    { label:'3:30',  v:210  },
+    { label:'4:00',  v:240  },
+    { label:'5:00',  v:300  },
+    { label:'7:00',  v:420  },
+    { label:'10:00', v:600  },
+  ];
+  const SEC_VALUES = Array.from({length:12}, (_,i) => i*5); // 0,5,10,...,55
+  const MIN_VALUES = Array.from({length:16}, (_,i) => i);   // 0..15
+
+  const [mins, setMins] = React.useState(Math.floor(initialSecs/60));
+  const [secs, setSecs] = React.useState(() => {
+    // snap initial seconds to nearest 5
+    const s = initialSecs % 60;
+    return SEC_VALUES.reduce((p,c) => Math.abs(c-s) < Math.abs(p-s) ? c : p, 0);
+  });
+
+  const total = mins*60 + secs;
+
+  const setFromPreset = (v) => {
+    setMins(Math.floor(v/60));
+    setSecs(v%60);
+  };
+
+  const Chip = ({ label, active, onClick }) => (
+    <div onClick={onClick} style={{
+      height:50, borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center',
+      background: active ? L.accent : L.surf,
+      border: `1px solid ${active ? L.accent : L.hair2}`,
+      color: active ? '#fff' : L.ink,
+      fontFamily:'"Space Mono",monospace', fontSize:13, fontWeight:700, letterSpacing:0.5,
+      cursor:'pointer', userSelect:'none',
+      boxShadow: active ? `0 6px 16px ${L.accent}33` : 'none',
+    }}>{label}</div>
+  );
+
+  return (
+    <div style={{ position:'absolute', inset:0, zIndex:90, display:'flex', flexDirection:'column', justifyContent:'flex-end' }}>
+      <style>{`.picker-wheel::-webkit-scrollbar{display:none}.picker-wheel{scrollbar-width:none}`}</style>
+      <div onClick={onClose} style={{ position:'absolute', inset:0, background:'rgba(31,28,25,0.45)', backdropFilter:'blur(6px)', WebkitBackdropFilter:'blur(6px)' }}/>
+      <div style={{ position:'relative', background:L.bg, borderTopLeftRadius:24, borderTopRightRadius:24, padding:'10px 22px 28px', boxShadow:'0 -16px 48px rgba(0,0,0,0.22)' }}>
+        <div style={{ width:36, height:4, background:L.faint, borderRadius:2, margin:'0 auto 14px' }}/>
+        <div style={{ fontFamily:'"Space Mono",monospace', fontSize:11, letterSpacing:1.8, color:L.muted }}>REST TIMER</div>
+        <div style={{ fontFamily:'"Archivo",sans-serif', fontWeight:800, fontSize:24, color:L.ink, marginTop:2, letterSpacing:-0.2 }}>{exerciseName}</div>
+
+        {/* Preset grid — 4×3 */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:8, marginTop:16 }}>
+          {PRESETS.map(p => (
+            <Chip key={p.label} label={p.label} active={total===p.v} onClick={() => setFromPreset(p.v)}/>
           ))}
         </div>
-        {/* Default rest row */}
-        <div style={{ background:L.surf, borderRadius:10, padding:'8px 12px', border:`1px solid ${L.hair}`, display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
-          <div>
-            <div style={{ fontFamily:'"Space Mono",monospace', fontSize:8, letterSpacing:1.2, color:L.muted }}>DEFAULT · BENCH</div>
-            <div style={{ fontFamily:'"Archivo",sans-serif', fontSize:20, lineHeight:1, marginTop:2 }}>2:30 PER SET</div>
-          </div>
-          <span style={{ fontFamily:'"Space Mono",monospace', fontSize:10, color:L.accent, fontWeight:700 }}>EDIT</span>
+
+        {/* iOS-style scroll wheel */}
+        <div style={{ marginTop:18, display:'flex', alignItems:'center', justifyContent:'center', gap:4 }}>
+          <PickerWheel values={MIN_VALUES} value={mins} onChange={setMins}/>
+          <div style={{ fontFamily:'"Archivo",sans-serif', fontWeight:800, fontSize:30, color:L.ink, paddingBottom:4 }}>:</div>
+          <PickerWheel values={SEC_VALUES} value={secs} onChange={setSecs}/>
         </div>
-        <div onClick={onClose} style={{ height:54, borderRadius:12, background:L.accent, color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'"Archivo",sans-serif', fontWeight:900, fontSize:20, letterSpacing:1.5, boxShadow:`0 8px 24px ${L.accent}44`, cursor:'pointer' }}>SKIP REST ›</div>
+        <div style={{ display:'flex', justifyContent:'center', gap:54, marginTop:-4 }}>
+          <div style={{ width:86, textAlign:'center', fontFamily:'"Space Mono",monospace', fontSize:9, letterSpacing:1.8, color:L.muted }}>MIN</div>
+          <div style={{ width:86, textAlign:'center', fontFamily:'"Space Mono",monospace', fontSize:9, letterSpacing:1.8, color:L.muted }}>SEC</div>
+        </div>
+
+        {/* SAVE */}
+        <div onClick={onClose} style={{
+          marginTop:18, height:56, borderRadius:14, background:L.accent, color:'#fff',
+          display:'flex', alignItems:'center', justifyContent:'center',
+          fontFamily:'"Archivo",sans-serif', fontWeight:900, fontSize:18, letterSpacing:2.5,
+          boxShadow:`0 10px 24px ${L.accent}44`, cursor:'pointer',
+        }}>SAVE</div>
       </div>
     </div>
   );
@@ -492,7 +602,7 @@ function StageA({ stage='main' }) {
         </div>
       </div>
       {setSheet && <SetTypeSheet current={exercises[setSheet.ex].sets[setSheet.set].type||'standard'} onPick={() => setSetSheet(null)} onClose={() => setSetSheet(null)}/>}
-      {restModal && <RestTimerModal secs={102} total={150} onClose={() => setRestModal(false)}/>}
+      {restModal && <RestTimerModal exerciseName={exercises[0]?.name || "Barbell Squat"} initialSecs={90} onClose={() => setRestModal(false)}/>}
     </div>
   );
 }
@@ -642,7 +752,7 @@ function StageB({ stage='main' }) {
         </div>
       </div>
       {setSheet && <SetTypeSheet current={exercises[setSheet.ex].sets[setSheet.set].type||'standard'} onPick={() => setSetSheet(null)} onClose={() => setSetSheet(null)}/>}
-      {restModal && <RestTimerModal secs={102} total={150} onClose={() => setRestModal(false)}/>}
+      {restModal && <RestTimerModal exerciseName={exercises[0]?.name || "Barbell Squat"} initialSecs={90} onClose={() => setRestModal(false)}/>}
     </div>
   );
 }

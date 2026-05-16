@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pulse Pump — Programs + Exercise Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700;800;900&family=Space+Mono:wght@400;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #edeae3; min-height: 100vh; font-family: 'Archivo', system-ui; }
+  .canvas { padding: 60px 40px 120px; }
+  h1 { font-family: 'Fraunces', serif; font-weight: 400; font-size: 52px; letter-spacing: -1.5px; line-height: 1; max-width: 1900px; margin: 0 auto 12px; }
+  .h1-sub { font-family: 'Archivo'; font-size: 15px; color: #777; max-width: 700px; margin: 0 auto 56px; line-height: 1.5; }
+  .section-label { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #c8553d; max-width: 1900px; margin: 56px auto 10px; font-weight: 700; }
+  .section-desc { font-family: 'Archivo'; font-size: 13px; color: #888; max-width: 700px; margin: 0 auto 28px; line-height: 1.5; }
+  .grid { display: flex; gap: 40px; max-width: 1900px; margin: 0 auto; align-items: flex-start; flex-wrap: wrap; }
+  .pcard { display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+  .card-label { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #888; }
+  .card-label .num { color: #c8553d; font-weight: 700; }
+  .card-label .vibe { color: #1a1a1a; font-weight: 600; margin-left: 6px; }
+  .frame { width: 390px; height: 844px; border-radius: 48px; padding: 4px; background: linear-gradient(135deg, #cbcac4, #b9b8b2); box-shadow: 0 40px 80px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.4); flex-shrink: 0; }
+  .screen { width: 100%; height: 100%; border-radius: 44px; overflow: hidden; position: relative; }
+  @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+</style>
+<template id="__bundler_thumbnail" data-bg-color="#fbf8f2"><svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg"><rect width="1200" height="800" fill="#fbf8f2"/><g transform="translate(540 320)"><rect width="120" height="120" rx="28" fill="#c8553d"/></g></svg></template>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+
+// ── Tokens ────────────────────────────────────────────────────
+const TL = {
+  bg:'#fbf8f2', surf:'#f4f0e6', surf2:'#ece7d8', surf3:'#e2dccd',
+  ink:'#1f1c19', ink2:'#3a342d',
+  muted:'rgba(31,28,25,0.5)', faint:'rgba(31,28,25,0.14)',
+  hair:'rgba(31,28,25,0.08)', hair2:'rgba(31,28,25,0.13)',
+  accent:'#c8553d', accentSoft:'rgba(200,85,61,0.08)',
+  up:'#1f8f5a', pr:'#c9892e',
+  st:{ WU:'rgba(180,140,60,0.13)', STD:'transparent', DROP:'rgba(200,85,61,0.10)', AMRAP:'rgba(44,109,163,0.10)' },
+  stFg:{ WU:'#a17418', STD:'rgba(31,28,25,0.5)', DROP:'#a8442f', AMRAP:'#2c6da3' },
+};
+const TD = {
+  bg:'#1a1816', surf:'#252220', surf2:'#2e2a26', surf3:'#363028',
+  ink:'#ece5d6', ink2:'#c8bfb0',
+  muted:'rgba(236,229,214,0.5)', faint:'rgba(236,229,214,0.13)',
+  hair:'rgba(236,229,214,0.08)', hair2:'rgba(236,229,214,0.13)',
+  accent:'#dc7d4a', accentSoft:'rgba(220,125,74,0.10)',
+  up:'#3fb777', pr:'#d4a03c',
+  st:{ WU:'rgba(180,140,60,0.18)', STD:'transparent', DROP:'rgba(200,85,61,0.15)', AMRAP:'rgba(44,109,163,0.15)' },
+  stFg:{ WU:'#c9a040', STD:'rgba(236,229,214,0.5)', DROP:'#e06040', AMRAP:'#5590d0' },
+};
+
+// ── Exercise database with variant taxonomy ───────────────────
+const EXERCISES = [
+  {
+    id:'rdl', name:'Romanian Deadlift', abbr:'RDL',
+    primary:'hamstrings', secondary:['glutes','back'],
+    movement:'hinge',
+    variants: {
+      equipment: [
+        { id:'barbell', label:'Barbell', grip: null },
+        { id:'dumbbell', label:'Dumbbell', grip: null },
+        { id:'cable',    label:'Cable', grip: null },
+        { id:'trap',     label:'Trap Bar', grip: null },
+      ]
+    }
+  },
+  {
+    id:'pullup', name:'Pull-up', abbr:'Pull-up',
+    primary:'back', secondary:['biceps','core'],
+    movement:'pull',
+    variants: {
+      grip: [
+        { id:'overhand', label:'Overhand (Pronated)' },
+        { id:'neutral',  label:'Neutral (Parallel)' },
+        { id:'underhand',label:'Underhand (Supinated)' },
+        { id:'wide',     label:'Wide Grip' },
+        { id:'close',    label:'Close Grip' },
+      ]
+    }
+  },
+  {
+    id:'bench', name:'Bench Press', abbr:'Bench',
+    primary:'chest', secondary:['shoulders','triceps'],
+    movement:'push',
+    variants: {
+      equipment: [
+        { id:'barbell',  label:'Barbell',       grip: ['flat','incline','decline'] },
+        { id:'dumbbell', label:'Dumbbell',       grip: ['flat','incline','decline'] },
+        { id:'machine',  label:'Machine',        grip: null },
+        { id:'cable',    label:'Cable Fly',      grip: null },
+      ]
+    }
+  },
+  {
+    id:'squat', name:'Squat', abbr:'Squat',
+    primary:'quads', secondary:['glutes','hamstrings'],
+    movement:'squat',
+    variants: {
+      equipment: [
+        { id:'barbell',  label:'Barbell',     grip: ['high-bar','low-bar','front'] },
+        { id:'goblet',   label:'Goblet',      grip: null },
+        { id:'hack',     label:'Hack Squat',  grip: null },
+        { id:'leg-press',label:'Leg Press',   grip: null },
+        { id:'belt',     label:'Belt Squat',  grip: null },
+      ]
+    }
+  },
+  {
+    id:'row', name:'Row', abbr:'Row',
+    primary:'back', secondary:['biceps','rear-delt'],
+    movement:'pull',
+    variants: {
+      equipment: [
+        { id:'barbell',  label:'Barbell',    grip: ['overhand','underhand','pendlay'] },
+        { id:'dumbbell', label:'Dumbbell',   grip: ['pronated','supinated','neutral'] },
+        { id:'cable',    label:'Cable',      grip: ['seated-low','standing','face-pull'] },
+        { id:'machine',  label:'Machine',    grip: null },
+        { id:'chest-supported', label:'Chest Supported', grip: null },
+      ]
+    }
+  },
+  {
+    id:'curl', name:'Curl', abbr:'Curl',
+    primary:'biceps', secondary:['forearms'],
+    movement:'pull',
+    variants: {
+      equipment: [
+        { id:'barbell',  label:'Barbell',   grip: ['straight-bar','ez-bar'] },
+        { id:'dumbbell', label:'Dumbbell',  grip: ['alternate','hammer','concentration','spider'] },
+        { id:'cable',    label:'Cable',     grip: ['straight-bar','rope','high-cable'] },
+        { id:'machine',  label:'Machine',   grip: null },
+      ]
+    }
+  },
+  {
+    id:'ohp', name:'Overhead Press', abbr:'OHP',
+    primary:'shoulders', secondary:['triceps','traps'],
+    movement:'push',
+    variants: {
+      equipment: [
+        { id:'barbell',  label:'Barbell',   grip: ['standing','seated'] },
+        { id:'dumbbell', label:'Dumbbell',  grip: ['standing','seated','arnold'] },
+        { id:'cable',    label:'Cable',     grip: null },
+        { id:'machine',  label:'Machine',   grip: null },
+        { id:'landmine', label:'Landmine',  grip: null },
+      ]
+    }
+  },
+  {
+    id:'deadlift', name:'Deadlift', abbr:'DL',
+    primary:'back', secondary:['hamstrings','glutes','traps'],
+    movement:'hinge',
+    variants: {
+      equipment: [
+        { id:'conventional', label:'Conventional',   grip: ['double-overhand','mixed','hook'] },
+        { id:'sumo',         label:'Sumo',            grip: ['double-overhand','mixed'] },
+        { id:'trap',         label:'Trap Bar',        grip: null },
+        { id:'deficit',      label:'Deficit',         grip: null },
+        { id:'single-leg',   label:'Single Leg',      grip: null },
+      ]
+    }
+  },
+  {
+    id:'lateral-raise', name:'Lateral Raise', abbr:'Lat Raise',
+    primary:'shoulders', secondary:[],
+    movement:'isolation',
+    variants: {
+      equipment: [
+        { id:'dumbbell', label:'Dumbbell',  grip: null },
+        { id:'cable',    label:'Cable',     grip: null },
+        { id:'machine',  label:'Machine',   grip: null },
+      ]
+    }
+  },
+  {
+    id:'dip', name:'Dip', abbr:'Dip',
+    primary:'triceps', secondary:['chest','shoulders'],
+    movement:'push',
+    variants: {
+      grip: [
+        { id:'chest',   label:'Chest Dip (Wide)' },
+        { id:'tricep',  label:'Tricep Dip (Narrow)' },
+        { id:'machine', label:'Machine Assisted' },
+        { id:'weighted',label:'Weighted' },
+      ]
+    }
+  },
+];
+
+// ── Programs data ─────────────────────────────────────────────
+const PROGRAMS = [
+  {
+    id:1, name:'Push Pull Legs', tag:'PPL', days:6,
+    exercises:18, lastUsed:'2 days ago',
+    split:['Push','Pull','Legs','Push','Pull','Legs'],
+  },
+  {
+    id:2, name:'Upper Lower', tag:'U/L', days:4,
+    exercises:12, lastUsed:'1 week ago',
+    split:['Upper','Lower','Upper','Lower'],
+  },
+  {
+    id:3, name:'Full Body', tag:'FB', days:3,
+    exercises:9, lastUsed:'3 weeks ago',
+    split:['Full','Full','Full'],
+  },
+];
+
+const TEMPLATE_EXERCISES = [
+  { exId:'bench',    variantEq:'barbell', variantGrip:'flat',     sets:4, reps:'6-8', rir:2, pr:'105kg', oneRm:'~118kg' },
+  { exId:'ohp',      variantEq:'barbell', variantGrip:'standing', sets:4, reps:'8-10', rir:2, pr:'72.5kg', oneRm:'~82kg' },
+  { exId:'dip',      variantEq:'chest',   variantGrip:null,       sets:3, reps:'10-12', rir:2, pr:null, oneRm:null },
+  { exId:'lateral-raise', variantEq:'cable', variantGrip:null,   sets:3, reps:'15-20', rir:1, pr:null, oneRm:null },
+  { exId:'curl',     variantEq:'cable',   variantGrip:'rope',     sets:3, reps:'12-15', rir:2, pr:null, oneRm:null },
+];
+
+// Helper: build readable variant label for an exercise row
+function variantLabel(exId, variantEq, variantGrip) {
+  const ex = EXERCISES.find(e=>e.id===exId);
+  if (!ex) return '';
+  const parts = [];
+  if (variantEq) {
+    // find label
+    const allVariants = ex.variants.equipment || ex.variants.grip || [];
+    const found = allVariants.find(v=>v.id===variantEq);
+    if (found) parts.push(found.label);
+  }
+  if (variantGrip) {
+    parts.push(variantGrip.replace(/-/g,' '));
+  }
+  return parts.join(' · ');
+}
+
+// ── Primitives ────────────────────────────────────────────────
+const StatusBar = ({dark=false}) => (
+  <div style={{height:50,display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:6,flexShrink:0}}>
+    <div style={{width:126,height:37,background:dark?'rgba(255,255,255,0.1)':'#000',borderRadius:24}}/>
+  </div>
+);
+
+function TabBar({C, active='Programs'}) {
+  const dark=C===TD;
+  const muted=dark?'rgba(255,255,255,0.35)':'rgba(0,0,0,0.35)';
+  const bg=dark?'rgba(26,24,22,0.94)':'rgba(251,248,242,0.94)';
+  const bord=dark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)';
+  const tabs=[{k:'Programs',active:active==='Programs'},{k:'Social'},{k:'Home',center:true},{k:'Body'},{k:'More'}];
+  const ICON=(k,col)=>{const s={width:22,height:22,fill:'none',stroke:col,strokeWidth:1.6,strokeLinecap:'round',strokeLinejoin:'round'};
+    if(k==='Programs')return<svg {...s} viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>;
+    if(k==='Social')  return<svg {...s} viewBox="0 0 24 24"><circle cx="9" cy="9" r="3"/><circle cx="17" cy="11" r="2.5"/><path d="M3 19c.5-3 3-5 6-5s5.5 2 6 5"/></svg>;
+    if(k==='Body')    return<svg {...s} viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.2"/><path d="M8 11l4-3 4 3M12 8v6M9 14l-2 6M15 14l2 6"/></svg>;
+    if(k==='More')    return<svg {...s} viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/></svg>;
+    return null;
+  };
+  return(
+    <div style={{position:'absolute',bottom:0,left:0,right:0,background:bg,backdropFilter:'blur(16px)',borderTop:`0.5px solid ${bord}`,display:'flex',alignItems:'center',padding:'8px 0 28px',zIndex:50}}>
+      {tabs.map((t,i)=>{
+        const col=t.active?C.ink:muted;
+        return(
+          <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+            {t.center
+              ?<div style={{width:46,height:46,borderRadius:15,background:C.accent,display:'flex',alignItems:'center',justifyContent:'center',marginTop:-12,boxShadow:`0 8px 16px ${C.accent}44`}}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3.5 12L12 4M12 4L20.5 12M6 13.5v7M18 13.5v7M6 20.5h12M10.5 20.5v-4.5h3v4.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              :ICON(t.k,col)}
+            <span style={{fontFamily:'"Archivo",sans-serif',fontSize:10,fontWeight:t.active?600:500,color:t.center?C.accent:col}}>{t.k}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Variant tag chip ──────────────────────────────────────────
+function VariantTag({ label, C }) {
+  if (!label) return null;
+  return (
+    <span style={{fontFamily:'"Space Mono",monospace',fontSize:8,fontWeight:700,letterSpacing:0.8,color:C.accent,background:C.accentSoft,padding:'2px 6px',borderRadius:4,textTransform:'uppercase',whiteSpace:'nowrap'}}>
+      {label}
+    </span>
+  );
+}
+
+// ── Movement icon ─────────────────────────────────────────────
+function MovementDot({ movement, C }) {
+  const colors = { push:'#c8553d', pull:'#2c6da3', hinge:'#c9892e', squat:'#1f8f5a', isolation:C.muted };
+  const color = colors[movement] || C.muted;
+  return <div style={{width:8,height:8,borderRadius:'50%',background:color,flexShrink:0}}/>;
+}
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN 1 — Program list
+// ══════════════════════════════════════════════════════════════
+function ProgramRow({ p, C, onSelect }) {
+  const [offset, setOffset] = React.useState(0);
+  const drag = React.useRef(null);
+  const DW = 80;
+  const onDS=(x)=>{drag.current=x;};
+  const onDM=(x)=>{if(drag.current===null)return;const d=x-drag.current;if(d<0)setOffset(Math.max(-DW,d));};
+  const onDE=()=>{setOffset(o=>o<-DW/2?-DW:0);drag.current=null;};
+  return (
+    <div style={{position:'relative',overflow:'hidden',borderBottom:`1px solid ${C.hair}`}}>
+      <div style={{position:'absolute',right:0,top:0,bottom:0,width:DW,background:'#c0341a',display:'flex',alignItems:'center',justifyContent:'center',zIndex:0}}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+      </div>
+      <div onClick={()=>offset===0&&onSelect(p)}
+        onMouseDown={e=>onDS(e.clientX)} onMouseMove={e=>onDM(e.clientX)} onMouseUp={onDE} onMouseLeave={onDE}
+        onTouchStart={e=>onDS(e.touches[0].clientX)} onTouchMove={e=>onDM(e.touches[0].clientX)} onTouchEnd={onDE}
+        style={{position:'relative',zIndex:1,background:C.surf,padding:'14px 16px',display:'flex',alignItems:'center',gap:12,cursor:'pointer',transform:`translateX(${offset}px)`,transition:drag.current?'none':'transform 0.2s ease',userSelect:'none'}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontFamily:'"Archivo",sans-serif',fontWeight:600,fontSize:18,color:C.ink,letterSpacing:0.2,lineHeight:1}}>{p.name}</div>
+          <div style={{display:'flex',gap:8,marginTop:3,fontFamily:'"Space Mono",monospace',fontSize:9,color:C.muted}}>
+            <span>{p.days} DAYS/WK</span><span>·</span><span>{p.exercises} EXERCISES</span><span>·</span><span>{p.lastUsed}</span>
+          </div>
+        </div>
+        <div style={{display:'flex',gap:3,flexShrink:0}}>
+          {p.split.map((s,si)=>(
+            <div key={si} style={{width:22,height:22,borderRadius:4,background:C.accentSoft,border:`1px solid ${C.accent}33`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <span style={{fontFamily:'"Space Mono",monospace',fontSize:7,fontWeight:700,color:C.accent}}>{s[0].toUpperCase()}</span>
+            </div>
+          ))}
+        </div>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.faint} strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+  );
+}
+
+function ProgramListScreen({ C, onSelectProgram, onNewProgram }) {
+  const dark=C===TD;
+  return (
+    <div style={{width:'100%',height:'100%',background:C.bg,display:'flex',flexDirection:'column',overflow:'hidden',color:C.ink}}>
+      <StatusBar dark={dark}/>
+      <div style={{padding:'2px 16px 10px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div style={{fontFamily:'"Archivo",sans-serif',fontWeight:900,fontSize:28,letterSpacing:0.5,color:C.ink}}>PROGRAMS</div>
+        <div onClick={onNewProgram} style={{width:34,height:34,borderRadius:10,background:C.accent,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </div>
+      </div>
+      <div style={{flex:1,overflowY:'auto',paddingBottom:96}}>
+        {PROGRAMS.map(p=><ProgramRow key={p.id} p={p} C={C} onSelect={onSelectProgram}/>)}
+        <div onClick={onNewProgram} style={{margin:'16px',height:52,borderRadius:10,border:`1px dashed ${C.faint}`,display:'flex',alignItems:'center',justifyContent:'center',gap:8,cursor:'pointer'}}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          <span style={{fontFamily:'"Space Mono",monospace',fontSize:10,color:C.muted,letterSpacing:1}}>NEW PROGRAM</span>
+        </div>
+        <div style={{padding:'0 16px'}}>
+          <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:C.muted,letterSpacing:1.3,marginBottom:4}}>QUICK START</div>
+          <div style={{fontFamily:'"Archivo",sans-serif',fontSize:11,color:C.muted,marginBottom:10,lineHeight:1.4}}>Repeat a recent session in one tap</div>
+          {[{name:'Push Day',tag:'PPL',time:'2 days ago'},{name:'Pull Day',tag:'PPL',time:'4 days ago'}].map((w,i)=>(
+            <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 0',borderTop:`1px solid ${C.hair}`}}>
+              <div style={{flex:1}}>
+                <div style={{fontFamily:'"Archivo",sans-serif',fontWeight:600,fontSize:14,color:C.ink,letterSpacing:0.2}}>{w.name}</div>
+                <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:C.muted,marginTop:1}}>{w.tag} · {w.time}</div>
+              </div>
+              <div style={{height:32,padding:'0 14px',borderRadius:8,background:C.accentSoft,border:`1px solid ${C.accent}44`,display:'flex',alignItems:'center',cursor:'pointer'}}>
+                <span style={{fontFamily:'"Archivo",sans-serif',fontSize:15,letterSpacing:1,color:C.accent}}>START</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <TabBar C={C} active="Programs"/>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN 2 — Preset picker sheet
+// ══════════════════════════════════════════════════════════════
+function PresetPickerSheet({ C, onClose, onSelect }) {
+  const dark=C===TD;
+  const presets = [
+    { id:'blank', name:'Blank Program', desc:'Start from scratch — add your own exercises and structure', days:null, icon:'✏️', iconSvg:true },
+    { id:'ppl',   name:'Push Pull Legs', desc:'6-day split. Push (chest/shoulders/triceps), Pull (back/biceps), Legs. High frequency.', days:6 },
+    { id:'ul',    name:'Upper Lower', desc:'4-day split. Two upper and two lower sessions per week. Balanced frequency.', days:4 },
+    { id:'fb',    name:'Full Body', desc:'3-day split. Hit every major muscle group each session. Great for beginners.', days:3 },
+    { id:'bro',   name:'Bro Split', desc:'5-day split. One muscle group per day. Classic bodybuilder approach.', days:5 },
+    { id:'phul',  name:'PHUL', desc:'4-day Power Hypertrophy Upper Lower. Combines strength and hypertrophy focus.', days:4 },
+  ];
+
+  return (
+    <div style={{position:'absolute',inset:0,zIndex:100,display:'flex',flexDirection:'column',justifyContent:'flex-end',animation:'fadeIn 0.15s ease-out'}}>
+      <div onClick={onClose} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.5)',backdropFilter:'blur(6px)'}}/>
+      <div style={{position:'relative',background:C.bg,borderRadius:'20px 20px 0 0',maxHeight:'82%',display:'flex',flexDirection:'column',animation:'slideUp 0.28s ease-out',border:`1px solid ${C.hair2}`,borderBottom:'none'}}>
+        <div style={{padding:'10px 0 6px',display:'flex',justifyContent:'center',flexShrink:0}}>
+          <div style={{width:36,height:4,borderRadius:2,background:C.faint}}/>
+        </div>
+        <div style={{padding:'0 16px 12px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:`1px solid ${C.hair}`,flexShrink:0}}>
+          <div>
+            <div style={{fontFamily:'"Archivo",sans-serif',fontWeight:900,fontSize:22,color:C.ink,letterSpacing:0.5}}>CHOOSE A TEMPLATE</div>
+            <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:C.muted,marginTop:2}}>All exercises are editable after selecting</div>
+          </div>
+          <div onClick={onClose} style={{fontSize:20,color:C.muted,cursor:'pointer'}}>×</div>
+        </div>
+        <div style={{overflowY:'auto',padding:'8px 0 28px'}}>
+          {presets.map((p,i) => (
+            <div key={p.id} onClick={()=>onSelect(p)} style={{display:'flex',alignItems:'flex-start',gap:12,padding:'14px 16px',borderBottom:`1px solid ${C.hair}`,cursor:'pointer'}}>
+              <div style={{width:44,height:44,borderRadius:12,background:p.id==='blank'?C.surf2:C.accentSoft,border:`1px solid ${p.id==='blank'?C.hair2:C.accent+'33'}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                {p.id==='blank'
+                  ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                  : <span style={{fontFamily:'"Archivo",sans-serif',fontSize:14,color:C.accent,letterSpacing:0.5}}>{p.days}D</span>}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontFamily:'"Archivo",sans-serif',fontSize:14,fontWeight:600,color:C.ink}}>{p.name}</div>
+                <div style={{fontFamily:'"Archivo",sans-serif',fontSize:12,color:C.muted,marginTop:3,lineHeight:1.4}}>{p.desc}</div>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.faint} strokeWidth="2" strokeLinecap="round" style={{flexShrink:0,marginTop:4}}><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Set types + expandable rows ────────────────────────────────
+const SET_TYPES = [
+  {id:'std',  label:'STD',   desc:'Standard'},
+  {id:'wu',   label:'WU',    desc:'Warmup'},
+  {id:'drop', label:'DROP',  desc:'Drop set'},
+  {id:'amrap',label:'AMRAP', desc:'As many reps as possible'},
+  {id:'ss',   label:'SS',    desc:'Superset'},
+  {id:'rp',   label:'RP',    desc:'Rest-pause'},
+];
+
+function SetTypeChipSmall({typeId,C}) {
+  const isDark=C===TD;
+  const cols={std:{bg:isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.07)',fg:C.muted},wu:{bg:'rgba(180,140,60,0.14)',fg:'#a17418'},drop:{bg:'rgba(200,85,61,0.13)',fg:'#a8442f'},amrap:{bg:'rgba(44,109,163,0.12)',fg:'#2c6da3'},ss:{bg:'rgba(125,74,140,0.13)',fg:'#7d4a8c'},rp:{bg:'rgba(31,28,25,0.09)',fg:C.ink2}};
+  const t=SET_TYPES.find(s=>s.id===typeId)||SET_TYPES[0];
+  const col=cols[typeId]||cols.std;
+  return <div style={{height:18,padding:'0 5px',borderRadius:3,background:col.bg,display:'flex',alignItems:'center',flexShrink:0}}><span style={{fontFamily:'"Space Mono",monospace',fontSize:7,fontWeight:700,letterSpacing:0.5,color:col.fg}}>{t.label}</span></div>;
+}
+
+function ExerciseTemplateRow({te,ex,vLabel,C}) {
+  const [expanded,setExpanded]=React.useState(false);
+  const [sets,setSets]=React.useState(()=>Array.from({length:te.sets||3},(_,i)=>({id:i,type:i===0?'wu':'std',reps:te.reps||null,rir:te.rir!=null?String(te.rir):null})));
+  const [editSet,setEditSet]=React.useState(null);
+  return (
+    <div style={{borderBottom:`1px solid ${C.hair}`}}>
+      <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 16px',cursor:'pointer',background:expanded?C.accentSoft:'transparent'}} onClick={()=>setExpanded(e=>!e)}>
+        <div style={{display:'flex',flexDirection:'column',gap:2,opacity:0.35,flexShrink:0}}>
+          <div style={{width:12,height:1.5,background:C.ink}}/><div style={{width:12,height:1.5,background:C.ink}}/><div style={{width:12,height:1.5,background:C.ink}}/>
+        </div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+            <MovementDot movement={ex?.movement} C={C}/>
+            <span style={{fontFamily:'"Archivo",sans-serif',fontSize:13,fontWeight:600,color:C.ink}}>{ex?.name||te.exId}</span>
+            {te.pr&&<span style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:C.pr,fontWeight:700}}>★ {te.pr}</span>}
+          </div>
+          {vLabel&&<div style={{marginTop:3}}><VariantTag label={vLabel} C={C}/></div>}
+        </div>
+        <div style={{display:'flex',gap:6,alignItems:'center',flexShrink:0}}>
+          <div style={{textAlign:'center'}}>
+            <div style={{fontFamily:'"Archivo",sans-serif',fontWeight:900,fontSize:18,color:C.ink,lineHeight:0.9}}>{sets.length}</div>
+            <div style={{fontFamily:'"Space Mono",monospace',fontSize:7,color:C.muted,letterSpacing:0.8}}>SETS</div>
+          </div>
+          {te.reps&&<><span style={{color:C.faint}}>×</span><div style={{textAlign:'center'}}><div style={{fontFamily:'"Space Mono",monospace',fontSize:11,fontWeight:700,color:C.ink}}>{te.reps}</div><div style={{fontFamily:'"Space Mono",monospace',fontSize:7,color:C.muted,letterSpacing:0.8}}>REPS</div></div></>}
+          {te.rir!=null&&<><span style={{color:C.faint,fontSize:10}}>·</span><div style={{textAlign:'center'}}><div style={{fontFamily:'"Space Mono",monospace',fontSize:11,fontWeight:700,color:C.muted}}>{te.rir}</div><div style={{fontFamily:'"Space Mono",monospace',fontSize:7,color:C.muted,letterSpacing:0.8}}>RIR</div></div></>}
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round" style={{transform:expanded?'rotate(90deg)':'rotate(0)',transition:'0.15s'}}><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+      {expanded&&(
+        <div style={{background:C.surf}}>
+          <div style={{display:'grid',gridTemplateColumns:'40px 20px 1fr 1fr 24px',padding:'4px 16px',fontFamily:'"Space Mono",monospace',fontSize:7,letterSpacing:1.2,color:C.muted,borderBottom:`1px solid ${C.hair}`}}>
+            <span>TYPE</span><span style={{textAlign:'center'}}>#</span><span style={{textAlign:'center'}}>REPS</span><span style={{textAlign:'center'}}>RIR</span><span/>
+          </div>
+          {sets.map((s,si)=>(
+            <div key={s.id}>
+              <div style={{display:'grid',gridTemplateColumns:'40px 20px 1fr 1fr 24px',alignItems:'center',padding:'7px 16px',borderBottom:`1px solid ${C.hair}`,background:editSet===si?C.accentSoft:'transparent',cursor:'pointer'}} onClick={()=>setEditSet(editSet===si?null:si)}>
+                <SetTypeChipSmall typeId={s.type} C={C}/>
+                <span style={{fontFamily:'"Space Mono",monospace',fontSize:9,fontWeight:700,color:C.muted,textAlign:'center'}}>{String(si+1).padStart(2,'0')}</span>
+                <div style={{height:24,borderRadius:5,background:C.surf2,border:`1px solid ${C.hair}`,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 3px'}}><span style={{fontFamily:'"Space Mono",monospace',fontSize:10,color:s.reps?C.ink:C.faint,fontWeight:700}}>{s.reps||'—'}</span></div>
+                <div style={{height:24,borderRadius:5,background:C.surf2,border:`1px solid ${C.hair}`,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 3px'}}><span style={{fontFamily:'"Space Mono",monospace',fontSize:10,color:s.rir!=null?C.ink:C.faint,fontWeight:700}}>{s.rir!=null?s.rir:'—'}</span></div>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={C.faint} strokeWidth="2" strokeLinecap="round" style={{transform:editSet===si?'rotate(180deg)':'rotate(0)',transition:'0.15s'}}><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              {editSet===si&&(
+                <div style={{display:'flex',gap:5,padding:'8px 16px',background:C.surf2,borderBottom:`1px solid ${C.hair}`,flexWrap:'wrap'}}>
+                  {SET_TYPES.map(t=>(
+                    <div key={t.id} onClick={()=>setSets(prev=>prev.map((ss,ssi)=>ssi===si?{...ss,type:t.id}:ss))}
+                      style={{height:26,padding:'0 9px',borderRadius:6,background:s.type===t.id?C.accent:'transparent',border:`1px solid ${s.type===t.id?C.accent:C.hair2}`,display:'flex',alignItems:'center',cursor:'pointer'}}>
+                      <span style={{fontFamily:'"Space Mono",monospace',fontSize:8,fontWeight:700,color:s.type===t.id?'#fff':C.muted,letterSpacing:0.5}}>{t.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+          <div style={{padding:'6px 16px'}}>
+            <div onClick={()=>setSets(prev=>[...prev,{id:prev.length,type:'std',reps:null,rir:null}])} style={{height:28,borderRadius:6,border:`1px dashed ${C.faint}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+              <span style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:C.muted,letterSpacing:0.8}}>+ ADD SET</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN 3 — Template detail
+// ══════════════════════════════════════════════════════════════
+function TemplateDetailScreen({ C, program, onBack, onAddExercise }) {
+  const dark=C===TD;
+  return (
+    <div style={{width:'100%',height:'100%',background:C.bg,display:'flex',flexDirection:'column',overflow:'hidden',color:C.ink}}>
+      <StatusBar dark={dark}/>
+      <div style={{padding:'2px 16px 10px',display:'flex',alignItems:'center',gap:10,borderBottom:`1px solid ${C.hair}`}}>
+        <div onClick={onBack} style={{cursor:'pointer',fontSize:20,color:C.muted,lineHeight:1}}>‹</div>
+        <div style={{flex:1}}>
+          <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:C.muted,letterSpacing:1.2}}>PUSH PULL LEGS</div>
+          <div style={{fontFamily:'"Archivo",sans-serif',fontWeight:900,fontSize:20,color:C.ink,letterSpacing:0.5,lineHeight:1}}>PUSH DAY</div>
+        </div>
+        <div style={{display:'flex',gap:8}}>
+          <div style={{height:32,padding:'0 12px',borderRadius:8,background:C.surf,border:`1px solid ${C.hair2}`,display:'flex',alignItems:'center',cursor:'pointer'}}>
+            <span style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:C.muted,fontWeight:700}}>EDIT</span>
+          </div>
+          <div style={{height:32,padding:'0 14px',borderRadius:8,background:C.accent,display:'flex',alignItems:'center',cursor:'pointer'}}>
+            <span style={{fontFamily:'"Archivo",sans-serif',fontSize:16,letterSpacing:1,color:'#fff'}}>START</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Day selector */}
+      <div style={{display:'flex',gap:4,padding:'10px 16px',borderBottom:`1px solid ${C.hair}`,overflowX:'auto'}}>
+        {['Push','Pull','Legs','Push','Pull','Legs'].map((d,i)=>(
+          <div key={i} style={{height:32,padding:'0 12px',borderRadius:999,background:i===0?C.accent:C.surf,border:`1px solid ${i===0?C.accent:C.hair2}`,display:'flex',alignItems:'center',flexShrink:0,cursor:'pointer'}}>
+            <span style={{fontFamily:'"Space Mono",monospace',fontSize:9,fontWeight:700,color:i===0?'#fff':C.muted,letterSpacing:0.8}}>{d.toUpperCase()} {i+1}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{flex:1,overflowY:'auto',paddingBottom:20}}>
+        {TEMPLATE_EXERCISES.map((te,i) => {
+          const ex = EXERCISES.find(e=>e.id===te.exId);
+          const vLabel = variantLabel(te.exId, te.variantEq, te.variantGrip);
+          return <ExerciseTemplateRow key={i} te={te} ex={ex} vLabel={vLabel} C={C}/>;
+        })}
+
+        {/* Add exercise button */}
+        <div onClick={onAddExercise} style={{margin:'12px 16px',height:44,borderRadius:10,border:`1px dashed ${C.faint}`,display:'flex',alignItems:'center',justifyContent:'center',gap:8,cursor:'pointer'}}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          <span style={{fontFamily:'"Space Mono",monospace',fontSize:10,color:C.muted,letterSpacing:1}}>ADD EXERCISE</span>
+        </div>
+
+        {/* Notes section */}
+        <div style={{margin:'0 16px',padding:'10px 12px',background:C.surf,borderRadius:10,border:`1px solid ${C.hair}`}}>
+          <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:C.muted,letterSpacing:1,marginBottom:4}}>NOTES</div>
+          <div style={{fontFamily:'"Archivo",sans-serif',fontSize:12,color:C.muted,fontStyle:'italic',lineHeight:1.4}}>"Focus on mind-muscle connection on fly. Don't rush the press."</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN 4A — Exercise picker (inline variant expansion)
+// ══════════════════════════════════════════════════════════════
+function ExercisePickerInline({ C, onBack, searchQuery='' }) {
+  const dark=C===TD;
+  const [query, setQuery] = React.useState(searchQuery);
+  const [expanded, setExpanded] = React.useState(null);
+  const [filter, setFilter] = React.useState('All');
+  const filters = ['All','Push','Pull','Hinge','Squat','Isolation'];
+
+  // Smart search: if query contains equipment keyword, pre-select variant
+  function smartMatch(ex, q) {
+    if (!q) return { match: true, preselect: null };
+    const lower = q.toLowerCase();
+    const nameMatch = ex.name.toLowerCase().includes(lower) || ex.abbr.toLowerCase().includes(lower);
+    // Check if query implies a specific variant
+    const allVariants = [...(ex.variants.equipment||[]), ...(ex.variants.grip||[])];
+    for (const v of allVariants) {
+      if (lower.includes(v.label.toLowerCase()) || v.label.toLowerCase().includes(lower.replace(ex.abbr.toLowerCase(),'').trim())) {
+        return { match: true, preselect: v };
+      }
+    }
+    return { match: nameMatch, preselect: null };
+  }
+
+  const filtered = EXERCISES
+    .map(ex => ({ ex, ...smartMatch(ex, query) }))
+    .filter(({match}) => match)
+    .filter(({ex}) => filter==='All' || ex.movement.toLowerCase()===filter.toLowerCase() ||
+      (filter==='Hinge' && ex.movement==='hinge') ||
+      (filter==='Push' && ex.movement==='push') ||
+      (filter==='Pull' && ex.movement==='pull') ||
+      (filter==='Squat' && ex.movement==='squat') ||
+      (filter==='Isolation' && ex.movement==='isolation'));
+
+  return (
+    <div style={{width:'100%',height:'100%',background:C.bg,display:'flex',flexDirection:'column',overflow:'hidden',color:C.ink}}>
+      <StatusBar dark={dark}/>
+      <div style={{padding:'2px 16px 10px',display:'flex',alignItems:'center',gap:10}}>
+        <div onClick={onBack} style={{cursor:'pointer',fontSize:20,color:C.muted,lineHeight:1}}>‹</div>
+        <div style={{fontFamily:'"Archivo",sans-serif',fontWeight:900,fontSize:22,color:C.ink,letterSpacing:0.5,flex:1}}>ADD EXERCISE</div>
+      </div>
+
+      {/* Search bar */}
+      <div style={{padding:'0 16px 10px'}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,height:40,background:C.surf,borderRadius:10,border:`1px solid ${C.hair2}`,padding:'0 12px'}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input value={query} onChange={e=>setQuery(e.target.value)} placeholder='Search "RDL", "dumbbell curl", "pull-up"…'
+            style={{flex:1,background:'transparent',border:'none',outline:'none',fontFamily:'"Archivo",sans-serif',fontSize:13,color:C.ink}}/>
+          {query && <div onClick={()=>setQuery('')} style={{cursor:'pointer',color:C.muted,fontSize:16}}>×</div>}
+        </div>
+      </div>
+
+      {/* Movement filter pills */}
+      <div style={{display:'flex',gap:6,padding:'0 16px 10px',overflowX:'auto'}}>
+        {filters.map(f=>(
+          <div key={f} onClick={()=>setFilter(f)} style={{height:28,padding:'0 12px',borderRadius:999,background:filter===f?C.accent:C.surf,border:`1px solid ${filter===f?C.accent:C.hair2}`,display:'flex',alignItems:'center',flexShrink:0,cursor:'pointer'}}>
+            <span style={{fontFamily:'"Space Mono",monospace',fontSize:9,fontWeight:700,color:filter===f?'#fff':C.muted,letterSpacing:0.8}}>{f.toUpperCase()}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{flex:1,overflowY:'auto',paddingBottom:20}}>
+        {filtered.length===0 && (
+          <div style={{padding:'40px 16px',textAlign:'center'}}>
+            <div style={{fontFamily:'"Archivo",sans-serif',fontSize:14,color:C.muted}}>No exercises found</div>
+            <div style={{fontFamily:'"Space Mono",monospace',fontSize:10,color:C.faint,marginTop:6,letterSpacing:0.8}}>TRY A DIFFERENT SEARCH</div>
+          </div>
+        )}
+        {filtered.map(({ex, preselect},i) => {
+          const isExpanded = expanded===ex.id;
+          const allVariants = ex.variants.equipment || ex.variants.grip || [];
+          const varType = ex.variants.equipment ? 'equipment' : 'grip';
+          const hasVariants = allVariants.length > 1;
+
+          return (
+            <div key={ex.id} style={{borderBottom:`1px solid ${C.hair}`}}>
+              {/* Main row */}
+              <div onClick={()=>hasVariants?setExpanded(isExpanded?null:ex.id):null}
+                style={{display:'flex',alignItems:'center',gap:10,padding:'12px 16px',cursor:hasVariants?'pointer':'default',background:isExpanded?C.accentSoft:'transparent'}}>
+                <MovementDot movement={ex.movement} C={C}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                    <span style={{fontFamily:'"Archivo",sans-serif',fontSize:17,color:C.ink,letterSpacing:0.5}}>{ex.name.toUpperCase()}</span>
+                    {preselect && <span style={{fontFamily:'"Space Mono",monospace',fontSize:9,fontWeight:700,color:C.accent,background:C.accentSoft,padding:'3px 8px',borderRadius:999,letterSpacing:0.8,border:`1px solid ${C.accent}44`,whiteSpace:'nowrap'}}>{preselect.label.toUpperCase()}</span>}
+                  </div>
+                  <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:C.muted,marginTop:2,letterSpacing:0.5}}>{[ex.primary,...ex.secondary.slice(0,2)].map((m,mi)=><span key={mi}>{mi>0?' · ':''}{m.toUpperCase()}</span>)}</div>
+                </div>
+                {hasVariants
+                  ? <div style={{display:'flex',alignItems:'center',gap:4}}>
+                      <span style={{fontFamily:'"Space Mono",monospace',fontSize:8,color:C.muted,letterSpacing:0.8}}>{allVariants.length} VARIANTS</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round" style={{transform:isExpanded?'rotate(90deg)':'rotate(0deg)',transition:'transform 0.15s'}}><polyline points="9 18 15 12 9 6"/></svg>
+                    </div>
+                  : <div onClick={()=>{}} style={{height:28,padding:'0 12px',borderRadius:8,background:C.accent,display:'flex',alignItems:'center',cursor:'pointer'}}>
+                      <span style={{fontFamily:'"Archivo",sans-serif',fontSize:14,letterSpacing:1,color:'#fff'}}>ADD</span>
+                    </div>}
+              </div>
+
+              {/* Inline variant expansion */}
+              {isExpanded && (
+                <div style={{background:C.surf,borderTop:`1px solid ${C.hair}`}}>
+                  <div style={{padding:'6px 16px 4px',fontFamily:'"Space Mono",monospace',fontSize:8,color:C.muted,letterSpacing:1.2,textTransform:'uppercase'}}>
+                    Select {varType}:
+                  </div>
+                  {allVariants.map((v,vi) => (
+                    <div key={v.id} style={{display:'flex',alignItems:'center',padding:'9px 16px 9px 32px',borderTop:`1px solid ${C.hair}`,cursor:'pointer',background:preselect?.id===v.id?C.accentSoft:'transparent'}}>
+                      {preselect?.id===v.id && <div style={{width:6,height:6,borderRadius:'50%',background:C.accent,marginRight:8,flexShrink:0}}/>}
+                      <div style={{flex:1}}>
+                        <span style={{fontFamily:'"Archivo",sans-serif',fontSize:13,fontWeight:preselect?.id===v.id?600:400,color:preselect?.id===v.id?C.accent:C.ink}}>{v.label}</span>
+                        {v.grip && Array.isArray(v.grip) && (
+                          <div style={{display:'flex',gap:4,marginTop:4,flexWrap:'wrap'}}>
+                            {v.grip.map((g,gi)=>(
+                              <span key={gi} style={{fontFamily:'"Space Mono",monospace',fontSize:8,color:C.muted,background:C.surf2,padding:'2px 6px',borderRadius:4}}>{g}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{height:28,padding:'0 12px',borderRadius:8,background:C.accent,display:'flex',alignItems:'center',cursor:'pointer'}}>
+                        <span style={{fontFamily:'"Archivo",sans-serif',fontSize:13,letterSpacing:1,color:'#fff'}}>ADD</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN 4B — Exercise picker with bottom sheet variant picker
+// ══════════════════════════════════════════════════════════════
+function ExercisePickerSheet({ C, onBack }) {
+  const dark=C===TD;
+  const [query, setQuery] = React.useState('');
+  const [sheetFor, setSheetFor] = React.useState(null);
+  const [selectedEq, setSelectedEq] = React.useState(null);
+  const [selectedGrip, setSelectedGrip] = React.useState(null);
+  const [sheetSearch, setSheetSearch] = React.useState('');
+
+  const filtered = EXERCISES.filter(ex => {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    return ex.name.toLowerCase().includes(q) || ex.abbr.toLowerCase().includes(q);
+  });
+
+  const openSheet = (ex) => { setSheetFor(ex); setSelectedEq(null); setSelectedGrip(null); setSheetSearch(''); };
+
+  return (
+    <div style={{width:'100%',height:'100%',background:C.bg,display:'flex',flexDirection:'column',overflow:'hidden',color:C.ink}}>
+      <StatusBar dark={dark}/>
+      <div style={{padding:'2px 16px 10px',display:'flex',alignItems:'center',gap:10}}>
+        <div onClick={onBack} style={{cursor:'pointer',fontSize:20,color:C.muted}}>‹</div>
+        <div style={{fontFamily:'"Archivo",sans-serif',fontWeight:900,fontSize:22,color:C.ink,letterSpacing:0.5,flex:1}}>ADD EXERCISE</div>
+      </div>
+      <div style={{padding:'0 16px 10px'}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,height:40,background:C.surf,borderRadius:10,border:`1px solid ${C.hair2}`,padding:'0 12px'}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search exercises…"
+            style={{flex:1,background:'transparent',border:'none',outline:'none',fontFamily:'"Archivo",sans-serif',fontSize:13,color:C.ink}}/>
+          {query && <div onClick={()=>setQuery('')} style={{cursor:'pointer',color:C.muted,fontSize:16}}>×</div>}
+        </div>
+      </div>
+      <div style={{flex:1,overflowY:'auto',paddingBottom:20}}>
+        {filtered.map((ex,i) => {
+          const allVariants = ex.variants.equipment || ex.variants.grip || [];
+          const hasVariants = allVariants.length > 1;
+          return (
+            <div key={ex.id} style={{display:'flex',alignItems:'center',gap:10,padding:'12px 16px',borderBottom:`1px solid ${C.hair}`,cursor:'pointer'}}
+              onClick={()=>hasVariants ? openSheet(ex) : null}>
+              <MovementDot movement={ex.movement} C={C}/>
+              <div style={{flex:1}}>
+                <div style={{fontFamily:'"Archivo",sans-serif',fontSize:17,color:C.ink,letterSpacing:0.5}}>{ex.name.toUpperCase()}</div>
+                <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:C.muted,marginTop:2,letterSpacing:0.5}}>{[ex.primary,...ex.secondary.slice(0,1)].map((m,mi)=><span key={mi}>{mi>0?' · ':''}{m.toUpperCase()}</span>)}</div>
+              </div>
+              {hasVariants
+                ? <div style={{display:'flex',alignItems:'center',gap:4}}>
+                    <span style={{fontFamily:'"Space Mono",monospace',fontSize:8,color:C.muted,letterSpacing:0.8}}>{allVariants.length} VAR</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+                  </div>
+                : <div style={{height:28,padding:'0 12px',borderRadius:8,background:C.accent,display:'flex',alignItems:'center'}}>
+                    <span style={{fontFamily:'"Archivo",sans-serif',fontSize:13,letterSpacing:1,color:'#fff'}}>ADD</span>
+                  </div>}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Variant bottom sheet */}
+      {sheetFor && (
+        <div style={{position:'absolute',inset:0,zIndex:150,display:'flex',flexDirection:'column',justifyContent:'flex-end',animation:'fadeIn 0.15s'}}>
+          <div onClick={()=>setSheetFor(null)} style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.45)',backdropFilter:'blur(5px)'}}/>
+          <div style={{position:'relative',background:C.bg,borderRadius:'20px 20px 0 0',maxHeight:'70%',display:'flex',flexDirection:'column',animation:'slideUp 0.25s ease-out',border:`1px solid ${C.hair2}`,borderBottom:'none'}}>
+            <div style={{padding:'10px 0 6px',display:'flex',justifyContent:'center',flexShrink:0}}>
+              <div style={{width:36,height:4,borderRadius:2,background:C.faint}}/>
+            </div>
+            <div style={{padding:'0 16px 10px',borderBottom:`1px solid ${C.hair}`,flexShrink:0}}>
+              <div style={{fontFamily:'"Archivo",sans-serif',fontWeight:900,fontSize:20,color:C.ink,letterSpacing:0.5}}>{sheetFor.name.toUpperCase()}</div>
+              <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:C.muted,marginTop:2,marginBottom:8}}>{sheetFor.variants.equipment?'SELECT EQUIPMENT':'SELECT GRIP / STYLE'}</div>
+              <div style={{display:'flex',alignItems:'center',gap:8,height:34,background:C.surf,borderRadius:8,border:`1px solid ${C.hair2}`,padding:'0 10px'}}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                <input placeholder="FILTER VARIANTS…" value={sheetSearch} onChange={e=>setSheetSearch(e.target.value)} style={{flex:1,background:'transparent',border:'none',outline:'none',fontFamily:'"Space Mono",monospace',fontSize:10,color:C.ink,letterSpacing:0.8}}/>
+              </div>
+            </div>
+            <div style={{overflowY:'auto',paddingBottom:28}}>
+              {/* Equipment or grip variants */}
+              {(sheetFor.variants.equipment || sheetFor.variants.grip || []).filter(v=>!sheetSearch||v.label.toLowerCase().includes(sheetSearch.toLowerCase())).map((v,vi) => {
+                const isSelEq = selectedEq?.id === v.id;
+                return (
+                  <div key={v.id}>
+                    <div onClick={()=>{ setSelectedEq(v); setSelectedGrip(null); }}
+                      style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',borderBottom:`1px solid ${C.hair}`,cursor:'pointer',background:isSelEq?C.accentSoft:'transparent'}}>
+                      <div style={{width:10,height:10,borderRadius:'50%',border:`2px solid ${isSelEq?C.accent:C.faint}`,background:isSelEq?C.accent:'transparent',flexShrink:0,transition:'all 0.15s'}}/>
+                      <div style={{flex:1}}>
+                        <div style={{fontFamily:'"Space Mono",monospace',fontSize:12,fontWeight:700,color:isSelEq?C.accent:C.ink,letterSpacing:0.5}}>{v.label.toUpperCase()}</div>
+                      </div>
+                      {isSelEq && v.grip && Array.isArray(v.grip) && (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+                      )}
+                    </div>
+                    {/* Grip sub-options inline under selected equipment */}
+                    {isSelEq && v.grip && Array.isArray(v.grip) && (
+                      <div style={{background:C.surf,borderBottom:`1px solid ${C.hair}`}}>
+                        <div style={{padding:'6px 16px 4px 40px',fontFamily:'"Space Mono",monospace',fontSize:8,color:C.muted,letterSpacing:1}}>GRIP / STYLE</div>
+                        {v.grip.map((g,gi)=>(
+                          <div key={gi} onClick={()=>setSelectedGrip(g)}
+                            style={{display:'flex',alignItems:'center',gap:10,padding:'9px 16px 9px 40px',borderTop:`1px solid ${C.hair}`,cursor:'pointer',background:selectedGrip===g?C.accentSoft:'transparent'}}>
+                            <div style={{width:8,height:8,borderRadius:'50%',border:`2px solid ${selectedGrip===g?C.accent:C.faint}`,background:selectedGrip===g?C.accent:'transparent',flexShrink:0}}/>
+                            <span style={{fontFamily:'"Archivo",sans-serif',fontSize:13,color:selectedGrip===g?C.accent:C.ink,fontWeight:selectedGrip===g?600:400}}>{g.replace(/-/g,' ')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {/* Add CTA */}
+            <div style={{padding:'10px 16px 28px',borderTop:`1px solid ${C.hair}`,background:C.bg,flexShrink:0}}>
+              <div style={{height:48,borderRadius:12,background:(selectedEq||(!sheetFor.variants.equipment&&selectedGrip))?C.accent:C.surf,border:`1px solid ${(selectedEq||selectedGrip)?C.accent:C.hair2}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',transition:'all 0.15s'}}>
+                <span style={{fontFamily:'"Archivo",sans-serif',fontWeight:700,fontSize:20,letterSpacing:2,color:(selectedEq||selectedGrip)?'#fff':C.muted}}>
+                  {selectedEq ? `ADD ${(selectedGrip?selectedGrip.replace(/-/g,' ')+' ':'')}${selectedEq.label.toUpperCase()}` : 'SELECT A VARIANT'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN — New blank program
+// ══════════════════════════════════════════════════════════════
+function NewProgramScreen({ C, onBack, onAddExercise }) {
+  const dark = C===TD;
+  const [name, setName] = React.useState('');
+  const [daysPerWeek, setDaysPerWeek] = React.useState(null);
+  const [exercises, setExercises] = React.useState([]);
+
+  const DAYS = [1,2,3,4,5,6,7];
+
+  return (
+    <div style={{width:'100%',height:'100%',background:C.bg,display:'flex',flexDirection:'column',overflow:'hidden',color:C.ink}}>
+      <StatusBar dark={dark}/>
+      <div style={{padding:'2px 16px 10px',display:'flex',alignItems:'center',gap:10,borderBottom:`1px solid ${C.hair}`}}>
+        <div onClick={onBack} style={{cursor:'pointer',fontSize:20,color:C.muted,lineHeight:1}}>‹</div>
+        <div style={{fontFamily:'"Archivo",sans-serif',fontWeight:900,fontSize:22,color:C.ink,letterSpacing:0.5,flex:1}}>NEW PROGRAM</div>
+        <div style={{height:32,padding:'0 14px',borderRadius:8,background:name&&daysPerWeek?C.accent:C.surf,border:`1px solid ${name&&daysPerWeek?C.accent:C.hair2}`,display:'flex',alignItems:'center',cursor:'pointer',transition:'all 0.2s'}}>
+          <span style={{fontFamily:'"Archivo",sans-serif',fontSize:16,letterSpacing:1,color:name&&daysPerWeek?'#fff':C.muted}}>SAVE</span>
+        </div>
+      </div>
+
+      <div style={{flex:1,overflowY:'auto',paddingBottom:30}}>
+        {/* Program name input */}
+        <div style={{padding:'16px 16px 0'}}>
+          <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:C.muted,letterSpacing:1.3,marginBottom:8}}>PROGRAM NAME</div>
+          <input
+            value={name} onChange={e=>setName(e.target.value)}
+            placeholder="E.G. MY PPL PROGRAM"
+            style={{width:'100%',height:46,background:C.surf,border:`1px solid ${name?C.accent:C.hair2}`,borderRadius:10,padding:'0 14px',fontFamily:'"Archivo",sans-serif',fontWeight:700,fontSize:20,letterSpacing:0.5,color:C.ink,outline:'none',transition:'border 0.15s'}}
+          />
+        </div>
+
+        {/* Days per week */}
+        <div style={{padding:'16px 16px 0'}}>
+          <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:C.muted,letterSpacing:1.3,marginBottom:8}}>DAYS PER WEEK</div>
+          <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+            {DAYS.map(d=>(
+              <div key={d} onClick={()=>setDaysPerWeek(d)} style={{width:38,height:38,borderRadius:8,background:daysPerWeek===d?C.accent:C.surf,border:`1px solid ${daysPerWeek===d?C.accent:C.hair2}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',transition:'all 0.15s'}}>
+                <span style={{fontFamily:'"Archivo",sans-serif',fontWeight:700,fontSize:20,color:daysPerWeek===d?'#fff':C.muted,lineHeight:1}}>{d}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Split type (optional) */}
+        <div style={{padding:'16px 16px 0'}}>
+          <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:C.muted,letterSpacing:1.3,marginBottom:8}}>SPLIT TYPE <span style={{opacity:0.5}}>(OPTIONAL)</span></div>
+          <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+            {['PPL','UPPER / LOWER','FULL BODY','BRO SPLIT','CUSTOM'].map((s,i)=>(
+              <div key={i} style={{height:30,padding:'0 12px',borderRadius:999,background:C.surf,border:`1px solid ${C.hair2}`,display:'flex',alignItems:'center',cursor:'pointer'}}>
+                <span style={{fontFamily:'"Space Mono",monospace',fontSize:9,fontWeight:700,color:C.muted,letterSpacing:0.8}}>{s}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Exercises — empty state */}
+        <div style={{padding:'20px 16px 0'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+            <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:C.muted,letterSpacing:1.3}}>EXERCISES</div>
+            <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:C.muted}}>{exercises.length} ADDED</div>
+          </div>
+
+          {exercises.length === 0 ? (
+            /* Empty state */
+            <div style={{borderRadius:12,border:`1px dashed ${C.faint}`,padding:'32px 20px',display:'flex',flexDirection:'column',alignItems:'center',gap:12,textAlign:'center'}}>
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={C.faint} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="4" y="5" width="16" height="14" rx="2"/>
+                <path d="M8 9h8M8 13h8M8 17h5"/>
+              </svg>
+              <div>
+                <div style={{fontFamily:'"Archivo",sans-serif',fontSize:14,fontWeight:600,color:C.ink,marginBottom:4}}>No exercises yet</div>
+                <div style={{fontFamily:'"Archivo",sans-serif',fontSize:12,color:C.muted,lineHeight:1.4}}>Add exercises to build your program. You can configure sets, reps and RIR for each.</div>
+              </div>
+              <div onClick={onAddExercise} style={{height:40,padding:'0 20px',borderRadius:8,background:C.accent,display:'flex',alignItems:'center',cursor:'pointer',gap:8,boxShadow:`0 6px 16px ${C.accent}44`}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                <span style={{fontFamily:'"Archivo",sans-serif',fontSize:16,letterSpacing:1.5,color:'#fff'}}>ADD EXERCISE</span>
+              </div>
+            </div>
+          ) : (
+            <div>
+              {exercises.map((ex,i)=>(
+                <div key={i} style={{padding:'10px 0',borderBottom:`1px solid ${C.hair}`,display:'flex',alignItems:'center',gap:10}}>
+                  <span style={{fontFamily:'"Archivo",sans-serif',fontSize:16,color:C.ink,letterSpacing:0.5}}>{ex}</span>
+                </div>
+              ))}
+              <div onClick={onAddExercise} style={{marginTop:10,height:40,borderRadius:10,border:`1px dashed ${C.faint}`,display:'flex',alignItems:'center',justifyContent:'center',gap:8,cursor:'pointer'}}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                <span style={{fontFamily:'"Space Mono",monospace',fontSize:10,color:C.muted,letterSpacing:1}}>ADD EXERCISE</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Notes */}
+        <div style={{padding:'16px 16px 0'}}>
+          <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:C.muted,letterSpacing:1.3,marginBottom:8}}>NOTES <span style={{opacity:0.5}}>(OPTIONAL)</span></div>
+          <div style={{height:70,background:C.surf,borderRadius:10,border:`1px solid ${C.hair2}`,padding:'10px 14px',display:'flex',alignItems:'flex-start'}}>
+            <span style={{fontFamily:'"Archivo",sans-serif',fontSize:13,color:C.muted,fontStyle:'italic'}}>Add program notes…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// COMPOSED SCREENS (with sheet state)
+// ══════════════════════════════════════════════════════════════
+function ProgramFlowLight({ C }) {
+  const [screen, setScreen] = React.useState('list');
+  const [showPresets, setShowPresets] = React.useState(false);
+  const [selectedProgram, setSelectedProgram] = React.useState(null);
+
+  if (screen==='picker-inline') return <ExercisePickerInline C={C} onBack={()=>setScreen(selectedProgram?'detail':'new')} searchQuery="rdl"/>;
+  if (screen==='picker-sheet')  return <ExercisePickerSheet C={C} onBack={()=>setScreen(selectedProgram?'detail':'new')}/>;
+  if (screen==='new') return (
+    <NewProgramScreen C={C}
+      onBack={()=>setScreen('list')}
+      onAddExercise={()=>setScreen('picker-inline')}/>
+  );
+  if (screen==='detail') return (
+    <TemplateDetailScreen C={C} program={selectedProgram}
+      onBack={()=>setScreen('list')}
+      onAddExercise={()=>setScreen('picker-inline')}/>
+  );
+
+  return (
+    <div style={{position:'relative',width:'100%',height:'100%'}}>
+      <ProgramListScreen C={C}
+        onSelectProgram={(p)=>{setSelectedProgram(p);setScreen('detail');}}
+        onNewProgram={()=>{setSelectedProgram(null);setShowPresets(true);}}/>
+      {showPresets && (
+        <PresetPickerSheet C={C}
+          onClose={()=>setShowPresets(false)}
+          onSelect={(p)=>{setShowPresets(false); if(p.id==='blank') setScreen('new'); else setScreen('detail');}}/>
+      )}
+    </div>
+  );
+}
+
+// ── Layout ────────────────────────────────────────────────────
+function PhoneCard({num,vibe,children}) {
+  return(
+    <div className="pcard">
+      <div><div className="card-label"><span className="num">{num}</span><span className="vibe">{vibe}</span></div></div>
+      <div className="frame"><div className="screen">{children}</div></div>
+    </div>
+  );
+}
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentColor": "#c8553d",
+  "showPR": true,
+  "showRIR": true
+}/*EDITMODE-END*/;
+
+// Minimal tweaks panel (self-contained, no external dep)
+function TweaksFloating({ tweaks, setTweak, visible }) {
+  if (!visible) return null;
+  return (
+    <div style={{position:'fixed',bottom:24,right:24,zIndex:9999,background:'#fff',borderRadius:14,padding:'16px 18px',boxShadow:'0 8px 32px rgba(0,0,0,0.18)',border:'1px solid rgba(0,0,0,0.1)',minWidth:220,fontFamily:'Inter,system-ui'}}>
+      <div style={{fontSize:12,fontWeight:700,letterSpacing:1,color:'#888',marginBottom:12,textTransform:'uppercase'}}>Tweaks</div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+        <span style={{fontSize:13,color:'#333'}}>Accent color</span>
+        <input type="color" value={tweaks.accentColor} onChange={e=>setTweak('accentColor',e.target.value)} style={{width:32,height:24,border:'none',borderRadius:4,cursor:'pointer'}}/>
+      </div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+        <span style={{fontSize:13,color:'#333'}}>Show PR badges</span>
+        <div onClick={()=>setTweak('showPR',!tweaks.showPR)} style={{width:36,height:20,borderRadius:999,background:tweaks.showPR?'#c8553d':'#ddd',cursor:'pointer',position:'relative',transition:'background 0.2s'}}>
+          <div style={{position:'absolute',top:2,left:tweaks.showPR?16:2,width:16,height:16,borderRadius:'50%',background:'#fff',transition:'left 0.2s'}}/>
+        </div>
+      </div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <span style={{fontSize:13,color:'#333'}}>Show RIR</span>
+        <div onClick={()=>setTweak('showRIR',!tweaks.showRIR)} style={{width:36,height:20,borderRadius:999,background:tweaks.showRIR?'#c8553d':'#ddd',cursor:'pointer',position:'relative',transition:'background 0.2s'}}>
+          <div style={{position:'absolute',top:2,left:tweaks.showRIR?16:2,width:16,height:16,borderRadius:'50%',background:'#fff',transition:'left 0.2s'}}/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [tweaks, setTweaksState] = React.useState(TWEAK_DEFAULTS);
+  const [tweaksVisible, setTweaksVisible] = React.useState(false);
+
+  const setTweak = (k,v) => {
+    setTweaksState(p => {
+      const next = {...p,[k]:v};
+      window.parent.postMessage({type:'__edit_mode_set_keys', edits: next}, '*');
+      return next;
+    });
+  };
+
+  React.useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type === '__activate_edit_mode')   setTweaksVisible(true);
+      if (e.data?.type === '__deactivate_edit_mode')  setTweaksVisible(false);
+    };
+    window.addEventListener('message', handler);
+    window.parent.postMessage({type:'__edit_mode_available'}, '*');
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
+  const C_LIGHT = tweaks.accentColor !== '#c8553d'
+    ? { ...TL, accent: tweaks.accentColor, accentSoft: tweaks.accentColor + '18' }
+    : TL;
+  const C_DARK = tweaks.accentColor !== '#c8553d'
+    ? { ...TD, accent: tweaks.accentColor, accentSoft: tweaks.accentColor + '18' }
+    : TD;
+
+  return (
+    <>
+    <TweaksFloating tweaks={tweaks} setTweak={setTweak} visible={tweaksVisible}/>
+    <div className="canvas">
+      <h1>Programs + Exercise Library</h1>
+      <p className="h1-sub">Tap any program to enter template detail. Tap ADD EXERCISE to enter the exercise picker. The picker has two variant patterns: inline expansion and bottom sheet drill-down. Smart search pre-selects variants from query keywords.</p>
+
+      <div className="section-label">PROGRAMS — FULLY INTERACTIVE</div>
+      <p className="section-desc">Tap a program → template detail → ADD EXERCISE → exercise picker with variants. All navigation wired up.</p>
+      <div className="grid">
+        <PhoneCard num="A1" vibe="Light — full flow"><ProgramFlowLight C={C_LIGHT}/></PhoneCard>
+        <PhoneCard num="A2" vibe="Dark — full flow"><ProgramFlowLight C={C_DARK}/></PhoneCard>
+      </div>
+
+      <div className="section-label">NEW PROGRAM — BLANK CANVAS</div>
+      <p className="section-desc">Creating a program from scratch. Name + days per week required. Exercise list starts empty with a clear empty state CTA.</p>
+      <div className="grid">
+        <PhoneCard num="A3" vibe="New program — empty (light)"><NewProgramScreen C={C_LIGHT} onBack={()=>{}} onAddExercise={()=>{}}/></PhoneCard>
+        <PhoneCard num="A4" vibe="New program — empty (dark)"><NewProgramScreen C={C_DARK} onBack={()=>{}} onAddExercise={()=>{}}/></PhoneCard>
+      </div>
+
+      <div className="section-label">EXERCISE PICKER — VARIANTS SIDE BY SIDE</div>
+      <p className="section-desc">Left: inline expansion (tap exercise row to reveal variants below). Right: bottom sheet (tap opens drill-down modal with equipment → grip sub-selection).</p>
+      <div className="grid">
+        <PhoneCard num="B1" vibe="Inline expansion (light)"><ExercisePickerInline C={C_LIGHT} onBack={()=>{}} searchQuery=""/></PhoneCard>
+        <PhoneCard num="B2" vibe="Inline — smart search 'rdl'"><ExercisePickerInline C={C_LIGHT} onBack={()=>{}} searchQuery="rdl"/></PhoneCard>
+        <PhoneCard num="B3" vibe="Bottom sheet (light)"><ExercisePickerSheet C={C_LIGHT} onBack={()=>{}}/></PhoneCard>
+        <PhoneCard num="B4" vibe="Bottom sheet (dark)"><ExercisePickerSheet C={C_DARK} onBack={()=>{}}/></PhoneCard>
+      </div>
+
+      <div className="section-label">PRESET PICKER + TEMPLATE DETAIL</div>
+      <div className="grid">
+        <PhoneCard num="C1" vibe="Preset picker open (light)">
+          <div style={{position:'relative',width:'100%',height:'100%'}}>
+            <ProgramListScreen C={C_LIGHT} onSelectProgram={()=>{}} onNewProgram={()=>{}}/>
+            <PresetPickerSheet C={C_LIGHT} onClose={()=>{}} onSelect={()=>{}}/>
+          </div>
+        </PhoneCard>
+        <PhoneCard num="C2" vibe="Template detail (light)">
+          <TemplateDetailScreen C={C_LIGHT} program={PROGRAMS[0]} onBack={()=>{}} onAddExercise={()=>{}}/>
+        </PhoneCard>
+        <PhoneCard num="C3" vibe="Template detail (dark)">
+          <TemplateDetailScreen C={C_DARK} program={PROGRAMS[0]} onBack={()=>{}} onAddExercise={()=>{}}/>
+        </PhoneCard>
+      </div>
+    </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
