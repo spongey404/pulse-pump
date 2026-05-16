@@ -17,21 +17,21 @@ struct RecentWorkoutsWidget: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Recent Workouts")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.mono(14, weight: .medium))
                 Spacer()
                 if currentStreak > 0 {
                     HStack(spacing: 4) {
                         Image(systemName: "flame.fill")
                             .foregroundStyle(.orange)
                         Text("\(currentStreak) day streak")
-                            .font(.caption.weight(.medium))
+                            .font(.mono(11, weight: .medium))
                     }
                 }
             }
 
             if recentWorkouts.isEmpty {
                 Text("No workouts yet")
-                    .font(.subheadline)
+                    .font(.mono(14))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 8)
@@ -40,14 +40,14 @@ struct RecentWorkoutsWidget: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(workout.template?.name ?? "Workout")
-                                .font(.subheadline.weight(.medium))
+                                .font(.mono(14, weight: .medium))
                             Text(workout.date, style: .relative)
-                                .font(.caption)
+                                .font(.mono(11))
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
                         Text("\(workout.exerciseLogs.count) exercises")
-                            .font(.caption)
+                            .font(.mono(11))
                             .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 4)
@@ -55,7 +55,7 @@ struct RecentWorkoutsWidget: View {
             }
         }
         .padding()
-        .background(Color(.secondarySystemBackground))
+        .background(Color.surf)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }

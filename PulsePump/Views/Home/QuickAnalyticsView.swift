@@ -106,29 +106,29 @@ struct QuickStatTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.caption)
+                .font(.mono(11))
                 .foregroundStyle(.secondary)
 
             Text(value)
-                .font(.title2.weight(.bold))
+                .font(.display(22))
 
             if let change {
                 HStack(spacing: 2) {
                     Image(systemName: change >= 0 ? "arrow.up.right" : "arrow.down.right")
-                        .font(.caption2.weight(.bold))
+                        .font(.mono(9, weight: .bold))
                     Text(String(format: "%+.0f%%", change))
-                        .font(.caption2.weight(.semibold))
+                        .font(.mono(9, weight: .medium))
                 }
                 .foregroundStyle(change >= 0 ? .green : .red)
 
                 Text(period)
-                    .font(.caption2)
+                    .font(.mono(9))
                     .foregroundStyle(.tertiary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-        .background(Color(.secondarySystemBackground))
+        .background(Color.surf)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
