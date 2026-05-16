@@ -2,7 +2,10 @@ import SwiftUI
 import SwiftData
 
 struct ExerciseLibraryView: View {
+    var onSelect: ((Exercise) -> Void)? = nil
+
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     @Query(sort: \Exercise.name) private var exercises: [Exercise]
 
     @State private var searchText = ""
@@ -12,12 +15,14 @@ struct ExerciseLibraryView: View {
     @State private var showFilters = false
     @State private var showCreateExercise = false
 
+    private var isSelectionMode: Bool { onSelect != nil }
+
     private var filteredExercises: [Exercise] {
         exercises.filter { exercise in
             guard exercise.isApproved || exercise.isCustom else { return false }
 
             if !searchText.isEmpty {
-                guard exercise.name.localizedCaseInsensitiveContains(searchText) else { return false }
+                guard exercise.name.hasWordPrefix(searchText) else { return false }
             }
 
             if !selectedMuscleGroups.isEmpty {
@@ -59,7 +64,7 @@ struct ExerciseLibraryView: View {
                                 ExerciseRowView(exercise: exercise)
                                 Spacer()
                                 Text("Pending")
-                                    .font(.caption2)
+                                    .font(.mono(9))
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
                                     .background(Color.orange.opacity(0.15))
@@ -72,31 +77,47 @@ struct ExerciseLibraryView: View {
             }
 
             ForEach(filteredExercises) { exercise in
-                NavigationLink(value: exercise) {
-                    ExerciseRowView(exercise: exercise)
+                if isSelectionMode {
+                    Button {
+                        onSelect?(exercise)
+                        dismiss()
+                    } label: {
+                        ExerciseRowView(exercise: exercise)
+                    }
+                    .foregroundStyle(Color.inkPrimary)
+                } else {
+                    NavigationLink(value: exercise) {
+                        ExerciseRowView(exercise: exercise)
+                    }
                 }
             }
         }
         .searchable(text: $searchText, prompt: "Search exercises")
-        .navigationTitle("Exercises")
+        .navigationTitle(isSelectionMode ? "Replace Exercise" : "Exercises")
         .navigationDestination(for: Exercise.self) { exercise in
             ExerciseDetailView(exercise: exercise)
         }
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showCreateExercise = true
-                } label: {
-                    Image(systemName: "plus")
+            if isSelectionMode {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
                 }
-            }
-            ToolbarItem(placement: .secondaryAction) {
-                Button {
-                    showFilters.toggle()
-                } label: {
-                    Label("Filter", systemImage: activeFilterCount > 0
-                        ? "line.3.horizontal.decrease.circle.fill"
-                        : "line.3.horizontal.decrease.circle")
+            } else {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        showCreateExercise = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                }
+                ToolbarItem(placement: .secondaryAction) {
+                    Button {
+                        showFilters.toggle()
+                    } label: {
+                        Label("Filter", systemImage: activeFilterCount > 0
+                            ? "line.3.horizontal.decrease.circle.fill"
+                            : "line.3.horizontal.decrease.circle")
+                    }
                 }
             }
         }
@@ -124,37 +145,38 @@ struct ExerciseRowView: View {
             // Movement pattern icon
             ZStack {
                 Circle()
-                    .fill(Color.pumpPrimary.opacity(0.12))
+                    .fill(Color.pumpAccent.opacity(0.10))
                     .frame(width: 40, height: 40)
                 Image(systemName: exercise.movementPattern.sfSymbol)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Color.pumpPrimary)
+                    .font(.mono(16, weight: .medium))
+                    .foregroundStyle(Color.pumpAccent)
             }
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(exercise.name)
-                        .font(.body)
+                        .font(.mono(16))
                     if exercise.isCustom {
-                        Text("Custom")
-                            .font(.caption2)
+                        Text("CUSTOM")
+                            .font(.spaceMono(8))
+                            .tracking(0.5)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.pumpPrimary.opacity(0.15))
-                            .foregroundStyle(Color.pumpPrimary)
+                            .background(Color.pumpAccent.opacity(0.10))
+                            .foregroundStyle(Color.pumpAccent)
                             .clipShape(Capsule())
                     }
                 }
 
                 HStack(spacing: 4) {
                     Text(exercise.primaryMuscleGroups.map(\.displayName).joined(separator: ", "))
-                        .font(.caption)
+                        .font(.mono(11))
                         .foregroundStyle(.secondary)
                     Text("·")
-                        .font(.caption)
+                        .font(.mono(11))
                         .foregroundStyle(.tertiary)
                     Text(exercise.equipmentType.displayName)
-                        .font(.caption)
+                        .font(.mono(11))
                         .foregroundStyle(.secondary)
                 }
             }

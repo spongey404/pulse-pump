@@ -140,7 +140,7 @@ struct ExerciseTrendChart: View {
         if dataPoints.count >= 2 {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Weight Over Time")
-                    .font(.caption)
+                    .font(.mono(11))
                     .foregroundStyle(.secondary)
 
                 Chart {
@@ -149,12 +149,12 @@ struct ExerciseTrendChart: View {
                             x: .value("Date", point.date),
                             y: .value("Weight", point.maxWeight)
                         )
-                        .foregroundStyle(Color.pumpPrimary)
+                        .foregroundStyle(Color.pumpAccent)
                         PointMark(
                             x: .value("Date", point.date),
                             y: .value("Weight", point.maxWeight)
                         )
-                        .foregroundStyle(Color.pumpPrimary)
+                        .foregroundStyle(Color.pumpAccent)
                     }
                 }
                 .frame(height: 160)
@@ -171,14 +171,14 @@ struct StatCard: View {
     var body: some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(.title3.weight(.bold))
+                .font(.display(20))
             Text(title)
-                .font(.caption)
+                .font(.mono(11))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
-        .background(Color(.secondarySystemBackground))
+        .background(Color.surf)
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
@@ -204,7 +204,7 @@ struct ExerciseRecentSessionsSection: View {
                 VStack(alignment: .leading, spacing: 4) {
                     if let date = log.workout?.date {
                         Text(date, style: .date)
-                            .font(.caption)
+                            .font(.mono(11))
                             .foregroundStyle(.secondary)
                     }
                     Text(log.sets.map { "\($0.weight)×\($0.reps)" }.joined(separator: "  "))
@@ -268,10 +268,10 @@ struct ExerciseNotesSection: View {
             ForEach(notesFromLogs, id: \.date) { entry in
                 VStack(alignment: .leading, spacing: 2) {
                     Text(entry.date, style: .date)
-                        .font(.caption)
+                        .font(.mono(11))
                         .foregroundStyle(.secondary)
                     Text(entry.note)
-                        .font(.callout)
+                        .font(.mono(15))
                 }
             }
         }

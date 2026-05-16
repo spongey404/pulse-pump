@@ -90,7 +90,7 @@ struct CreateExerciseView: View {
                                 Text("Back")
                             }
                             .frame(maxWidth: .infinity, minHeight: 50)
-                            .background(Color(.secondarySystemBackground))
+                            .background(Color.surf)
                             .foregroundStyle(.primary)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                         }
@@ -106,7 +106,7 @@ struct CreateExerciseView: View {
                                 Image(systemName: "chevron.right")
                             }
                             .frame(maxWidth: .infinity, minHeight: 50)
-                            .background(canAdvance ? Color.pumpPrimary : Color(.systemGray4))
+                            .background(canAdvance ? Color.pumpAccent : Color.inkFaint)
                             .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                         }
@@ -119,7 +119,7 @@ struct CreateExerciseView: View {
                         } label: {
                             Text("Save Exercise")
                                 .frame(maxWidth: .infinity, minHeight: 50)
-                                .background(Color.pumpPrimary)
+                                .background(Color.pumpAccent)
                                 .foregroundStyle(.white)
                                 .clipShape(RoundedRectangle(cornerRadius: 14))
                         }
@@ -167,7 +167,7 @@ struct StepProgressIndicator: View {
         HStack(spacing: 8) {
             ForEach(0..<total, id: \.self) { i in
                 Capsule()
-                    .fill(i <= current ? Color.pumpPrimary : Color(.systemGray4))
+                    .fill(i <= current ? Color.pumpAccent : Color.inkFaint)
                     .frame(width: i == current ? 24 : 8, height: 8)
                     .animation(.spring(response: 0.3), value: current)
             }
@@ -186,19 +186,19 @@ struct NameStepCard: View {
             Spacer()
             VStack(spacing: 12) {
                 Text("What's the exercise called?")
-                    .font(.title2.weight(.bold))
+                    .font(.display(22))
                     .multilineTextAlignment(.center)
                 Text("Give it a clear, recognisable name.")
-                    .font(.subheadline)
+                    .font(.mono(14))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
 
             TextField("e.g. Barbell Bench Press", text: $name)
-                .font(.title3)
+                .font(.display(20))
                 .multilineTextAlignment(.center)
                 .padding(.vertical, 14)
-                .background(Color(.secondarySystemBackground))
+                .background(Color.surf)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
                 .focused($focused)
                 .submitLabel(.next)
@@ -231,9 +231,9 @@ struct MuscleSelectCard: View {
         VStack(spacing: 0) {
             VStack(spacing: 8) {
                 Text(title)
-                    .font(.title2.weight(.bold))
+                    .font(.display(22))
                 Text(subtitle)
-                    .font(.subheadline)
+                    .font(.mono(14))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
@@ -248,7 +248,7 @@ struct MuscleSelectCard: View {
                         ForEach(Array(selected).sorted { $0.displayName < $1.displayName }) { muscle in
                             HStack(spacing: 4) {
                                 Text(muscle.displayName)
-                                    .font(.caption.weight(.medium))
+                                    .font(.mono(11, weight: .medium))
                                 Button {
                                     selected.remove(muscle)
                                     for sub in MuscleSubRegion.subRegions(for: muscle) {
@@ -256,13 +256,13 @@ struct MuscleSelectCard: View {
                                     }
                                 } label: {
                                     Image(systemName: "xmark")
-                                        .font(.caption2.weight(.bold))
+                                        .font(.mono(9, weight: .bold))
                                 }
                             }
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
-                            .background(Color.pumpPrimary.opacity(0.15))
-                            .foregroundStyle(Color.pumpPrimary)
+                            .background(Color.pumpAccent.opacity(0.15))
+                            .foregroundStyle(Color.pumpAccent)
                             .clipShape(Capsule())
                         }
                     }
@@ -285,7 +285,7 @@ struct MuscleSelectCard: View {
                 }
             }
             .padding(10)
-            .background(Color(.secondarySystemBackground))
+            .background(Color.surf)
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .padding(.horizontal)
             .padding(.bottom, 4)
@@ -309,10 +309,10 @@ struct MuscleSelectCard: View {
                             Spacer()
                             if isSelected {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(Color.pumpPrimary)
+                                    .foregroundStyle(Color.pumpAccent)
                             } else {
                                 Image(systemName: "circle")
-                                    .foregroundStyle(Color(.systemGray4))
+                                    .foregroundStyle(Color.inkFaint)
                             }
                         }
                     }
@@ -329,12 +329,12 @@ struct MuscleSelectCard: View {
                             } label: {
                                 HStack {
                                     Text(sub.displayName)
-                                        .font(.subheadline)
+                                        .font(.mono(14))
                                         .foregroundStyle(.secondary)
                                     Spacer()
                                     Image(systemName: selectedSubRegions.contains(sub) ? "checkmark.circle.fill" : "circle")
-                                        .font(.subheadline)
-                                        .foregroundStyle(selectedSubRegions.contains(sub) ? Color.pumpPrimary : Color(.systemGray4))
+                                        .font(.mono(14))
+                                        .foregroundStyle(selectedSubRegions.contains(sub) ? Color.pumpAccent : Color.inkFaint)
                                 }
                                 .padding(.leading, 16)
                                 .padding(.top, 4)
@@ -361,9 +361,9 @@ struct DetailsStepCard: View {
             VStack(alignment: .leading, spacing: 28) {
                 VStack(spacing: 8) {
                     Text("Exercise details")
-                        .font(.title2.weight(.bold))
+                        .font(.display(22))
                     Text("Tell us more about how it's performed.")
-                        .font(.subheadline)
+                        .font(.mono(14))
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -372,7 +372,7 @@ struct DetailsStepCard: View {
                 // Equipment
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Equipment")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.mono(14, weight: .medium))
                         .foregroundStyle(.secondary)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {
@@ -391,7 +391,7 @@ struct DetailsStepCard: View {
                 // Movement pattern
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Movement pattern")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.mono(14, weight: .medium))
                         .foregroundStyle(.secondary)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {
@@ -410,7 +410,7 @@ struct DetailsStepCard: View {
                 // Exercise type
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Tracking type")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.mono(14, weight: .medium))
                         .foregroundStyle(.secondary)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {
@@ -429,7 +429,7 @@ struct DetailsStepCard: View {
                 // Unilateral toggle
                 Toggle("Unilateral (log each side separately)", isOn: $isUnilateral)
                     .padding()
-                    .background(Color(.secondarySystemBackground))
+                    .background(Color.surf)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .padding(.horizontal)
@@ -452,14 +452,14 @@ struct ChipButton: View {
             HStack(spacing: 6) {
                 if let icon {
                     Image(systemName: icon)
-                        .font(.caption.weight(.medium))
+                        .font(.mono(11, weight: .medium))
                 }
                 Text(label)
-                    .font(.caption.weight(.medium))
+                    .font(.mono(11, weight: .medium))
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .background(isSelected ? Color.pumpPrimary : Color(.secondarySystemBackground))
+            .background(isSelected ? Color.pumpAccent : Color.surf)
             .foregroundStyle(isSelected ? .white : .primary)
             .clipShape(Capsule())
         }
@@ -484,9 +484,9 @@ struct ReviewStepCard: View {
             VStack(spacing: 20) {
                 VStack(spacing: 8) {
                     Text("Looks good?")
-                        .font(.title2.weight(.bold))
+                        .font(.display(22))
                     Text("Review your exercise before saving.")
-                        .font(.subheadline)
+                        .font(.mono(14))
                         .foregroundStyle(.secondary)
                 }
                 .multilineTextAlignment(.center)
@@ -496,17 +496,17 @@ struct ReviewStepCard: View {
                     HStack {
                         ZStack {
                             Circle()
-                                .fill(Color.pumpPrimary.opacity(0.12))
+                                .fill(Color.pumpAccent.opacity(0.12))
                                 .frame(width: 48, height: 48)
                             Image(systemName: pattern.sfSymbol)
-                                .font(.system(size: 20, weight: .medium))
-                                .foregroundStyle(Color.pumpPrimary)
+                                .font(.mono(20, weight: .medium))
+                                .foregroundStyle(Color.pumpAccent)
                         }
                         VStack(alignment: .leading, spacing: 2) {
                             Text(name)
-                                .font(.headline)
+                                .font(.mono(16, weight: .medium))
                             Text(pattern.displayName + " · " + equipment.displayName)
-                                .font(.caption)
+                                .font(.mono(11))
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -523,16 +523,16 @@ struct ReviewStepCard: View {
                     }
                 }
                 .padding()
-                .background(Color(.secondarySystemBackground))
+                .background(Color.surf)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
 
                 // Community toggle
                 Toggle("Submit to community library", isOn: $submitToCommunity)
                     .padding()
-                    .background(Color(.secondarySystemBackground))
+                    .background(Color.surf)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 Text("Community submissions require approval before appearing in the public library.")
-                    .font(.caption)
+                    .font(.mono(11))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
@@ -550,11 +550,11 @@ struct ReviewRow: View {
     var body: some View {
         HStack(alignment: .top) {
             Text(label)
-                .font(.caption)
+                .font(.mono(11))
                 .foregroundStyle(.secondary)
                 .frame(width: 72, alignment: .leading)
             Text(value)
-                .font(.caption)
+                .font(.mono(11))
                 .foregroundStyle(.primary)
             Spacer()
         }
@@ -589,10 +589,10 @@ struct MuscleGroupPicker: View {
                             Spacer()
                             if !subRegions.isEmpty && selected.contains(muscle) {
                                 Image(systemName: expandedGroups.contains(muscle) ? "chevron.down" : "chevron.right")
-                                    .font(.caption).foregroundStyle(.secondary)
+                                    .font(.mono(11)).foregroundStyle(.secondary)
                             }
                             if selected.contains(muscle) {
-                                Image(systemName: "checkmark").foregroundStyle(Color.pumpPrimary)
+                                Image(systemName: "checkmark").foregroundStyle(Color.pumpAccent)
                             }
                         }
                     }
@@ -603,10 +603,10 @@ struct MuscleGroupPicker: View {
                                 else { selectedSubRegions.insert(sub) }
                             } label: {
                                 HStack {
-                                    Text(sub.displayName).font(.subheadline).foregroundStyle(.primary)
+                                    Text(sub.displayName).font(.mono(14)).foregroundStyle(.primary)
                                     Spacer()
                                     if selectedSubRegions.contains(sub) {
-                                        Image(systemName: "checkmark").font(.caption).foregroundStyle(Color.pumpPrimary)
+                                        Image(systemName: "checkmark").font(.mono(11)).foregroundStyle(Color.pumpAccent)
                                     }
                                 }
                                 .padding(.leading, 20)

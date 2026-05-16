@@ -27,7 +27,7 @@ struct ExerciseFilterSheet: View {
                                         Spacer()
                                         if selectedMuscleGroups.contains(muscle) {
                                             Image(systemName: "checkmark")
-                                                .foregroundStyle(Color.pumpPrimary)
+                                                .foregroundStyle(Color.pumpAccent)
                                         }
                                     }
                                 }
@@ -47,7 +47,7 @@ struct ExerciseFilterSheet: View {
                                 Spacer()
                                 if selectedEquipmentType == equipment {
                                     Image(systemName: "checkmark")
-                                        .foregroundStyle(Color.pumpPrimary)
+                                        .foregroundStyle(Color.pumpAccent)
                                 }
                             }
                         }
@@ -65,7 +65,7 @@ struct ExerciseFilterSheet: View {
                                 Spacer()
                                 if selectedMovementPattern == pattern {
                                     Image(systemName: "checkmark")
-                                        .foregroundStyle(Color.pumpPrimary)
+                                        .foregroundStyle(Color.pumpAccent)
                                 }
                             }
                         }
