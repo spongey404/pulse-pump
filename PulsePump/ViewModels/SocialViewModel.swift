@@ -27,10 +27,106 @@ class SocialViewModel {
 
     var currentUid: String? { Auth.auth().currentUser?.uid }
 
+    // MARK: - Demo data (shown when feed is empty and user has no friends yet)
+
+    static let demoFeedItems: [WorkoutFeedItem] = {
+        let cal = Calendar.current
+        let now = Date()
+        return [
+            WorkoutFeedItem(
+                id: "demo-1",
+                userId: "demo-alex",
+                username: "alex_lifts",
+                templateName: "PUSH DAY",
+                exerciseCount: 6,
+                durationSeconds: 3720,
+                caloriesBurned: 412,
+                musclesWorked: ["Chest", "Shoulders", "Triceps"],
+                prCount: 2,
+                improvedCount: 4,
+                totalExercises: 6,
+                date: cal.date(byAdding: .hour, value: -2, to: now) ?? now,
+                caption: "Huge session today. New PR on bench — finally hit 100kg! 🔥",
+                exercises: [
+                    FeedExercise(id: "fe-1", name: "Barbell Bench Press", sets: [
+                        FeedSetLog(weight: 100, reps: 5, duration: 0, distance: 0, setType: "standard", side: nil),
+                        FeedSetLog(weight: 95, reps: 6, duration: 0, distance: 0, setType: "standard", side: nil),
+                        FeedSetLog(weight: 90, reps: 8, duration: 0, distance: 0, setType: "standard", side: nil),
+                    ]),
+                    FeedExercise(id: "fe-2", name: "Incline Dumbbell Press", sets: [
+                        FeedSetLog(weight: 34, reps: 10, duration: 0, distance: 0, setType: "standard", side: nil),
+                        FeedSetLog(weight: 34, reps: 10, duration: 0, distance: 0, setType: "standard", side: nil),
+                    ]),
+                    FeedExercise(id: "fe-3", name: "Lateral Raise", sets: [
+                        FeedSetLog(weight: 12, reps: 15, duration: 0, distance: 0, setType: "standard", side: nil),
+                        FeedSetLog(weight: 12, reps: 15, duration: 0, distance: 0, setType: "standard", side: nil),
+                        FeedSetLog(weight: 12, reps: 12, duration: 0, distance: 0, setType: "standard", side: nil),
+                    ]),
+                ]
+            ),
+            WorkoutFeedItem(
+                id: "demo-2",
+                userId: "demo-priya",
+                username: "priya.trains",
+                templateName: "LEG DAY",
+                exerciseCount: 5,
+                durationSeconds: 4200,
+                caloriesBurned: 536,
+                musclesWorked: ["Quads", "Hamstrings", "Glutes"],
+                prCount: 1,
+                improvedCount: 3,
+                totalExercises: 5,
+                date: cal.date(byAdding: .hour, value: -5, to: now) ?? now,
+                caption: "First leg day in 2 weeks and I'm already dreading stairs tomorrow",
+                exercises: [
+                    FeedExercise(id: "fe-4", name: "Barbell Squat", sets: [
+                        FeedSetLog(weight: 80, reps: 5, duration: 0, distance: 0, setType: "standard", side: nil),
+                        FeedSetLog(weight: 80, reps: 5, duration: 0, distance: 0, setType: "standard", side: nil),
+                        FeedSetLog(weight: 75, reps: 6, duration: 0, distance: 0, setType: "standard", side: nil),
+                    ]),
+                    FeedExercise(id: "fe-5", name: "Romanian Deadlift", sets: [
+                        FeedSetLog(weight: 60, reps: 10, duration: 0, distance: 0, setType: "standard", side: nil),
+                        FeedSetLog(weight: 60, reps: 10, duration: 0, distance: 0, setType: "standard", side: nil),
+                    ]),
+                ]
+            ),
+            WorkoutFeedItem(
+                id: "demo-3",
+                userId: "demo-james",
+                username: "james_bulk",
+                templateName: "PULL DAY",
+                exerciseCount: 7,
+                durationSeconds: 4500,
+                caloriesBurned: 489,
+                musclesWorked: ["Back", "Biceps"],
+                prCount: 0,
+                improvedCount: 5,
+                totalExercises: 7,
+                date: cal.date(byAdding: .day, value: -1, to: now) ?? now,
+                caption: "Back width is coming along nicely. Weighted pull-ups feeling strong.",
+                exercises: [
+                    FeedExercise(id: "fe-6", name: "Weighted Pull Up", sets: [
+                        FeedSetLog(weight: 10, reps: 8, duration: 0, distance: 0, setType: "standard", side: nil),
+                        FeedSetLog(weight: 10, reps: 7, duration: 0, distance: 0, setType: "standard", side: nil),
+                        FeedSetLog(weight: 7.5, reps: 8, duration: 0, distance: 0, setType: "standard", side: nil),
+                    ]),
+                    FeedExercise(id: "fe-7", name: "Barbell Row", sets: [
+                        FeedSetLog(weight: 70, reps: 8, duration: 0, distance: 0, setType: "standard", side: nil),
+                        FeedSetLog(weight: 70, reps: 8, duration: 0, distance: 0, setType: "standard", side: nil),
+                        FeedSetLog(weight: 65, reps: 10, duration: 0, distance: 0, setType: "standard", side: nil),
+                    ]),
+                ]
+            ),
+        ]
+    }()
+
     // MARK: - Feed
 
     func loadFeed(forceRefresh: Bool = false) async {
-        guard let uid = currentUid else { return }
+        guard let uid = currentUid else {
+            if feedItems.isEmpty { feedItems = Self.demoFeedItems }
+            return
+        }
 
         // If cache is fresh and we have items, skip the network call
         if !forceRefresh,
@@ -45,15 +141,17 @@ class SocialViewModel {
 
         do {
             let friendUids = try await firestoreService.fetchFriendUids(for: uid)
+            var fetched: [WorkoutFeedItem]
             if friendUids.isEmpty {
-                feedItems = try await firestoreService.fetchOwnFeed()
+                fetched = try await firestoreService.fetchOwnFeed()
             } else {
                 let allUids = friendUids + [uid]
-                feedItems = try await firestoreService.fetchFeed(friendUids: allUids)
+                fetched = try await firestoreService.fetchFeed(friendUids: allUids)
             }
+            feedItems = fetched.isEmpty ? Self.demoFeedItems : fetched
             lastFeedFetch = Date()
         } catch {
-            if feedItems.isEmpty { feedItems = [] }
+            if feedItems.isEmpty { feedItems = Self.demoFeedItems }
         }
         isLoadingFeed = false
     }

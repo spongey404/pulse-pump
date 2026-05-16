@@ -33,6 +33,12 @@ class WorkoutViewModel {
 
     // MARK: - Start Workout
 
+    /// Deletes any existing draft then starts a fresh session.
+    func discardDraftAndStart(draft: Workout, modelContext: ModelContext, user: User, template: WorkoutTemplate? = nil) {
+        modelContext.delete(draft)
+        startWorkout(modelContext: modelContext, user: user, template: template)
+    }
+
     func startWorkout(modelContext: ModelContext, user: User, template: WorkoutTemplate? = nil) {
         let newWorkout = Workout(isDraft: true)
         newWorkout.user = user
@@ -65,6 +71,71 @@ class WorkoutViewModel {
         startTime = Date()
         startDurationTimer()
         liveActivity.startLiveActivity(workoutName: workout?.template?.name ?? "Workout")
+
+        injectTestData(modelContext: modelContext)
+    }
+
+    // Populates exerciseEntries with realistic pre-completed test data for UI development.
+    func injectTestData(modelContext: ModelContext) {
+        exerciseEntries = []
+
+        // current: (name, sets). history: previous best weight to compare against for PR detection.
+        // 5 PRs (beating history), 1 improved (no PR), 2 same, 2 worse
+        let testExercises: [(name: String, sets: [(String, String)], historyWeight: Double?, historyReps: Int)] = [
+            ("Barbell Bench Press",     [("107.5","5"),("107.5","4"),("110","3")],  105,  5),  // PR ★ +5kg
+            ("Overhead Press",          [("65","5"),("65","5"),("67.5","4")],       62.5, 5),  // PR ★ +2.5kg
+            ("Incline Dumbbell Press",  [("38","8"),("38","8"),("40","6")],         36,   8),  // PR ★ +2kg
+            ("Skull Crusher",           [("35","8"),("37.5","7"),("37.5","6")],     32.5, 8),  // PR ★ +2.5kg
+            ("Tricep Pushdown",         [("45","10"),("47.5","9"),("47.5","8")],    42.5, 10), // PR ★ +2.5kg
+            ("Cable Fly",               [("22","12"),("22","11"),("22","10")],      20,   12), // improved (same weight, more reps than prev max) — no weight PR
+            ("Dumbbell Lateral Raise",  [("12","15"),("12","12"),("12","12")],      12,   15), // same
+            ("Face Pull",               [("25","15"),("25","14"),("25","12")],      25,   15), // same
+            ("Chest Dip",               [("0","10"),("0","8"),("0","7")],           0,    12), // worse (fewer reps)
+            ("Pec Deck",                [("55","10"),("55","8"),("50","8")],        57.5, 12), // worse (less weight)
+        ]
+
+        for testEx in testExercises {
+            let name = testEx.name
+            let desc = FetchDescriptor<Exercise>(predicate: #Predicate { $0.name == name })
+            let exercise = try? modelContext.fetch(desc).first
+
+            // Seed one historical ExerciseLog so PR detection has something to compare against
+            if let exercise, let histWeight = testEx.historyWeight {
+                let oldWorkout = Workout()
+                oldWorkout.date = Date().addingTimeInterval(-7 * 86400)
+                oldWorkout.isDraft = false
+                modelContext.insert(oldWorkout)
+                if let user = workout?.user { oldWorkout.user = user }
+
+                let oldLog = ExerciseLog(order: 0, notes: "")
+                modelContext.insert(oldLog)
+                oldLog.exercise = exercise
+                oldLog.workout = oldWorkout
+
+                let histReps = testEx.historyReps
+                let oldSet = SetLog(order: 0, weight: histWeight, reps: histReps, rir: nil, duration: nil, distance: nil, setType: .standard, side: .both)
+                modelContext.insert(oldSet)
+                oldSet.exerciseLog = oldLog
+            }
+
+            let completedSets: [SetEntry] = testEx.sets.enumerated().map { i, s in
+                var set = SetEntry(order: i, weight: s.0, reps: s.1)
+                set.isCompleted = true
+                return set
+            }
+            var entry = ExerciseEntry(
+                exerciseId: exercise?.id ?? UUID(),
+                exerciseName: name,
+                sets: completedSets
+            )
+            entry.exerciseType = exercise?.exerciseType ?? .weighted
+            entry.isUnilateral = exercise?.isUnilateral ?? false
+            entry.equipmentType = exercise?.equipmentType ?? .barbell
+            exerciseEntries.append(entry)
+        }
+
+        // Backdate startTime so timer shows ~78 min elapsed
+        startTime = Date().addingTimeInterval(-4680)
     }
 
     func resumeDraft(workout: Workout, modelContext: ModelContext) {
@@ -221,6 +292,8 @@ class WorkoutViewModel {
 
         var prCount = 0
         var improvedCount = 0
+        var improvementScores: [UUID: Double] = [:]  // entry.id → % 1RM gain
+        var prDetails: [PRDetail] = []
 
         for (i, entry) in exerciseEntries.enumerated() {
             let completedSets = entry.sets.filter { $0.isCompleted }
@@ -258,17 +331,46 @@ class WorkoutViewModel {
                 bestWeight = max(bestWeight, weight)
             }
 
-            // Check for PRs (simplified: compare max weight)
+            // Check for PRs and compute improvement score (Epley 1RM comparison)
             if let exercise = exerciseLog.exercise {
                 let allPreviousSets = exercise.logs
                     .filter { $0.id != exerciseLog.id }
                     .flatMap(\.sets)
-                let previousBest = allPreviousSets.map(\.weight).max() ?? 0
-                if bestWeight > previousBest && previousBest > 0 {
+                let previousBestWeight = allPreviousSets.map(\.weight).max() ?? 0
+                let bestRepsThisWorkout = completedSets.map { Int($0.reps) ?? 0 }.max() ?? 0
+                let previousMaxReps = allPreviousSets.filter { $0.weight <= bestWeight + 0.01 }.map(\.reps).max() ?? 0
+
+                func epley(_ w: Double, _ r: Int) -> Double { w > 0 ? w * (1 + Double(r) / 30) : Double(r) }
+                let current1RM = completedSets.map { epley(Double($0.weight) ?? 0, Int($0.reps) ?? 0) }.max() ?? 0
+                let previous1RM = allPreviousSets.map { epley($0.weight, $0.reps) }.max() ?? 0
+                let oneRMDelta = current1RM - previous1RM
+
+                if bestWeight > previousBestWeight && previousBestWeight > 0 {
                     prCount += 1
+                    let score = previousBestWeight > 0 ? (bestWeight - previousBestWeight) / previousBestWeight * 100 : 0
+                    prDetails.append(PRDetail(
+                        exerciseName: entry.exerciseName,
+                        weightDelta: bestWeight - previousBestWeight,
+                        repsDelta: 0,
+                        isWeightPR: true,
+                        impressivenessScore: score
+                    ))
+                } else if bestRepsThisWorkout > previousMaxReps && previousMaxReps > 0 {
+                    prCount += 1
+                    let score = previousMaxReps > 0 ? Double(bestRepsThisWorkout - previousMaxReps) / Double(previousMaxReps) * 100 * 0.5 : 0
+                    prDetails.append(PRDetail(
+                        exerciseName: entry.exerciseName,
+                        weightDelta: 0,
+                        repsDelta: bestRepsThisWorkout - previousMaxReps,
+                        isWeightPR: false,
+                        impressivenessScore: score
+                    ))
                 }
-                if bestWeight >= previousBest && previousBest > 0 {
+                if bestWeight >= previousBestWeight && previousBestWeight > 0 {
                     improvedCount += 1
+                }
+                if previous1RM > 0 {
+                    improvementScores[entry.id] = max(0, oneRMDelta / previous1RM * 100)
                 }
             }
         }
@@ -300,6 +402,31 @@ class WorkoutViewModel {
             intensity: .moderate
         )
 
+        let feedExercises: [FeedExercise] = exerciseEntries.compactMap { entry in
+            let completed = entry.sets.filter(\.isCompleted)
+            guard !completed.isEmpty else { return nil }
+            return FeedExercise(
+                id: entry.id.uuidString,
+                name: entry.exerciseName,
+                sets: completed.map { s in
+                    FeedSetLog(
+                        weight: Double(s.weight) ?? 0,
+                        reps: Int(s.reps) ?? 0,
+                        duration: Int(s.duration) ?? 0,
+                        distance: Double(s.distance) ?? 0,
+                        setType: s.setType.rawValue,
+                        side: s.side == .both ? nil : s.side.rawValue
+                    )
+                },
+                improvementScore: improvementScores[entry.id] ?? 0
+            )
+        }
+
+        let allWorkoutDates = (try? modelContext.fetch(FetchDescriptor<Workout>(
+            predicate: #Predicate<Workout> { !$0.isDraft }
+        )).map(\.date)) ?? []
+        let streakCount = max(1, StreakCalculator.currentStreak(from: allWorkoutDates))
+
         completionData = WorkoutCompletionData(
             duration: workout.duration,
             calories: workout.calorieBurnEstimate,
@@ -308,7 +435,11 @@ class WorkoutViewModel {
             prCount: prCount,
             improvedCount: improvedCount,
             totalExercises: exerciseEntries.count,
-            musclesWorked: collectMusclesWorked(modelContext: modelContext)
+            streakCount: streakCount,
+            prDetails: prDetails.sorted { $0.impressivenessScore > $1.impressivenessScore },
+            musclesWorked: collectMusclesWorked(modelContext: modelContext),
+            exercises: feedExercises,
+            workoutName: workout.template?.name
         )
 
         // Post to social feed (fire-and-forget) if auto-share is enabled
@@ -325,7 +456,8 @@ class WorkoutViewModel {
                 prCount: data.prCount,
                 improvedCount: data.improvedCount,
                 totalExercises: data.totalExercises,
-                date: workout.date
+                date: workout.date,
+                exercises: data.exercises
             )
             Task {
                 try? await FirestoreService().shareWorkoutToFeed(feedItem)
@@ -335,8 +467,8 @@ class WorkoutViewModel {
         // Update widget data
         WidgetDataService.updateWidgetData(modelContext: modelContext)
 
-        showCompletionSummary = true
         isActive = false
+        showCompletionSummary = true
     }
 
     func cancelWorkout(modelContext: ModelContext) {
@@ -367,6 +499,13 @@ class WorkoutViewModel {
         completionData = nil
         showCompletionSummary = false
     }
+
+#if DEBUG
+    func showPreviewCompletion() {
+        completionData = WorkoutCompletionData.preview
+        showCompletionSummary = true
+    }
+#endif
 
     // MARK: - Smart Weight Suggestion (Pulse+)
 
@@ -403,19 +542,105 @@ class WorkoutViewModel {
         return String(format: "%g", lastWeight)
     }
 
+    // MARK: - PR Detection (live, during workout)
+
+    func checkPR(exerciseIndex: Int, setIndex: Int, modelContext: ModelContext) {
+        guard exerciseEntries.indices.contains(exerciseIndex),
+              exerciseEntries[exerciseIndex].sets.indices.contains(setIndex) else { return }
+
+        let entry = exerciseEntries[exerciseIndex]
+        let set = entry.sets[setIndex]
+        let weight = Double(set.weight) ?? 0
+        let reps = Int(set.reps) ?? 0
+
+        guard weight > 0 || reps > 0 else { return }
+
+        let exId = entry.exerciseId
+        let descriptor = FetchDescriptor<ExerciseLog>(
+            predicate: #Predicate<ExerciseLog> { log in
+                log.exercise?.id == exId
+            },
+            sortBy: [SortDescriptor(\ExerciseLog.createdAt, order: .reverse)]
+        )
+
+        guard let previousLogs = try? modelContext.fetch(descriptor),
+              !previousLogs.isEmpty else { return }
+
+        let allPreviousSets = previousLogs.flatMap(\.sets)
+        guard !allPreviousSets.isEmpty else { return }
+
+        // Weight PR
+        let previousMaxWeight = allPreviousSets.map(\.weight).max() ?? 0
+        if weight > previousMaxWeight {
+            exerciseEntries[exerciseIndex].sets[setIndex].isPR = true
+            return
+        }
+
+        // Rep PR: more reps than ever done at this weight or lighter
+        if weight > 0 && reps > 0 {
+            let previousMaxReps = allPreviousSets.filter { $0.weight <= weight + 0.01 }.map(\.reps).max() ?? 0
+            if reps > previousMaxReps && previousMaxReps > 0 {
+                exerciseEntries[exerciseIndex].sets[setIndex].isPR = true
+            }
+        }
+    }
+
     // MARK: - Smart Prediction
 
-    func predictNextWorkout(user: User) -> String? {
+    func predictNextWorkout(user: User, modelContext: ModelContext) -> String? {
+        let descriptor = FetchDescriptor<Workout>(
+            predicate: #Predicate<Workout> { !$0.isDraft },
+            sortBy: [SortDescriptor(\Workout.date, order: .reverse)]
+        )
+        if let recent = try? modelContext.fetch(descriptor), !recent.isEmpty {
+            let names = recent.prefix(14).compactMap { $0.template?.name }
+            if let detected = detectNextByPattern(from: names) {
+                return detected
+            }
+        }
+
+        // Fall back to split schedule (no history)
         guard let split = user.selectedSplit else { return nil }
         let days = split.days.sorted(by: { $0.dayOfWeek < $1.dayOfWeek })
         guard !days.isEmpty else { return split.type.displayName }
+        return days.first?.label
+    }
 
-        let weekday = Calendar.current.component(.weekday, from: Date())
-        if let todaySession = days.first(where: { $0.dayOfWeek == weekday }) {
-            return todaySession.label
+    /// Frequency-based pattern detection: builds a map of "what workout
+    /// most often followed each workout" from history, then returns
+    /// the most common successor of the last session done.
+    /// Works for PPL, U/L, Full Body every-other-day, Bro splits, etc.
+    /// — no day-of-week assumptions.
+    private func detectNextByPattern(from names: [String]) -> String? {
+        guard names.count >= 2, let last = names.first else { return nil }
+        let lastKey = last.lowercased()
+
+        // Build frequency map: predecessor (lowercased) → [successor (actual case): count]
+        // names is newest-first; names[i] came AFTER names[i+1] in real time
+        var followMap: [String: [String: Int]] = [:]
+        for i in 1..<names.count {
+            let predecessor = names[i].lowercased()
+            let successor   = names[i - 1]          // keep actual casing
+            followMap[predecessor, default: [:]][successor, default: 0] += 1
         }
 
-        return days.first?.label
+        // If we have a clear winner successor for the last workout, return it
+        if let candidates = followMap[lastKey], !candidates.isEmpty {
+            let best = candidates.max(by: { $0.value < $1.value })!
+            // Only trust it if seen at least once (or it's the only option)
+            return best.key
+        }
+
+        // Fuzzy keyword fallback for named splits
+        let lower = lastKey
+        if lower.contains("push") { return names.first(where: { $0.lowercased().contains("pull") }) ?? "Pull Day" }
+        if lower.contains("pull") { return names.first(where: { $0.lowercased().contains("leg") })  ?? "Leg Day" }
+        if lower.contains("leg")  { return names.first(where: { $0.lowercased().contains("push") }) ?? "Push Day" }
+        if lower.contains("upper") { return names.first(where: { $0.lowercased().contains("lower") }) ?? "Lower" }
+        if lower.contains("lower") { return names.first(where: { $0.lowercased().contains("upper") }) ?? "Upper" }
+        if lower.contains("full")  { return last }
+
+        return nil
     }
 
     // MARK: - Duration Timer
@@ -498,6 +723,7 @@ struct SetEntry: Identifiable {
     var setType: SetType = .standard
     var side: Side = .both
     var isCompleted: Bool = false
+    var isPR: Bool = false
     var targetReps: Int?
     var targetRIR: Int?
 
@@ -518,6 +744,14 @@ struct SetEntry: Identifiable {
     }
 }
 
+struct PRDetail {
+    let exerciseName: String
+    let weightDelta: Double  // kg gained (0 for rep PRs)
+    let repsDelta: Int       // reps gained (0 for weight PRs)
+    let isWeightPR: Bool
+    let impressivenessScore: Double  // for sorting
+}
+
 struct WorkoutCompletionData {
     let duration: TimeInterval
     let calories: Double
@@ -526,7 +760,11 @@ struct WorkoutCompletionData {
     let prCount: Int
     let improvedCount: Int
     let totalExercises: Int
+    let streakCount: Int
+    let prDetails: [PRDetail]
     let musclesWorked: Set<MuscleGroup>
+    let exercises: [FeedExercise]
+    let workoutName: String?
 
     var formattedDuration: String {
         let h = Int(duration) / 3600
@@ -535,5 +773,45 @@ struct WorkoutCompletionData {
             return "\(h)h \(m)m"
         }
         return "\(m) min"
+    }
+
+    static var preview: WorkoutCompletionData {
+        func sets(_ pairs: [(Double, Int)]) -> [FeedSetLog] {
+            pairs.map { FeedSetLog(weight: $0.0, reps: $0.1, duration: 0, distance: 0, setType: "working", side: nil) }
+        }
+        // 5 PRs (weight), 1 improvement (no PR), 4 same/worse
+        let exercises: [FeedExercise] = [
+            FeedExercise(id: "1",  name: "Bench Press",      sets: sets([(100,5),(105,4),(110,3)]),  improvementScore: 14),  // PR ★
+            FeedExercise(id: "2",  name: "Overhead Press",   sets: sets([(60,8),(62.5,7),(65,5)]),   improvementScore: 11),  // PR ★
+            FeedExercise(id: "3",  name: "Incline DB Press", sets: sets([(36,10),(38,8),(38,7)]),    improvementScore: 9),   // PR ★
+            FeedExercise(id: "4",  name: "Skull Crusher",    sets: sets([(32.5,10),(35,8),(35,7)]),  improvementScore: 7),   // PR ★
+            FeedExercise(id: "5",  name: "Tricep Pushdown",  sets: sets([(42.5,12),(45,10),(45,9)]), improvementScore: 5),   // PR ★
+            FeedExercise(id: "6",  name: "Cable Fly",        sets: sets([(20,12),(20,12),(22,10)]),  improvementScore: 4),   // improved, no PR
+            FeedExercise(id: "7",  name: "Lateral Raise",    sets: sets([(12,15),(12,12),(12,12)]),  improvementScore: 0),   // same
+            FeedExercise(id: "8",  name: "Face Pull",        sets: sets([(25,15),(25,15),(25,12)]),  improvementScore: 0),   // same
+            FeedExercise(id: "9",  name: "Chest Dip",        sets: sets([(0,12),(0,10),(0,8)]),      improvementScore: -3),  // worse
+            FeedExercise(id: "10", name: "Pec Deck",         sets: sets([(55,10),(55,8),(50,8)]),    improvementScore: -5),  // worse
+        ]
+        let prs: [PRDetail] = [
+            PRDetail(exerciseName: "Bench Press",      weightDelta: 5,   repsDelta: 0, isWeightPR: true,  impressivenessScore: 4.5),
+            PRDetail(exerciseName: "Overhead Press",   weightDelta: 2.5, repsDelta: 0, isWeightPR: true,  impressivenessScore: 4.0),
+            PRDetail(exerciseName: "Incline DB Press", weightDelta: 2,   repsDelta: 0, isWeightPR: true,  impressivenessScore: 3.1),
+            PRDetail(exerciseName: "Skull Crusher",    weightDelta: 2.5, repsDelta: 0, isWeightPR: true,  impressivenessScore: 2.8),
+            PRDetail(exerciseName: "Tricep Pushdown",  weightDelta: 2.5, repsDelta: 0, isWeightPR: true,  impressivenessScore: 2.4),
+        ]
+        return WorkoutCompletionData(
+            duration: 4680,
+            calories: 412,
+            exerciseCount: 10,
+            totalSets: 30,
+            prCount: 5,
+            improvedCount: 6,
+            totalExercises: 10,
+            streakCount: 5,
+            prDetails: prs,
+            musclesWorked: [.chest, .shoulders, .triceps],
+            exercises: exercises,
+            workoutName: "Push Day A"
+        )
     }
 }

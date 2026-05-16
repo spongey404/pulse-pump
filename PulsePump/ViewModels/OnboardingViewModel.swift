@@ -11,13 +11,19 @@ enum OnboardingStep: Int, CaseIterable {
     case height
     case age
     case gender
-    case unitPreference
+    case unitPreference  // kept for Codable compat, skipped in flow
     case experienceLevel
     case splitSelection
     case tutorialPrompt
 
-    static let profileSteps: [OnboardingStep] = [
-        .name, .weight, .height, .age, .gender, .unitPreference, .experienceLevel, .splitSelection
+    // Ordered flow — no separate unit-preference step; units collected inline
+    static let flow: [OnboardingStep] = [
+        .welcome, .name, .weight, .height, .age, .gender, .experienceLevel, .splitSelection, .tutorialPrompt
+    ]
+
+    // Steps that show the progress bar (1 of 8 … 8 of 8)
+    static let progressSteps: [OnboardingStep] = [
+        .name, .weight, .height, .age, .gender, .experienceLevel, .splitSelection, .tutorialPrompt
     ]
 }
 
@@ -37,11 +43,14 @@ class OnboardingViewModel {
     var heightInches = ""
     var useImperialHeight = false
     var ageText = ""
-    var gender: Gender = .preferNotToSay
+    var gender: Gender? = nil
     var unitPreference: UnitPreference = .kg
-    var experienceLevel: ExperienceLevel = .beginner
+    var experienceLevel: ExperienceLevel? = nil
     var selectedSplitType: SplitType = .none
     var wantsTutorial = false
+
+    // Set to true after sign-in (not sign-up) so container skips profile steps
+    var shouldSkipToComplete = false
 
     // Email auth
     var showEmailAuth = false
@@ -57,10 +66,8 @@ class OnboardingViewModel {
 
     var canContinue: Bool {
         switch currentStep {
-        case .welcome:
-            return isAuthenticated
-        case .name:
-            return !name.trimmingCharacters(in: .whitespaces).isEmpty
+        case .welcome:     return isAuthenticated
+        case .name:        return !name.trimmingCharacters(in: .whitespaces).isEmpty
         case .weight:
             guard let w = Double(weightText), w > 0 else { return false }
             return true
@@ -80,25 +87,26 @@ class OnboardingViewModel {
     }
 
     var progress: Double {
-        guard let index = OnboardingStep.profileSteps.firstIndex(of: currentStep) else {
-            return currentStep == .tutorialPrompt ? 1.0 : 0
-        }
-        return Double(index + 1) / Double(OnboardingStep.profileSteps.count)
+        guard let idx = OnboardingStep.progressSteps.firstIndex(of: currentStep) else { return 0 }
+        return Double(idx + 1) / Double(OnboardingStep.progressSteps.count)
     }
 
+    var stepNumber: Int {
+        (OnboardingStep.progressSteps.firstIndex(of: currentStep) ?? -1) + 1
+    }
+
+    var totalSteps: Int { OnboardingStep.progressSteps.count }
+
     func advance() {
-        guard let next = OnboardingStep(rawValue: currentStep.rawValue + 1) else { return }
-        withAnimation(.easeInOut(duration: 0.3)) {
-            currentStep = next
-        }
+        let flow = OnboardingStep.flow
+        guard let idx = flow.firstIndex(of: currentStep), idx + 1 < flow.count else { return }
+        withAnimation(.easeInOut(duration: 0.25)) { currentStep = flow[idx + 1] }
     }
 
     func goBack() {
-        guard currentStep.rawValue > 1 else { return }
-        guard let prev = OnboardingStep(rawValue: currentStep.rawValue - 1) else { return }
-        withAnimation(.easeInOut(duration: 0.3)) {
-            currentStep = prev
-        }
+        let flow = OnboardingStep.flow
+        guard let idx = flow.firstIndex(of: currentStep), idx > 0 else { return }
+        withAnimation(.easeInOut(duration: 0.25)) { currentStep = flow[idx - 1] }
     }
 
     func completeOnboarding(modelContext: ModelContext) {
@@ -118,9 +126,9 @@ class OnboardingViewModel {
             weight: weightValue,
             height: heightCm,
             age: Int(ageText) ?? 0,
-            gender: gender,
+            gender: gender ?? .preferNotToSay,
             unitPreference: unitPreference,
-            experienceLevel: experienceLevel
+            experienceLevel: experienceLevel ?? .beginner
         )
 
         if selectedSplitType != .none {
@@ -148,6 +156,45 @@ class OnboardingViewModel {
 
     // MARK: - Apple Sign In
 
+    private var appleCoordinator: AppleSignInCoordinator?
+
+    func signInWithApple() {
+        let nonceData = authService.prepareAppleSignIn()
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+        request.requestedScopes = [.fullName, .email]
+        request.nonce = nonceData.hashedNonce
+
+        let coordinator = AppleSignInCoordinator(viewModel: self)
+        appleCoordinator = coordinator
+
+        let controller = ASAuthorizationController(authorizationRequests: [request])
+        controller.delegate = coordinator
+        controller.presentationContextProvider = coordinator
+        controller.performRequests()
+    }
+
+    func processAppleCredential(_ credential: ASAuthorizationAppleIDCredential) {
+        Task {
+            isLoading = true
+            defer { isLoading = false }
+            do {
+                let authResult = try await authService.signInWithApple(credential: credential)
+                if name.isEmpty, let displayName = authResult.displayName {
+                    name = displayName
+                }
+                isAuthenticated = true
+                if authResult.isNewUser {
+                    advance()
+                } else {
+                    shouldSkipToComplete = true
+                }
+            } catch {
+                authError = error.localizedDescription
+            }
+        }
+    }
+
+    // Legacy callbacks kept for any remaining SignInWithAppleButton usage
     func handleAppleSignInRequest(_ request: ASAuthorizationAppleIDRequest) {
         let nonceData = authService.prepareAppleSignIn()
         request.requestedScopes = [.fullName, .email]
@@ -157,24 +204,8 @@ class OnboardingViewModel {
     func handleAppleSignInCompletion(_ result: Result<ASAuthorization, Error>) {
         switch result {
         case .success(let authorization):
-            guard let appleCredential = authorization.credential as? ASAuthorizationAppleIDCredential else {
-                authError = "Invalid Apple credential"
-                return
-            }
-            Task {
-                isLoading = true
-                defer { isLoading = false }
-                do {
-                    let authResult = try await authService.signInWithApple(credential: appleCredential)
-                    if name.isEmpty, let displayName = authResult.displayName {
-                        name = displayName
-                    }
-                    isAuthenticated = true
-                    advance()
-                } catch {
-                    authError = error.localizedDescription
-                }
-            }
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else { return }
+            processAppleCredential(credential)
         case .failure(let error):
             if (error as NSError).code == ASAuthorizationError.canceled.rawValue { return }
             authError = error.localizedDescription
@@ -193,7 +224,11 @@ class OnboardingViewModel {
                     name = displayName
                 }
                 isAuthenticated = true
-                advance()
+                if result.isNewUser {
+                    advance()
+                } else {
+                    shouldSkipToComplete = true
+                }
             } catch {
                 authError = error.localizedDescription
             }
@@ -209,15 +244,50 @@ class OnboardingViewModel {
             do {
                 if isSignUp {
                     _ = try await authService.signUpWithEmail(email: email, password: password)
+                    isAuthenticated = true
+                    showEmailAuth = false
+                    advance()
                 } else {
                     _ = try await authService.signInWithEmail(email: email, password: password)
+                    isAuthenticated = true
+                    showEmailAuth = false
+                    shouldSkipToComplete = true
                 }
-                isAuthenticated = true
-                showEmailAuth = false
-                advance()
             } catch {
                 authError = error.localizedDescription
             }
         }
+    }
+}
+
+// MARK: - Apple Sign In coordinator (programmatic flow, no SignInWithAppleButton required)
+
+final class AppleSignInCoordinator: NSObject,
+    ASAuthorizationControllerDelegate,
+    ASAuthorizationControllerPresentationContextProviding
+{
+    private weak var viewModel: OnboardingViewModel?
+
+    init(viewModel: OnboardingViewModel) {
+        self.viewModel = viewModel
+    }
+
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow } ?? ASPresentationAnchor()
+    }
+
+    func authorizationController(controller: ASAuthorizationController,
+                                 didCompleteWithAuthorization authorization: ASAuthorization) {
+        guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else { return }
+        Task { @MainActor in self.viewModel?.processAppleCredential(credential) }
+    }
+
+    func authorizationController(controller: ASAuthorizationController,
+                                 didCompleteWithError error: Error) {
+        guard (error as NSError).code != ASAuthorizationError.canceled.rawValue else { return }
+        Task { @MainActor in self.viewModel?.authError = error.localizedDescription }
     }
 }
