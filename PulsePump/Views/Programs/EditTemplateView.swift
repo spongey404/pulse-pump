@@ -17,82 +17,187 @@ struct EditTemplateView: View {
         })
     }
 
+    private var canSave: Bool {
+        !name.trimmingCharacters(in: .whitespaces).isEmpty && !exercises.isEmpty
+    }
+
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Template Name") {
-                    TextField("Template name", text: $name)
+        VStack(spacing: 0) {
+            // Custom header
+            HStack(alignment: .center, spacing: 10) {
+                Button { dismiss() } label: {
+                    Text("‹")
+                        .font(.mono(24, weight: .light))
+                        .foregroundStyle(Color.inkMuted)
+                        .frame(width: 28, height: 32)
                 }
+                .buttonStyle(.plain)
 
-                Section("Exercises") {
-                    ForEach(Array(exercises.enumerated()), id: \.element.id) { index, entry in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(entry.exerciseName)
-                                .font(.body.weight(.medium))
+                Text("EDIT PROGRAM")
+                    .font(.display(22))
+                    .foregroundStyle(Color.inkPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                            Stepper("Sets: \(exercises[index].targetSets)", value: $exercises[index].targetSets, in: 1...10)
-                                .font(.caption)
+                Button {
+                    save()
+                    dismiss()
+                } label: {
+                    Text("SAVE")
+                        .font(.display(16))
+                        .foregroundStyle(canSave ? Color.canvasBg : Color.inkMuted)
+                        .frame(height: 32)
+                        .padding(.horizontal, 14)
+                        .background(canSave ? Color.pumpAccent : Color.surf)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .strokeBorder(canSave ? Color.pumpAccent : Color.inkPrimary.opacity(0.12))
+                        )
+                }
+                .buttonStyle(.plain)
+                .disabled(!canSave)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 20)
+            .padding(.bottom, 10)
 
-                            if let reps = exercises[index].targetReps {
-                                HStack {
-                                    Stepper("Reps: \(reps)", value: Binding(
-                                        get: { exercises[index].targetReps ?? 10 },
-                                        set: { exercises[index].targetReps = $0 }
-                                    ), in: 1...50)
-                                    .font(.caption)
-                                    Button {
-                                        exercises[index].targetReps = nil
-                                    } label: {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            } else {
-                                Button {
-                                    exercises[index].targetReps = 10
-                                } label: {
-                                    Label("Add target reps", systemImage: "plus")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                            }
+            Rectangle().fill(Color.dsHairLine).frame(height: 0.5)
+
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Name field
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("PROGRAM NAME")
+                            .font(Font.mono(9)).tracking(1.3).foregroundStyle(Color.inkMuted)
+                        TextField("Program name", text: $name)
+                            .font(.display(20))
+                            .foregroundStyle(Color.inkPrimary)
+                            .frame(height: 46)
+                            .padding(.horizontal, 14)
+                            .background(Color.surf)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .strokeBorder(name.isEmpty ? Color.inkPrimary.opacity(0.12) : Color.pumpAccent)
+                            )
+                    }
+                    .padding(16)
+
+                    // Exercises section
+                    VStack(spacing: 0) {
+                        HStack {
+                            Text("EXERCISES")
+                                .font(Font.mono(9)).tracking(1.3).foregroundStyle(Color.inkMuted)
+                            Spacer()
+                            Text("\(exercises.count) ADDED")
+                                .font(Font.mono(9)).foregroundStyle(Color.inkMuted)
                         }
-                    }
-                    .onDelete { exercises.remove(atOffsets: $0) }
-                    .onMove { exercises.move(fromOffsets: $0, toOffset: $1) }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 12)
 
-                    Button {
-                        showExercisePicker = true
-                    } label: {
-                        Label("Add Exercise", systemImage: "plus.circle")
-                            .foregroundStyle(Color.pumpPrimary)
+                        if !exercises.isEmpty {
+                            VStack(spacing: 0) {
+                                // Column headers
+                                HStack {
+                                    Text("EXERCISE")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    Text("SETS").frame(width: 50, alignment: .trailing)
+                                    Text("REPS").frame(width: 50, alignment: .trailing)
+                                    Spacer().frame(width: 36)
+                                }
+                                .font(Font.mono(9)).tracking(0.5).foregroundStyle(Color.inkMuted)
+                                .padding(.horizontal, 16).padding(.vertical, 10)
+
+                                Rectangle().fill(Color.dsHairLine).frame(height: 0.5)
+
+                                ForEach(Array(exercises.enumerated()), id: \.element.id) { index, entry in
+                                    HStack(spacing: 8) {
+                                        Text(entry.exerciseName.uppercased())
+                                            .font(Font.mono(11, weight: .medium))
+                                            .foregroundStyle(Color.inkPrimary)
+                                            .lineLimit(1)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                                        Stepper("", value: $exercises[index].targetSets, in: 1...10)
+                                            .labelsHidden()
+                                            .frame(width: 1)
+                                        Text("\(exercises[index].targetSets)")
+                                            .font(Font.mono(13, weight: .bold))
+                                            .foregroundStyle(Color.inkPrimary)
+                                            .frame(width: 28, alignment: .trailing)
+
+                                        Stepper("", value: Binding(
+                                            get: { exercises[index].targetReps ?? 10 },
+                                            set: { exercises[index].targetReps = $0 }
+                                        ), in: 1...50)
+                                        .labelsHidden()
+                                        .frame(width: 1)
+                                        Text(exercises[index].targetReps.map { "\($0)" } ?? "—")
+                                            .font(Font.mono(13))
+                                            .foregroundStyle(Color.inkMuted)
+                                            .frame(width: 28, alignment: .trailing)
+
+                                        Button {
+                                            exercises.remove(at: index)
+                                        } label: {
+                                            Image(systemName: "minus.circle.fill")
+                                                .foregroundStyle(Color.signalDown.opacity(0.7))
+                                                .font(.mono(16))
+                                        }
+                                        .buttonStyle(.plain)
+                                        .frame(width: 28)
+                                    }
+                                    .padding(.horizontal, 16).padding(.vertical, 10)
+
+                                    if index < exercises.count - 1 {
+                                        Rectangle().fill(Color.dsHairLine).frame(height: 0.5).padding(.leading, 16)
+                                    }
+                                }
+                            }
+                            .background(Color.surf)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.dsHairLine))
+                            .padding(.horizontal, 16)
+                        }
+
+                        // Add exercise button
+                        Button {
+                            showExercisePicker = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "plus").font(.mono(13))
+                                Text("ADD EXERCISE").font(Font.mono(11)).tracking(0.5)
+                            }
+                            .foregroundStyle(Color.inkMuted)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.canvasBg)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4]))
+                                    .foregroundStyle(Color.inkFaint)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
                     }
+
+                    Color.clear.frame(height: 40)
                 }
             }
-            .navigationTitle("Edit Template")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        save()
-                        dismiss()
-                    }
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || exercises.isEmpty)
-                }
-            }
-            .sheet(isPresented: $showExercisePicker) {
-                ExercisePickerView { exercise in
+        }
+        .background(Color.canvasBg.ignoresSafeArea())
+        .sheet(isPresented: $showExercisePicker) {
+            ExercisePickerView { selected in
+                selected.forEach { exercise in
                     exercises.append(TemplateExerciseEntry(
                         exerciseId: exercise.id,
                         exerciseName: exercise.name
                     ))
-                    showExercisePicker = false
                 }
+                showExercisePicker = false
             }
         }
     }

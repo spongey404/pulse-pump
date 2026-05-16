@@ -26,7 +26,7 @@ struct TemplateListView: View {
                     } label: {
                         Label("Start", systemImage: "play.fill")
                     }
-                    .tint(Color.pumpPrimary)
+                    .tint(Color.pumpAccent)
                 }
             }
         }
@@ -58,10 +58,10 @@ struct TemplateRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(template.name)
-                .font(.body.weight(.medium))
+                .font(.mono(16, weight: .medium))
 
             Text("\(template.templateExercises.count) exercises")
-                .font(.caption)
+                .font(.mono(11))
                 .foregroundStyle(.secondary)
         }
     }
