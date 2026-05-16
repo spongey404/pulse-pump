@@ -26,61 +26,63 @@ enum AppTheme: String, CaseIterable, Identifiable {
 }
 
 struct SettingsView: View {
+    var onBack: (() -> Void)? = nil
     @Environment(\.modelContext) private var modelContext
     @Query private var users: [User]
-    @Query private var splits: [Split]
     @State private var pulsePlusService = PulsePlusService()
+    @State private var navigateToEditProfile = false
+    @State private var navigateToSplitConfig = false
+    @State private var navigateToDataExport = false
+    @State private var navigateToEquipment = false
+    @State private var showSignOutAlert = false
 
     private var user: User? { users.first }
     private var hasPulsePlus: Bool { pulsePlusService.isSubscribed || pulsePlusService.isInFreeTrial }
 
     var body: some View {
-        List {
-            if let user {
-                accountSection(user: user)
-                measurementsSection(user: user)
-                appearanceSection
-                workoutSection
-                postWorkoutSection
-                splitSection(user: user)
-                notificationSection
-                dataSection
-                aboutSection
+        VStack(spacing: 0) {
+            settingsHeader
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    if let user {
+                        buildSections(user: user)
+                    }
+                    Color.clear.frame(height: 40)
+                }
             }
         }
-        .navigationTitle("Settings")
-        .task {
-            await pulsePlusService.refreshSubscriptionStatus()
+        .background(Color.canvasBg.ignoresSafeArea())
+        .task { await pulsePlusService.refreshSubscriptionStatus() }
+        .navigationDestination(isPresented: $navigateToEditProfile) {
+            if let user { EditProfileView(user: user) }
         }
-    }
-
-    // MARK: - Account
-
-    private func accountSection(user: User) -> some View {
-        Section("Account") {
-            HStack {
-                Text("Name")
-                Spacer()
-                Text(user.name)
-                    .foregroundStyle(.secondary)
-            }
-
-            NavigationLink {
-                EditProfileView(user: user)
-            } label: {
-                Text("Edit Profile")
-            }
-
-            Button("Sign Out", role: .destructive) {
-                signOut()
-            }
+        .navigationDestination(isPresented: $navigateToSplitConfig) {
+            if let user { SplitConfigView(user: user) }
+        }
+        .navigationDestination(isPresented: $navigateToDataExport) {
+            DataExportView()
+        }
+        .navigationDestination(isPresented: $navigateToEquipment) {
+            EquipmentProfilesView()
+        }
+        .alert("Sign Out", isPresented: $showSignOutAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Sign Out", role: .destructive) { signOut() }
+        } message: {
+            Text("You'll need to sign back in to access your data.")
         }
     }
 
-    // MARK: - Measurements
+    @ViewBuilder
+    private func buildSections(user: User) -> some View {
+        // ACCOUNT
+        sectionLabel("ACCOUNT")
+        navRow(icon: "person.crop.circle", label: "Edit Profile") { navigateToEditProfile = true }
 
-    private func measurementsSection(user: User) -> some View {
-        Section("Units & Measurements") {
+        // UNITS & MEASUREMENTS
+        sectionLabel("UNITS & MEASUREMENTS")
+        pickerRow(icon: "scalemass", label: "Weight Unit") {
             Picker("Weight Unit", selection: Binding(
                 get: { user.unitPreference },
                 set: { user.unitPreference = $0; user.updatedAt = Date() }
@@ -89,7 +91,8 @@ struct SettingsView: View {
                     Text(unit.displayName).tag(unit)
                 }
             }
-
+        }
+        pickerRow(icon: "person.fill", label: "Gender") {
             Picker("Gender", selection: Binding(
                 get: { user.gender },
                 set: { user.gender = $0; user.updatedAt = Date() }
@@ -98,7 +101,8 @@ struct SettingsView: View {
                     Text(gender.displayName).tag(gender)
                 }
             }
-
+        }
+        pickerRow(icon: "chart.bar", label: "Experience Level") {
             Picker("Experience", selection: Binding(
                 get: { user.experienceLevel },
                 set: { user.experienceLevel = $0; user.updatedAt = Date() }
@@ -108,166 +112,231 @@ struct SettingsView: View {
                 }
             }
         }
-    }
 
-    // MARK: - Appearance
-
-    private var appearanceSection: some View {
-        Section("Appearance") {
-            Picker("Theme", selection: themeBinding) {
-                ForEach(AppTheme.allCases) { theme in
-                    Text(theme.displayName).tag(theme)
-                }
-            }
-
-            Toggle("Simple Body Map", isOn: simpleBodyMapBinding)
-        }
-    }
-
-    // MARK: - Workout
-
-    private var workoutSection: some View {
-        Section("Workout") {
+        // WORKOUT
+        sectionLabel("WORKOUT")
+        pickerRow(icon: "flame", label: "Calorie Formula") {
             Picker("Calorie Formula", selection: calorieFormulaBinding) {
                 ForEach(hasPulsePlus ? CalorieFormula.allCases : [.basic]) { formula in
                     Text(formula.displayName).tag(formula)
                 }
             }
-            if !hasPulsePlus {
-                Text("MET-Based formula requires Pulse+")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
+        }
+        pickerRow(icon: "timer", label: "Rest Timer Mode") {
             Picker("Rest Timer Mode", selection: restTimerModeBinding) {
                 ForEach(RestTimerMode.allCases) { mode in
                     Text(mode.displayName).tag(mode)
                 }
             }
-
+        }
+        pickerRow(icon: "bell", label: "Timer Alert") {
             Picker("Timer Alert", selection: alertTypeBinding) {
                 ForEach(AlertType.allCases) { alert in
                     Text(alert.displayName).tag(alert)
                 }
             }
-
-            HStack {
-                Text("Compound Rest (sec)")
-                Spacer()
-                Text("\(compoundRest)")
-                    .foregroundStyle(.secondary)
-                Stepper("", value: compoundRestBinding, in: 30...600, step: 15)
-                    .labelsHidden()
-            }
-
-            HStack {
-                Text("Isolation Rest (sec)")
-                Spacer()
-                Text("\(isolationRest)")
-                    .foregroundStyle(.secondary)
-                Stepper("", value: isolationRestBinding, in: 30...600, step: 15)
-                    .labelsHidden()
-            }
-
-            Toggle("Smart Weight Suggestions", isOn: smartSuggestionsBinding)
         }
-    }
+        toggleRow(icon: "brain", label: "Smart Weight Suggestions", binding: smartSuggestionsBinding)
 
-    // MARK: - Post-Workout
-
-    private var postWorkoutSection: some View {
-        Section("Post-Workout") {
-            Toggle("Auto-Share to Feed", isOn: autoShareBinding)
-            NavigationLink {
-                PostWorkoutCustomizationView()
-            } label: {
-                Text("Summary Customization")
+        // APPEARANCE
+        sectionLabel("APPEARANCE")
+        pickerRow(icon: "paintbrush", label: "Theme") {
+            Picker("Theme", selection: themeBinding) {
+                ForEach(AppTheme.allCases) { theme in
+                    Text(theme.displayName).tag(theme)
+                }
             }
         }
+        toggleRow(icon: "figure.stand", label: "Simple Body Map", binding: simpleBodyMapBinding)
+
+        // TRAINING
+        sectionLabel("TRAINING")
+        navRow(icon: "calendar.badge.clock", label: "Training Split") { navigateToSplitConfig = true }
+
+        // POST-WORKOUT
+        sectionLabel("POST-WORKOUT")
+        toggleRow(icon: "square.and.arrow.up", label: "Auto-Share to Feed", binding: autoShareBinding)
+
+        // NOTIFICATIONS
+        sectionLabel("NOTIFICATIONS")
+        toggleRow(icon: "bell.badge", label: "Workout Reminders", binding: workoutRemindersBinding(user: user))
+        toggleRow(icon: "moon", label: "Rest Day Alerts", binding: restDayAlertsBinding(user: user))
+        toggleRow(icon: "person.2", label: "Social Activity", binding: socialNotificationsBinding)
+        toggleRow(icon: "trophy", label: "Challenge Updates", binding: challengeNotificationsBinding)
+
+        // DATA
+        sectionLabel("DATA")
+        navRow(icon: "square.and.arrow.down", label: "Import / Export Data") { navigateToDataExport = true }
+        navRow(icon: "dumbbell", label: "Equipment Profiles") { navigateToEquipment = true }
+
+        // ABOUT
+        sectionLabel("ABOUT")
+        valueRow(icon: "info.circle", label: "Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
+
+        // DANGER ZONE
+        sectionLabel("")
+        dangerRow(icon: "rectangle.portrait.and.arrow.right", label: "Sign Out") { showSignOutAlert = true }
     }
 
-    // MARK: - Split Configuration
+    // MARK: - Header
 
-    private func splitSection(user: User) -> some View {
-        Section("Training Split") {
-            if let split = user.selectedSplit {
-                HStack {
-                    Text("Current Split")
+    private var settingsHeader: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .center, spacing: 12) {
+                if let onBack {
+                    Button(action: onBack) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.inkPrimary)
+                            .frame(width: 36, height: 36)
+                            .background(Color.surf2)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
+                }
+                Text("SETTINGS")
+                    .font(.archivo(24, weight: .black))
+                    .tracking(0.5)
+                    .foregroundStyle(Color.inkPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            Rectangle().fill(Color.dsHairLine).frame(height: 1)
+        }
+        .background(Color.canvasBg)
+    }
+
+    // MARK: - Row builders
+
+    private func sectionLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.spaceMono(9))
+            .tracking(1.5)
+            .foregroundStyle(Color.inkMuted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.top, title.isEmpty ? 4 : 14)
+            .padding(.bottom, 4)
+    }
+
+    private func navRow(icon: String, label: String, action: @escaping () -> Void) -> some View {
+        settingsRowWrapper {
+            Button(action: action) {
+                HStack(spacing: 12) {
+                    iconBox(icon)
+                    Text(label)
+                        .font(.archivo(14, weight: .medium))
+                        .foregroundStyle(Color.inkPrimary)
                     Spacer()
-                    Text(split.name)
-                        .foregroundStyle(.secondary)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.inkPrimary.opacity(0.2))
                 }
-
-                NavigationLink {
-                    SplitConfigView(user: user)
-                } label: {
-                    Text("Change Split")
-                }
-            } else {
-                NavigationLink {
-                    SplitConfigView(user: user)
-                } label: {
-                    Text("Set Up Training Split")
-                }
+                .padding(.vertical, 13)
+                .padding(.horizontal, 16)
             }
+            .buttonStyle(.plain)
         }
     }
 
-    // MARK: - Notifications
-
-    private var notificationSection: some View {
-        Section("Notifications") {
-            Toggle("Workout Reminders", isOn: workoutRemindersBinding)
-            Toggle("Rest Day Alerts", isOn: restDayAlertsBinding)
-            Toggle("Social Activity", isOn: socialNotificationsBinding)
-            Toggle("Challenge Updates", isOn: challengeNotificationsBinding)
-        }
-    }
-
-    // MARK: - Data
-
-    private var dataSection: some View {
-        Section("Data") {
-            NavigationLink {
-                EquipmentProfilesView()
-            } label: {
-                Text("Equipment Profiles")
-            }
-
-            NavigationLink {
-                DataExportView()
-            } label: {
-                Text("Import / Export Data")
-            }
-        }
-    }
-
-    // MARK: - About
-
-    private var aboutSection: some View {
-        Section("About") {
-            HStack {
-                Text("Version")
+    private func pickerRow<C: View>(icon: String, label: String, @ViewBuilder content: () -> C) -> some View {
+        settingsRowWrapper {
+            HStack(spacing: 12) {
+                iconBox(icon)
+                Text(label)
+                    .font(.archivo(14, weight: .medium))
+                    .foregroundStyle(Color.inkPrimary)
                 Spacer()
-                Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
-                    .foregroundStyle(.secondary)
+                content()
+                    .labelsHidden()
+                    .font(.spaceMono(11))
+                    .foregroundStyle(Color.inkMuted)
             }
-
-            NavigationLink {
-                Text("Terms of Service — Coming Soon")
-            } label: {
-                Text("Terms of Service")
-            }
-
-            NavigationLink {
-                Text("Privacy Policy — Coming Soon")
-            } label: {
-                Text("Privacy Policy")
-            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 16)
         }
     }
 
-    // MARK: - UserDefaults Bindings
+    private func toggleRow(icon: String, label: String, binding: Binding<Bool>) -> some View {
+        settingsRowWrapper {
+            HStack(spacing: 12) {
+                iconBox(icon)
+                Text(label)
+                    .font(.archivo(14, weight: .medium))
+                    .foregroundStyle(Color.inkPrimary)
+                Spacer()
+                Toggle("", isOn: binding)
+                    .labelsHidden()
+                    .tint(Color.pumpAccent)
+            }
+            .padding(.vertical, 10)
+            .padding(.horizontal, 16)
+        }
+    }
+
+    private func valueRow(icon: String, label: String, value: String) -> some View {
+        settingsRowWrapper {
+            HStack(spacing: 12) {
+                iconBox(icon)
+                Text(label)
+                    .font(.archivo(14, weight: .medium))
+                    .foregroundStyle(Color.inkPrimary)
+                Spacer()
+                Text(value)
+                    .font(.spaceMono(11))
+                    .foregroundStyle(Color.inkMuted)
+            }
+            .padding(.vertical, 13)
+            .padding(.horizontal, 16)
+        }
+    }
+
+    private func dangerRow(icon: String, label: String, action: @escaping () -> Void) -> some View {
+        settingsRowWrapper {
+            Button(action: action) {
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.signalDown.opacity(0.10))
+                            .frame(width: 32, height: 32)
+                        Image(systemName: icon)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(Color.signalDown)
+                    }
+                    Text(label)
+                        .font(.archivo(14, weight: .medium))
+                        .foregroundStyle(Color.signalDown)
+                    Spacer()
+                }
+                .padding(.vertical, 13)
+                .padding(.horizontal, 16)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    @ViewBuilder
+    private func settingsRowWrapper<C: View>(@ViewBuilder content: () -> C) -> some View {
+        VStack(spacing: 0) {
+            content()
+            Rectangle().fill(Color.dsHairLine).frame(height: 1)
+        }
+        .background(Color.canvasBg)
+    }
+
+    private func iconBox(_ icon: String) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.surf2)
+                .frame(width: 32, height: 32)
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(Color.inkMuted)
+        }
+    }
+
+    // MARK: - Bindings
 
     private var calorieFormulaBinding: Binding<CalorieFormula> {
         Binding(
@@ -290,73 +359,10 @@ struct SettingsView: View {
         )
     }
 
-    private var compoundRest: Int {
-        UserDefaults.standard.object(forKey: "compoundRestSeconds") as? Int ?? 180
-    }
-
-    private var compoundRestBinding: Binding<Int> {
+    private var smartSuggestionsBinding: Binding<Bool> {
         Binding(
-            get: { compoundRest },
-            set: { UserDefaults.standard.set($0, forKey: "compoundRestSeconds") }
-        )
-    }
-
-    private var isolationRest: Int {
-        UserDefaults.standard.object(forKey: "isolationRestSeconds") as? Int ?? 90
-    }
-
-    private var isolationRestBinding: Binding<Int> {
-        Binding(
-            get: { isolationRest },
-            set: { UserDefaults.standard.set($0, forKey: "isolationRestSeconds") }
-        )
-    }
-
-    private var workoutRemindersBinding: Binding<Bool> {
-        Binding(
-            get: { UserDefaults.standard.bool(forKey: "workoutReminders") },
-            set: { newValue in
-                UserDefaults.standard.set(newValue, forKey: "workoutReminders")
-                Task {
-                    let granted = await NotificationService.shared.requestPermission()
-                    if granted {
-                        await NotificationService.shared.scheduleWorkoutReminders(split: user?.selectedSplit)
-                    } else if !newValue {
-                        NotificationService.shared.cancelWorkoutReminders()
-                    }
-                }
-            }
-        )
-    }
-
-    private var restDayAlertsBinding: Binding<Bool> {
-        Binding(
-            get: { UserDefaults.standard.bool(forKey: "restDayAlerts") },
-            set: { newValue in
-                UserDefaults.standard.set(newValue, forKey: "restDayAlerts")
-                Task {
-                    let granted = await NotificationService.shared.requestPermission()
-                    if granted {
-                        await NotificationService.shared.scheduleRestDayAlerts(split: user?.selectedSplit)
-                    } else if !newValue {
-                        NotificationService.shared.cancelRestDayAlerts()
-                    }
-                }
-            }
-        )
-    }
-
-    private var socialNotificationsBinding: Binding<Bool> {
-        Binding(
-            get: { UserDefaults.standard.object(forKey: "socialNotifications") as? Bool ?? true },
-            set: { UserDefaults.standard.set($0, forKey: "socialNotifications") }
-        )
-    }
-
-    private var challengeNotificationsBinding: Binding<Bool> {
-        Binding(
-            get: { UserDefaults.standard.object(forKey: "challengeNotifications") as? Bool ?? true },
-            set: { UserDefaults.standard.set($0, forKey: "challengeNotifications") }
+            get: { UserDefaults.standard.object(forKey: "smartWeightSuggestions") as? Bool ?? true },
+            set: { UserDefaults.standard.set($0, forKey: "smartWeightSuggestions") }
         )
     }
 
@@ -381,10 +387,51 @@ struct SettingsView: View {
         )
     }
 
-    private var smartSuggestionsBinding: Binding<Bool> {
+    private func workoutRemindersBinding(user: User) -> Binding<Bool> {
         Binding(
-            get: { UserDefaults.standard.object(forKey: "smartWeightSuggestions") as? Bool ?? true },
-            set: { UserDefaults.standard.set($0, forKey: "smartWeightSuggestions") }
+            get: { UserDefaults.standard.bool(forKey: "workoutReminders") },
+            set: { newValue in
+                UserDefaults.standard.set(newValue, forKey: "workoutReminders")
+                Task {
+                    let granted = await NotificationService.shared.requestPermission()
+                    if granted {
+                        await NotificationService.shared.scheduleWorkoutReminders(split: user.selectedSplit)
+                    } else if !newValue {
+                        NotificationService.shared.cancelWorkoutReminders()
+                    }
+                }
+            }
+        )
+    }
+
+    private func restDayAlertsBinding(user: User) -> Binding<Bool> {
+        Binding(
+            get: { UserDefaults.standard.bool(forKey: "restDayAlerts") },
+            set: { newValue in
+                UserDefaults.standard.set(newValue, forKey: "restDayAlerts")
+                Task {
+                    let granted = await NotificationService.shared.requestPermission()
+                    if granted {
+                        await NotificationService.shared.scheduleRestDayAlerts(split: user.selectedSplit)
+                    } else if !newValue {
+                        NotificationService.shared.cancelRestDayAlerts()
+                    }
+                }
+            }
+        )
+    }
+
+    private var socialNotificationsBinding: Binding<Bool> {
+        Binding(
+            get: { UserDefaults.standard.object(forKey: "socialNotifications") as? Bool ?? true },
+            set: { UserDefaults.standard.set($0, forKey: "socialNotifications") }
+        )
+    }
+
+    private var challengeNotificationsBinding: Binding<Bool> {
+        Binding(
+            get: { UserDefaults.standard.object(forKey: "challengeNotifications") as? Bool ?? true },
+            set: { UserDefaults.standard.set($0, forKey: "challengeNotifications") }
         )
     }
 
@@ -441,49 +488,43 @@ struct SplitConfigView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(splitType.displayName)
-                                    .font(.body)
+                                    .font(.archivo(16))
+                                    .foregroundStyle(Color.inkPrimary)
                                 if let days = splitType.daysPerWeek {
                                     Text("\(days) days/week")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .font(.spaceMono(11))
+                                        .foregroundStyle(Color.inkMuted)
                                 }
                             }
                             Spacer()
                             if selectedType == splitType {
                                 Image(systemName: "checkmark")
-                                    .foregroundStyle(Color.pumpPrimary)
+                                    .foregroundStyle(Color.pumpAccent)
                             }
                         }
                     }
-                    .foregroundStyle(.primary)
+                    .buttonStyle(.plain)
                 }
             }
 
             Section {
-                Button("Save") {
-                    applySplit()
+                Button("Save Split") {
+                    let split = Split(type: selectedType, name: selectedType.displayName)
+                    modelContext.insert(split)
+                    user.selectedSplit = split
+                    user.updatedAt = Date()
                     dismiss()
                 }
-                .frame(maxWidth: .infinity)
-                .foregroundStyle(Color.pumpPrimary)
+                .font(.archivo(16, weight: .semibold))
+                .foregroundStyle(Color.pumpAccent)
             }
         }
         .navigationTitle("Training Split")
+        .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             if let current = user.selectedSplit {
                 selectedType = current.type
             }
-        }
-    }
-
-    private func applySplit() {
-        let split = Split(type: selectedType)
-        modelContext.insert(split)
-        user.selectedSplit = split
-        user.updatedAt = Date()
-        // Reschedule notifications for new split
-        Task {
-            await NotificationService.shared.reschedule(split: split)
         }
     }
 }

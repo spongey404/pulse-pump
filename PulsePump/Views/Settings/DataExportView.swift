@@ -22,7 +22,7 @@ struct DataExportView: View {
         List {
             Section {
                 Text("Export your workout data to keep a backup or use in other apps.")
-                    .font(.subheadline)
+                    .font(.mono(14))
                     .foregroundStyle(.secondary)
             }
 
@@ -50,7 +50,7 @@ struct DataExportView: View {
                     }
                 }
                 Text("Export a CSV from \(selectedImportSource.displayName) and select it here.")
-                    .font(.caption)
+                    .font(.mono(11))
                     .foregroundStyle(.secondary)
             }
         }
