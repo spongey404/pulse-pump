@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pulse Pump — Font Comparison v2</title>
+<!-- Free bold grotesques -->
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&family=Syne:wght@400;500;600;700;800&family=Archivo:wght@300;400;500;600;700;800;900&family=Hanken+Grotesk:wght@300;400;500;600;700;800;900&family=Familjen+Grotesk:wght@400;500;600;700&family=Barlow:wght@300;400;500;600;700;800;900&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- MD Nichrome + GT America for reference -->
+<link href="https://fonts.cdnfonts.com/css/gt-america-trial" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/md-nichrome-test" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #f0ece4; min-height: 100vh; }
+  .canvas { padding: 60px 48px 120px; max-width: 1900px; margin: 0 auto; }
+  h1 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 48px; letter-spacing: -1.5px; color: #1a1a1a; margin-bottom: 8px; }
+  .intro { font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; color: #888; margin-bottom: 56px; line-height: 1.5; max-width: 700px; }
+  .pairing-title { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 2px; color: #c8553d; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; margin-top: 48px; }
+  .pairing-desc { font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; color: #888; margin-bottom: 20px; max-width: 700px; line-height: 1.5; }
+  .row { display: flex; gap: 28px; flex-wrap: wrap; }
+  .col { flex: 1; min-width: 320px; background: #fbf8f2; border-radius: 16px; border: 1px solid rgba(0,0,0,0.08); overflow: hidden; }
+  .col.dark { background: #1a1816; border-color: rgba(255,255,255,0.06); }
+  .col-header { padding: 12px 18px 10px; border-bottom: 1px solid rgba(0,0,0,0.07); }
+  .col.dark .col-header { border-color: rgba(255,255,255,0.07); }
+  .col-tag { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #c8553d; font-weight: 700; margin-bottom: 3px; }
+  .col-name { font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; font-weight: 600; color: #1a1a1a; }
+  .col.dark .col-name { color: #ece5d6; }
+  .col-sub { font-family: 'IBM Plex Mono', monospace; font-size: 8px; color: rgba(0,0,0,0.35); letter-spacing: 0.5px; margin-top: 2px; line-height: 1.4; }
+  .col.dark .col-sub { color: rgba(255,255,255,0.25); }
+  .ticker { background: #1a1816; height: 26px; display: flex; align-items: center; overflow: hidden; padding: 0 14px; font-size: 10px; font-weight: 500; letter-spacing: 0.5px; color: #ece5d6; gap: 14px; flex-shrink: 0; white-space: nowrap; }
+  .up { color: #7fcf9f; }
+  .dn { color: #ff8b75; }
+  .sep { color: rgba(255,255,255,0.18); }
+  .specimen { padding: 18px; }
+  .lbl { font-family: 'IBM Plex Mono', monospace; font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(0,0,0,0.3); margin-bottom: 6px; }
+  .col.dark .lbl { color: rgba(255,255,255,0.22); }
+  .sp { height: 14px; }
+  .rule { height: 1px; background: rgba(0,0,0,0.06); margin-bottom: 14px; }
+  .col.dark .rule { background: rgba(255,255,255,0.06); }
+  .notes { margin-top: 48px; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .note { background: #fff; border-radius: 10px; padding: 16px; border: 1px solid rgba(0,0,0,0.07); }
+  .note-tag { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 1.5px; color: #c8553d; font-weight: 700; margin-bottom: 6px; text-transform: uppercase; }
+  .note-body { font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; color: #666; line-height: 1.5; }
+  .ref-label { font-family: 'IBM Plex Mono', monospace; font-size: 8px; letter-spacing: 1.5px; color: rgba(0,0,0,0.3); text-transform: uppercase; display: inline-block; padding: 2px 6px; background: rgba(200,85,61,0.1); border-radius: 3px; margin-left: 6px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<div class="canvas">
+  <h1>Free Bold Grotesque Pairings</h1>
+  <p class="intro">You liked the weight and strength of GT America. These are the best free alternatives with similar boldness and character. Each shown with a free monospace partner for labels/data. GT America Trial shown at top for reference.</p>
+
+  <!-- ── REFERENCE: GT America Trial ── -->
+  <div class="pairing-title">REF · GT America Trial + GT America Mono <span class="ref-label">PAID — REFERENCE ONLY</span></div>
+  <div class="pairing-desc">The benchmark. Bold, warm, American grotesque. Everything below is being compared to this.</div>
+  <div class="row">
+    <div class="col">
+      <div class="col-header">
+        <div class="col-tag">REF · Light</div>
+        <div class="col-name">GT America Trial (paid reference)</div>
+      </div>
+      <div class="ticker" style="font-family:'GT America Mono Trial',monospace">
+        <span style="opacity:0.5">CHEST</span><span class="up">▲ +12.5%</span><span class="sep">·</span>
+        <span style="opacity:0.5">STREAK</span><span style="opacity:0.7">13D</span><span class="sep">·</span>
+        <span style="opacity:0.5">VOL</span><span class="up">▲ 8.4%</span>
+      </div>
+      <div class="specimen">
+        <div class="lbl">Workout name · 22px bold</div>
+        <div style="font-family:'GT America Trial',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.3px;color:#1f1c19;margin-bottom:12px;">PUSH DAY</div>
+        <div class="lbl">Hero number · 64px</div>
+        <div style="font-family:'GT America Mono Trial',monospace;font-weight:700;font-size:64px;color:#1f1c19;line-height:0.85;letter-spacing:-1px;margin-bottom:4px;">94</div>
+        <div style="font-family:'GT America Mono Trial',monospace;font-size:10px;color:rgba(31,28,25,0.45);letter-spacing:1.5px;margin-bottom:14px;">SETS THIS WEEK</div>
+        <div class="rule"></div>
+        <div class="lbl">Onboarding heading · 30px light</div>
+        <div style="font-family:'GT America Trial',sans-serif;font-weight:300;font-size:30px;color:#1f1c19;letter-spacing:-0.5px;line-height:1.1;margin-bottom:10px;">What should<br>we call you?</div>
+        <div style="height:50px;border-radius:10px;background:#c8553d;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'GT America Trial',sans-serif;font-weight:700;font-size:15px;letter-spacing:2px;color:#fff;text-transform:uppercase;">START WORKOUT</span>
+        </div>
+      </div>
+    </div>
+    <div class="col dark">
+      <div class="col-header">
+        <div class="col-tag">REF · Dark</div>
+        <div class="col-name">GT America Trial (paid reference)</div>
+      </div>
+      <div class="ticker" style="font-family:'GT America Mono Trial',monospace">
+        <span style="opacity:0.5">BENCH</span><span class="up">▲ +5KG</span><span class="sep">·</span>
+        <span style="opacity:0.5">STREAK</span><span style="opacity:0.7">13D</span>
+      </div>
+      <div class="specimen">
+        <div class="lbl">Workout name</div>
+        <div style="font-family:'GT America Trial',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.3px;color:#ece5d6;margin-bottom:12px;">PUSH DAY</div>
+        <div class="lbl">Hero number</div>
+        <div style="font-family:'GT America Mono Trial',monospace;font-weight:700;font-size:64px;color:#ece5d6;line-height:0.85;letter-spacing:-1px;margin-bottom:4px;">94</div>
+        <div style="font-family:'GT America Mono Trial',monospace;font-size:10px;color:rgba(236,229,214,0.4);letter-spacing:1.5px;margin-bottom:14px;">SETS THIS WEEK</div>
+        <div class="rule"></div>
+        <div class="lbl">Onboarding heading</div>
+        <div style="font-family:'GT America Trial',sans-serif;font-weight:300;font-size:30px;color:#ece5d6;letter-spacing:-0.5px;line-height:1.1;margin-bottom:10px;">What should<br>we call you?</div>
+        <div style="height:50px;border-radius:10px;background:#dc7d4a;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'GT America Trial',sans-serif;font-weight:700;font-size:15px;letter-spacing:2px;color:#fff;text-transform:uppercase;">START WORKOUT</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 1: Space Grotesk + Space Mono ── -->
+  <div class="pairing-title">1 · Space Grotesk + Space Mono — FREE (Google Fonts)</div>
+  <div class="pairing-desc">The closest free match to GT America's weight and warmth. Space Grotesk has slightly irregular strokes that give it personality — not sterile like Helvetica. Space Mono is the natural companion.</div>
+  <div class="row">
+    <div class="col">
+      <div class="col-header">
+        <div class="col-tag">1A · Light</div>
+        <div class="col-name">Space Grotesk + Space Mono</div>
+        <div class="col-sub">DISPLAY + BODY: SPACE GROTESK · LABELS + DATA: SPACE MONO</div>
+      </div>
+      <div class="ticker" style="font-family:'Space Mono',monospace">
+        <span style="opacity:0.5">CHEST</span><span class="up">▲ +12.5%</span><span class="sep">·</span>
+        <span style="opacity:0.5">STREAK</span><span style="opacity:0.7">13D</span><span class="sep">·</span>
+        <span style="opacity:0.5">VOL</span><span class="up">▲ 8.4%</span>
+      </div>
+      <div class="specimen">
+        <div class="lbl">Workout name · 22px bold</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.5px;color:#1f1c19;margin-bottom:12px;">PUSH DAY</div>
+        <div class="lbl">Hero number · 64px</div>
+        <div style="font-family:'Space Mono',monospace;font-weight:700;font-size:64px;color:#1f1c19;line-height:0.85;letter-spacing:-2px;margin-bottom:4px;">94</div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:rgba(31,28,25,0.45);letter-spacing:1.5px;margin-bottom:14px;">SETS THIS WEEK</div>
+        <div class="rule"></div>
+        <div class="lbl">Onboarding heading · 30px light</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:300;font-size:30px;color:#1f1c19;letter-spacing:-0.5px;line-height:1.1;margin-bottom:10px;">What should<br>we call you?</div>
+        <div style="height:50px;border-radius:10px;background:#c8553d;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;letter-spacing:2px;color:#fff;text-transform:uppercase;">Start Workout</span>
+        </div>
+      </div>
+    </div>
+    <div class="col dark">
+      <div class="col-header"><div class="col-tag">1B · Dark</div><div class="col-name">Space Grotesk + Space Mono</div></div>
+      <div class="ticker" style="font-family:'Space Mono',monospace">
+        <span style="opacity:0.5">BENCH</span><span class="up">▲ +5KG</span><span class="sep">·</span>
+        <span style="opacity:0.5">PR WATCH</span><span class="up">▲ +1</span>
+      </div>
+      <div class="specimen">
+        <div class="lbl">Workout name</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.5px;color:#ece5d6;margin-bottom:12px;">PUSH DAY</div>
+        <div class="lbl">Hero number</div>
+        <div style="font-family:'Space Mono',monospace;font-weight:700;font-size:64px;color:#ece5d6;line-height:0.85;letter-spacing:-2px;margin-bottom:4px;">94</div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:rgba(236,229,214,0.4);letter-spacing:1.5px;margin-bottom:14px;">SETS THIS WEEK</div>
+        <div class="rule"></div>
+        <div class="lbl">Onboarding heading</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:300;font-size:30px;color:#ece5d6;letter-spacing:-0.5px;line-height:1.1;margin-bottom:10px;">What should<br>we call you?</div>
+        <div style="height:50px;border-radius:10px;background:#dc7d4a;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;letter-spacing:2px;color:#fff;text-transform:uppercase;">Start Workout</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 2: Archivo Black + IBM Plex Mono ── -->
+  <div class="pairing-title">2 · Archivo Black + IBM Plex Mono — FREE (Google Fonts)</div>
+  <div class="pairing-desc">Archivo Black is a newspaper-weight grotesque — extremely heavy and confident at large sizes. More muscular than GT America. Paired with IBM Plex Mono for data precision.</div>
+  <div class="row">
+    <div class="col">
+      <div class="col-header">
+        <div class="col-tag">2A · Light</div>
+        <div class="col-name">Archivo Black + IBM Plex Mono</div>
+        <div class="col-sub">DISPLAY + CTA: ARCHIVO BLACK · BODY: ARCHIVO REGULAR · LABELS: IBM PLEX MONO</div>
+      </div>
+      <div class="ticker" style="font-family:'IBM Plex Mono',monospace">
+        <span style="opacity:0.5">CHEST</span><span class="up">▲ +12.5%</span><span class="sep">·</span>
+        <span style="opacity:0.5">STREAK</span><span style="opacity:0.7">13D</span><span class="sep">·</span>
+        <span style="opacity:0.5">VOL</span><span class="up">▲ 8.4%</span>
+      </div>
+      <div class="specimen">
+        <div class="lbl">Workout name · 22px black</div>
+        <div style="font-family:'Archivo',sans-serif;font-weight:900;font-size:22px;letter-spacing:-0.3px;color:#1f1c19;margin-bottom:12px;">PUSH DAY</div>
+        <div class="lbl">Hero number · 64px</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:64px;color:#1f1c19;line-height:0.85;letter-spacing:-2px;margin-bottom:4px;">94</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(31,28,25,0.45);letter-spacing:1.5px;margin-bottom:14px;">SETS THIS WEEK</div>
+        <div class="rule"></div>
+        <div class="lbl">Onboarding heading · 30px regular</div>
+        <div style="font-family:'Archivo',sans-serif;font-weight:300;font-size:30px;color:#1f1c19;letter-spacing:-0.3px;line-height:1.1;margin-bottom:10px;">What should<br>we call you?</div>
+        <div style="height:50px;border-radius:10px;background:#c8553d;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'Archivo',sans-serif;font-weight:900;font-size:15px;letter-spacing:2px;color:#fff;text-transform:uppercase;">Start Workout</span>
+        </div>
+      </div>
+    </div>
+    <div class="col dark">
+      <div class="col-header"><div class="col-tag">2B · Dark</div><div class="col-name">Archivo Black + IBM Plex Mono</div></div>
+      <div class="ticker" style="font-family:'IBM Plex Mono',monospace">
+        <span style="opacity:0.5">BENCH</span><span class="up">▲ +5KG</span><span class="sep">·</span>
+        <span style="opacity:0.5">SETS</span><span style="opacity:0.7">28</span>
+      </div>
+      <div class="specimen">
+        <div class="lbl">Workout name</div>
+        <div style="font-family:'Archivo',sans-serif;font-weight:900;font-size:22px;letter-spacing:-0.3px;color:#ece5d6;margin-bottom:12px;">PUSH DAY</div>
+        <div class="lbl">Hero number</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:64px;color:#ece5d6;line-height:0.85;letter-spacing:-2px;margin-bottom:4px;">94</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(236,229,214,0.4);letter-spacing:1.5px;margin-bottom:14px;">SETS THIS WEEK</div>
+        <div class="rule"></div>
+        <div class="lbl">Onboarding heading</div>
+        <div style="font-family:'Archivo',sans-serif;font-weight:300;font-size:30px;color:#ece5d6;letter-spacing:-0.3px;line-height:1.1;margin-bottom:10px;">What should<br>we call you?</div>
+        <div style="height:50px;border-radius:10px;background:#dc7d4a;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'Archivo',sans-serif;font-weight:900;font-size:15px;letter-spacing:2px;color:#fff;text-transform:uppercase;">Start Workout</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3: Hanken Grotesk + IBM Plex Mono ── -->
+  <div class="pairing-title">3 · Hanken Grotesk + IBM Plex Mono — FREE (Google Fonts)</div>
+  <div class="pairing-desc">Hanken Grotesk has the warmth and ink-trap details that make GT America feel humanist rather than cold. Black weight is very strong. Less distinctive than GT America but genuinely excellent.</div>
+  <div class="row">
+    <div class="col">
+      <div class="col-header">
+        <div class="col-tag">3A · Light</div>
+        <div class="col-name">Hanken Grotesk + IBM Plex Mono</div>
+        <div class="col-sub">DISPLAY + BODY: HANKEN GROTESK · LABELS + DATA: IBM PLEX MONO</div>
+      </div>
+      <div class="ticker" style="font-family:'IBM Plex Mono',monospace">
+        <span style="opacity:0.5">CHEST</span><span class="up">▲ +12.5%</span><span class="sep">·</span>
+        <span style="opacity:0.5">STREAK</span><span style="opacity:0.7">13D</span><span class="sep">·</span>
+        <span style="opacity:0.5">HAMS</span><span class="dn">▼ -33%</span>
+      </div>
+      <div class="specimen">
+        <div class="lbl">Workout name · 22px 900</div>
+        <div style="font-family:'Hanken Grotesk',sans-serif;font-weight:900;font-size:22px;letter-spacing:-0.5px;color:#1f1c19;margin-bottom:12px;">PUSH DAY</div>
+        <div class="lbl">Hero number · 64px</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:64px;color:#1f1c19;line-height:0.85;letter-spacing:-2px;margin-bottom:4px;">94</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(31,28,25,0.45);letter-spacing:1.5px;margin-bottom:14px;">SETS THIS WEEK</div>
+        <div class="rule"></div>
+        <div class="lbl">Onboarding heading · 30px light</div>
+        <div style="font-family:'Hanken Grotesk',sans-serif;font-weight:300;font-size:30px;color:#1f1c19;letter-spacing:-0.4px;line-height:1.1;margin-bottom:10px;">What should<br>we call you?</div>
+        <div style="height:50px;border-radius:10px;background:#c8553d;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'Hanken Grotesk',sans-serif;font-weight:800;font-size:15px;letter-spacing:2px;color:#fff;text-transform:uppercase;">Start Workout</span>
+        </div>
+      </div>
+    </div>
+    <div class="col dark">
+      <div class="col-header"><div class="col-tag">3B · Dark</div><div class="col-name">Hanken Grotesk + IBM Plex Mono</div></div>
+      <div class="ticker" style="font-family:'IBM Plex Mono',monospace">
+        <span style="opacity:0.5">BENCH</span><span class="up">▲ +5KG</span><span class="sep">·</span>
+        <span style="opacity:0.5">KCAL</span><span style="opacity:0.7">342</span>
+      </div>
+      <div class="specimen">
+        <div class="lbl">Workout name</div>
+        <div style="font-family:'Hanken Grotesk',sans-serif;font-weight:900;font-size:22px;letter-spacing:-0.5px;color:#ece5d6;margin-bottom:12px;">PUSH DAY</div>
+        <div class="lbl">Hero number</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:64px;color:#ece5d6;line-height:0.85;letter-spacing:-2px;margin-bottom:4px;">94</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(236,229,214,0.4);letter-spacing:1.5px;margin-bottom:14px;">SETS THIS WEEK</div>
+        <div class="rule"></div>
+        <div class="lbl">Onboarding heading</div>
+        <div style="font-family:'Hanken Grotesk',sans-serif;font-weight:300;font-size:30px;color:#ece5d6;letter-spacing:-0.4px;line-height:1.1;margin-bottom:10px;">What should<br>we call you?</div>
+        <div style="height:50px;border-radius:10px;background:#dc7d4a;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'Hanken Grotesk',sans-serif;font-weight:800;font-size:15px;letter-spacing:2px;color:#fff;text-transform:uppercase;">Start Workout</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 4: Barlow Semi Condensed + IBM Plex Mono ── -->
+  <div class="pairing-title">4 · Barlow Semi Condensed + IBM Plex Mono — FREE (Google Fonts)</div>
+  <div class="pairing-desc">Barlow Semi Condensed is slightly narrower than GT America — gives you more text per line at large sizes. The ExtraBold weight is very strong. Semi-condensed adds a sporty, purposeful quality that works well for a workout app.</div>
+  <div class="row">
+    <div class="col">
+      <div class="col-header">
+        <div class="col-tag">4A · Light</div>
+        <div class="col-name">Barlow Semi Condensed + IBM Plex Mono</div>
+        <div class="col-sub">DISPLAY + BODY: BARLOW SEMI CONDENSED · LABELS: IBM PLEX MONO</div>
+      </div>
+      <div class="ticker" style="font-family:'IBM Plex Mono',monospace">
+        <span style="opacity:0.5">CHEST</span><span class="up">▲ +12.5%</span><span class="sep">·</span>
+        <span style="opacity:0.5">STREAK</span><span style="opacity:0.7">13D</span><span class="sep">·</span>
+        <span style="opacity:0.5">VOL</span><span class="up">▲ 8.4%</span>
+      </div>
+      <div class="specimen">
+        <div class="lbl">Workout name · 24px extrabold</div>
+        <div style="font-family:'Barlow Semi Condensed',sans-serif;font-weight:800;font-size:24px;letter-spacing:0.3px;color:#1f1c19;margin-bottom:12px;text-transform:uppercase;">Push Day</div>
+        <div class="lbl">Hero number · 64px</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:64px;color:#1f1c19;line-height:0.85;letter-spacing:-2px;margin-bottom:4px;">94</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(31,28,25,0.45);letter-spacing:1.5px;margin-bottom:14px;">SETS THIS WEEK</div>
+        <div class="rule"></div>
+        <div class="lbl">Onboarding heading · 32px light</div>
+        <div style="font-family:'Barlow Semi Condensed',sans-serif;font-weight:300;font-size:32px;color:#1f1c19;letter-spacing:0px;line-height:1.05;margin-bottom:10px;">What should<br>we call you?</div>
+        <div style="height:50px;border-radius:10px;background:#c8553d;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'Barlow Semi Condensed',sans-serif;font-weight:800;font-size:17px;letter-spacing:2.5px;color:#fff;text-transform:uppercase;">Start Workout</span>
+        </div>
+      </div>
+    </div>
+    <div class="col dark">
+      <div class="col-header"><div class="col-tag">4B · Dark</div><div class="col-name">Barlow Semi Condensed + IBM Plex Mono</div></div>
+      <div class="ticker" style="font-family:'IBM Plex Mono',monospace">
+        <span style="opacity:0.5">BENCH</span><span class="up">▲ +5KG</span><span class="sep">·</span>
+        <span style="opacity:0.5">DURATION</span><span style="opacity:0.7">58:42</span>
+      </div>
+      <div class="specimen">
+        <div class="lbl">Workout name</div>
+        <div style="font-family:'Barlow Semi Condensed',sans-serif;font-weight:800;font-size:24px;letter-spacing:0.3px;color:#ece5d6;margin-bottom:12px;text-transform:uppercase;">Push Day</div>
+        <div class="lbl">Hero number</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:64px;color:#ece5d6;line-height:0.85;letter-spacing:-2px;margin-bottom:4px;">94</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(236,229,214,0.4);letter-spacing:1.5px;margin-bottom:14px;">SETS THIS WEEK</div>
+        <div class="rule"></div>
+        <div class="lbl">Onboarding heading</div>
+        <div style="font-family:'Barlow Semi Condensed',sans-serif;font-weight:300;font-size:32px;color:#ece5d6;letter-spacing:0px;line-height:1.05;margin-bottom:10px;">What should<br>we call you?</div>
+        <div style="height:50px;border-radius:10px;background:#dc7d4a;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'Barlow Semi Condensed',sans-serif;font-weight:800;font-size:17px;letter-spacing:2.5px;color:#fff;text-transform:uppercase;">Start Workout</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes -->
+
+  <!-- ── 5: Archivo Black + Space Mono ── -->
+  <div class="pairing-title">5 · Archivo Black + Space Mono — FREE (Google Fonts) ⭐ NEW</div>
+  <div class="pairing-desc">Archivo Black's newspaper-grade heaviness paired with Space Mono's warm quirky character. The boldest display weight in this comparison with the most personality in the data layer. Strong, punchy, distinctive.</div>
+  <div class="row">
+    <div class="col">
+      <div class="col-header">
+        <div class="col-tag">5A · Light</div>
+        <div class="col-name">Archivo Black + Space Mono</div>
+        <div class="col-sub">DISPLAY + CTA: ARCHIVO BLACK · BODY: ARCHIVO REGULAR · LABELS + DATA: SPACE MONO</div>
+      </div>
+      <div class="ticker" style="font-family:'Space Mono',monospace">
+        <span style="opacity:0.5">CHEST</span><span class="up">▲ +12.5%</span><span class="sep">·</span>
+        <span style="opacity:0.5">STREAK</span><span style="opacity:0.7">13D</span><span class="sep">·</span>
+        <span style="opacity:0.5">VOL</span><span class="up">▲ 8.4%</span><span class="sep">·</span>
+        <span style="opacity:0.5">SHLDR</span><span class="dn">▼ -14.3%</span>
+      </div>
+      <div class="specimen">
+        <div class="lbl">Workout name · 22px black</div>
+        <div style="font-family:'Archivo',sans-serif;font-weight:900;font-size:22px;letter-spacing:-0.3px;color:#1f1c19;margin-bottom:12px;">PUSH DAY</div>
+        <div class="lbl">Hero number · 64px</div>
+        <div style="font-family:'Space Mono',monospace;font-weight:700;font-size:64px;color:#1f1c19;line-height:0.85;letter-spacing:-2px;margin-bottom:4px;">94</div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:rgba(31,28,25,0.45);letter-spacing:1.5px;margin-bottom:14px;">SETS THIS WEEK</div>
+        <div class="rule"></div>
+        <div class="lbl">Set row · tabular data</div>
+        <div style="display:grid;grid-template-columns:36px 24px 1fr 1fr 36px;gap:0;border:1px solid rgba(0,0,0,0.08);border-radius:8px;overflow:hidden;margin-bottom:14px;">
+          <div style="padding:8px 6px;background:#ece7d8;font-family:'Space Mono',monospace;font-size:7px;font-weight:700;color:#a17418;display:flex;align-items:center;justify-content:center;">WU</div>
+          <div style="padding:8px 4px;font-family:'Space Mono',monospace;font-size:10px;color:rgba(31,28,25,0.45);display:flex;align-items:center;justify-content:center;">01</div>
+          <div style="padding:8px;font-family:'Space Mono',monospace;font-size:18px;color:#1f1c19;display:flex;align-items:center;justify-content:center;">60</div>
+          <div style="padding:8px;font-family:'Space Mono',monospace;font-size:18px;color:#1f1c19;display:flex;align-items:center;justify-content:center;">8</div>
+          <div style="padding:8px;display:flex;align-items:center;justify-content:center;color:#1f8f5a;font-weight:700;font-size:13px;">✓</div>
+        </div>
+        <div class="lbl">Onboarding heading · 30px light</div>
+        <div style="font-family:'Archivo',sans-serif;font-weight:300;font-size:30px;color:#1f1c19;letter-spacing:-0.3px;line-height:1.1;margin-bottom:10px;">What should<br>we call you?</div>
+        <div style="height:50px;border-radius:10px;background:#c8553d;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'Archivo',sans-serif;font-weight:900;font-size:15px;letter-spacing:2.5px;color:#fff;text-transform:uppercase;">Start Workout</span>
+        </div>
+      </div>
+    </div>
+    <div class="col dark">
+      <div class="col-header"><div class="col-tag">5B · Dark</div><div class="col-name">Archivo Black + Space Mono</div></div>
+      <div class="ticker" style="font-family:'Space Mono',monospace">
+        <span style="opacity:0.5">BENCH</span><span class="up">▲ +5KG</span><span class="sep">·</span>
+        <span style="opacity:0.5">PR WATCH</span><span class="up">▲ +1</span><span class="sep">·</span>
+        <span style="opacity:0.5">KCAL</span><span style="opacity:0.7">342</span>
+      </div>
+      <div class="specimen">
+        <div class="lbl">Workout name</div>
+        <div style="font-family:'Archivo',sans-serif;font-weight:900;font-size:22px;letter-spacing:-0.3px;color:#ece5d6;margin-bottom:12px;">PUSH DAY</div>
+        <div class="lbl">Hero number</div>
+        <div style="font-family:'Space Mono',monospace;font-weight:700;font-size:64px;color:#ece5d6;line-height:0.85;letter-spacing:-2px;margin-bottom:4px;">94</div>
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:rgba(236,229,214,0.4);letter-spacing:1.5px;margin-bottom:14px;">SETS THIS WEEK</div>
+        <div class="rule"></div>
+        <div class="lbl">Set row · tabular data</div>
+        <div style="display:grid;grid-template-columns:36px 24px 1fr 1fr 36px;gap:0;border:1px solid rgba(255,255,255,0.08);border-radius:8px;overflow:hidden;margin-bottom:14px;">
+          <div style="padding:8px 6px;background:rgba(180,140,60,0.18);font-family:'Space Mono',monospace;font-size:7px;font-weight:700;color:#c9a040;display:flex;align-items:center;justify-content:center;">WU</div>
+          <div style="padding:8px 4px;font-family:'Space Mono',monospace;font-size:10px;color:rgba(236,229,214,0.4);display:flex;align-items:center;justify-content:center;">01</div>
+          <div style="padding:8px;font-family:'Space Mono',monospace;font-size:18px;color:#ece5d6;display:flex;align-items:center;justify-content:center;">60</div>
+          <div style="padding:8px;font-family:'Space Mono',monospace;font-size:18px;color:#ece5d6;display:flex;align-items:center;justify-content:center;">8</div>
+          <div style="padding:8px;display:flex;align-items:center;justify-content:center;color:#3fb777;font-weight:700;font-size:13px;">✓</div>
+        </div>
+        <div class="lbl">Onboarding heading</div>
+        <div style="font-family:'Archivo',sans-serif;font-weight:300;font-size:30px;color:#ece5d6;letter-spacing:-0.3px;line-height:1.1;margin-bottom:10px;">What should<br>we call you?</div>
+        <div style="height:50px;border-radius:10px;background:#dc7d4a;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'Archivo',sans-serif;font-weight:900;font-size:15px;letter-spacing:2.5px;color:#fff;text-transform:uppercase;">Start Workout</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="note" style="border:1px solid rgba(200,85,61,0.3);background:#fff8f5;">
+      <div class="note-tag">5 · Archivo Black + Space Mono ⭐</div>
+      <div class="note-body">Heavy newspaper display weight + Space Mono's warm quirky data layer. The contrast between ultra-heavy Archivo and Space Mono's character is striking. Very distinctive combination.</div>
+    </div>
+    <div class="note">
+      <div class="note-tag">REF · GT America Trial</div>
+      <div class="note-body">The benchmark. Paid (Grilli Type license needed). Warmest, most distinctive. Worth buying if budget allows.</div>
+    </div>
+    <div class="note">
+      <div class="note-tag">1 · Space Grotesk</div>
+      <div class="note-body">⭐ Closest free alternative to GT America. Has quirky ink-trap details, warm personality. Bold weight is strong without being aggressive. Space Mono pairs beautifully.</div>
+    </div>
+    <div class="note">
+      <div class="note-tag">2 · Archivo Black</div>
+      <div class="note-body">Most muscular and heavy. Newspaper-grade boldness. Works brilliantly for CTAs and workout names at large sizes. Body text at regular weight is clean.</div>
+    </div>
+    <div class="note">
+      <div class="note-tag">3 · Hanken Grotesk</div>
+      <div class="note-body">Most "invisible" quality — extremely readable, warm, but doesn't shout its own personality as loudly. Excellent if you want the app content to lead, not the font.</div>
+    </div>
+    <div class="note">
+      <div class="note-tag">4 · Barlow Semi Condensed</div>
+      <div class="note-body">Most sporty/utilitarian. The semi-condensed width feels purposeful for a workout app. ExtraBold is very punchy. Most legibility at small sizes.</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

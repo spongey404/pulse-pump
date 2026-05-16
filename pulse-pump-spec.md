@@ -145,6 +145,10 @@ This is the most important feature. Build it to be fast and frictionless.
 - Alert options (user picks): sound, vibration, both, or silent visual only
 - Display on iOS lock screen via Live Activity and in Dynamic Island on supported devices
 
+**Single active workout rule:** Only one workout can be in progress at a time. If a draft exists and the user starts a new workout, the draft is permanently deleted before the new session begins. There is no multi-workout or queued-session concept.
+
+**Draft / resume behaviour:** If the user leaves an active workout without finishing (app close, crash, or explicit cancel), it is auto-saved as a draft. On returning to the Home tab, the Start Workout button transforms into a "Resume Workout" button showing the draft name and how long ago it was started. A secondary "Start New Workout" link below the button lets the user discard the draft and begin fresh — this requires a confirmation dialog and permanently deletes the draft.
+
 **Live workout session UX:**
 - Minimal duration timer in the header
 - Drag handle to reorder exercises mid-workout
@@ -242,7 +246,7 @@ Lives inside the More tab.
 
 **Finding friends:** Search by username, find via phone contacts, shareable invite link.
 
-**Activity feed (free):** Chronological. Each post shows: body map of muscles worked, number of exercises improved on, PRs hit. Tapping into a post reveals full workout details (exercises, sets, reps, weights) but NOT the user's personal notes. Feed posts are generated from the post-workout summary. Auto-post is on by default (configurable in Settings).
+**Activity feed (free):** Chronological. Each post shows: an interactive 3D body model with worked muscles highlighted (friends can orbit, zoom, and pan to inspect what was trained), number of exercises improved on, PRs hit. Tapping into a post reveals full workout details (exercises, sets, reps, weights) but NOT the user's personal notes. The detail sheet also shows the full interactive 3D model. Feed posts are generated from the post-workout summary. Auto-post is on by default (configurable in Settings).
 
 **Reactions:** Like and comments only.
 
@@ -403,6 +407,66 @@ These were built after the initial 15-phase spec was complete.
 - When rest timer is active: Dynamic Island compact trailing and expanded leading show rest countdown in red; lock screen banner shows "Rest" label in red
 - When rest ends: automatically reverts to elapsed workout time
 - `NSSupportsLiveActivities` and `NSSupportsLiveActivitiesFrequentUpdates` enabled in Info.plist
+
+---
+
+## Known Gaps & Backlog
+
+These items have been audited against the codebase and are confirmed incomplete. Tackle them in priority order.
+
+### High Priority (already in progress or blocked on design decisions)
+
+**Programs & Templates (Phase 5)**
+- Template share-via-link: use custom URL scheme `pulsepump://template?data=<base64encodedJSON>`. Serialize template name + exercises to JSON, base64-encode, embed in URL. Share sheet includes plain-text App Store fallback for recipients without the app. Handle the URL in the scene delegate to import and create a local SwiftData copy.
+
+**Social (Phase 9)**
+- Push notifications: remote social notifications (likes, comments, friend requests) require Firebase Cloud Functions + FCM — not yet set up. Local workout reminder notifications can be wired up independently. Mark as deferred until FCM is configured.
+- Challenges not gated behind Pulse+ — add subscription check to challenge creation.
+- No friend profile tap destination — friend list items go nowhere. Profile should show: username, avatar, stats (total workouts, streak), latest body heatmap, current split, and past workouts. Users control visibility via a privacy toggle: private mode shows only username, avatar, and streak to others.
+
+**Share Cards (Phase 11)**
+- Post-workout card missing body map silhouette — embed `FeedBodyMapView`.
+- Weekly recap card: triggered every Monday via a local notification, and manually accessible from History/More. Shows: workouts last week, volume vs previous week (up/down), PRs hit, muscles worked.
+- Monthly recap card: triggered automatically the first time the app is opened after a calendar month rolls over (modal). Also manually accessible from History/More. Shows: total workouts, total sets, PRs hit, most-trained muscles (mini heatmap), consistency % (workout days / days in month), longest streak that month.
+- Milestone cards: shown on the workout completion screen when one or more PRs were hit that session.
+
+### Medium Priority
+
+**Body Map (Phase 6)**
+- `FinalBaseMesh.obj` is a silent runtime dependency — add a graceful fallback if the file is missing.
+- No free-tier skin tone / body type customization (spec says free users get basic customization options).
+- Muscle detail sheet has no trend graphs — spec says trend graphs appear at the top of the detail sheet.
+
+**Onboarding (Phase 2)**
+- No differentiated beginner/experienced tutorial flow — the yes/no prompt exists but both paths go to the same place.
+- Contextual hints exist in `HintSystem.swift` but are not wired to any screens.
+
+**Exercise Library (Phase 3)**
+- Community exercise submissions only set a local `isCustom` flag — there is no backend write to a pending-review queue. Requires a Firestore collection for submitted exercises.
+
+**Home Screen (Phase 7)**
+- The predicted workout pinned widget card is missing from the configurable widget stack on the Home tab.
+- Workout results in global search are not tappable (no navigation to workout detail).
+
+### Lower Priority
+
+**Settings (Phase 12)**
+- No email/password change flow in account management.
+- Terms of Service and Privacy Policy are placeholder links with no destinations.
+
+**Utilities (Phase 10)**
+- Equipment profiles are stored but not used to filter exercise substitution suggestions during a workout.
+
+**iOS Platform (Phase 15)**
+- Widget extension only shows streak — missing "next predicted workout" and "weekly volume" widgets (free and Pulse+ tiers).
+- No network reachability handling — social writes (likes, comments, feed posts) fail silently when offline. Need an offline queue or reachability guard.
+
+**Pulse+ (Phase 14)**
+- Free trial uses `UserDefaults` install date instead of StoreKit's native introductory offer — resets on reinstall and is not tied to the App Store account.
+- Multi-app pricing tiers (1 app / 2 apps / all 3 apps) are not represented in the StoreKit products or paywall UI.
+
+**Calorie / Ecosystem (Phase 13)**
+- No Pulse Fuel integration stub — spec asks for at minimum a protocol/interface placeholder so the hook point is defined even before Fuel is built.
 
 ---
 
