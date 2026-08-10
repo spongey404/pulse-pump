@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct RootView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query private var users: [User]
 
     private var user: User? { users.first }
@@ -15,9 +16,8 @@ struct RootView: View {
             }
         }
         .task {
-            // Request notification permission on first meaningful launch
+            WorkoutDemoDataService.seedIfNeeded(modelContext: modelContext)
             _ = await NotificationService.shared.requestPermission()
-            // Reschedule reminders based on current split and preferences
             await NotificationService.shared.reschedule(split: user?.selectedSplit)
         }
     }

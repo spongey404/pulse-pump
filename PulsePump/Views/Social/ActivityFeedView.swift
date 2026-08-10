@@ -349,7 +349,7 @@ struct FeedPostCard: View {
                     HStack(alignment: .lastTextBaseline, spacing: 0) {
                         Text("\(item.improvedCount)")
                             .font(.display(26))
-                            .foregroundStyle(Color.signalUp)
+                            .foregroundStyle(Color.pumpAccent)
                         Text("/\(item.totalExercises)")
                             .font(.display(13))
                             .foregroundStyle(Color.white.opacity(0.5))

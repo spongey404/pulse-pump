@@ -74,10 +74,10 @@ struct WorkoutModalModifier: ViewModifier {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 40)
-                        .background(primaryDestructive ? Color.signalDown : Color.inkPrimary)
+                        .background(Color.pumpAccent)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                         .shadow(
-                            color: (primaryDestructive ? Color.signalDown : Color.inkPrimary).opacity(0.33),
+                            color: Color.pumpAccent.opacity(0.33),
                             radius: 8, y: 4
                         )
                 }

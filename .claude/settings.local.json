@@ -11,7 +11,11 @@
       "Bash(ls:*)",
       "mcp__XcodeBuildMCP__list_schemes",
       "mcp__XcodeBuildMCP__session_set_defaults",
-      "mcp__XcodeBuildMCP__build_sim"
+      "mcp__XcodeBuildMCP__build_sim",
+      "Bash(git merge:*)",
+      "Bash(git stash:*)",
+      "Bash(plutil -p /Users/vasanth.santosh/Documents/Apps/Pump/PulsePump/Info.plist)",
+      "Bash(git commit *)"
     ]
   }
 }

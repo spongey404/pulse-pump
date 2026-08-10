@@ -396,7 +396,7 @@ struct WorkoutCompletionView: View {
                 HStack(alignment: .bottom, spacing: 5) {
                     Text("\(data.improvedCount)")
                         .font(.display(58))
-                        .foregroundStyle(Color.signalUp)
+                        .foregroundStyle(Color.pumpAccent)
                         .lineLimit(1)
                     VStack(alignment: .leading, spacing: 0) {
                         Text("OF \(data.totalExercises)")
@@ -486,7 +486,7 @@ struct WorkoutCompletionView: View {
                         .frame(width: 66, alignment: .trailing)
                     Text(improved ? "+\(String(format: "%.0f", ex.improvementScore))%" : "—")
                         .font(Font.spaceMono(10))
-                        .foregroundStyle(improved ? Color.signalUp : Color.inkMuted)
+                        .foregroundStyle(improved ? Color.pumpAccent : Color.inkMuted)
                         .frame(width: 28, alignment: .trailing)
                 }
                 .padding(.vertical, 4)

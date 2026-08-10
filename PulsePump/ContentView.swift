@@ -57,7 +57,6 @@ struct ContentView: View {
         .onAppear {
             ExerciseSeedService.seedIfNeeded(modelContext: modelContext)
             TemplateSeedService.seedIfNeeded(modelContext: modelContext)
-            WorkoutDemoDataService.seedIfNeeded(modelContext: modelContext)
             if UserDefaults.standard.bool(forKey: "wantsTutorial") {
                 tutorialViewModel.start()
             }
@@ -502,14 +501,14 @@ struct HomeTabView: View {
                     label: "STREAK",
                     value: "\(currentStreak)",
                     sub: "DAYS",
-                    valueColor: Color.signalUp
+                    valueColor: Color.pumpAccent
                 )
                 Rectangle().fill(Color.dsHairLine).frame(width: 1)
                 kpiCell(
                     label: "IMPROVED",
                     value: "\(weekImproved)",
                     sub: "THIS WK",
-                    valueColor: Color.signalUp
+                    valueColor: Color.inkPrimary
                 )
                 Rectangle().fill(Color.dsHairLine).frame(width: 1)
                 kpiCell(
@@ -591,7 +590,7 @@ struct HomeTabView: View {
                             RoundedRectangle(cornerRadius: 2)
                                 .fill(
                                     isToday ? Color.pumpAccent :
-                                    (isPast && v > 0 ? Color.signalUp.opacity(0.70) :
+                                    (isPast && v > 0 ? Color.pumpAccent.opacity(0.70) :
                                      Color.inkFaint.opacity(0.15))
                                 )
                                 .frame(height: animH)
@@ -674,7 +673,7 @@ struct HomeTabView: View {
 
                         Text("\(improvedCount)/\(totalExercises)")
                             .font(.spaceMono(11, weight: .bold))
-                            .foregroundStyle(Color.signalUp)
+                            .foregroundStyle(Color.pumpAccent)
                             .frame(width: 56, alignment: .center)
 
                         let volDelta = volumeDelta(for: workout)

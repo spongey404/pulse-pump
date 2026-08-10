@@ -8,7 +8,7 @@ struct WelcomeView: View {
 
     var body: some View {
         ZStack {
-            Color(hex: "#fbf8f2").ignoresSafeArea()
+            Color.canvasBg.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 Spacer()
@@ -71,7 +71,7 @@ struct WelcomeView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
-                        .background(Color(hex: "#f4f0e6"))
+                        .background(Color.surf)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.inkPrimary.opacity(0.13), lineWidth: 1))
                     }
@@ -87,7 +87,7 @@ struct WelcomeView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
-                        .background(Color(hex: "#f4f0e6"))
+                        .background(Color.surf)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.inkPrimary.opacity(0.13), lineWidth: 1))
                     }
@@ -106,7 +106,7 @@ struct WelcomeView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
-                        .background(Color(hex: "#f4f0e6"))
+                        .background(Color.surf)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.inkPrimary.opacity(0.13), lineWidth: 1))
                     }

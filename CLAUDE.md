@@ -130,7 +130,7 @@ Lowercase prefixes, present tense:
 - `WorkoutActivityAttributes` is defined in **both** the main app (`LiveActivityService.swift`) and the widget extension (`WorkoutLiveActivity.swift`) — must be kept in sync manually until a shared framework is added
 - Feed caching: `SocialViewModel` stores `lastFeedFetch` timestamp with a 5-min TTL; pull-to-refresh forces a network fetch
 - `StreakCalculator` (Utilities/) is the single source of truth for streak logic — gap-based, 3-day expiry window
-- `Color.pumpAccent` is the canonical accent token (`Extensions/Color+Theme.swift` + xcassets `PumpAccent.colorset`). Set to terracotta `#c8553d` light / `#dc7d4a` dark. `Color.pumpPrimary` is a deprecated alias — do not use it.
+- `Color.pumpAccent` is the canonical accent token (`Extensions/Color+Theme.swift` + xcassets `PumpAccent.colorset`). Set to hot pink `#fd4a9f` (same light/dark). `Color.pumpPrimary` is a deprecated alias — do not use it.
 
 ## UI Patterns
 
@@ -165,7 +165,7 @@ The `pump-and-fuel/project/` directory contains HTML prototype files from Claude
 Design system reference: `pump-and-fuel/project/uploads/pulse-design-system.md`
 
 Key design tokens to implement in Swift:
-- **Accent:** `#c8553d` light / `#dc7d4a` dark
+- **Accent:** `#fd4a9f` (hot pink, light and dark)
 - **Canvas bg:** `#fbf8f2` light / `#1a1816` dark
 - **Ticker bg (always dark):** `#1a1816`
 - **Fonts:** Bebas Neue for display/headers, DM Mono for labels/numbers, Inter for body (currently using SF Pro system fonts — will need custom font registration)

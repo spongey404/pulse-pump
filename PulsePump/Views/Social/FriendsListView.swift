@@ -50,6 +50,7 @@ struct FriendsListView: View {
                                 Task { await viewModel.sendFriendRequest(to: user.uid) }
                             }
                             .buttonStyle(.bordered)
+                            .tint(Color.pumpAccent)
                             .controlSize(.small)
                         }
                     }
@@ -97,6 +98,7 @@ struct FriendsListView: View {
                                 Task { await viewModel.sendFriendRequest(to: user.uid) }
                             }
                             .buttonStyle(.bordered)
+                            .tint(Color.pumpAccent)
                             .controlSize(.small)
                         }
                     }

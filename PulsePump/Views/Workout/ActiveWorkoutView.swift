@@ -1204,7 +1204,7 @@ struct NewSetRowView: View {
         Group {
             if setEntry.isCompleted {
                 ZStack {
-                    Circle().fill(Color.signalUp)
+                    Circle().fill(Color.pumpAccent)
                     Image(systemName: "checkmark")
                         .font(.system(size: 8, weight: .bold))
                         .foregroundStyle(.white)
@@ -1724,7 +1724,7 @@ struct InlinePlateCalculatorView: View {
         case 20:   return (Color(hex: "#1f4ea3"), .white)
         case 15:   return (Color(hex: "#c98a17"), .white)
         case 10:   return (Color(hex: "#1f8f5a"), .white)
-        case 5:    return (Color(hex: "#1f1c19"), Color(hex: "#f4f0e6"))
+        case 5:    return (Color(hex: "#1f1c19"), Color(hex: "#f0efeb"))
         case 2.5:  return (Color(hex: "#a3a39a"), Color(hex: "#1f1c19"))
         default:   return (Color(hex: "#d6d2c4"), Color(hex: "#1f1c19"))
         }

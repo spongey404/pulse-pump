@@ -119,7 +119,7 @@ struct QuickStatTile: View {
                     Text(String(format: "%+.0f%%", change))
                         .font(.mono(9, weight: .medium))
                 }
-                .foregroundStyle(change >= 0 ? .green : .red)
+                .foregroundStyle(change >= 0 ? Color.signalUp : Color.signalDown)
 
                 Text(period)
                     .font(.mono(9))

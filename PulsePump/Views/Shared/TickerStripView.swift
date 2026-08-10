@@ -86,8 +86,8 @@ struct TickerStripView: View {
 
     private func valueColor(_ dir: TickerItem.Direction?) -> Color {
         switch dir {
-        case .up:   return colorScheme == .dark ? Color(hex: "#7fcf9f") : Color(hex: "#2a7a4a")
-        case .down: return colorScheme == .dark ? Color(hex: "#ff8b75") : Color(hex: "#c0341a")
+        case .up:   return Color(hex: "#00e07a")
+        case .down: return Color(hex: "#ff3b30")
         case .none: return fg.opacity(0.6)
         }
     }

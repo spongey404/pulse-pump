@@ -126,12 +126,12 @@ struct PulsePlusView: View {
         HStack(spacing: 10) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 20, weight: .medium))
-                .foregroundStyle(Color.signalUp)
+                .foregroundStyle(Color.pumpAccent)
             VStack(alignment: .leading, spacing: 2) {
                 Text("PULSE+ ACTIVE")
                     .font(.spaceMono(10, weight: .bold))
                     .tracking(1.5)
-                    .foregroundStyle(Color.signalUp)
+                    .foregroundStyle(Color.pumpAccent)
                 Text("Thank you for subscribing.")
                     .font(.archivo(13))
                     .foregroundStyle(Color.inkMuted)
@@ -140,7 +140,7 @@ struct PulsePlusView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
-        .background(Color.signalUp.opacity(0.08))
+        .background(Color.pumpAccent.opacity(0.08))
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
     }
 
@@ -244,7 +244,7 @@ struct PulsePlusView: View {
                         Spacer()
                         Image(systemName: "checkmark")
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(Color.signalUp)
+                            .foregroundStyle(Color.pumpAccent)
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)

@@ -22,9 +22,10 @@ struct RecentWorkoutsWidget: View {
                 if currentStreak > 0 {
                     HStack(spacing: 4) {
                         Image(systemName: "flame.fill")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Color.pumpAccent)
                         Text("\(currentStreak) day streak")
                             .font(.mono(11, weight: .medium))
+                            .foregroundStyle(Color.pumpAccent)
                     }
                 }
             }
