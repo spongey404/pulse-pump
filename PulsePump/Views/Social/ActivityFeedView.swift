@@ -349,7 +349,7 @@ struct FeedPostCard: View {
                     HStack(alignment: .lastTextBaseline, spacing: 0) {
                         Text("\(item.improvedCount)")
                             .font(.display(26))
-                            .foregroundStyle(Color.pumpAccent)
+                            .foregroundStyle(Color.accentInk)
                         Text("/\(item.totalExercises)")
                             .font(.display(13))
                             .foregroundStyle(Color.white.opacity(0.5))
@@ -373,7 +373,8 @@ struct FeedPostCard: View {
                     VStack(alignment: .trailing, spacing: 1) {
                         Text("★ \(item.prCount)")
                             .font(.display(22))
-                            .foregroundStyle(Color.prGold)
+                            .foregroundStyle(Color.white)
+                            .underline(true, color: Color.white)
                         Text("PR\(item.prCount > 1 ? "S" : "")")
                             .font(Font.mono(7))
                             .tracking(0.8)
@@ -385,7 +386,7 @@ struct FeedPostCard: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
-                            .strokeBorder(Color.prGold.opacity(0.53), lineWidth: 1)
+                            .strokeBorder(Color.white.opacity(0.3), lineWidth: 1)
                     )
                 }
             }
@@ -400,7 +401,7 @@ struct FeedPostCard: View {
             Text("WORKOUT SUMMARY — TAP FOR FULL DETAIL")
                 .font(Font.mono(8, weight: .medium))
                 .tracking(2.0)
-                .foregroundStyle(Color.pumpAccent)
+                .foregroundStyle(Color.accentInk)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
 
@@ -518,12 +519,12 @@ struct FeedPostCard: View {
                     HStack(spacing: 6) {
                         Image(systemName: isLiked ? "heart.fill" : "heart")
                             .font(.mono(14))
-                            .foregroundStyle(isLiked ? Color.pumpAccent : Color.inkMuted)
+                            .foregroundStyle(isLiked ? Color.accentInk : Color.inkMuted)
                             .scaleEffect(isLiked ? 1.15 : 1)
                             .animation(.spring(response: 0.25, dampingFraction: 0.5), value: isLiked)
                         Text("\(item.likes.count)")
                             .font(Font.mono(12, weight: .bold))
-                            .foregroundStyle(isLiked ? Color.pumpAccent : Color.inkMuted)
+                            .foregroundStyle(isLiked ? Color.accentInk : Color.inkMuted)
                             .contentTransition(.numericText())
                         Text("HOLD")
                             .font(Font.mono(8))
@@ -536,7 +537,7 @@ struct FeedPostCard: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
-                            .strokeBorder(isLiked ? Color.pumpAccent.opacity(0.5) : Color.dsHairLine.opacity(1.6), lineWidth: 1)
+                            .strokeBorder(isLiked ? Color.accentInk.opacity(0.5) : Color.dsHairLine.opacity(1.6), lineWidth: 1)
                     )
                     .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isLiked)
                 }
@@ -707,7 +708,7 @@ struct FeedWorkoutDetailView: View {
                                     ForEach(item.musclesWorked.sorted(), id: \.self) { muscle in
                                         Text(muscle.uppercased())
                                             .font(Font.mono(9))
-                                            .foregroundStyle(Color.pumpAccent)
+                                            .foregroundStyle(Color.accentInk)
                                             .padding(.horizontal, 8)
                                             .padding(.vertical, 4)
                                             .background(Color.pumpSoft)
@@ -787,7 +788,7 @@ struct ExerciseBreakdownRow: View {
                     if set.setType != SetType.standard.rawValue {
                         Text(SetType(rawValue: set.setType)?.shortName ?? set.setType)
                             .font(Font.mono(9))
-                            .foregroundStyle(Color.pumpAccent)
+                            .foregroundStyle(Color.accentInk)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Color.pumpSoft)

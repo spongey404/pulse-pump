@@ -189,16 +189,16 @@ struct BodyMapTabView: View {
                       : hasWorkout ? Color.pumpAccent.opacity(0.12)
                       : day.date != nil ? Color.canvasBg
                       : Color.clear
-        let borderColor: Color = isSelected ? Color.pumpAccent
-                               : isToday ? Color.pumpAccent
-                               : hasWorkout ? Color.pumpAccent.opacity(0.25)
+        let borderColor: Color = isSelected ? Color.accentInk
+                               : isToday ? Color.accentInk
+                               : hasWorkout ? Color.accentInk.opacity(0.25)
                                : day.date != nil ? Color.dsHairLine
                                : Color.clear
         let borderWidth: CGFloat = isSelected || isToday ? 1.5 : 1
         let numColor: Color = isToday ? .white
                             : isFuture ? Color.inkMuted.opacity(0.25)
-                            : hasWorkout ? Color.pumpAccent
-                            : isSelected ? Color.pumpAccent
+                            : hasWorkout ? Color.accentInk
+                            : isSelected ? Color.accentInk
                             : Color.inkMuted.opacity(0.55)
 
         return Button {
@@ -447,7 +447,7 @@ struct BodyMapTabView: View {
                         // TOP column
                         VStack(alignment: .leading, spacing: 12) {
                             Text("▲ TOP")
-                                .font(Font.mono(9, weight: .medium)).tracking(2.0).foregroundStyle(Color.pumpAccent)
+                                .font(Font.mono(9, weight: .medium)).tracking(2.0).foregroundStyle(Color.accentInk)
                             ForEach(topMuscles, id: \.key) { item in
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(item.key.uppercased().prefix(5))
@@ -482,7 +482,7 @@ struct BodyMapTabView: View {
                         // GAPS column
                         VStack(alignment: .trailing, spacing: 12) {
                             Text("▼ GAPS")
-                                .font(Font.mono(9, weight: .medium)).tracking(2.0).foregroundStyle(Color.pumpAccent)
+                                .font(Font.mono(9, weight: .medium)).tracking(2.0).foregroundStyle(Color.accentInk)
                             ForEach(gapMuscles, id: \.key) { item in
                                 VStack(alignment: .trailing, spacing: 2) {
                                     Text(item.key.uppercased().prefix(5))

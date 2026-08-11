@@ -27,7 +27,7 @@ struct ExperienceLevelStepView: View {
                 ZStack {
                     Circle()
                         .strokeBorder(
-                            selected ? Color.pumpAccent : Color.inkFaint,
+                            selected ? Color.accentInk : Color.inkFaint,
                             lineWidth: 2
                         )
                         .frame(width: 18, height: 18)
@@ -42,7 +42,7 @@ struct ExperienceLevelStepView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(level.displayName)
                         .font(.archivo(15, weight: selected ? .semibold : .medium))
-                        .foregroundStyle(selected ? Color.pumpAccent : Color.inkPrimary)
+                        .foregroundStyle(selected ? Color.accentInk : Color.inkPrimary)
 
                     Text(level.sub)
                         .font(.archivo(12))
@@ -65,7 +65,7 @@ struct ExperienceLevelStepView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12).strokeBorder(
-                    selected ? Color.pumpAccent : Color.inkFaint,
+                    selected ? Color.accentInk : Color.inkFaint,
                     lineWidth: 1
                 )
             )

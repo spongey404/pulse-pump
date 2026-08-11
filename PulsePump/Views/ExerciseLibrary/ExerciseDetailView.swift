@@ -149,12 +149,12 @@ struct ExerciseTrendChart: View {
                             x: .value("Date", point.date),
                             y: .value("Weight", point.maxWeight)
                         )
-                        .foregroundStyle(Color.pumpAccent)
+                        .foregroundStyle(Color.accentInk)
                         PointMark(
                             x: .value("Date", point.date),
                             y: .value("Weight", point.maxWeight)
                         )
-                        .foregroundStyle(Color.pumpAccent)
+                        .foregroundStyle(Color.accentInk)
                     }
                 }
                 .frame(height: 160)

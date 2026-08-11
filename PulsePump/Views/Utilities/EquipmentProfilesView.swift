@@ -94,7 +94,7 @@ struct EquipmentProfilesView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .strokeBorder(isActive ? Color.pumpAccent : Color.dsHairLine, lineWidth: 1)
+                                    .strokeBorder(isActive ? Color.accentInk : Color.dsHairLine, lineWidth: 1)
                             )
                     }
                     .buttonStyle(.plain)
@@ -113,14 +113,14 @@ struct EquipmentProfilesView: View {
             Text("ACTIVE PROFILE")
                 .font(.spaceMono(9, weight: .bold))
                 .tracking(0.8)
-                .foregroundStyle(Color.pumpAccent)
+                .foregroundStyle(Color.accentInk)
             Spacer()
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(Color.pumpAccent.opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.pumpAccent.opacity(0.2), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.accentInk.opacity(0.2), lineWidth: 1))
         .padding(.horizontal, 16)
         .padding(.top, 12)
         .padding(.bottom, 4)
@@ -340,7 +340,7 @@ struct CreateEquipmentProfileView: View {
                                 Spacer()
                                 if selectedEquipment.contains(equipment) {
                                     Image(systemName: "checkmark")
-                                        .foregroundStyle(Color.pumpAccent)
+                                        .foregroundStyle(Color.accentInk)
                                 }
                             }
                         }

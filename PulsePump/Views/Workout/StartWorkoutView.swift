@@ -108,7 +108,7 @@ struct StartWorkoutView: View {
                                 }
                                 Spacer()
                                 Image(systemName: "arrow.right.circle")
-                                    .foregroundStyle(Color.pumpAccent)
+                                    .foregroundStyle(Color.accentInk)
                             }
                             .padding()
                             .background(Color.surf)
@@ -137,7 +137,7 @@ struct AlternativeWorkoutPicker: View {
             } label: {
                 HStack {
                     Image(systemName: "plus.circle")
-                        .foregroundStyle(Color.pumpAccent)
+                        .foregroundStyle(Color.accentInk)
                     Text("Blank workout")
                         .font(.mono(14))
                         .foregroundStyle(.primary)

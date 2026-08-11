@@ -19,7 +19,7 @@ struct GenderStepView: View {
                             ZStack {
                                 Circle()
                                     .strokeBorder(
-                                        viewModel.gender == gender ? Color.pumpAccent : Color.inkFaint,
+                                        viewModel.gender == gender ? Color.accentInk : Color.inkFaint,
                                         lineWidth: 2
                                     )
                                     .frame(width: 18, height: 18)
@@ -32,7 +32,7 @@ struct GenderStepView: View {
 
                             Text(gender.displayName)
                                 .font(.archivo(15, weight: viewModel.gender == gender ? .semibold : .medium))
-                                .foregroundStyle(viewModel.gender == gender ? Color.pumpAccent : Color.inkPrimary)
+                                .foregroundStyle(viewModel.gender == gender ? Color.accentInk : Color.inkPrimary)
 
                             Spacer()
                         }
@@ -42,7 +42,7 @@ struct GenderStepView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12).strokeBorder(
-                                viewModel.gender == gender ? Color.pumpAccent : Color.inkFaint,
+                                viewModel.gender == gender ? Color.accentInk : Color.inkFaint,
                                 lineWidth: 1
                             )
                         )

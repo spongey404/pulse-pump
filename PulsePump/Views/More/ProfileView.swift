@@ -75,12 +75,12 @@ struct ProfileView: View {
                     Text("EDIT")
                         .font(.spaceMono(9, weight: .bold))
                         .tracking(1.5)
-                        .foregroundStyle(Color.pumpAccent)
+                        .foregroundStyle(Color.accentInk)
                         .padding(.horizontal, 12)
                         .frame(height: 30)
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
-                                .strokeBorder(Color.pumpAccent.opacity(0.5), lineWidth: 1)
+                                .strokeBorder(Color.accentInk.opacity(0.5), lineWidth: 1)
                         )
                 }
                 .buttonStyle(.plain)
@@ -133,7 +133,7 @@ struct ProfileView: View {
                         Text(split.name.uppercased())
                             .font(.spaceMono(8))
                             .tracking(1.5)
-                            .foregroundStyle(Color.pumpAccent)
+                            .foregroundStyle(Color.accentInk)
                             .padding(.top, 2)
                     } else {
                         Text(user.experienceLevel.displayName.uppercased())

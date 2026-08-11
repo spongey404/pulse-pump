@@ -262,7 +262,7 @@ struct MuscleSelectCard: View {
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
                             .background(Color.pumpAccent.opacity(0.15))
-                            .foregroundStyle(Color.pumpAccent)
+                            .foregroundStyle(Color.accentInk)
                             .clipShape(Capsule())
                         }
                     }
@@ -309,7 +309,7 @@ struct MuscleSelectCard: View {
                             Spacer()
                             if isSelected {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(Color.pumpAccent)
+                                    .foregroundStyle(Color.accentInk)
                             } else {
                                 Image(systemName: "circle")
                                     .foregroundStyle(Color.inkFaint)
@@ -334,7 +334,7 @@ struct MuscleSelectCard: View {
                                     Spacer()
                                     Image(systemName: selectedSubRegions.contains(sub) ? "checkmark.circle.fill" : "circle")
                                         .font(.mono(14))
-                                        .foregroundStyle(selectedSubRegions.contains(sub) ? Color.pumpAccent : Color.inkFaint)
+                                        .foregroundStyle(selectedSubRegions.contains(sub) ? Color.accentInk : Color.inkFaint)
                                 }
                                 .padding(.leading, 16)
                                 .padding(.top, 4)
@@ -500,7 +500,7 @@ struct ReviewStepCard: View {
                                 .frame(width: 48, height: 48)
                             Image(systemName: pattern.sfSymbol)
                                 .font(.mono(20, weight: .medium))
-                                .foregroundStyle(Color.pumpAccent)
+                                .foregroundStyle(Color.accentInk)
                         }
                         VStack(alignment: .leading, spacing: 2) {
                             Text(name)
@@ -592,7 +592,7 @@ struct MuscleGroupPicker: View {
                                     .font(.mono(11)).foregroundStyle(.secondary)
                             }
                             if selected.contains(muscle) {
-                                Image(systemName: "checkmark").foregroundStyle(Color.pumpAccent)
+                                Image(systemName: "checkmark").foregroundStyle(Color.accentInk)
                             }
                         }
                     }
@@ -606,7 +606,7 @@ struct MuscleGroupPicker: View {
                                     Text(sub.displayName).font(.mono(14)).foregroundStyle(.primary)
                                     Spacer()
                                     if selectedSubRegions.contains(sub) {
-                                        Image(systemName: "checkmark").font(.mono(11)).foregroundStyle(Color.pumpAccent)
+                                        Image(systemName: "checkmark").font(.mono(11)).foregroundStyle(Color.accentInk)
                                     }
                                 }
                                 .padding(.leading, 20)

@@ -77,7 +77,7 @@ struct CreateTemplateView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
-                            .strokeBorder(canSave ? Color.pumpAccent : Color.inkPrimary.opacity(0.12))
+                            .strokeBorder(canSave ? Color.accentInk : Color.inkPrimary.opacity(0.12))
                     )
             }
             .buttonStyle(.plain)
@@ -101,7 +101,7 @@ struct CreateTemplateView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(name.isEmpty ? Color.inkPrimary.opacity(0.12) : Color.pumpAccent)
+                        .strokeBorder(name.isEmpty ? Color.inkPrimary.opacity(0.12) : Color.accentInk)
                 )
         }
         .padding(.horizontal, 16)
@@ -125,7 +125,7 @@ struct CreateTemplateView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .strokeBorder(daysPerWeek == d ? Color.pumpAccent : Color.inkPrimary.opacity(0.12))
+                                    .strokeBorder(daysPerWeek == d ? Color.accentInk : Color.inkPrimary.opacity(0.12))
                             )
                     }
                     .buttonStyle(.plain)
@@ -154,14 +154,14 @@ struct CreateTemplateView: View {
                         } label: {
                             Text(split)
                                 .font(Font.mono(9, weight: .bold)).tracking(0.8)
-                                .foregroundStyle(selectedSplitType == split ? Color.pumpAccent : Color.inkMuted)
+                                .foregroundStyle(selectedSplitType == split ? Color.accentInk : Color.inkMuted)
                                 .frame(height: 30)
                                 .padding(.horizontal, 12)
                                 .background(Color.surf)
                                 .clipShape(Capsule())
                                 .overlay(
                                     Capsule()
-                                        .strokeBorder(selectedSplitType == split ? Color.pumpAccent : Color.inkPrimary.opacity(0.12))
+                                        .strokeBorder(selectedSplitType == split ? Color.accentInk : Color.inkPrimary.opacity(0.12))
                                 )
                         }
                         .buttonStyle(.plain)

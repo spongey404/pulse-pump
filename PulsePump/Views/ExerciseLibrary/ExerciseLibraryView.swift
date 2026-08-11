@@ -149,7 +149,7 @@ struct ExerciseRowView: View {
                     .frame(width: 40, height: 40)
                 Image(systemName: exercise.movementPattern.sfSymbol)
                     .font(.mono(16, weight: .medium))
-                    .foregroundStyle(Color.pumpAccent)
+                    .foregroundStyle(Color.accentInk)
             }
 
             VStack(alignment: .leading, spacing: 3) {
@@ -163,7 +163,7 @@ struct ExerciseRowView: View {
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Color.pumpAccent.opacity(0.10))
-                            .foregroundStyle(Color.pumpAccent)
+                            .foregroundStyle(Color.accentInk)
                             .clipShape(Capsule())
                     }
                 }

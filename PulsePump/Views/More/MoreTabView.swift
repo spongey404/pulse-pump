@@ -227,7 +227,7 @@ struct MoreTabView: View {
         chevron: Bool = true,
         action: @escaping () -> Void
     ) -> some View {
-        let textColor: Color = destructive ? Color.signalDown : accent ? Color.pumpAccent : Color.inkPrimary
+        let textColor: Color = destructive ? Color.signalDown : accent ? Color.accentInk : Color.inkPrimary
         let iconBg: Color = destructive ? Color.signalDown.opacity(0.10) : accent ? Color.pumpAccent.opacity(0.08) : Color.surf2
 
         Button(action: action) {

@@ -40,7 +40,7 @@ struct ChallengesView: View {
                                         Task { await viewModel.joinChallenge(id: challenge.id, username: "") }
                                     }
                                     .font(.mono(11, weight: .medium))
-                                    .foregroundStyle(Color.pumpAccent)
+                                    .foregroundStyle(Color.accentInk)
                                 }
                             }
                         }
@@ -106,7 +106,7 @@ struct ChallengeCardView: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                         .background(Color.pumpAccent.opacity(0.15))
-                        .foregroundStyle(Color.pumpAccent)
+                        .foregroundStyle(Color.accentInk)
                         .clipShape(Capsule())
                 }
             }

@@ -366,7 +366,7 @@ private struct FilterPill: View {
                 .padding(.horizontal, 12)
                 .background(isSelected ? Color.pumpAccent : Color.surf)
                 .clipShape(Capsule())
-                .overlay(Capsule().strokeBorder(isSelected ? Color.pumpAccent : Color.inkPrimary.opacity(0.12)))
+                .overlay(Capsule().strokeBorder(isSelected ? Color.accentInk : Color.inkPrimary.opacity(0.12)))
         }
         .buttonStyle(.plain)
     }

@@ -18,7 +18,7 @@ struct AgeStepView: View {
                         .font(.archivo(56, weight: .black))
                         .tracking(-1)
                         .foregroundStyle(Color.inkPrimary)
-                        .tint(Color.pumpAccent)
+                        .tint(Color.accentInk)
                         .keyboardType(.numberPad)
                         .focused($isFocused)
                         .frame(width: 160)

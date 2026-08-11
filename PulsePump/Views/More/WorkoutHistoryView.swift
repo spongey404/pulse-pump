@@ -88,7 +88,7 @@ struct WorkoutHistoryView: View {
                     Button { withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { viewMode = mode } } label: {
                         Image(systemName: mode == .list ? "list.bullet" : "calendar")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(active ? Color.pumpAccent : Color.inkMuted)
+                            .foregroundStyle(active ? Color.accentInk : Color.inkMuted)
                             .frame(width: 36, height: 30)
                             .background(active ? Color.canvasBg : Color.clear)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
@@ -187,12 +187,12 @@ struct WorkoutHistoryView: View {
         let bg: Color = isSelected ? Color.pumpAccent
                       : hasWorkout ? Color.pumpAccent.opacity(0.1)
                       : Color.clear
-        let border: Color = isSelected ? Color.pumpAccent
-                          : hasWorkout ? Color.pumpAccent.opacity(0.25)
+        let border: Color = isSelected ? Color.accentInk
+                          : hasWorkout ? Color.accentInk.opacity(0.25)
                           : day.date != nil ? Color.dsHairLine
                           : Color.clear
         let numColor: Color = isSelected ? .white
-                            : hasWorkout || isToday ? Color.pumpAccent
+                            : hasWorkout || isToday ? Color.accentInk
                             : Color.inkMuted
 
         return Button {

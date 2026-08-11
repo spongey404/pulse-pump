@@ -8,7 +8,7 @@ struct PulsePlusUpsellBanner: View {
         HStack(spacing: 12) {
             Image(systemName: "bolt.fill")
                 .font(.display(20))
-                .foregroundStyle(Color.pumpAccent)
+                .foregroundStyle(Color.accentInk)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(feature)
@@ -51,7 +51,7 @@ struct PulsePlusBlurOverlay: View {
             VStack(spacing: 12) {
                 Image(systemName: "bolt.fill")
                     .font(.display(34))
-                    .foregroundStyle(Color.pumpAccent)
+                    .foregroundStyle(Color.accentInk)
 
                 Text("UNLOCK WITH PULSE+")
                     .font(.spaceMono(16, weight: .bold))

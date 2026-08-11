@@ -217,7 +217,7 @@ struct GlobalSearchView: View {
                     .frame(width: 40, height: 40)
                 Image(systemName: icon)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Color.pumpAccent)
+                    .foregroundStyle(Color.accentInk)
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text(label)
@@ -298,7 +298,7 @@ struct GlobalSearchView: View {
             Text(label)
                 .font(.spaceMono(9))
                 .tracking(1.5)
-                .foregroundStyle(Color.pumpAccent)
+                .foregroundStyle(Color.accentInk)
             Spacer()
         }
         .padding(.horizontal, 16)
@@ -315,7 +315,7 @@ struct GlobalSearchView: View {
                     .frame(width: 40, height: 40)
                 Image(systemName: exercise.movementPattern.sfSymbol)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Color.pumpAccent)
+                    .foregroundStyle(Color.accentInk)
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text(exercise.name)

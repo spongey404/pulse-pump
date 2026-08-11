@@ -274,7 +274,7 @@ struct ActiveWorkoutView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text("SESSION")
                     .font(.spaceMono(9))
-                    .foregroundStyle(Color.pumpAccent)
+                    .foregroundStyle(Color.accentInk)
                     .tracking(1.5)
                 Text(sessionTitle)
                     .font(.archivo(18, weight: .black))
@@ -333,7 +333,7 @@ struct ActiveWorkoutView: View {
                 if running {
                     Circle()
                         .trim(from: 0, to: viewModel.restTimer.progress)
-                        .stroke(Color.pumpAccent, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                        .stroke(Color.accentInk, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                         .animation(.linear(duration: 0.1), value: viewModel.restTimer.progress)
                 } else {
@@ -967,6 +967,8 @@ struct ExerciseCardView: View {
             exerciseType: entry.exerciseType,
             showRIR: showRIR,
             ghostText: ghost,
+            // One tinted row per screen: only the next set to log is "active".
+            isActive: setIdx == nextUncompletedSetIdx,
             onSetTypeTap: { onSetTypeTap(setIdx) },
             onLog: {
                 viewModel.checkPR(exerciseIndex: exerciseIndex, setIndex: setIdx, modelContext: modelContext)
@@ -1017,27 +1019,37 @@ struct NewSetRowView: View {
     let exerciseType: ExerciseType
     let showRIR: Bool
     let ghostText: (weight: String, reps: String)?
+    /// One tinted row per screen — only the next set to log is active. Completion is
+    /// carried by the check control, not by a background colour, so completed rows
+    /// return to canvas and never tint green (green is deltaUp, and it never fills a
+    /// surface). See design_handoff_pulse_color_system/Set Row States.dc.html.
+    let isActive: Bool
     let onSetTypeTap: () -> Void
     let onLog: () -> Void
     let onDelete: () -> Void
 
-    private var isActive: Bool { !setEntry.isCompleted }
+    /// A previous-session value the user hasn't logged yet this session — dimmer than
+    /// a plain pending row, per the Ghost state in the states spec.
+    private var isGhost: Bool {
+        guard !setEntry.isCompleted, !isActive else { return false }
+        let ghostWeight = ghostText?.weight ?? ""
+        let ghostReps = ghostText?.reps ?? ""
+        return (!ghostWeight.isEmpty && setEntry.weight.isEmpty)
+            || (!ghostReps.isEmpty && setEntry.reps.isEmpty)
+    }
 
     var body: some View {
         ZStack(alignment: .leading) {
-            // Row background
+            // Row background — only the active row is tinted, always with accentSoft.
             if isActive {
-                Color.pumpAccent.opacity(0.07)
-                    .transition(.opacity)
-            } else {
-                Color.signalUp.opacity(0.07)
+                Color.accentSoft
                     .transition(.opacity)
             }
 
-            // Left accent border for active set
+            // Left accent border for the active set only
             if isActive {
                 HStack(spacing: 0) {
-                    Color.pumpAccent.frame(width: 2)
+                    Color.accentInk.frame(width: 2)
                     Spacer()
                 }
                 .transition(.opacity)
@@ -1052,7 +1064,7 @@ struct NewSetRowView: View {
                 // Set number — 22px wide
                 Text(String(format: "%02d", setIndex + 1))
                     .font(.spaceMono(10, weight: .bold))
-                    .foregroundStyle(isActive ? Color.pumpAccent : Color.inkMuted)
+                    .foregroundStyle(isActive ? Color.accentInk : Color.inkMuted)
                     .frame(width: 22, alignment: .leading)
 
                 // KG field
@@ -1071,19 +1083,13 @@ struct NewSetRowView: View {
                             keyboard: .decimalPad
                         )
                     default:
+                        // No live PR marker here by design — PRs stay a surprise until
+                        // the post-workout summary, not spoiled mid-set.
                         weightOrGhostField(
                             entered: $setEntry.weight,
                             ghost: ghostText?.weight,
                             keyboard: .decimalPad
                         )
-                        .overlay(alignment: .topTrailing) {
-                            if setEntry.isPR {
-                                Circle()
-                                    .fill(Color(hex: "#c98a17"))
-                                    .frame(width: 5, height: 5)
-                                    .offset(x: -2, y: 2)
-                            }
-                        }
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -1212,11 +1218,14 @@ struct NewSetRowView: View {
                 .transition(.scale(scale: 0.5).combined(with: .opacity))
             } else if isActive {
                 Circle()
-                    .strokeBorder(Color.pumpAccent, lineWidth: 2)
+                    .strokeBorder(Color.accentInk, lineWidth: 2)
                     .transition(.opacity)
+            } else if isGhost {
+                Circle()
+                    .strokeBorder(Color.inkPrimary.opacity(0.10), lineWidth: 1.5)
             } else {
                 Circle()
-                    .strokeBorder(Color.inkFaint, lineWidth: 1.5)
+                    .strokeBorder(Color.inkPrimary.opacity(0.20), lineWidth: 1.5)
             }
         }
         .frame(width: 22, height: 22)
@@ -1270,7 +1279,7 @@ struct SetTypeSheetView: View {
                 // Label
                 Text("SET TYPE")
                     .font(.spaceMono(9))
-                    .foregroundStyle(Color.pumpAccent)
+                    .foregroundStyle(Color.accentInk)
                     .tracking(1.5)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 14)
@@ -1375,7 +1384,7 @@ struct RestTimerModalView: View {
                     // Progress arc
                     Circle()
                         .trim(from: 0, to: restTimer.progress)
-                        .stroke(Color.pumpAccent, style: StrokeStyle(lineWidth: 7, lineCap: .round))
+                        .stroke(Color.accentInk, style: StrokeStyle(lineWidth: 7, lineCap: .round))
                         .frame(width: ringSize, height: ringSize)
                         .rotationEffect(.degrees(-90))
                         .animation(.linear(duration: 0.1), value: restTimer.progress)
@@ -1548,7 +1557,7 @@ struct WorkoutNotesRow: View {
                 TextField("Add a note for this workout...", text: $notes, axis: .vertical)
                     .lineLimit(2...6).focused($isFocused).font(.mono(15))
                 Button("Done") { isExpanded = false; isFocused = false }
-                    .font(Font.mono(11)).foregroundStyle(Color.pumpAccent)
+                    .font(Font.mono(11)).foregroundStyle(Color.accentInk)
             }
             .padding()
             .background(Color.surf)
@@ -1591,7 +1600,7 @@ struct ExerciseNotesRow: View {
                 Button("DONE") { isExpanded = false; isFocused = false }
                     .font(.spaceMono(10, weight: .bold))
                     .tracking(1)
-                    .foregroundStyle(Color.pumpAccent)
+                    .foregroundStyle(Color.accentInk)
             }
             .padding(.vertical, 2)
             .onAppear { isFocused = true }
@@ -1785,7 +1794,7 @@ struct InlinePlateCalculatorView: View {
                         if remainder > 0.01 {
                             Text("+\(String(format: "%.2f", remainder))KG OFF")
                                 .font(.spaceMono(9))
-                                .foregroundStyle(Color.pumpAccent)
+                                .foregroundStyle(Color.accentInk)
                         }
                         Spacer()
                     }
@@ -1883,6 +1892,8 @@ struct SetRowView: View {
             exerciseType: exerciseType,
             showRIR: !setEntry.rir.isEmpty || setEntry.targetRIR != nil,
             ghostText: ghostText,
+            // No sibling-set context in this legacy wrapper — best-effort fallback.
+            isActive: !setEntry.isCompleted,
             onSetTypeTap: {},
             onLog: onLog,
             onDelete: {}

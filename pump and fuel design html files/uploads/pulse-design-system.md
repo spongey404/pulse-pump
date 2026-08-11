@@ -39,7 +39,7 @@ Pump, Fuel, and Stride are the *same app dressed differently*. They share:
 - Identical iconography style
 
 What differs between apps:
-- **Primary accent color** (Pump = terracotta, Fuel = sage, Stride = TBD)
+- **Primary accent color** (Pump = blue `#0A6FC0`, confirmed; Fuel = sage `#7A9B6E`, current but rejected as final; Stride = TBD)
 - **Tab structure** (Pump has 5, Fuel has 3 — driven by content needs, not aesthetic)
 - **App-specific surfaces** (Pump has body map / plate calc; Fuel has calorie ring / food picker)
 
@@ -53,30 +53,41 @@ Every pixel earns its place. We use horizontal rules, small caps labels, and tab
 
 ## 2. BRAND FOUNDATION
 
-> **⚑ TODO — DIAL IN HEX VALUES:** Every hex code below is an educated estimate from screenshot eyeballing. Before locking the system, drop the existing reference screens into a color picker and replace each value with the actual extracted color. The token *names* are the contract; the values are placeholders. Update the values in this doc once finalized so future batches inherit the correct palette.
+> **Pump's foundation, signals, and accent are CONFIRMED** — sourced from
+> `design_handoff_pulse_color_system/tokens.json` and `README.md` (Claude Design
+> project "App color system redesign"), which also has the full contrast rationale
+> and the four rules any new accent must satisfy. **Fuel and Stride accents remain
+> open** — do not invent values for them; see *Open decisions* at the end of this doc.
+> The values below replace the earlier screenshot-eyeballed placeholders.
 
 ### 2.1 Color tokens — light mode
 
 ```
-bg/canvas              #F4EDE2   warm cream — primary background
-bg/elevated            #FAF5EC   slightly lighter — cards, sheets
-bg/sunken              #ECE3D3   slightly darker — input wells, last-session note bg
-bg/active-row          #F0DFD4   pale terracotta tint — active set, focused row
-bg/ticker              #1A1A1A   black — ticker strips and live status bars
+bg/canvas              #F9F8F4   warm cream — primary background
+bg/elevated            #F1EFE9   slightly lighter — cards, sheets
+bg/sunken              #E7E4DC   slightly darker — input wells, last-session note bg
+bg/active-row          rgba(10,111,192,0.08)   accentSoft — active set, focused row only
+                        (only the active row is tinted; completed/pending rows stay bg/canvas)
+bg/ticker              #1A1816   always-dark, both color schemes, per spec
+                        (Pump's implemented ticker deviates and switches to a light cream
+                        bg in light mode — see the per-app note in 2.3)
 
-text/primary           #1A1A1A   charcoal — main copy, numbers
-text/secondary         #5C554B   warm grey — labels, metadata
-text/tertiary          #8E867A   light warm grey — small caps labels, helper text
-text/ghost             #BFB8A8   ghost text — previous values shown beside empty inputs
-text/inverse           #F4EDE2   cream — text on black ticker bars
+text/primary           #1C1B18   charcoal — main copy, numbers
+text/secondary         rgba(28,27,24,0.50)   warm grey — labels, metadata
+text/ghost             rgba(28,27,24,0.13)   ghost text — previous values shown beside empty inputs
+text/inverse           #ECE5D6   cream — text on the dark ticker bar
 
-rule/default           #D9CFBE   thin horizontal divider
-rule/strong            #1A1A1A   strong divider (rare — used in tabular headers)
+rule/default           rgba(28,27,24,0.08)   thin horizontal divider
 
-signal/up              #3B8C5A   green ▲ — positive trend
-signal/down            #C84A3D   red ▼ — negative trend
-signal/warn            #C9892E   amber — used only for weekly over-target in Fuel
-signal/pr              #D4A93C   muted gold — PR badge highlight (subtle, not gamified)
+signal/up              #00AA55   green ▲ — positive trend, in-UI
+signal/down            #FF3B30   red ▼ — negative trend
+signal/ticker-up       #00E07A   brighter green for the always-dark ticker only —
+                        signal/up is too dark against ticker/bg
+signal/warn            #C9892E   amber — Fuel weekly total >15% over target. Nothing else,
+                        in any app, uses amber — including PR (see signal/pr below).
+signal/pr              not a color — inkPrimary text + 1.5px inkPrimary underline.
+                        Removed as a gold token; gold read as "amber" and collided with
+                        signal/warn's meaning.
 ```
 
 ### 2.2 Color tokens — dark mode (warm dark)
@@ -84,35 +95,54 @@ signal/pr              #D4A93C   muted gold — PR badge highlight (subtle, not 
 We are not using true black. Warm dark preserves the analog feel.
 
 ```
-bg/canvas              #1F1A14   warm dark charcoal
-bg/elevated            #2A241B   slightly lighter
-bg/sunken              #161210
-bg/active-row          #3A2A22   warm dark with terracotta tint
-bg/ticker              #0E0B08   near black for ticker strips (still distinguishable from canvas)
+bg/canvas              #1A1917   warm dark charcoal
+bg/elevated            #24221F   slightly lighter
+bg/sunken              #2D2A26
+bg/active-row          rgba(77,184,255,0.14)   accentSoft, dark variant
+bg/ticker              #1A1816   unchanged — ticker is identical in both modes per spec
 
-text/primary           #F4EDE2   cream
-text/secondary         #BFB8A8
-text/tertiary          #8E867A
-text/ghost             #5C554B
-text/inverse           #1A1A1A
+text/primary           #EAE7DF   cream
+text/secondary         rgba(234,231,223,0.50)
+text/ghost             rgba(234,231,223,0.13)
+text/inverse           #ECE5D6
 
-rule/default           #3A352D
-rule/strong            #F4EDE2
+rule/default           rgba(234,231,223,0.08)
 
-signal colors          same as light mode (already chosen for warm-palette harmony)
+signal colors          same as light mode (already chosen for warm-palette harmony) —
+                        except signal/ticker-up, which is dark-mode-only; Pump's
+                        implemented ticker falls back to a pre-redesign darker green
+                        (#2A7A4A) in light mode instead of signal/ticker-up. See 2.3.
 ```
 
 ### 2.3 Per-app accent colors
 
 ```
-accent/pump            #B85533   terracotta — Pump primary
-accent/pump-soft       #D4A38C   tinted version for backgrounds, ghost states
+accent/pump            #0A6FC0   blue — Pump primary, CONFIRMED. Flat in both color
+                                  schemes on filled surfaces (CTA, tab-bar fill, chip
+                                  fill) so white on-accent text keeps its contrast.
+accent/pump-ink        #0A6FC0 light / #4DB8FF dark — accent TEXT, glyphs, borders,
+                                  and the active-row left border. Lifts on the dark
+                                  canvas so it doesn't read as a dim, desaturated ink.
+accent/pump-soft       rgba(10,111,192,0.08) light / rgba(77,184,255,0.14) dark
 
-accent/fuel            #7A9B6E   sage green — Fuel primary (herbal, food-coded, warm-palette compatible)
-accent/fuel-soft       #B5C7A8   tinted version
+accent/fuel            #7A9B6E   sage green — CURRENT codebase value, but REJECTED as
+                                  the confirmed Fuel accent (same hue as signal/up,
+                                  also read as too muted) — see Open decisions. Do not
+                                  treat this as final.
 
-accent/stride          TBD — reserve a third earthy hue (proposed: dusty mustard #C9892E or soft clay #B07A55)
+accent/stride          TBD. A candidate exists (magenta #D4197A / bright #FF5EAE,
+                                  4.98:1 vs white, 3.46:1 vs ink) but is not confirmed.
+                                  Do not use dusty mustard or soft clay — both collide
+                                  with signal/warn's amber, now reserved exclusively
+                                  for Fuel's over-target signal.
 ```
+
+**Per-app ticker exception (Pump only):** Pump's implemented `TickerStripView` switches
+`bg/ticker` to a light cream (`#F0EBE0`) in light mode rather than staying always-dark,
+and its up-arrow correspondingly falls back from `signal/ticker-up` (`#00E07A`, tuned
+for the dark bg) to the pre-redesign darker green `#2A7A4A` in light mode, where the
+brighter green would wash out. Dark mode is unaffected. This is a deliberate,
+implemented deviation from the spec default above — not something to "fix" back.
 
 The accent is used for: primary CTAs, active tab indicator, selected day pill on the date scrubber, body silhouette overlay (Pump), calorie ring (Fuel), the one-week-highlighted bar in volume charts.
 
@@ -120,38 +150,43 @@ Never use the accent for body text or for decorative purposes.
 
 ### 2.4 Typography
 
-> **⚑ TODO — REVISIT BEFORE LAUNCH:** The fonts below are placeholders. SF Pro / SF Mono are used now because they're free, system-native, and ship with iOS. The plan is to find a "perfect" font pairing closer to launch — likely a custom or licensed pairing that doubles down on the editorial/terminal aesthetic (candidates to evaluate: JetBrains Mono, IBM Plex Mono, GT America Mono, Berkeley Mono for numerics; Söhne, Inter, GT America, or Tiempos for body). Do not commit to custom fonts until the rest of the system is locked, because changing fonts changes letter-spacing, line-heights, and density throughout. Until then, every prompt to Claude Design uses SF Pro + SF Mono.
+> **Resolved for Pump — implemented, not a placeholder.** The SF Pro / SF Mono
+> system-font placeholder below is superseded. Pump ships Archivo (5 weights) +
+> Space Mono (2 weights) as bundled, registered fonts (`Info.plist` `UIAppFonts`,
+> `Extensions/Font+Design.swift`) — both free Google Fonts, no licensing concerns. Per
+> the identical-typography family rule, treat this as decided for Fuel and Stride too
+> unless there's a reason to diverge.
 
-Two voices, both system-available so no font licensing drama.
+Two voices, both free (Google Fonts) so no font licensing drama.
 
 ```
-Display & body:   SF Pro Text / SF Pro Display (regular, medium, semibold)
-Numerics & data:  SF Mono (regular, medium) — used for ALL numbers, percentages, weights, reps, calories, set counts
-Labels:           SF Pro Text, all caps, tracked +0.08em, medium weight
+Display & body:   Archivo (light, regular, semibold, bold, black)
+Numerics & data:  Space Mono (regular, bold) — used for ALL numbers, percentages, weights, reps, calories, set counts
+Labels:           Space Mono regular, all caps, tracked +0.08em
 ```
 
 Rules:
-- Numbers are always SF Mono. Always. Tabular alignment depends on it.
+- Numbers are always Space Mono. Always. Tabular alignment depends on it.
 - Labels are always small caps with letter-spacing. Examples: `SETS`, `VS LAST`, `BAR 20KG`, `PR WATCH`.
-- Body text is SF Pro Text regular at 16pt for readable copy.
+- Body text is Archivo regular at 16pt for readable copy.
 - Never mix italic and bold for emphasis. Use weight only.
 - The italic exception is the "last session note" quote treatment in the workout logger.
 
 ### 2.5 Type scale
 
 ```
-display/xl     64pt   SF Mono medium       hero numbers (Home: "94" total sets)
-display/lg     40pt   SF Mono medium       large stats (calorie ring center)
-display/md     28pt   SF Mono medium       secondary stats
-heading/lg     20pt   SF Pro Display semi  screen titles, exercise names
-heading/md     16pt   SF Pro Text semi     section titles, meal names
-body           16pt   SF Pro Text regular  paragraph copy
-body/sm        14pt   SF Pro Text regular  secondary copy
-data/lg        20pt   SF Mono regular      table cell numbers (set rows)
-data/md        14pt   SF Mono regular      ticker strip numbers
-data/sm        12pt   SF Mono regular      micro stats (sub-percentages, dates)
-label/md       12pt   SF Pro Text medium   small caps labels, +0.08em tracking
-label/sm       10pt   SF Pro Text medium   tiny small caps, +0.1em tracking
+display/xl     64pt   Space Mono bold      hero numbers (Home: "94" total sets)
+display/lg     40pt   Space Mono bold      large stats (calorie ring center)
+display/md     28pt   Space Mono bold      secondary stats
+heading/lg     20pt   Archivo black        screen titles, exercise names
+heading/md     16pt   Archivo bold         section titles, meal names
+body           16pt   Archivo regular      paragraph copy
+body/sm        14pt   Archivo regular      secondary copy
+data/lg        20pt   Space Mono bold      table cell numbers (set rows)
+data/md        14pt   Space Mono regular   ticker strip numbers
+data/sm        12pt   Space Mono regular   micro stats (sub-percentages, dates)
+label/md       12pt   Space Mono regular   small caps labels, +0.08em tracking
+label/sm       10pt   Space Mono regular   tiny small caps, +0.1em tracking
 ```
 
 ### 2.6 Iconography
@@ -162,7 +197,7 @@ label/sm       10pt   SF Pro Text medium   tiny small caps, +0.1em tracking
 - Icon sizes: 16pt (inline with body text), 20pt (controls), 24pt (tab bar), 28pt+ (hero).
 - Custom symbols allowed only for: triangular trend arrows (▲▼), the dashed-border add icon, the plate-calculator visual.
 - **No filled icons in non-state contexts.** Don't use `heart.fill` for a static "favorites" label — use `heart`.
-- PR badge: `medal.fill` in `signal/pr` gold. Streak: `flame.fill` in orange (if used).
+- PR badge: no icon color — `signal/pr` is inkPrimary text + underline, not a fill color. Streak: `flame.fill` in orange (if used).
 
 ---
 
@@ -242,7 +277,7 @@ A label + big tabular number + optional comparison percentage. The dominant data
 - **Hero (used as page-level dominant stat):** big `display/xl` number with `data/sm` denominator ghost (e.g., `94 / 132`).
 - **Compact (used in ticker-adjacent KPI rows):** label + value + delta inline.
 
-**Rule:** the label is *always* small caps, never sentence case. The number is *always* SF Mono.
+**Rule:** the label is *always* small caps, never sentence case. The number is *always* Space Mono.
 
 ### 4.3 Set / Log Row
 
@@ -276,7 +311,7 @@ Primary action pill with right-aligned secondary metadata, separated by a vertic
 **Visual:**
 - Height: 56pt
 - Shape: `radius/pill`
-- Left: primary action label, white text, accent background (e.g., terracotta for Pump, sage for Fuel)
+- Left: primary action label, white text, accent background (e.g., blue for Pump, sage for Fuel — pending confirmation)
 - Vertical rule: 0.5pt `text/inverse` at 0.3 opacity
 - Right: secondary metadata in cream/inverse text, smaller (`label/md`)
 - Position: docked to bottom via safeAreaInset
@@ -355,7 +390,7 @@ Color treatments by category:
 
 - **Body silhouette:** stylized blocky figure with overlay regions colored by accent. Front and back views in a swipeable pager.
 - **Plate calculator:** horizontal barbell visualization with color-coded plates per side. Updates live as weight is typed in a set row.
-- **Rest timer ring:** circular progress ring in the top-right of the workout logger header. Background black, ring accent color, countdown time in white SF Mono inside.
+- **Rest timer ring:** circular progress ring in the top-right of the workout logger header. Background black, ring accent color, countdown time in white Space Mono inside.
 - **Exercise card:** drag handle on the left, exercise name + type label, PR/1RM badges, set-count progress (`3/5`), overflow menu. Contains the set rows.
 
 ### 5.2 Fuel-only components
@@ -442,7 +477,7 @@ ring fill          800ms  ease-out      calorie ring loading in
 - Spring physics with overshoot
 - Page curl / 3D card flips
 - Confetti, particle effects, celebrations
-- Pulsing/glowing PR badges (subtle gold highlight only — see anti-patterns)
+- Pulsing/glowing PR badges (inkPrimary text + underline only — see anti-patterns)
 
 ---
 
@@ -456,7 +491,7 @@ A combined list from both specs. If you find yourself doing any of these, stop.
 - No drop shadows.
 - No gradients (except subtle ring fills).
 - No confetti, particles, or celebration animations.
-- No PR badges that pulse, animate, or get oversized — gold subtle highlight only.
+- No PR badges that pulse, animate, or get oversized — inkPrimary text + underline only, no color, no gold.
 - No gamification: no XP, levels, badges-as-trophies, leaderboards-as-status.
 - No ads, ever, of any kind.
 - No red alarm colors for daily over-target in Fuel. Amber for weekly notable over-target only.
@@ -484,7 +519,7 @@ The screens already designed. Use these as the visual ground truth for every oth
 - **Active workout (logger):** session breadcrumb header with rest-timer ring, black status ticker, exercise card with set rows, plate preview, add-set affordance, finish-workout pill CTA. ✅ already designed — use as reference.
 - **Rest timer expanded view:** full rest timer modal/sheet with dismiss button.
 - **Live Activity / Dynamic Island:** rest countdown in red, elapsed workout time when not resting.
-- **Post-workout completion:** duration, calories, body map muscles worked, PRs hit (subtle gold), improvement count ("Improved on 4/6 exercises"), caption field, share buttons, save & exit.
+- **Post-workout completion:** duration, calories, body map muscles worked, PRs hit (inkPrimary text + underline, not a color), improvement count ("Improved on 4/6 exercises"), caption field, share buttons, save & exit.
 - **Cancel workout confirmation:** dialog with warning copy, cancel/keep buttons.
 
 ### Batch 3: Programs + Templates
@@ -600,7 +635,7 @@ Build all screens in this batch as a connected prototype. Use the design tokens,
 
 ## 12. QUICK CHECKLIST — BEFORE FINALIZING ANY SCREEN
 
-- [ ] All numbers use SF Mono (tabular)
+- [ ] All numbers use Space Mono (tabular)
 - [ ] All labels are small caps with letter-spacing
 - [ ] No drop shadows anywhere
 - [ ] No emojis anywhere
@@ -619,13 +654,15 @@ Build all screens in this batch as a connected prototype. Use the design tokens,
 
 A consolidated list of every "decide later" flagged in this doc. Don't lose track of these.
 
+**Resolved (was a placeholder, now confirmed):**
+- **Font pairing** — Archivo + Space Mono, both bundled and registered in Pump. No longer SF Pro / SF Mono; no plan to swap to a licensed pairing later. Treat this as decided for Fuel and Stride too.
+- **Pump's foundation, signal, and accent hex values** — confirmed via `design_handoff_pulse_color_system/tokens.json` and `README.md`, not screenshot-eyeballed estimates. Section 2 above reflects the confirmed values.
+
 **Locked-in placeholders (intentionally deferred):**
-- **Custom font pairing.** Currently using SF Pro + SF Mono as system defaults. Plan: evaluate JetBrains Mono / IBM Plex Mono / Berkeley Mono / GT America Mono for numerics, paired with Söhne / Inter / GT America / Tiempos for body, near launch. Don't commit until system is otherwise locked.
 - **Custom icon set.** Currently using whatever Claude Design defaults to (likely SF Symbols or Lucide). Plan: design a thin-stroke custom icon family late in the build, swap into the existing icon slots without layout changes.
-- **Final hex values.** Every color token in section 2 is eyeballed from screenshots. Plan: extract actual values from reference screens with a color picker before locking the system.
 
 **Genuine open questions:**
-- Stride accent color (proposed: dusty mustard `#C9892E` or soft clay `#B07A55` — decide when Stride scoping starts)
+- **Fuel and Stride accent colors — still unresolved.** Constraint: Fuel must be green, and `signal/up`/`signal/down` must stay green/red, so Fuel's green has to sit hue-separated from `signal/up` (roughly 75–105°, deeper and less saturated than `signal/up`'s ~150°). Sage `#7A9B6E` (current codebase value) was explicitly rejected — same hue as `signal/up`, also read as too muted. Also rejected on taste: teal `#2EBAB5` (too close to Pump's blue), violet `#6B4FD0`, forest `#4A7F38`, olive `#5F7A21`. For Stride, magenta `#D4197A` is viable (4.98:1 vs white, 3.46:1 vs ink) but not confirmed. Do not propose dusty mustard or soft clay for Stride — both collide with `signal/warn`'s amber, now reserved exclusively for Fuel's over-target signal. Any new candidate must clear all four rules in `design_handoff_pulse_color_system/README.md` before being treated as confirmed.
 - Exact body-model customization tiers in Pump (free vs Pulse+) — placeholder for now
 - Body-map sub-navigation (swipe vs toggle vs segmented) — currently using TabView page swipe
 - Specific widget visual designs (functional placeholders matching this system are fine)
