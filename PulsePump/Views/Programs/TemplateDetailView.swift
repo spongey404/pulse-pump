@@ -217,7 +217,7 @@ struct TemplateDetailView: View {
                             .padding(.horizontal, 12)
                             .background(isActive ? Color.pumpAccent : Color.surf)
                             .clipShape(Capsule())
-                            .overlay(Capsule().strokeBorder(isActive ? Color.pumpAccent : Color.dsHairLine, lineWidth: 1))
+                            .overlay(Capsule().strokeBorder(isActive ? Color.accentInk : Color.dsHairLine, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
                 }
@@ -353,13 +353,13 @@ struct TemplateDetailView: View {
                     }
                     .font(.spaceMono(8, weight: .bold))
                     .tracking(0.5)
-                    .foregroundStyle(showRIR ? Color.pumpAccent : (isEditing ? Color.pumpAccent : Color.inkFaint))
+                    .foregroundStyle(showRIR ? Color.accentInk : (isEditing ? Color.accentInk : Color.inkFaint))
                     .padding(.horizontal, 7)
                     .frame(height: 22)
                     .background(showRIR ? Color.pumpAccent.opacity(0.1) : Color.clear)
                     .clipShape(RoundedRectangle(cornerRadius: 5))
                     .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(
-                        showRIR ? Color.pumpAccent.opacity(0.4) : (isEditing ? Color.pumpAccent.opacity(0.4) : Color.clear),
+                        showRIR ? Color.accentInk.opacity(0.4) : (isEditing ? Color.accentInk.opacity(0.4) : Color.clear),
                         lineWidth: 1))
                     .contentShape(RoundedRectangle(cornerRadius: 5))
                 }
@@ -385,13 +385,13 @@ struct TemplateDetailView: View {
                     }
                     .font(.spaceMono(8, weight: .bold))
                     .tracking(0.5)
-                    .foregroundStyle(ex.restSeconds != nil ? Color.pumpAccent : (isEditing ? Color.inkMuted : Color.inkFaint))
+                    .foregroundStyle(ex.restSeconds != nil ? Color.accentInk : (isEditing ? Color.inkMuted : Color.inkFaint))
                     .padding(.horizontal, 7)
                     .frame(height: 22)
                     .background(ex.restSeconds != nil ? Color.pumpAccent.opacity(0.1) : Color.clear)
                     .clipShape(RoundedRectangle(cornerRadius: 5))
                     .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(
-                        ex.restSeconds != nil ? Color.pumpAccent.opacity(0.4) : (isEditing ? Color.dsHairLine : Color.clear),
+                        ex.restSeconds != nil ? Color.accentInk.opacity(0.4) : (isEditing ? Color.dsHairLine : Color.clear),
                         lineWidth: 1))
                     .contentShape(RoundedRectangle(cornerRadius: 5))
                 }
@@ -510,7 +510,7 @@ struct TemplateDetailView: View {
                                             .padding(.horizontal, 9)
                                             .frame(height: 26)
                                             .background(RoundedRectangle(cornerRadius: 6).fill(isSelected ? Color.pumpAccent : s.bg))
-                                            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(isSelected ? Color.pumpAccent : Color.dsHairLine))
+                                            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(isSelected ? Color.accentInk : Color.dsHairLine))
                                     }
                                     .buttonStyle(.plain)
                                 }
@@ -658,7 +658,7 @@ struct TemplateDetailView: View {
                             .background(isSelected ? Color.pumpAccent : Color.surf)
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                             .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(
-                                isSelected ? Color.pumpAccent : Color.dsHairLine, lineWidth: 1))
+                                isSelected ? Color.accentInk : Color.dsHairLine, lineWidth: 1))
                             .contentShape(RoundedRectangle(cornerRadius: 10))
                     }
                     .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.94))

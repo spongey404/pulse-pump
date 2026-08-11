@@ -32,7 +32,7 @@ struct CoachMarkOverlay: View {
                 // Icon
                 Image(systemName: viewModel.currentStep.icon)
                     .font(.mono(40))
-                    .foregroundStyle(Color.pumpAccent)
+                    .foregroundStyle(Color.accentInk)
 
                 // Title
                 Text(viewModel.currentStep.title)

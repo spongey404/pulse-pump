@@ -68,44 +68,59 @@ Level 4 — METADATA / LABELS    Space Mono 400 · 8-10px · all-caps · letter-
 
 ## 3. COLOR TOKENS
 
+Pump's accent moved from terracotta to blue (`#0A6FC0`) so it no longer shares a hue
+family with the negative-delta signal. Two accent tiers, not four tokens: `accent` for
+filled surfaces (CTA, tab-bar fill, chip fill — carries white `onAccent` text), `accentInk`
+for accent text/glyphs/borders, which lifts to a brighter blue on the dark canvas so it
+doesn't read as a dim, desaturated ink. PR is no longer a color — see *Anti-patterns*.
+Full rationale, contrast numbers and the two open accents (Fuel, Stride) are in
+`design_handoff_pulse_color_system/README.md`.
+
 ### Light mode
 ```
-bg/canvas:        #fbf8f2   warm cream — primary background
-bg/elevated:      #f4f0e6   slightly lighter — cards
-bg/sunken:        #ece7d8   inputs, last-session note bg
-bg/active-row:    rgba(200,85,61,0.07)  active set tint
+bg/canvas:        #f9f8f4   warm cream — primary background
+bg/elevated:      #f1efe9   slightly lighter — cards
+bg/sunken:        #e7e4dc   inputs, last-session note bg
+bg/active-row:    rgba(10,111,192,0.08)   active set tint (= accent/soft)
 
-text/primary:     #1f1c19   charcoal
-text/secondary:   rgba(31,28,25,0.5)   warm grey labels
-text/faint:       rgba(31,28,25,0.13)  ghost/placeholder
-rule/default:     rgba(31,28,25,0.08)  dividers
+text/primary:     #1c1b18   charcoal
+text/secondary:   rgba(28,27,24,0.5)    warm grey labels
+text/faint:       rgba(28,27,24,0.13)   ghost/placeholder
+rule/default:     rgba(28,27,24,0.08)   dividers
 
-accent:           #c8553d   terracotta — Pump primary
-accent/soft:      rgba(200,85,61,0.08)
-signal/up:        #1f8f5a   green — positive
-signal/down:      #c0341a   red — negative
-signal/pr:        #c9892e   gold — PR badges
+accent:           #0a6fc0   blue — Pump primary, FILLED surfaces only
+accent/ink:       #0a6fc0   accent TEXT, glyphs, borders (= accent in light mode)
+accent/soft:      rgba(10,111,192,0.08)
+on-accent:        #ffffff
+signal/up:        #00aa55   green — positive
+signal/down:      #ff3b30  red — negative
+signal/pr:        not a color — inkPrimary text + 1.5px inkPrimary underline
 ticker/bg:        #1a1816   always-dark bar
 ticker/fg:        #ece5d6   cream text on ticker
 ```
 
 ### Dark mode
 ```
-bg/canvas:        #1a1816   warm dark charcoal
-bg/elevated:      #252220
-bg/sunken:        #2e2a26
-bg/active-row:    rgba(220,125,74,0.10)
+bg/canvas:        #1a1917   warm dark charcoal
+bg/elevated:      #24221f
+bg/sunken:        #2d2a26
+bg/active-row:    rgba(77,184,255,0.14)   (= accent/soft)
 
-text/primary:     #ece5d6   cream
-text/secondary:   rgba(236,229,214,0.5)
-text/faint:       rgba(236,229,214,0.13)
-rule/default:     rgba(236,229,214,0.08)
+text/primary:     #eae7df   cream
+text/secondary:   rgba(234,231,223,0.5)
+text/faint:       rgba(234,231,223,0.13)
+rule/default:     rgba(234,231,223,0.08)
 
-accent:           #dc7d4a   warm orange in dark mode
-signal/up:        #3fb777
-signal/pr:        #d4a03c
-ticker/bg:        #0e0c0a
+accent:           #0a6fc0   unchanged in dark mode — filled surfaces keep this so
+                             white on-accent text keeps its contrast
+accent/ink:       #4db8ff   lifted blue — accent TEXT, glyphs, borders only
+signal/up:        #00aa55   unchanged
+signal/down:      #ff3b30   unchanged
+ticker/bg:        #1a1816   unchanged — ticker is identical in both modes
 ```
+
+Amber (`#c9892e`) is reserved app-wide for Fuel's "over target" signal. Nothing in Pump
+uses it — PR badges now use the `signal/pr` treatment above instead.
 
 ### Anti-patterns
 - **No drop shadows anywhere** — elevation via background tint only
@@ -131,7 +146,8 @@ Border radius:
   Pill buttons:     999px (only for filter chips and date pills)
   
 Dividers: 0.5-1px, always rgba not solid color
-Active row: 2px left border in accent color + accentSoft background
+Active row: 2px left border in accentInk + accentSoft background (only the active row —
+completed and pending rows are untinted, back to bgCanvas)
 ```
 
 ---
@@ -139,21 +155,44 @@ Active row: 2px left border in accent color + accentSoft background
 ## 5. SIGNATURE COMPONENTS
 
 ### 5.1 Stock Ticker Strip
-- Always-dark bar (`#1a1816`), height 26px
+- Spec default is an always-dark bar (`#1a1816`) in both color schemes, height 26px.
+  **Implemented behavior deviates from this**: `TickerStripView` switches to a light
+  cream bg (`#f0ebe0`) in light mode. Not something to "fix" back — see the color note
+  below.
 - Space Mono, 10px, white text
 - Stats: `LABEL` (muted opacity) + VALUE (▲/▼ in signal colors) + `·` separator
 - Scrolls as marquee if content overflows
 - Used on: Home, Workout Logger, Post-Workout Summary, Muscle Map
+- **Up-arrow color has a light/dark split**: `tickerUp` (`#00e07a`) is tuned for the
+  always-dark ticker bg and washes out on the light-mode cream bg, so light mode uses
+  the older, darker green `#2a7a4a` instead. Dark mode keeps `#00e07a`. `tickerDown`
+  (`#ff3b30`) is unaffected and stays the same in both modes.
 
 ### 5.2 Set Row
+One tinted row per screen. Completion is carried by the check control, not by a
+background color. Full state spec in `design_handoff_pulse_color_system/Set Row
+States.dc.html`.
 ```
 Grid: [TYPE] [#] [KG] [REPS] [RIR?] [✓]
 - TYPE chip: 4-6px radius, colored by set type
   WU = amber tint, STD = transparent, DROP = red tint, SS = purple tint, AMRAP = blue tint
 - Numbers: Space Mono 700, 18-20px
 - Ghost values: previous session shown in faint color (rgba 0.13)
-- Active row: accent left border 2px + accentSoft background
-- Done: green ✓ | Active: accent circle | Pending: faint circle
+
+State           Background                        Numbers      Check control
+Completed       bgCanvas (no tint)                inkPrimary   filled accent circle, white ✓
+Active           accentSoft + 2px accentInk        inkPrimary   2px accentInk ring, empty
+                 left border (only tinted row)
+Pending         bgCanvas                          inkPrimary   1.5px inkPrimary 20% ring
+Ghost           bgCanvas                          inkFaint     1.5px inkPrimary 10% ring
+                (previous-session value, not yet logged this session)
+
+- The filled check is `accent` (flat blue) in BOTH color modes, not `accentBright` —
+  it's a filled surface carrying white, so it follows the CTA rule.
+- Green never fills a set-row surface — deltaUp is reserved for positive-delta text/
+  arrows elsewhere. A completed row does not turn green.
+- No per-set PR marker/dot in the live row — PRs stay a surprise until the
+  post-workout summary rather than being spoiled mid-set.
 ```
 
 ### 5.3 Docked CTA (FINISH WORKOUT / START WORKOUT)
@@ -278,7 +317,8 @@ Grid: [TYPE] [#] [KG] [REPS] [RIR?] [✓]
   - 4-up stats grid: SETS / KCAL / VOL / STREAK
   - Body silhouettes (front + back thermal heatmap, 72px each)
   - Improvement hero: big green number N/total
-  - PR badges in gold (★)
+  - PR badges: inkPrimary text + 1.5px inkPrimary underline (★), not a color — amber is
+    reserved for Fuel's over-target signal
   - Exercise breakdown table: sorted PRs first → improved → unimproved
   - "+X MORE EXERCISES" if > 6 exercises
   - PULSE/PUMP watermark
@@ -499,7 +539,7 @@ The smart workout prediction on the Home screen works as follows:
 ### Active set detection
 - A set is "active" when the previous set is marked done and this one has no data
 - Only one set can be active at a time
-- Active set: 2px left accent border + accentSoft background
+- Active set: 2px left accentInk border + accentSoft background
 - Plate calculator only available on active set
 
 ### Ghost text
@@ -535,7 +575,7 @@ The smart workout prediction on the Home screen works as follows:
 - No emojis in UI (emojis are allowed in user-typed captions/notes only)
 - No filled icons in non-active state
 - No interstitial paywall popups during core flows  
-- No confetti or celebration animations for PRs — subtle gold highlight only
+- No confetti or celebration animations for PRs — inkPrimary text + underline only, never a color highlight
 - No "streak lost!" notifications
 - No round circles for day selectors — use rounded rectangles (radius 8px)
 - No pill-shaped primary action buttons — radius 12px for main CTAs

@@ -73,7 +73,7 @@ struct WarmupGeneratorView: View {
                     HStack {
                         Text("Working Set")
                             .font(.mono(15, weight: .medium))
-                            .foregroundStyle(Color.pumpAccent)
+                            .foregroundStyle(Color.accentInk)
                         Spacer()
                         Text("\(workingWeight) \(unit.abbreviation)")
                             .font(.callout.monospacedDigit().weight(.semibold))

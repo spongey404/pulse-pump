@@ -69,7 +69,7 @@ struct AnalyticsView: View {
                         DatePicker("To", selection: $customEndDate, in: customStartDate..., displayedComponents: .date)
                     }
                     .padding(.horizontal)
-                    .tint(Color.pumpAccent)
+                    .tint(Color.accentInk)
                 }
 
                 if filteredWorkouts.isEmpty {
@@ -88,7 +88,7 @@ struct AnalyticsView: View {
                                     x: .value("Week", entry.week),
                                     y: .value("Workouts", entry.count)
                                 )
-                                .foregroundStyle(Color.pumpAccent)
+                                .foregroundStyle(Color.accentInk)
                             }
                         }
                         .frame(height: 180)
@@ -109,12 +109,12 @@ struct AnalyticsView: View {
                                         x: .value("Date", entry.date),
                                         y: .value("Improved", entry.improved)
                                     )
-                                    .foregroundStyle(Color.pumpAccent)
+                                    .foregroundStyle(Color.accentInk)
                                     PointMark(
                                         x: .value("Date", entry.date),
                                         y: .value("Improved", entry.improved)
                                     )
-                                    .foregroundStyle(Color.pumpAccent)
+                                    .foregroundStyle(Color.accentInk)
                                 }
                             }
                             .frame(height: 180)
@@ -139,7 +139,7 @@ struct AnalyticsView: View {
                                         x: .value("Sets", entry.sets),
                                         y: .value("Muscle", entry.muscle)
                                     )
-                                    .foregroundStyle(Color.pumpAccent)
+                                    .foregroundStyle(Color.accentInk)
                                 }
                             }
                             .frame(height: CGFloat(max(160, data.count * 32)))
@@ -164,7 +164,7 @@ struct AnalyticsView: View {
                                     }
                                 }
                                 .pickerStyle(.menu)
-                                .tint(Color.pumpAccent)
+                                .tint(Color.accentInk)
 
                                 if let exercise = selectedExerciseForTrend {
                                     let trendData = exerciseTrend(for: exercise)
@@ -179,12 +179,12 @@ struct AnalyticsView: View {
                                                     x: .value("Date", point.date),
                                                     y: .value("Weight", point.maxWeight)
                                                 )
-                                                .foregroundStyle(Color.pumpAccent)
+                                                .foregroundStyle(Color.accentInk)
                                                 PointMark(
                                                     x: .value("Date", point.date),
                                                     y: .value("Weight", point.maxWeight)
                                                 )
-                                                .foregroundStyle(Color.pumpAccent)
+                                                .foregroundStyle(Color.accentInk)
                                             }
                                         }
                                         .frame(height: 180)

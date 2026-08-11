@@ -26,7 +26,7 @@ struct TemplateListView: View {
                     } label: {
                         Label("Start", systemImage: "play.fill")
                     }
-                    .tint(Color.pumpAccent)
+                    .tint(Color.accentInk)
                 }
             }
         }

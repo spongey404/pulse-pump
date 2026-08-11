@@ -77,7 +77,7 @@ struct HintButton: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
                     Image(systemName: hint.icon)
-                        .foregroundStyle(Color.pumpAccent)
+                        .foregroundStyle(Color.accentInk)
                     Text(hint.title)
                         .font(.mono(14, weight: .medium))
                 }

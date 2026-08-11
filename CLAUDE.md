@@ -130,7 +130,7 @@ Lowercase prefixes, present tense:
 - `WorkoutActivityAttributes` is defined in **both** the main app (`LiveActivityService.swift`) and the widget extension (`WorkoutLiveActivity.swift`) — must be kept in sync manually until a shared framework is added
 - Feed caching: `SocialViewModel` stores `lastFeedFetch` timestamp with a 5-min TTL; pull-to-refresh forces a network fetch
 - `StreakCalculator` (Utilities/) is the single source of truth for streak logic — gap-based, 3-day expiry window
-- `Color.pumpAccent` is the canonical accent token (`Extensions/Color+Theme.swift` + xcassets `PumpAccent.colorset`). Set to hot pink `#fd4a9f` (same light/dark). `Color.pumpPrimary` is a deprecated alias — do not use it.
+- `Color.pumpAccent` is the canonical accent token (`Extensions/Color+Theme.swift` + xcassets `PumpAccent.colorset`). Set to blue `#0A6FC0` (same light/dark — filled surfaces stay this flat value so white text keeps contrast). `Color.accentInk` (xcassets `AccentInk.colorset`) is the text/glyph/border variant, which lifts to `#4DB8FF` on the dark canvas; use it instead of `pumpAccent` for anything that isn't a filled surface. `Color.pumpPrimary` is a deprecated alias — do not use it. Full rationale in `design_handoff_pulse_color_system/README.md` (Claude Design project "App color system redesign").
 
 ## UI Patterns
 
@@ -149,9 +149,11 @@ Lowercase prefixes, present tense:
 | `PulsePumpWidget/WorkoutLiveActivity.swift` | Dynamic Island + lock screen Live Activity |
 | `Models/Enums/MuscleSubRegion.swift` | 35 anatomical sub-regions |
 
-## Design Refresh (pump-and-fuel/)
+## Design Refresh (pump and fuel design html files/)
 
-The `pump-and-fuel/project/` directory contains HTML prototype files from Claude Design that define the target UI. These are the reference screens for the ongoing UI/UX update:
+The `pump and fuel design html files/` directory (renamed from `pump-and-fuel/project/`)
+contains HTML prototype files from Claude Design that define the target UI. These are
+the reference screens for the ongoing UI/UX update:
 
 | File | Screen |
 |------|--------|
@@ -162,16 +164,30 @@ The `pump-and-fuel/project/` directory contains HTML prototype files from Claude
 | `Pump Social Feed.html` | Feed, post detail, friend profile |
 | `Pump Programs Exercise Library.html` | Programs list, template detail, exercise picker |
 
-Design system reference: `pump-and-fuel/project/uploads/pulse-design-system.md`
+Design system reference: `pump and fuel design html files/uploads/pulse-design-system.md`
+(multi-app master doc). Pump-only reference with the confirmed token values:
+`PULSE_PUMP_DESIGN_REFERENCE.md`. Color token rationale and contrast numbers:
+`design_handoff_pulse_color_system/README.md` (Claude Design project "App color system
+redesign", also covers `Set Row States.dc.html`, the active-row/completed-row/PR states spec).
 
-Key design tokens to implement in Swift:
-- **Accent:** `#fd4a9f` (hot pink, light and dark)
-- **Canvas bg:** `#fbf8f2` light / `#1a1816` dark
-- **Ticker bg (always dark):** `#1a1816`
-- **Fonts:** Bebas Neue for display/headers, DM Mono for labels/numbers, Inter for body (currently using SF Pro system fonts — will need custom font registration)
-- **No drop shadows.** Elevation via background tint only.
-- **Numbers always monospaced** (DM Mono / SF Mono)
+Key design tokens implemented in Swift:
+- **Accent:** `#0A6FC0` blue, flat in both color schemes on filled surfaces (`pumpAccent`);
+  lifts to `#4DB8FF` on the dark canvas for text/glyphs/borders (`accentInk`)
+- **Canvas bg:** `#f9f8f4` light / `#1a1917` dark
+- **Ticker bg:** `#1a1816`, always-dark per spec — but the implemented `TickerStripView`
+  switches to a light cream (`#f0ebe0`) in light mode, a deliberate deviation. Its
+  up-arrow green follows suit: `#00e07a` in dark mode, `#2a7a4a` in light mode (the
+  bright green washes out on the light bg).
+- **Fonts:** Archivo (display/headers/body) + Space Mono (all numbers and labels, no
+  exception) — both registered and bundled (`Info.plist` `UIAppFonts`,
+  `Extensions/Font+Design.swift`). Not Bebas Neue/DM Mono/Inter — that was an earlier,
+  superseded plan.
+- **No drop shadows.** Elevation via background tint only. (Some pre-existing accent
+  shadows remain in the codebase as a known deviation, not yet swept.)
+- **Numbers always monospaced** (Space Mono)
 - All labels in small caps with letter-spacing
+- **PR is a treatment, not a color** — `inkPrimary` text + 1.5px `inkPrimary` underline,
+  not amber. Amber (`#c9892e`) is reserved app-wide for Fuel's over-target signal.
 
 ## Known Gaps (from spec)
 

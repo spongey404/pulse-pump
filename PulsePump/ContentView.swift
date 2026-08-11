@@ -426,7 +426,7 @@ struct HomeTabView: View {
                         Text("PREDICTED TODAY · \(splitLabel)")
                             .font(.spaceMono(9))
                             .tracking(1.5)
-                            .foregroundStyle(Color.pumpAccent)
+                            .foregroundStyle(Color.accentInk)
                         Text(name.uppercased())
                             .font(.archivo(28, weight: .black))
                             .foregroundStyle(Color.inkPrimary)
@@ -476,7 +476,7 @@ struct HomeTabView: View {
                             Text("NOT TODAY? ›")
                                 .font(.spaceMono(9))
                                 .tracking(0.5)
-                                .foregroundStyle(Color.pumpAccent.opacity(0.8))
+                                .foregroundStyle(Color.accentInk.opacity(0.8))
                                 .padding(.vertical, 4)
                         }
                         .buttonStyle(.plain)
@@ -501,7 +501,7 @@ struct HomeTabView: View {
                     label: "STREAK",
                     value: "\(currentStreak)",
                     sub: "DAYS",
-                    valueColor: Color.pumpAccent
+                    valueColor: Color.accentInk
                 )
                 Rectangle().fill(Color.dsHairLine).frame(width: 1)
                 kpiCell(
@@ -568,7 +568,7 @@ struct HomeTabView: View {
                     Text("WEEKLY VOLUME · SETS")
                         .font(.spaceMono(9))
                         .tracking(1.5)
-                        .foregroundStyle(Color.pumpAccent)
+                        .foregroundStyle(Color.accentInk)
                     Spacer()
                     Text("WK \(currentWeekNumber) · \(totalSets) TOTAL")
                         .font(.spaceMono(9))
@@ -598,7 +598,7 @@ struct HomeTabView: View {
                                 .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(Double(i) * 0.04), value: barsAppeared)
                             Text(labels[i])
                                 .font(Font.mono(7))
-                                .foregroundStyle(isToday ? Color.pumpAccent : Color.inkMuted)
+                                .foregroundStyle(isToday ? Color.accentInk : Color.inkMuted)
                                 .fontWeight(isToday ? .bold : .regular)
                         }
                     }
@@ -622,7 +622,7 @@ struct HomeTabView: View {
                 Text("RECENT")
                     .font(.spaceMono(9))
                     .tracking(1.5)
-                    .foregroundStyle(Color.pumpAccent)
+                    .foregroundStyle(Color.accentInk)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text("SETS")
                     .font(.spaceMono(8))
@@ -673,7 +673,7 @@ struct HomeTabView: View {
 
                         Text("\(improvedCount)/\(totalExercises)")
                             .font(.spaceMono(11, weight: .bold))
-                            .foregroundStyle(Color.pumpAccent)
+                            .foregroundStyle(Color.accentInk)
                             .frame(width: 56, alignment: .center)
 
                         let volDelta = volumeDelta(for: workout)
@@ -932,7 +932,7 @@ struct StartWorkoutDock: View {
                         .fill(Color.surf)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(Color.pumpAccent.opacity(0.33), lineWidth: 1)
+                                .strokeBorder(Color.accentInk.opacity(0.33), lineWidth: 1)
                         )
 
                     // Progress fill
@@ -951,7 +951,7 @@ struct StartWorkoutDock: View {
                                 .foregroundStyle(Color.inkMuted)
                             Text((draft.template?.name ?? "WORKOUT").uppercased())
                                 .font(.archivo(20, weight: .black))
-                                .foregroundStyle(Color.pumpAccent)
+                                .foregroundStyle(Color.accentInk)
                             Text("\(draftSetsDone) SETS DONE")
                                 .font(.spaceMono(9))
                                 .foregroundStyle(Color.inkMuted)
@@ -960,7 +960,7 @@ struct StartWorkoutDock: View {
                         Text("TAP TO RESUME ›")
                             .font(.spaceMono(9))
                             .tracking(0.5)
-                            .foregroundStyle(Color.pumpAccent)
+                            .foregroundStyle(Color.accentInk)
                     }
                     .padding(.horizontal, 14)
                 }
@@ -1421,14 +1421,14 @@ struct ProgramGroupRowView: View {
                                 .fill(Color.pumpAccent.opacity(0.10))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 4)
-                                        .strokeBorder(Color.pumpAccent.opacity(0.33), lineWidth: 1)
+                                        .strokeBorder(Color.accentInk.opacity(0.33), lineWidth: 1)
                                 )
                                 .frame(width: 22, height: 22)
                                 .overlay(
                                     Text(label)
                                         .font(.spaceMono(7, weight: .bold))
                                         .tracking(0.5)
-                                        .foregroundStyle(Color.pumpAccent)
+                                        .foregroundStyle(Color.accentInk)
                                 )
                         }
                     }
@@ -1503,12 +1503,12 @@ struct ProgramDayPickerSheet: View {
                                     Text("START")
                                         .font(.spaceMono(9, weight: .bold))
                                         .tracking(1.5)
-                                        .foregroundStyle(Color.pumpAccent)
+                                        .foregroundStyle(Color.accentInk)
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 6)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 6)
-                                                .strokeBorder(Color.pumpAccent.opacity(0.5))
+                                                .strokeBorder(Color.accentInk.opacity(0.5))
                                         )
                                 }
                                 .buttonStyle(PressScaleButtonStyle())
@@ -1639,12 +1639,12 @@ struct PresetTemplatePicker: View {
                     .fill(days == nil ? Color.surf2 : Color.pumpAccent.opacity(0.08))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(days == nil ? Color.dsHairLine : Color.pumpAccent.opacity(0.2), lineWidth: 1)
+                            .strokeBorder(days == nil ? Color.dsHairLine : Color.accentInk.opacity(0.2), lineWidth: 1)
                     )
                 if let d = days {
                     Text("\(d)D")
                         .font(.archivo(14, weight: .semibold))
-                        .foregroundStyle(Color.pumpAccent)
+                        .foregroundStyle(Color.accentInk)
                 } else {
                     Image(systemName: "plus")
                         .font(.system(size: 16, weight: .medium))
@@ -1740,7 +1740,7 @@ struct WorkoutDayPickerSheet: View {
                                             .frame(width: 40, height: 40)
                                         Text(String(template.name.prefix(1)).uppercased())
                                             .font(.archivo(16, weight: .black))
-                                            .foregroundStyle(Color.pumpAccent)
+                                            .foregroundStyle(Color.accentInk)
                                     }
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text(template.name.uppercased())
@@ -1791,7 +1791,7 @@ struct ProfileMenuSheet: View {
                         .frame(width: 44, height: 44)
                     Text(user?.name.prefix(1).uppercased() ?? "?")
                         .font(.archivo(20, weight: .black))
-                        .foregroundStyle(Color.pumpAccent)
+                        .foregroundStyle(Color.accentInk)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text((user?.name ?? "ATHLETE").uppercased())

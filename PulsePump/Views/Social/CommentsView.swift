@@ -26,7 +26,7 @@ struct CommentsView: View {
                             HStack {
                                 Text("@\(comment.username)")
                                     .font(.mono(11, weight: .medium))
-                                    .foregroundStyle(Color.pumpAccent)
+                                    .foregroundStyle(Color.accentInk)
                                 Spacer()
                                 Text(comment.date, style: .relative)
                                     .font(.mono(9))
@@ -53,7 +53,7 @@ struct CommentsView: View {
                         Image(systemName: "arrow.up.circle.fill")
                             .font(.mono(22))
                             .foregroundStyle(newCommentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                ? Color.inkFaint : Color.pumpAccent)
+                                ? Color.inkFaint : Color.accentInk)
                     }
                     .disabled(newCommentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }

@@ -268,7 +268,7 @@ struct SettingsView: View {
                 Spacer()
                 Toggle("", isOn: binding)
                     .labelsHidden()
-                    .tint(Color.pumpAccent)
+                    .tint(Color.accentInk)
             }
             .padding(.vertical, 10)
             .padding(.horizontal, 16)
@@ -499,7 +499,7 @@ struct SplitConfigView: View {
                             Spacer()
                             if selectedType == splitType {
                                 Image(systemName: "checkmark")
-                                    .foregroundStyle(Color.pumpAccent)
+                                    .foregroundStyle(Color.accentInk)
                             }
                         }
                     }
@@ -516,7 +516,7 @@ struct SplitConfigView: View {
                     dismiss()
                 }
                 .font(.archivo(16, weight: .semibold))
-                .foregroundStyle(Color.pumpAccent)
+                .foregroundStyle(Color.accentInk)
             }
         }
         .navigationTitle("Training Split")

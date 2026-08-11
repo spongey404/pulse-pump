@@ -18,11 +18,18 @@ extension Color {
 
     // MARK: - Legacy aliases
     static var pumpPrimary: Color { Color.pumpAccent }
-    static var pumpSoft: Color   { Color.pumpAccent.opacity(0.08) }
+    static var pumpSoft: Color   { Color.accentSoft }
 
-    // MARK: - Design-reference token names
-    static var accentSoft: Color  { Color.pumpAccent.opacity(0.08) }
-    static var activeRowBg: Color { Color.pumpAccent.opacity(0.07) }
+    // MARK: - Accent
+    // `pumpAccent` (#0A6FC0, flat in both schemes) is for FILLED surfaces —
+    // CTA fill, tab-bar active fill, chip fill — so white `onAccent` text keeps its contrast.
+    // `accentInk` (AccentInk.colorset) lifts to #4DB8FF on the dark canvas and is for accent
+    // TEXT, glyphs, borders and the active-row left border, which read as under-saturated ink
+    // at #0A6FC0 on a dark background. `accentSoft` (AccentSoft.colorset) is the matching
+    // 8%-light/14%-dark tint. Both are Xcode-generated asset symbols — no declaration needed
+    // here. See design_handoff_pulse_color_system/README.md.
+    static var onAccent: Color    { .white }
+    static var activeRowBg: Color { Color.accentSoft }
 
     // MARK: - Derived opacity tokens
     static var inkMuted: Color   { Color.inkPrimary.opacity(0.50) }

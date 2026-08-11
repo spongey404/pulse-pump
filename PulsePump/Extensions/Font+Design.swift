@@ -45,7 +45,7 @@ extension Font {
 // MARK: - Label style: Space Mono all-caps tracked (section headers, metadata)
 struct MonoLabelStyle: ViewModifier {
     let size: CGFloat
-    var color: Color = Color.pumpAccent
+    var color: Color = Color.accentInk
 
     func body(content: Content) -> some View {
         content

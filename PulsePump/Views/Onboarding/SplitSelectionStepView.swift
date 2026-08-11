@@ -36,7 +36,7 @@ struct SplitSelectionStepView: View {
                 ZStack {
                     Circle()
                         .strokeBorder(
-                            selected ? Color.pumpAccent : Color.inkFaint,
+                            selected ? Color.accentInk : Color.inkFaint,
                             lineWidth: 2
                         )
                         .frame(width: 18, height: 18)
@@ -50,7 +50,7 @@ struct SplitSelectionStepView: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(item.label)
                         .font(.archivo(14, weight: selected ? .semibold : .medium))
-                        .foregroundStyle(selected ? Color.pumpAccent : Color.inkPrimary)
+                        .foregroundStyle(selected ? Color.accentInk : Color.inkPrimary)
 
                     Text(item.meta)
                         .font(.spaceMono(8))
@@ -66,7 +66,7 @@ struct SplitSelectionStepView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12).strokeBorder(
-                    selected ? Color.pumpAccent : Color.inkFaint,
+                    selected ? Color.accentInk : Color.inkFaint,
                     lineWidth: 1
                 )
             )

@@ -50,7 +50,7 @@ struct FriendsListView: View {
                                 Task { await viewModel.sendFriendRequest(to: user.uid) }
                             }
                             .buttonStyle(.bordered)
-                            .tint(Color.pumpAccent)
+                            .tint(Color.accentInk)
                             .controlSize(.small)
                         }
                     }
@@ -74,7 +74,7 @@ struct FriendsListView: View {
                                 Task { await viewModel.acceptFriendRequest(docId: request.docId) }
                             }
                             .buttonStyle(.borderedProminent)
-                            .tint(Color.pumpAccent)
+                            .tint(Color.accentInk)
                             .controlSize(.small)
                         }
                     }
@@ -98,7 +98,7 @@ struct FriendsListView: View {
                                 Task { await viewModel.sendFriendRequest(to: user.uid) }
                             }
                             .buttonStyle(.bordered)
-                            .tint(Color.pumpAccent)
+                            .tint(Color.accentInk)
                             .controlSize(.small)
                         }
                     }
@@ -185,7 +185,7 @@ struct ContactsPermissionView: View {
         VStack(spacing: 24) {
             Image(systemName: "person.crop.rectangle.stack")
                 .font(.display(34))
-                .foregroundStyle(Color.pumpAccent)
+                .foregroundStyle(Color.accentInk)
 
             Text("Find Friends from Contacts")
                 .font(.display(20))
@@ -200,7 +200,7 @@ struct ContactsPermissionView: View {
                 dismiss()
             }
             .buttonStyle(.borderedProminent)
-            .tint(Color.pumpAccent)
+            .tint(Color.accentInk)
 
             Button("Not Now") { dismiss() }
                 .foregroundStyle(.secondary)

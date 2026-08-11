@@ -18,7 +18,7 @@ struct UnitPreferenceStepView: View {
                             ZStack {
                                 Circle()
                                     .strokeBorder(
-                                        viewModel.unitPreference == unit ? Color.pumpAccent : Color.dsHairLine,
+                                        viewModel.unitPreference == unit ? Color.accentInk : Color.dsHairLine,
                                         lineWidth: viewModel.unitPreference == unit ? 2 : 1
                                     )
                                     .frame(width: 22, height: 22)
@@ -35,7 +35,7 @@ struct UnitPreferenceStepView: View {
                         .background(viewModel.unitPreference == unit ? Color.accentSoft : Color.surf2)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                         .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(
-                            viewModel.unitPreference == unit ? Color.pumpAccent.opacity(0.4) : Color.dsHairLine, lineWidth: 1))
+                            viewModel.unitPreference == unit ? Color.accentInk.opacity(0.4) : Color.dsHairLine, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
                 }

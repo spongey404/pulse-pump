@@ -25,7 +25,7 @@ struct NameStepView: View {
                         .font(.archivo(24, weight: .black))
                         .tracking(0.5)
                         .foregroundStyle(Color.inkPrimary)
-                        .tint(Color.pumpAccent)
+                        .tint(Color.accentInk)
                         .textContentType(.name)
                         .focused($isFocused)
                         .padding(.horizontal, 16)
@@ -37,7 +37,7 @@ struct NameStepView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12).strokeBorder(
-                        !viewModel.name.isEmpty ? Color.pumpAccent : Color.inkFaint,
+                        !viewModel.name.isEmpty ? Color.accentInk : Color.inkFaint,
                         lineWidth: 1
                     )
                 )

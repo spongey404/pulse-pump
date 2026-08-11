@@ -116,7 +116,7 @@ struct WelcomeView: View {
                 .disabled(viewModel.isLoading)
                 .overlay {
                     if viewModel.isLoading {
-                        ProgressView().tint(Color.pumpAccent)
+                        ProgressView().tint(Color.accentInk)
                     }
                 }
 
@@ -259,7 +259,7 @@ struct EmailAuthSheet: View {
                     Text(viewModel.isSignUp ? "01 / CREATE ACCOUNT" : "01 / WELCOME BACK")
                         .font(.spaceMono(10, weight: .bold))
                         .tracking(1.5)
-                        .foregroundStyle(Color.pumpAccent)
+                        .foregroundStyle(Color.accentInk)
                         .padding(.bottom, 10)
 
                     Text(viewModel.isSignUp ? "Create your\naccount." : "Sign in to\nyour account.")
@@ -289,7 +289,7 @@ struct EmailAuthSheet: View {
                                 Text(label)
                                     .font(.spaceMono(11, weight: .bold))
                                     .tracking(1.2)
-                                    .foregroundStyle(active ? Color.pumpAccent : Color.inkMuted)
+                                    .foregroundStyle(active ? Color.accentInk : Color.inkMuted)
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 36)
                                     .background(active ? Color.canvasBg : Color.clear)
@@ -319,7 +319,7 @@ struct EmailAuthSheet: View {
                                 .autocorrectionDisabled()
                                 .textInputAutocapitalization(.never)
                                 .focused($focusedField, equals: .email)
-                                .tint(Color.pumpAccent)
+                                .tint(Color.accentInk)
                                 .foregroundStyle(Color.inkPrimary)
                                 .frame(height: 50)
                                 .padding(.horizontal, 14)
@@ -336,7 +336,7 @@ struct EmailAuthSheet: View {
                                 }
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 11).strokeBorder(
-                                        focusedField == .email ? Color.pumpAccent :
+                                        focusedField == .email ? Color.accentInk :
                                         (!viewModel.email.isEmpty && !emailValid ? Color.signalDown : Color.dsHairLine),
                                         lineWidth: 1
                                     )
@@ -374,7 +374,7 @@ struct EmailAuthSheet: View {
                                 Button("FORGOT?") {}
                                     .font(.spaceMono(9, weight: .bold))
                                     .tracking(1)
-                                    .foregroundStyle(Color.pumpAccent)
+                                    .foregroundStyle(Color.accentInk)
                                     .buttonStyle(.plain)
                             }
                         }
@@ -405,7 +405,7 @@ struct EmailAuthSheet: View {
                             .clipShape(RoundedRectangle(cornerRadius: 11))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 11).strokeBorder(
-                                    focusedField == .password ? Color.pumpAccent : Color.dsHairLine,
+                                    focusedField == .password ? Color.accentInk : Color.dsHairLine,
                                     lineWidth: 1
                                 )
                             )
@@ -480,7 +480,7 @@ struct EmailAuthSheet: View {
                     .disabled(!canSubmit || viewModel.isLoading)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 16)
-                    .overlay { if viewModel.isLoading { ProgressView().tint(Color.pumpAccent) } }
+                    .overlay { if viewModel.isLoading { ProgressView().tint(Color.accentInk) } }
                 }
                 .background(Color.canvasBg)
             }

@@ -51,7 +51,7 @@ struct EditTemplateView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .strokeBorder(canSave ? Color.pumpAccent : Color.inkPrimary.opacity(0.12))
+                                .strokeBorder(canSave ? Color.accentInk : Color.inkPrimary.opacity(0.12))
                         )
                 }
                 .buttonStyle(.plain)
@@ -78,7 +78,7 @@ struct EditTemplateView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10)
-                                    .strokeBorder(name.isEmpty ? Color.inkPrimary.opacity(0.12) : Color.pumpAccent)
+                                    .strokeBorder(name.isEmpty ? Color.inkPrimary.opacity(0.12) : Color.accentInk)
                             )
                     }
                     .padding(16)

@@ -59,7 +59,7 @@ struct CustomTabBar: View {
                 Text(tab.label.uppercased())
                     .font(.spaceMono(7, weight: .bold))
                     .tracking(1)
-                    .foregroundStyle(Color.pumpAccent)
+                    .foregroundStyle(Color.accentInk)
                     .offset(y: -10)
             }
             .frame(maxWidth: .infinity)

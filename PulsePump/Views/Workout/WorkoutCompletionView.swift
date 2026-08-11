@@ -187,7 +187,7 @@ struct WorkoutCompletionView: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text("WORKOUT COMPLETE")
                         .font(Font.spaceMono(9, weight: .bold))
-                        .foregroundStyle(Color.pumpAccent)
+                        .foregroundStyle(Color.accentInk)
                         .tracking(1.2)
                     Text((data.workoutName ?? "WORKOUT").uppercased())
                         .font(.display(18))
@@ -396,7 +396,7 @@ struct WorkoutCompletionView: View {
                 HStack(alignment: .bottom, spacing: 5) {
                     Text("\(data.improvedCount)")
                         .font(.display(58))
-                        .foregroundStyle(Color.pumpAccent)
+                        .foregroundStyle(Color.accentInk)
                         .lineLimit(1)
                     VStack(alignment: .leading, spacing: 0) {
                         Text("OF \(data.totalExercises)")
@@ -415,7 +415,8 @@ struct WorkoutCompletionView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("★ \(data.prCount) NEW PR\(data.prCount == 1 ? "" : "S")")
                             .font(.display(18))
-                            .foregroundStyle(Color.prGold)
+                            .foregroundStyle(Color.inkPrimary)
+                            .underline(true, color: Color.inkPrimary)
                             .tracking(0.5)
                             .padding(.top, 7)
                             .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
@@ -429,7 +430,8 @@ struct WorkoutCompletionView: View {
                                      ? "+\(String(format: "%g", pr.weightDelta))KG"
                                      : "+\(pr.repsDelta) REP\(pr.repsDelta == 1 ? "" : "S")")
                                     .font(Font.spaceMono(9, weight: .bold))
-                                    .foregroundStyle(Color.prGold)
+                                    .foregroundStyle(Color.inkPrimary)
+                                    .underline(true, color: Color.inkPrimary)
                             }
                         }
                     }
@@ -470,7 +472,7 @@ struct WorkoutCompletionView: View {
                         if isPR {
                             Text("★")
                                 .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(Color.prGold)
+                                .foregroundStyle(Color.inkPrimary)
                                 .offset(y: -1)
                         }
                     }
@@ -486,7 +488,7 @@ struct WorkoutCompletionView: View {
                         .frame(width: 66, alignment: .trailing)
                     Text(improved ? "+\(String(format: "%.0f", ex.improvementScore))%" : "—")
                         .font(Font.spaceMono(10))
-                        .foregroundStyle(improved ? Color.pumpAccent : Color.inkMuted)
+                        .foregroundStyle(improved ? Color.accentInk : Color.inkMuted)
                         .frame(width: 28, alignment: .trailing)
                 }
                 .padding(.vertical, 4)
@@ -525,13 +527,13 @@ struct WorkoutCompletionView: View {
                         .font(Font.spaceMono(9, weight: .bold))
                         .tracking(0.8)
                 }
-                .foregroundStyle(thumbnailImage == nil ? Color.inkMuted : Color.pumpAccent)
+                .foregroundStyle(thumbnailImage == nil ? Color.inkMuted : Color.accentInk)
                 .frame(maxWidth: .infinity)
                 .frame(height: 36)
                 .background(Color.surf)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(
-                    thumbnailImage == nil ? Color.dsHairLine : Color.pumpAccent.opacity(0.4), lineWidth: 1))
+                    thumbnailImage == nil ? Color.dsHairLine : Color.accentInk.opacity(0.4), lineWidth: 1))
             }
             .buttonStyle(.plain)
 
@@ -720,7 +722,7 @@ struct WorkoutCompletionView: View {
                 .padding(.horizontal, 12)
                 .frame(height: 30)
                 .background(Capsule().fill(active ? Color.pumpAccent : Color.clear))
-                .overlay(Capsule().strokeBorder(active ? Color.pumpAccent : Color.dsHairLine, lineWidth: 1))
+                .overlay(Capsule().strokeBorder(active ? Color.accentInk : Color.dsHairLine, lineWidth: 1))
         }
         .buttonStyle(.plain)
     }
@@ -933,7 +935,7 @@ struct CompletionStatCard: View {
     let title: String; let value: String; let icon: String
     var body: some View {
         VStack(spacing: 6) {
-            Image(systemName: icon).font(.display(20)).foregroundStyle(Color.pumpAccent)
+            Image(systemName: icon).font(.display(20)).foregroundStyle(Color.accentInk)
             Text(value).font(.display(20))
             Text(title).font(.mono(11)).foregroundStyle(.secondary)
         }

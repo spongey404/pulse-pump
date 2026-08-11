@@ -144,7 +144,7 @@ struct ShareCardView: View {
         VStack(spacing: 8) {
             Image(systemName: "trophy")
                 .font(.display(28))
-                .foregroundStyle(Color.pumpAccent)
+                .foregroundStyle(Color.accentInk)
             Text("New Milestone")
                 .font(.mono(16, weight: .medium))
             Text(description)

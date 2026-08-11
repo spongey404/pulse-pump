@@ -17,13 +17,13 @@ struct TutorialPromptStepView: View {
                         .fill(Color.accentSoft)
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
-                                .strokeBorder(Color.pumpAccent.opacity(0.27), lineWidth: 1)
+                                .strokeBorder(Color.accentInk.opacity(0.27), lineWidth: 1)
                         )
                         .frame(width: 56, height: 56)
 
                     Image(systemName: "checkmark")
                         .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(Color.pumpAccent)
+                        .foregroundStyle(Color.accentInk)
                 }
 
                 VStack(alignment: .leading, spacing: 0) {

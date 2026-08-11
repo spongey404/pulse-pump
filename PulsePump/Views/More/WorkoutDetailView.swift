@@ -22,7 +22,7 @@ struct WorkoutDetailView: View {
                 if isEditing {
                     Section {
                         DatePicker("Date", selection: $workout.date, displayedComponents: .date)
-                            .tint(Color.pumpAccent)
+                            .tint(Color.accentInk)
                     }
                 }
 
@@ -49,7 +49,7 @@ struct WorkoutDetailView: View {
                 if pulsePlusService.isSubscribed || pulsePlusService.isInFreeTrial {
                     Section {
                         Toggle("Deload Week", isOn: $workout.isDeload)
-                            .tint(Color.pumpAccent)
+                            .tint(Color.accentInk)
                     }
                 }
 
@@ -92,7 +92,7 @@ struct WorkoutDetailView: View {
                 Text(shortDate(workout.date))
                     .font(.spaceMono(9))
                     .tracking(1.5)
-                    .foregroundStyle(Color.pumpAccent)
+                    .foregroundStyle(Color.accentInk)
                 Text((workout.template?.name ?? "Workout").uppercased())
                     .font(.archivo(18, weight: .black))
                     .foregroundStyle(Color.inkPrimary)
@@ -109,12 +109,12 @@ struct WorkoutDetailView: View {
                     Text("DONE")
                         .font(.spaceMono(9, weight: .bold))
                         .tracking(1.5)
-                        .foregroundStyle(Color.pumpAccent)
+                        .foregroundStyle(Color.accentInk)
                         .padding(.horizontal, 12)
                         .frame(height: 30)
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
-                                .strokeBorder(Color.pumpAccent.opacity(0.5), lineWidth: 1)
+                                .strokeBorder(Color.accentInk.opacity(0.5), lineWidth: 1)
                         )
                 }
                 .buttonStyle(.plain)
@@ -238,7 +238,7 @@ struct DetailExerciseSectionView: View {
                 Button { addSet() } label: {
                     Label("Add Set", systemImage: "plus")
                         .font(.archivo(14))
-                        .foregroundStyle(Color.pumpAccent)
+                        .foregroundStyle(Color.accentInk)
                 }
             }
 

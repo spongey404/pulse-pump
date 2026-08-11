@@ -86,7 +86,10 @@ struct TickerStripView: View {
 
     private func valueColor(_ dir: TickerItem.Direction?) -> Color {
         switch dir {
-        case .up:   return Color(hex: "#00e07a")
+        // tickerUp (#00e07a) reads fine on the always-dark ticker bg the design spec
+        // assumes, but this ticker's bg switches to a light cream in light mode, where
+        // that green washes out. Fall back to the pre-redesign darker green there.
+        case .up:   return colorScheme == .dark ? Color(hex: "#00e07a") : Color(hex: "#2a7a4a")
         case .down: return Color(hex: "#ff3b30")
         case .none: return fg.opacity(0.6)
         }
