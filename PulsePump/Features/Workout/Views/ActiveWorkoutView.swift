@@ -202,8 +202,7 @@ struct ActiveWorkoutView: View {
                     .map { $0.element.exerciseId })
                 ExercisePickerView(title: "REPLACE EXERCISE", excludedIds: otherIds) { exercises in
                     if let first = exercises.first {
-                        viewModel.exerciseEntries[idx].exerciseId = first.id
-                        viewModel.exerciseEntries[idx].exerciseName = first.name
+                        viewModel.replaceExercise(at: idx, with: first)
                     }
                     replaceExerciseIdx = nil
                 }
@@ -223,7 +222,7 @@ struct ActiveWorkoutView: View {
             primaryDestructive: true,
             onPrimary: { viewModel.cancelWorkout(modelContext: modelContext) },
             secondaryLabel: "SAVE AS DRAFT",
-            onSecondary: { viewModel.saveDraft(); viewModel.isActive = false }
+            onSecondary: { viewModel.saveDraftAndClose(modelContext: modelContext) }
         )
         .fullScreenCover(isPresented: $showExercisePicker) {
             ExercisePickerView(excludedIds: Set(viewModel.exerciseEntries.map(\.exerciseId))) { exercises in
@@ -233,6 +232,7 @@ struct ActiveWorkoutView: View {
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .background { viewModel.saveDraft() }
+            if newPhase == .active { viewModel.restTimer.refresh() }
         }
     }
 

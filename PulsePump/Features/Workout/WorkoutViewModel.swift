@@ -1,7 +1,6 @@
 import SwiftUI
 import SwiftData
 import Observation
-import FirebaseAuth
 
 @MainActor
 @Observable
@@ -17,17 +16,21 @@ class WorkoutViewModel {
     // Timer
     var startTime: Date?
     var elapsedSeconds: Int = 0
-    private var durationTimer: Timer?
+    var durationTimer: Timer?
 
     // Rest timer
-    let restTimer = RestTimerService()
+    let restTimer: RestTimerService
+
+    init(restTimer: RestTimerService? = nil) {
+        self.restTimer = restTimer ?? RestTimerService()
+    }
 
     // Live Activity
-    private let liveActivity = LiveActivityService()
-    private var liveModelContext: ModelContext?
-    private var liveObservers: [NSObjectProtocol] = []
-    private var cachedRestEnd: Date?
-    private var lastTimeCache: [UUID: (line: String, date: String)] = [:]
+    let liveActivity = LiveActivityService()
+    /// Context used for draft persistence + live-activity lookups while a session is active.
+    var liveModelContext: ModelContext?
+    var liveObservers: [NSObjectProtocol] = []
+    var lastTimeCache: [UUID: (line: String, date: String)] = [:]
 
     // Live calorie estimate
     var liveCalories: Double = 0
@@ -44,6 +47,11 @@ class WorkoutViewModel {
     }
 
     func startWorkout(modelContext: ModelContext, user: User, template: WorkoutTemplate? = nil) {
+        exerciseEntries = []
+        workoutNotes = ""
+        elapsedSeconds = 0
+        lastTimeCache = [:]
+
         let newWorkout = Workout(isDraft: true)
         newWorkout.user = user
         newWorkout.template = template
@@ -54,21 +62,19 @@ class WorkoutViewModel {
 
         if let template {
             for templateExercise in template.templateExercises.sorted(by: { $0.order < $1.order }) {
-                // Look up exercise to get type + unilateral flag
-                let exId = templateExercise.exerciseId
-                let exDesc = FetchDescriptor<Exercise>(predicate: #Predicate { $0.id == exId })
-                let exercise = try? modelContext.fetch(exDesc).first
-
+                // Link by id; fall back to the (normalised) name so presets and imported templates
+                // whose ids don't match the catalogue still log against the real exercise.
+                let exercise = Self.findExercise(id: templateExercise.exerciseId, name: templateExercise.exerciseName,
+                                                 modelContext: modelContext)
                 var entry = ExerciseEntry(
-                    exerciseId: templateExercise.exerciseId,
-                    exerciseName: templateExercise.exerciseName,
-                    sets: (0..<templateExercise.targetSets).map { i in
+                    exerciseId: exercise?.id ?? templateExercise.exerciseId,
+                    exerciseName: exercise?.name ?? templateExercise.exerciseName,
+                    sets: (0..<max(templateExercise.targetSets, 0)).map { i in
                         SetEntry(order: i, targetReps: templateExercise.targetReps, targetRIR: templateExercise.targetRIR)
                     }
                 )
-                entry.exerciseType = exercise?.exerciseType ?? .weighted
-                entry.isUnilateral = exercise?.isUnilateral ?? false
-                entry.equipmentType = exercise?.equipmentType ?? .barbell
+                entry.apply(exercise)
+                entry.restSeconds = templateExercise.restSeconds
                 exerciseEntries.append(entry)
             }
         }
@@ -77,41 +83,17 @@ class WorkoutViewModel {
         startTime = Date()
         startDurationTimer()
         liveActivity.startLiveActivity(workoutName: workout?.template?.name ?? "Workout")
-
+        persistDraft(modelContext: modelContext)
     }
 
-    func resumeDraft(workout: Workout, modelContext: ModelContext) {
-        self.workout = workout
-        self.workoutNotes = workout.notes
-        self.isActive = true
-
-        for log in workout.exerciseLogs.sorted(by: { $0.order < $1.order }) {
-            guard let exercise = log.exercise else { continue }
-            var entry = ExerciseEntry(
-                exerciseId: exercise.id,
-                exerciseName: exercise.name,
-                sets: log.sets.sorted(by: { $0.order < $1.order }).map { setLog in
-                    SetEntry(
-                        order: setLog.order,
-                        weight: setLog.weight > 0 ? String(format: "%g", setLog.weight) : "",
-                        reps: setLog.reps > 0 ? "\(setLog.reps)" : "",
-                        rir: setLog.rir.map { "\($0)" } ?? "",
-                        duration: setLog.duration.map { "\(Int($0))" } ?? "",
-                        distance: setLog.distance.map { String(format: "%g", $0) } ?? "",
-                        setType: setLog.setType,
-                        side: setLog.side
-                    )
-                },
-                notes: log.notes
-            )
-            entry.exerciseType = exercise.exerciseType
-            entry.isUnilateral = exercise.isUnilateral
-            entry.equipmentType = exercise.equipmentType
-            exerciseEntries.append(entry)
-        }
-
-        startTime = Date().addingTimeInterval(-workout.duration)
-        startDurationTimer()
+    /// Exercise by id, else by normalised name (case/whitespace/punctuation-insensitive).
+    static func findExercise(id: UUID, name: String, modelContext: ModelContext) -> Exercise? {
+        let byId = FetchDescriptor<Exercise>(predicate: #Predicate { $0.id == id })
+        if let hit = try? modelContext.fetch(byId).first { return hit }
+        let key = Exercise.normalisedName(name)
+        guard !key.isEmpty else { return nil }
+        let all = (try? modelContext.fetch(FetchDescriptor<Exercise>())) ?? []
+        return all.first { Exercise.normalisedName($0.name) == key }
     }
 
     // MARK: - Exercise Management
@@ -122,19 +104,28 @@ class WorkoutViewModel {
             exerciseName: exercise.name,
             sets: [SetEntry(order: 0)]
         )
-        entry.exerciseType = exercise.exerciseType
-        entry.isUnilateral = exercise.isUnilateral
-        entry.equipmentType = exercise.equipmentType
+        entry.apply(exercise)
         exerciseEntries.append(entry)
+        persistDraftIfActive()
     }
 
     func removeExercise(at index: Int) {
         guard exerciseEntries.indices.contains(index) else { return }
         exerciseEntries.remove(at: index)
+        persistDraftIfActive()
+    }
+
+    func replaceExercise(at index: Int, with exercise: Exercise) {
+        guard exerciseEntries.indices.contains(index) else { return }
+        exerciseEntries[index].exerciseId = exercise.id
+        exerciseEntries[index].exerciseName = exercise.name
+        exerciseEntries[index].apply(exercise)
+        persistDraftIfActive()
     }
 
     func moveExercise(from source: IndexSet, to destination: Int) {
         exerciseEntries.move(fromOffsets: source, toOffset: destination)
+        persistDraftIfActive()
     }
 
     // MARK: - Set Management
@@ -148,39 +139,64 @@ class WorkoutViewModel {
     func removeSet(exerciseIndex: Int, setIndex: Int) {
         guard exerciseEntries.indices.contains(exerciseIndex),
               exerciseEntries[exerciseIndex].sets.indices.contains(setIndex) else { return }
+        let wasCompleted = exerciseEntries[exerciseIndex].sets[setIndex].isCompleted
         exerciseEntries[exerciseIndex].sets.remove(at: setIndex)
+        if wasCompleted { persistDraftIfActive() }
     }
 
-    func logSet(exerciseIndex: Int, setIndex: Int, isCompound: Bool) {
+    /// Marks a set done. When the weight/reps fields are empty but the row shows the previous
+    /// session's ghost placeholders, those ghost values are saved (and only then).
+    func logSet(exerciseIndex: Int, setIndex: Int, modelContext: ModelContext? = nil) {
         guard exerciseEntries.indices.contains(exerciseIndex),
               exerciseEntries[exerciseIndex].sets.indices.contains(setIndex) else { return }
+        if let ctx = modelContext ?? liveModelContext {
+            applyGhostValues(exerciseIndex: exerciseIndex, setIndex: setIndex, modelContext: ctx)
+        }
         exerciseEntries[exerciseIndex].sets[setIndex].isCompleted = true
         restTimer.clearCompletion()
 
         updateLiveCalories()
+        persistDraftIfActive()
 
         if restTimer.mode == .autoStart || restTimer.mode == .autoStartWithDismiss {
-            let exerciseId = exerciseEntries[exerciseIndex].exerciseId
-            let duration = restTimer.restDuration(isCompound: isCompound, exerciseId: exerciseId)
+            let entry = exerciseEntries[exerciseIndex]
+            let duration = restTimer.restDuration(isCompound: entry.isCompound, exerciseId: entry.exerciseId,
+                                                  templateSeconds: entry.restSeconds)
             restTimer.start(seconds: duration)
+        }
+    }
+
+    /// The user un-ticked a completed set: it leaves the persisted draft too.
+    func unlogSet(exerciseIndex: Int, setIndex: Int) {
+        guard exerciseEntries.indices.contains(exerciseIndex),
+              exerciseEntries[exerciseIndex].sets.indices.contains(setIndex) else { return }
+        exerciseEntries[exerciseIndex].sets[setIndex].isCompleted = false
+        updateLiveCalories()
+        persistDraftIfActive()
+    }
+
+    /// Fills empty weight/reps from the previous session's same-position set.
+    func applyGhostValues(exerciseIndex: Int, setIndex: Int, modelContext: ModelContext) {
+        let entry = exerciseEntries[exerciseIndex]
+        // Time/distance exercises show no weight/reps ghost, so there is nothing to save.
+        guard entry.exerciseType != .timeBased, entry.exerciseType != .distanceBased else { return }
+        guard let ghost = ghostText(for: entry.exerciseId, setIndex: setIndex, modelContext: modelContext) else { return }
+        if exerciseEntries[exerciseIndex].sets[setIndex].weight.trimmingCharacters(in: .whitespaces).isEmpty, !ghost.weight.isEmpty {
+            exerciseEntries[exerciseIndex].sets[setIndex].weight = ghost.weight
+        }
+        if exerciseEntries[exerciseIndex].sets[setIndex].reps.trimmingCharacters(in: .whitespaces).isEmpty, !ghost.reps.isEmpty {
+            exerciseEntries[exerciseIndex].sets[setIndex].reps = ghost.reps
         }
     }
 
     func updateLiveCalories() {
         var compoundSets = 0
         var isolationSets = 0
-        let totalCompleted = exerciseEntries.flatMap(\.sets).filter(\.isCompleted).count
-        // Approximate: treat sets as compound if exercise name contains common compound keywords
+        var totalCompleted = 0
         for entry in exerciseEntries {
-            let completed = entry.sets.filter(\.isCompleted).count
-            let name = entry.exerciseName.lowercased()
-            let isCompound = name.contains("squat") || name.contains("bench") || name.contains("deadlift") ||
-                name.contains("press") || name.contains("row") || name.contains("pull-up") || name.contains("chin-up")
-            if isCompound {
-                compoundSets += completed
-            } else {
-                isolationSets += completed
-            }
+            let completed = entry.sets.filter { $0.isCompleted && $0.setType != .warmup }.count
+            totalCompleted += completed
+            if entry.isCompound { compoundSets += completed } else { isolationSets += completed }
         }
         let formula = CalorieFormula(rawValue: UserDefaults.standard.string(forKey: "calorieFormula") ?? "") ?? .basic
         let durationMinutes = Double(elapsedSeconds) / 60.0
@@ -198,17 +214,12 @@ class WorkoutViewModel {
 
     // MARK: - Ghost Text
 
+    /// Previous finished session's value for the same set position (draft sessions excluded).
     func ghostText(for exerciseId: UUID, setIndex: Int, modelContext: ModelContext) -> (weight: String, reps: String)? {
-        let descriptor = FetchDescriptor<ExerciseLog>(
-            predicate: #Predicate<ExerciseLog> { log in
-                log.exercise?.id == exerciseId
-            },
-            sortBy: [SortDescriptor(\ExerciseLog.createdAt, order: .reverse)]
-        )
-        guard let previousLog = try? modelContext.fetch(descriptor).first,
-              setIndex < previousLog.sets.count else { return nil }
-
-        let previousSet = previousLog.sets.sorted(by: { $0.order < $1.order })[setIndex]
+        guard let previousLog = modelContext.finalLogs(forExercise: exerciseId, limit: 1).first else { return nil }
+        let sorted = previousLog.sets.sorted(by: { $0.order < $1.order })
+        guard setIndex < sorted.count else { return nil }
+        let previousSet = sorted[setIndex]
         return (
             weight: previousSet.weight > 0 ? String(format: "%g", previousSet.weight) : "",
             reps: previousSet.reps > 0 ? "\(previousSet.reps)" : ""
@@ -225,18 +236,14 @@ class WorkoutViewModel {
 
         workout.duration = TimeInterval(elapsedSeconds)
         workout.notes = workoutNotes
-        workout.isDraft = false
         workout.updatedAt = Date()
 
-        // Remove old exercise logs and recreate
-        for log in workout.exerciseLogs {
-            modelContext.delete(log)
-        }
+        // Convert the draft in place: reconcile the already-persisted logs, drop empty exercises.
+        persistDraft(modelContext: modelContext, final: true)
+        workout.isDraft = false
+        try? modelContext.save()
 
-        // Single lookup reused below instead of a separate fetch per entry per loop.
-        let exerciseById: [UUID: Exercise] = Dictionary(
-            uniqueKeysWithValues: ((try? modelContext.fetch(FetchDescriptor<Exercise>())) ?? []).map { ($0.id, $0) }
-        )
+        let exerciseById = Self.exerciseLookup(modelContext)
 
         var prCount = 0
         var improvedCount = 0
@@ -244,111 +251,72 @@ class WorkoutViewModel {
         var weightDeltas: [UUID: Double] = [:]  // entry.id → kg gained on the best set vs last time
         var repsDeltas: [UUID: Int] = [:]       // entry.id → reps gained at the same weight vs last time
         var prDetails: [PRDetail] = []
+        var totalWorkingSets = 0
+        var compoundSets = 0
+        var isolationSets = 0
+        var countedExercises = 0
 
-        for (i, entry) in exerciseEntries.enumerated() {
-            let completedSets = entry.sets.filter { $0.isCompleted }
-            guard !completedSets.isEmpty else { continue }
+        for entry in exerciseEntries {
+            // Warm-ups are saved, but never count toward sets, volume, PRs or calories.
+            let working = entry.sets.filter { $0.isCompleted && $0.setType != .warmup }
+            guard !working.isEmpty else { continue }
+            countedExercises += 1
+            totalWorkingSets += working.count
+            if entry.isCompound { compoundSets += working.count } else { isolationSets += working.count }
 
-            let exerciseLog = ExerciseLog(order: i, notes: entry.notes)
-            modelContext.insert(exerciseLog)
-            exerciseLog.workout = workout
+            guard let exercise = exerciseById[entry.exerciseId] else { continue }
+            let weights = working.map { parseDecimal($0.weight) ?? 0 }
+            let reps = working.map { parseWholeNumber($0.reps) ?? 0 }
+            let bestWeight = weights.max() ?? 0
 
-            // Find exercise by ID
-            exerciseLog.exercise = exerciseById[entry.exerciseId]
+            let previousSets = exercise.finalLogs
+                .filter { $0.workout?.id != workout.id }
+                .flatMap(\.workingSets)
+            let previousBestWeight = previousSets.map(\.weight).max() ?? 0
+            let bestRepsThisWorkout = reps.max() ?? 0
+            let previousMaxReps = previousSets.filter { $0.weight <= bestWeight + 0.01 }.map(\.reps).max() ?? 0
 
-            var bestWeight: Double = 0
-            for (j, setEntry) in completedSets.enumerated() {
-                let weight = Double(setEntry.weight) ?? 0
-                let reps = Int(setEntry.reps) ?? 0
-                let rir = Int(setEntry.rir)
-                let duration: TimeInterval? = Double(setEntry.duration).map { TimeInterval($0) }
-                let distance: Double? = Double(setEntry.distance)
+            let current1RM = zip(weights, reps).map { Self.epley($0, $1) }.max() ?? 0
+            let previous1RM = previousSets.map { Self.epley($0.weight, $0.reps) }.max() ?? 0
 
-                let setLog = SetLog(
-                    order: j,
-                    weight: weight,
-                    reps: reps,
-                    rir: rir,
-                    duration: duration,
-                    distance: distance,
-                    setType: setEntry.setType,
-                    side: setEntry.side
-                )
-                modelContext.insert(setLog)
-                setLog.exerciseLog = exerciseLog
-                bestWeight = max(bestWeight, weight)
+            if bestWeight > previousBestWeight && previousBestWeight > 0 {
+                prCount += 1
+                let score = (bestWeight - previousBestWeight) / previousBestWeight * 100
+                prDetails.append(PRDetail(
+                    exerciseName: entry.exerciseName,
+                    weightDelta: bestWeight - previousBestWeight,
+                    repsDelta: 0,
+                    isWeightPR: true,
+                    impressivenessScore: score
+                ))
+                weightDeltas[entry.id] = bestWeight - previousBestWeight
+            } else if bestRepsThisWorkout > previousMaxReps && previousMaxReps > 0 {
+                prCount += 1
+                let score = Double(bestRepsThisWorkout - previousMaxReps) / Double(previousMaxReps) * 100 * 0.5
+                prDetails.append(PRDetail(
+                    exerciseName: entry.exerciseName,
+                    weightDelta: 0,
+                    repsDelta: bestRepsThisWorkout - previousMaxReps,
+                    isWeightPR: false,
+                    impressivenessScore: score
+                ))
+                // The feed's "VS LAST" column shows this raw kg/rep gain, not a %.
+                repsDeltas[entry.id] = bestRepsThisWorkout - previousMaxReps
             }
-
-            // Check for PRs and compute improvement score (Epley 1RM comparison)
-            if let exercise = exerciseLog.exercise {
-                let allPreviousSets = exercise.logs
-                    .filter { $0.id != exerciseLog.id }
-                    .flatMap(\.sets)
-                let previousBestWeight = allPreviousSets.map(\.weight).max() ?? 0
-                let bestRepsThisWorkout = completedSets.map { Int($0.reps) ?? 0 }.max() ?? 0
-                let previousMaxReps = allPreviousSets.filter { $0.weight <= bestWeight + 0.01 }.map(\.reps).max() ?? 0
-
-                func epley(_ w: Double, _ r: Int) -> Double { w > 0 ? w * (1 + Double(r) / 30) : Double(r) }
-                let current1RM = completedSets.map { epley(Double($0.weight) ?? 0, Int($0.reps) ?? 0) }.max() ?? 0
-                let previous1RM = allPreviousSets.map { epley($0.weight, $0.reps) }.max() ?? 0
-                let oneRMDelta = current1RM - previous1RM
-
-                if bestWeight > previousBestWeight && previousBestWeight > 0 {
-                    prCount += 1
-                    let score = previousBestWeight > 0 ? (bestWeight - previousBestWeight) / previousBestWeight * 100 : 0
-                    prDetails.append(PRDetail(
-                        exerciseName: entry.exerciseName,
-                        weightDelta: bestWeight - previousBestWeight,
-                        repsDelta: 0,
-                        isWeightPR: true,
-                        impressivenessScore: score
-                    ))
-                } else if bestRepsThisWorkout > previousMaxReps && previousMaxReps > 0 {
-                    prCount += 1
-                    let score = previousMaxReps > 0 ? Double(bestRepsThisWorkout - previousMaxReps) / Double(previousMaxReps) * 100 * 0.5 : 0
-                    prDetails.append(PRDetail(
-                        exerciseName: entry.exerciseName,
-                        weightDelta: 0,
-                        repsDelta: bestRepsThisWorkout - previousMaxReps,
-                        isWeightPR: false,
-                        impressivenessScore: score
-                    ))
-                }
-                if bestWeight >= previousBestWeight && previousBestWeight > 0 {
-                    improvedCount += 1
-                }
-                if previous1RM > 0 {
-                    improvementScores[entry.id] = max(0, oneRMDelta / previous1RM * 100)
-                }
-                // Same "what actually got better" comparison as the PR check above, but kept
-                // even when it isn't a PR (e.g. matched last time's weight but added reps at
-                // it) — the feed's "VS LAST" column shows this raw kg/rep gain, not a %.
-                if bestWeight > previousBestWeight && previousBestWeight > 0 {
-                    weightDeltas[entry.id] = bestWeight - previousBestWeight
-                } else if bestRepsThisWorkout > previousMaxReps && previousMaxReps > 0 {
-                    repsDeltas[entry.id] = bestRepsThisWorkout - previousMaxReps
-                }
+            if previous1RM > 0 {
+                // "Improved" means a better estimated 1RM than last time, not merely matching it.
+                if current1RM > previous1RM + 0.01 { improvedCount += 1 }
+                improvementScores[entry.id] = max(0, (current1RM - previous1RM) / previous1RM * 100)
             }
         }
 
         // Calorie estimate using CalorieEstimationService
-        let totalSets = exerciseEntries.flatMap(\.sets).filter(\.isCompleted).count
-        var compoundSets = 0
-        var isolationSets = 0
-        for entry in exerciseEntries {
-            let completedCount = entry.sets.filter(\.isCompleted).count
-            if let exercise = exerciseById[entry.exerciseId], exercise.movementPattern.isCompound {
-                compoundSets += completedCount
-            } else {
-                isolationSets += completedCount
-            }
-        }
         let userWeight = workout.user?.weight ?? 0
         let durationMinutes = workout.duration / 60.0
         let formula = CalorieFormula(rawValue: UserDefaults.standard.string(forKey: "calorieFormula") ?? "") ?? .basic
         workout.calorieBurnEstimate = CalorieEstimationService.estimate(
             formula: formula,
-            totalSets: totalSets,
+            totalSets: totalWorkingSets,
             compoundSets: compoundSets,
             isolationSets: isolationSets,
             bodyWeightKg: userWeight,
@@ -358,17 +326,17 @@ class WorkoutViewModel {
 
         let feedExercises: [FeedExercise] = exerciseEntries.compactMap { entry in
             let completed = entry.sets.filter(\.isCompleted)
-            guard !completed.isEmpty else { return nil }
+            guard completed.contains(where: { $0.setType != .warmup }) else { return nil }
             let exercise = exerciseById[entry.exerciseId]
             return FeedExercise(
                 id: entry.id.uuidString,
                 name: entry.exerciseName,
                 sets: completed.map { s in
                     FeedSetLog(
-                        weight: Double(s.weight) ?? 0,
-                        reps: Int(s.reps) ?? 0,
-                        duration: Int(s.duration) ?? 0,
-                        distance: Double(s.distance) ?? 0,
+                        weight: parseDecimal(s.weight) ?? 0,
+                        reps: parseWholeNumber(s.reps) ?? 0,
+                        duration: Int(parseDecimal(s.duration) ?? 0),
+                        distance: parseDecimal(s.distance) ?? 0,
                         setType: s.setType.rawValue,
                         side: s.side == .both ? nil : s.side.rawValue
                     )
@@ -389,45 +357,37 @@ class WorkoutViewModel {
         completionData = WorkoutCompletionData(
             duration: workout.duration,
             calories: workout.calorieBurnEstimate,
-            exerciseCount: exerciseEntries.filter { !$0.sets.filter(\.isCompleted).isEmpty }.count,
-            totalSets: totalSets,
+            exerciseCount: countedExercises,
+            totalSets: totalWorkingSets,
             prCount: prCount,
             improvedCount: improvedCount,
-            totalExercises: exerciseEntries.count,
+            totalExercises: countedExercises,
             streakCount: streakCount,
             prDetails: prDetails.sorted { $0.impressivenessScore > $1.impressivenessScore },
-            musclesWorked: collectMusclesWorked(modelContext: modelContext),
+            musclesWorked: collectMusclesWorked(exerciseById: exerciseById),
             exercises: feedExercises,
-            workoutName: workout.template?.name
+            workoutName: workout.template?.name,
+            workoutId: workout.id
         )
 
-        // Post to social feed (fire-and-forget) if auto-share is enabled
-        let autoShare = UserDefaults.standard.object(forKey: "autoShareToFeed") as? Bool ?? true
-        if autoShare, let data = completionData, let user = workout.user {
-            let feedItem = WorkoutFeedItem(
-                userId: Auth.auth().currentUser?.uid ?? "",
-                username: user.name,
-                templateName: workout.template?.name,
-                exerciseCount: data.exerciseCount,
-                durationSeconds: Int(workout.duration),
-                caloriesBurned: Int(data.calories),
-                musclesWorked: data.musclesWorked.map(\.displayName),
-                prCount: data.prCount,
-                improvedCount: data.improvedCount,
-                totalExercises: data.totalExercises,
-                date: workout.date,
-                exercises: data.exercises
-            )
-            Task {
-                try? await FirestoreService().shareWorkoutToFeed(feedItem)
-            }
-        }
+        // Posting to the feed is NOT done here: the completion composer owns that decision
+        // (Post / Don't post / auto-share), so a workout is posted at most once.
 
         // Update widget data
         WidgetDataService.updateWidgetData(modelContext: modelContext)
 
         isActive = false
         showCompletionSummary = true
+    }
+
+    /// Epley estimated 1RM; reps-only sets fall back to the rep count.
+    static func epley(_ weight: Double, _ reps: Int) -> Double {
+        weight > 0 ? weight * (1 + Double(reps) / 30) : Double(reps)
+    }
+
+    static func exerciseLookup(_ modelContext: ModelContext) -> [UUID: Exercise] {
+        Dictionary(((try? modelContext.fetch(FetchDescriptor<Exercise>())) ?? []).map { ($0.id, $0) },
+                   uniquingKeysWith: { first, _ in first })
     }
 
     func cancelWorkout(modelContext: ModelContext) {
@@ -441,14 +401,8 @@ class WorkoutViewModel {
         reset()
     }
 
-    func saveDraft() {
-        guard let workout else { return }
-        workout.duration = TimeInterval(elapsedSeconds)
-        workout.notes = workoutNotes
-        workout.updatedAt = Date()
-    }
-
     func reset() {
+        removeLiveActivityObservers()
         workout = nil
         exerciseEntries = []
         workoutNotes = ""
@@ -457,6 +411,8 @@ class WorkoutViewModel {
         startTime = nil
         completionData = nil
         showCompletionSummary = false
+        liveModelContext = nil
+        lastTimeCache = [:]
     }
 
 #if DEBUG
@@ -470,14 +426,8 @@ class WorkoutViewModel {
 
     func smartWeightSuggestion(for exerciseId: UUID, setIndex: Int, modelContext: ModelContext) -> String? {
         // Look at last 3 sessions, if weight increased consistently, suggest next increment
-        let descriptor = FetchDescriptor<ExerciseLog>(
-            predicate: #Predicate<ExerciseLog> { log in
-                log.exercise?.id == exerciseId
-            },
-            sortBy: [SortDescriptor(\ExerciseLog.createdAt, order: .reverse)]
-        )
-        guard let recentLogs = try? modelContext.fetch(descriptor),
-              recentLogs.count >= 2 else { return nil }
+        let recentLogs = modelContext.finalLogs(forExercise: exerciseId)
+        guard recentLogs.count >= 2 else { return nil }
 
         let lastWeights = recentLogs.prefix(3).compactMap { log -> Double? in
             let sorted = log.sets.sorted { $0.order < $1.order }
@@ -509,23 +459,14 @@ class WorkoutViewModel {
 
         let entry = exerciseEntries[exerciseIndex]
         let set = entry.sets[setIndex]
-        let weight = Double(set.weight) ?? 0
-        let reps = Int(set.reps) ?? 0
+        guard set.setType != .warmup else { return }
+        let weight = parseDecimal(set.weight) ?? 0
+        let reps = parseWholeNumber(set.reps) ?? 0
 
         guard weight > 0 || reps > 0 else { return }
 
-        let exId = entry.exerciseId
-        let descriptor = FetchDescriptor<ExerciseLog>(
-            predicate: #Predicate<ExerciseLog> { log in
-                log.exercise?.id == exId
-            },
-            sortBy: [SortDescriptor(\ExerciseLog.createdAt, order: .reverse)]
-        )
-
-        guard let previousLogs = try? modelContext.fetch(descriptor),
-              !previousLogs.isEmpty else { return }
-
-        let allPreviousSets = previousLogs.flatMap(\.sets)
+        let previousLogs = modelContext.finalLogs(forExercise: entry.exerciseId)
+        let allPreviousSets = previousLogs.flatMap(\.workingSets)
         guard !allPreviousSets.isEmpty else { return }
 
         // Weight PR
@@ -546,66 +487,29 @@ class WorkoutViewModel {
 
     // MARK: - Smart Prediction
 
+    /// Next workout name. Pattern-detected names are only used when they match a real template;
+    /// otherwise the split's next day (resolved to a template when possible) is used.
     func predictNextWorkout(user: User, modelContext: ModelContext) -> String? {
         let descriptor = FetchDescriptor<Workout>(
             predicate: #Predicate<Workout> { !$0.isDraft },
             sortBy: [SortDescriptor(\Workout.date, order: .reverse)]
         )
-        if let recent = try? modelContext.fetch(descriptor), !recent.isEmpty {
-            let names = recent.prefix(14).compactMap { $0.template?.name }
-            if let detected = detectNextByPattern(from: names) {
-                return detected
-            }
-        }
-
-        // Fall back to split schedule (no history)
-        guard let split = user.selectedSplit else { return nil }
-        let days = split.days.sorted(by: { $0.dayOfWeek < $1.dayOfWeek })
-        guard !days.isEmpty else { return split.type.displayName }
-        return days.first?.label
-    }
-
-    /// Frequency-based pattern detection: builds a map of "what workout
-    /// most often followed each workout" from history, then returns
-    /// the most common successor of the last session done.
-    /// Works for PPL, U/L, Full Body every-other-day, Bro splits, etc.
-    /// — no day-of-week assumptions.
-    private func detectNextByPattern(from names: [String]) -> String? {
-        guard names.count >= 2, let last = names.first else { return nil }
-        let lastKey = last.lowercased()
-
-        // Build frequency map: predecessor (lowercased) → [successor (actual case): count]
-        // names is newest-first; names[i] came AFTER names[i+1] in real time
-        var followMap: [String: [String: Int]] = [:]
-        for i in 1..<names.count {
-            let predecessor = names[i].lowercased()
-            let successor   = names[i - 1]          // keep actual casing
-            followMap[predecessor, default: [:]][successor, default: 0] += 1
-        }
-
-        // If we have a clear winner successor for the last workout, return it
-        if let candidates = followMap[lastKey], !candidates.isEmpty {
-            let best = candidates.max(by: { $0.value < $1.value })!
-            // Only trust it if seen at least once (or it's the only option)
-            return best.key
-        }
-
-        // Fuzzy keyword fallback for named splits
-        let lower = lastKey
-        if lower.contains("push") { return names.first(where: { $0.lowercased().contains("pull") }) ?? "Pull Day" }
-        if lower.contains("pull") { return names.first(where: { $0.lowercased().contains("leg") })  ?? "Leg Day" }
-        if lower.contains("leg")  { return names.first(where: { $0.lowercased().contains("push") }) ?? "Push Day" }
-        if lower.contains("upper") { return names.first(where: { $0.lowercased().contains("lower") }) ?? "Lower" }
-        if lower.contains("lower") { return names.first(where: { $0.lowercased().contains("upper") }) ?? "Upper" }
-        if lower.contains("full")  { return last }
-
-        return nil
+        let recent = (try? modelContext.fetch(descriptor)) ?? []
+        let history = recent.prefix(14).compactMap { $0.template?.name }
+        let templateNames = ((try? modelContext.fetch(FetchDescriptor<WorkoutTemplate>())) ?? []).map(\.name)
+        return WorkoutPredictor.predict(
+            history: Array(history),
+            templateNames: templateNames,
+            split: user.selectedSplit,
+            todayWeekday: Calendar.current.component(.weekday, from: Date())
+        )
     }
 
     // MARK: - Duration Timer
 
     private func startDurationTimer() {
-        let timerInstance = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+        durationTimer?.invalidate()
+        let timerInstance = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, let start = self.startTime else { return }
                 self.elapsedSeconds = Int(Date().timeIntervalSince(start))
@@ -613,6 +517,7 @@ class WorkoutViewModel {
                 Task { await self.liveActivity.updateLiveActivity(state) }
             }
         }
+        RunLoop.main.add(timerInstance, forMode: .common)
         durationTimer = timerInstance
     }
 
@@ -645,22 +550,15 @@ class WorkoutViewModel {
     private func lastTime(for entry: ExerciseEntry) -> (line: String, date: String) {
         if let cached = lastTimeCache[entry.exerciseId] { return cached }
         var result = (line: "", date: "")
-        if let ctx = liveModelContext {
-            let id = entry.exerciseId
-            let descriptor = FetchDescriptor<ExerciseLog>(
-                predicate: #Predicate<ExerciseLog> { $0.exercise?.id == id },
-                sortBy: [SortDescriptor(\ExerciseLog.createdAt, order: .reverse)]
-            )
-            if let log = try? ctx.fetch(descriptor).first {
-                let sets = log.sets.sorted { $0.order < $1.order }.prefix(4)
-                result.line = sets.map { String(format: "%g", $0.weight) + " × " + String($0.reps) }.joined(separator: " · ")
-                var parts: [String] = []
-                if let name = log.workout?.template?.name { parts.append(name.uppercased()) }
-                if let d = log.workout?.duration, d > 0 {
-                    parts.append(String(format: "%d:%02d", Int(d) / 60, Int(d) % 60))
-                }
-                result.date = parts.joined(separator: " · ")
+        if let ctx = liveModelContext, let log = ctx.finalLogs(forExercise: entry.exerciseId, limit: 1).first {
+            let sets = log.workingSets.sorted { $0.order < $1.order }.prefix(4)
+            result.line = sets.map { String(format: "%g", $0.weight) + " × " + String($0.reps) }.joined(separator: " · ")
+            var parts: [String] = []
+            if let name = log.workout?.template?.name { parts.append(name.uppercased()) }
+            if let d = log.workout?.duration, d > 0 {
+                parts.append(String(format: "%d:%02d", Int(d) / 60, Int(d) % 60))
             }
+            result.date = parts.joined(separator: " · ")
         }
         lastTimeCache[entry.exerciseId] = result
         return result
@@ -670,20 +568,12 @@ class WorkoutViewModel {
         let completed = exerciseEntries.flatMap(\.sets).filter(\.isCompleted).count
         let total = exerciseEntries.flatMap(\.sets).count
 
-        // Stable rest end date (avoid sub-second jitter so unchanged states dedupe)
+        // The rest timer is end-date based, so the Live Activity gets its exact (stable) end date.
         var restStart: Date?
         var restEnd: Date?
-        if restTimer.isRunning {
-            let candidate = Date().addingTimeInterval(TimeInterval(restTimer.remainingSeconds))
-            if let cached = cachedRestEnd, abs(cached.timeIntervalSince(candidate)) < 1.5 {
-                restEnd = cached
-            } else {
-                restEnd = candidate
-                cachedRestEnd = candidate
-            }
-            restStart = restEnd!.addingTimeInterval(-TimeInterval(max(restTimer.totalSeconds, restTimer.remainingSeconds)))
-        } else {
-            cachedRestEnd = nil
+        if restTimer.isRunning, let end = restTimer.endDate {
+            restEnd = end
+            restStart = end.addingTimeInterval(-TimeInterval(max(restTimer.totalSeconds, restTimer.remainingSeconds)))
         }
 
         var state = WorkoutActivityAttributes.ContentState(
@@ -712,7 +602,7 @@ class WorkoutViewModel {
         return state
     }
 
-    private func installLiveActivityObservers() {
+    func installLiveActivityObservers() {
         guard liveObservers.isEmpty else { return }
         let nc = NotificationCenter.default
         liveObservers.append(nc.addObserver(forName: .pumpLiveActivityAdjustRest, object: nil, queue: .main) { [weak self] note in
@@ -727,7 +617,7 @@ class WorkoutViewModel {
         })
     }
 
-    private func removeLiveActivityObservers() {
+    func removeLiveActivityObservers() {
         liveObservers.forEach(NotificationCenter.default.removeObserver)
         liveObservers = []
     }
@@ -743,16 +633,18 @@ class WorkoutViewModel {
         let planned = plannedValues(exercise: pos.exercise, set: pos.set)
         if exerciseEntries[pos.exercise].sets[pos.set].weight.isEmpty { exerciseEntries[pos.exercise].sets[pos.set].weight = planned.weight }
         if exerciseEntries[pos.exercise].sets[pos.set].reps.isEmpty { exerciseEntries[pos.exercise].sets[pos.set].reps = planned.reps }
-        logSet(exerciseIndex: pos.exercise, setIndex: pos.set, isCompound: true)
+        logSet(exerciseIndex: pos.exercise, setIndex: pos.set)
         pushLiveActivityNow()
     }
 
-    private func stopDurationTimer() {
+    func stopDurationTimer() {
         removeLiveActivityObservers()
         durationTimer?.invalidate()
         durationTimer = nil
         Task { await liveActivity.endLiveActivity() }
     }
+
+    func beginDurationTimer() { startDurationTimer() }
 
     var formattedDuration: String {
         let h = elapsedSeconds / 3600
@@ -766,15 +658,12 @@ class WorkoutViewModel {
 
     // MARK: - Helpers
 
-    private func collectMusclesWorked(modelContext: ModelContext) -> Set<MuscleGroup> {
+    private func collectMusclesWorked(exerciseById: [UUID: Exercise]) -> Set<MuscleGroup> {
         var muscles = Set<MuscleGroup>()
-        for entry in exerciseEntries {
-            let id = entry.exerciseId
-            let desc = FetchDescriptor<Exercise>(predicate: #Predicate { $0.id == id })
-            if let exercise = try? modelContext.fetch(desc).first {
-                muscles.formUnion(exercise.primaryMuscleGroups)
-                muscles.formUnion(exercise.secondaryMuscleGroups)
-            }
+        for entry in exerciseEntries where entry.sets.contains(where: { $0.isCompleted && $0.setType != .warmup }) {
+            guard let exercise = exerciseById[entry.exerciseId] else { continue }
+            muscles.formUnion(exercise.primaryMuscleGroups)
+            muscles.formUnion(exercise.secondaryMuscleGroups)
         }
         return muscles
     }
@@ -789,8 +678,23 @@ struct ExerciseEntry: Identifiable {
     var exerciseType: ExerciseType = .weighted
     var isUnilateral: Bool = false
     var equipmentType: EquipmentType = .barbell
+    /// Compound lifts rest longer than isolation (global compound/isolation rest settings).
+    var isCompound: Bool = true
+    /// Template-specified rest for this exercise, if any.
+    var restSeconds: Int?
     var sets: [SetEntry]
     var notes: String = ""
+    /// The persisted `ExerciseLog` this entry maps to (draft persistence / resume).
+    var logId: UUID?
+
+    /// Copies the catalogue traits (type, unilateral, equipment, compound) from `exercise`.
+    mutating func apply(_ exercise: Exercise?) {
+        guard let exercise else { return }
+        exerciseType = exercise.exerciseType
+        isUnilateral = exercise.isUnilateral
+        equipmentType = exercise.equipmentType
+        isCompound = exercise.movementPattern.isCompound
+    }
 }
 
 struct SetEntry: Identifiable {
@@ -807,6 +711,8 @@ struct SetEntry: Identifiable {
     var isPR: Bool = false
     var targetReps: Int?
     var targetRIR: Int?
+    /// The persisted `SetLog` this completed set maps to (draft persistence / resume).
+    var logId: UUID?
 
     init(order: Int, weight: String = "", reps: String = "", rir: String = "",
          duration: String = "", distance: String = "",
@@ -846,6 +752,8 @@ struct WorkoutCompletionData {
     let musclesWorked: Set<MuscleGroup>
     let exercises: [FeedExercise]
     let workoutName: String?
+    /// The finished `Workout`'s id — also the idempotent feed-post id, so a workout posts at most once.
+    var workoutId: UUID?
 
     var formattedDuration: String {
         let h = Int(duration) / 3600

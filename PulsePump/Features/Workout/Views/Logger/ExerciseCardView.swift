@@ -53,7 +53,7 @@ struct ExerciseCardView: View {
                 ForEach(Array(entry.sets.enumerated()), id: \.element.id) { setIdx, set in
                     let ghost = viewModel.ghostText(for: entry.exerciseId, setIndex: setIdx, modelContext: modelContext)
                     let weightStr = set.weight.isEmpty ? (ghost?.weight ?? "") : set.weight
-                    let weightVal = Double(weightStr) ?? 0
+                    let weightVal = parseDecimal(weightStr) ?? 0
 
                     VStack(spacing: 0) {
                         SwipeToDeleteRow(
@@ -181,15 +181,11 @@ struct ExerciseCardView: View {
     }
 
     private func loadAnalytics() {
-        let exId = entry.exerciseId
-        let descriptor = FetchDescriptor<ExerciseLog>(
-            predicate: #Predicate<ExerciseLog> { log in log.exercise?.id == exId },
-            sortBy: [SortDescriptor(\ExerciseLog.createdAt, order: .reverse)]
-        )
-        guard let logs = try? modelContext.fetch(descriptor), !logs.isEmpty else { return }
+        let logs = modelContext.finalLogs(forExercise: entry.exerciseId)
+        guard !logs.isEmpty else { return }
 
         // All-time best set by estimated 1RM (Epley formula)
-        let allSets = logs.flatMap(\.sets).filter { $0.weight > 0 && $0.reps > 0 }
+        let allSets = logs.flatMap(\.workingSets).filter { $0.weight > 0 && $0.reps > 0 }
         guard let prSet = allSets.max(by: {
             ($0.weight * (1 + Double($0.reps) / 30)) < ($1.weight * (1 + Double($1.reps) / 30))
         }) else { return }
@@ -198,8 +194,8 @@ struct ExerciseCardView: View {
         // Delta: most recent session best weight vs session before
         var deltaKg: Double? = nil
         if logs.count >= 2 {
-            let lastBest = logs[0].sets.map(\.weight).max() ?? 0
-            let prevBest = logs[1].sets.map(\.weight).max() ?? 0
+            let lastBest = logs[0].workingSets.map(\.weight).max() ?? 0
+            let prevBest = logs[1].workingSets.map(\.weight).max() ?? 0
             if prevBest > 0 { deltaKg = lastBest - prevBest }
         }
 
@@ -336,8 +332,13 @@ struct ExerciseCardView: View {
             isActive: setIdx == nextUncompletedSetIdx,
             onSetTypeTap: { onSetTypeTap(setIdx) },
             onLog: {
+                // Save ghost values first (empty fields showing placeholders), then PR-check them.
+                viewModel.applyGhostValues(exerciseIndex: exerciseIndex, setIndex: setIdx, modelContext: modelContext)
                 viewModel.checkPR(exerciseIndex: exerciseIndex, setIndex: setIdx, modelContext: modelContext)
-                viewModel.logSet(exerciseIndex: exerciseIndex, setIndex: setIdx, isCompound: true)
+                viewModel.logSet(exerciseIndex: exerciseIndex, setIndex: setIdx, modelContext: modelContext)
+            },
+            onUnlog: {
+                viewModel.unlogSet(exerciseIndex: exerciseIndex, setIndex: setIdx)
             },
             onDelete: {}
         )
