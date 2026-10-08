@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pulse Pump — Font Comparison</title>
+<!-- IBM Plex Sans + Mono -->
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Serif&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet">
+<!-- GT America Trial + Mono -->
+<link href="https://fonts.cdnfonts.com/css/gt-america-trial" rel="stylesheet">
+<!-- MD Nichrome Test -->
+<link href="https://fonts.cdnfonts.com/css/md-nichrome-test" rel="stylesheet">
+<!-- Bebas Neue + DM Mono (current) -->
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #f0ece4; min-height: 100vh; }
+  .canvas { padding: 60px 48px 120px; max-width: 1800px; margin: 0 auto; }
+  h1 { font-family: 'IBM Plex Sans', sans-serif; font-weight: 300; font-size: 48px; letter-spacing: -1px; color: #1a1a1a; margin-bottom: 8px; }
+  .intro { font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; color: #888; margin-bottom: 56px; line-height: 1.5; max-width: 700px; }
+  .row { display: flex; gap: 32px; margin-bottom: 56px; flex-wrap: wrap; }
+  .col { flex: 1; min-width: 340px; background: #fbf8f2; border-radius: 16px; border: 1px solid rgba(0,0,0,0.08); overflow: hidden; }
+  .col.dark { background: #1a1816; border-color: rgba(255,255,255,0.06); }
+  .col-header { padding: 14px 20px 10px; border-bottom: 1px solid rgba(0,0,0,0.07); }
+  .col.dark .col-header { border-color: rgba(255,255,255,0.07); }
+  .col-tag { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #c8553d; font-weight: 700; margin-bottom: 4px; }
+  .col-name { font-family: 'IBM Plex Sans', sans-serif; font-size: 15px; font-weight: 600; color: #1a1a1a; }
+  .col.dark .col-name { color: #ece5d6; }
+  .col-sub { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: rgba(0,0,0,0.4); letter-spacing: 0.5px; margin-top: 2px; }
+  .col.dark .col-sub { color: rgba(255,255,255,0.3); }
+  .section-rule { height: 1px; background: rgba(0,0,0,0.06); margin: 0 20px; }
+  .col.dark .section-rule { background: rgba(255,255,255,0.06); }
+  .specimen { padding: 20px; }
+  .section-label { font-family: 'DM Mono', monospace; font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(0,0,0,0.3); margin-bottom: 10px; }
+  .col.dark .section-label { color: rgba(255,255,255,0.25); }
+  .spacer { height: 16px; }
+  /* ticker */
+  .ticker { background: #1a1816; height: 26px; display: flex; align-items: center; overflow: hidden; padding: 0 14px; font-size: 10px; font-weight: 500; letter-spacing: 0.5px; color: #ece5d6; gap: 16px; flex-shrink: 0; }
+  .ticker .up { color: #7fcf9f; }
+  .ticker .dn { color: #ff8b75; }
+  .ticker .sep { color: rgba(255,255,255,0.2); }
+</style>
+</head>
+<body>
+<div class="canvas">
+  <h1>Font Pairings</h1>
+  <p class="intro">Four directions tested at real app sizes: display CTAs, ticker labels, workout names, body copy, onboarding headings. Light and dark for each. Numbers always DM Mono (tabular) unless the pairing replaces it.</p>
+
+  <!-- ── PAIRING 1: GT America + GT America Mono ── -->
+  <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:#c8553d;font-weight:700;margin-bottom:12px;text-transform:uppercase;">A · GT America + GT America Mono Trial</div>
+  <div style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:#888;margin-bottom:20px;">The sibling pair from Grilli Type. GT America for all text/display. GT America Mono for labels, ticker, data. Feels grounded, editorial, American.</div>
+  <div class="row">
+    <!-- Light -->
+    <div class="col">
+      <div class="col-header">
+        <div class="col-tag">A1 · Light mode</div>
+        <div class="col-name">GT America · GT America Mono</div>
+        <div class="col-sub">DISPLAY: GT AMERICA BOLD · LABELS: GT AMERICA MONO · BODY: GT AMERICA REGULAR</div>
+      </div>
+      <div class="ticker">
+        <span style="color:rgba(236,229,214,0.5);font-family:'GT America Mono Trial',monospace;letter-spacing:1px">CHEST</span>
+        <span class="up" style="font-family:'GT America Mono Trial',monospace">▲ +12.5%</span>
+        <span class="sep">·</span>
+        <span style="color:rgba(236,229,214,0.5);font-family:'GT America Mono Trial',monospace;letter-spacing:1px">BACK</span>
+        <span class="up" style="font-family:'GT America Mono Trial',monospace">▲ +11.1%</span>
+        <span class="sep">·</span>
+        <span style="color:rgba(236,229,214,0.5);font-family:'GT America Mono Trial',monospace;letter-spacing:1px">SHLDR</span>
+        <span class="dn" style="font-family:'GT America Mono Trial',monospace">▼ -14.3%</span>
+      </div>
+      <div class="specimen">
+        <div class="section-label">WORKOUT NAME · 22PX BOLD</div>
+        <div style="font-family:'GT America Trial',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.3px;color:#1f1c19;margin-bottom:14px;">PUSH DAY</div>
+
+        <div class="section-label">HERO STAT · 64PX BOLD</div>
+        <div style="font-family:'GT America Mono Trial',monospace;font-weight:700;font-size:64px;color:#1f1c19;line-height:0.85;letter-spacing:-1px;margin-bottom:6px;">94</div>
+        <div style="font-family:'GT America Mono Trial',monospace;font-size:10px;color:rgba(31,28,25,0.5);letter-spacing:1.5px;margin-bottom:16px;">SETS THIS WEEK</div>
+
+        <div class="section-rule"></div>
+        <div class="spacer"></div>
+
+        <div class="section-label">SET ROW · TABULAR DATA</div>
+        <div style="display:grid;grid-template-columns:36px 24px 1fr 1fr 40px;gap:0;border:1px solid rgba(0,0,0,0.08);border-radius:8px;overflow:hidden;margin-bottom:16px;">
+          <div style="padding:8px 6px;background:#ece7d8;font-family:'GT America Mono Trial',monospace;font-size:7px;font-weight:700;color:#a17418;letter-spacing:0.5px;display:flex;align-items:center;justify-content:center;">WU</div>
+          <div style="padding:8px 4px;font-family:'GT America Mono Trial',monospace;font-size:10px;font-weight:700;color:rgba(31,28,25,0.5);display:flex;align-items:center;justify-content:center;">01</div>
+          <div style="padding:8px;font-family:'GT America Mono Trial',monospace;font-size:18px;font-weight:500;color:#1f1c19;display:flex;align-items:center;justify-content:center;">60</div>
+          <div style="padding:8px;font-family:'GT America Mono Trial',monospace;font-size:18px;font-weight:500;color:#1f1c19;display:flex;align-items:center;justify-content:center;">8</div>
+          <div style="padding:8px;display:flex;align-items:center;justify-content:center;color:#1f8f5a;font-weight:700;font-size:13px;">✓</div>
+        </div>
+
+        <div class="section-label">ONBOARDING HEADING · 30PX</div>
+        <div style="font-family:'GT America Trial',sans-serif;font-weight:300;font-size:30px;color:#1f1c19;letter-spacing:-0.5px;line-height:1.1;margin-bottom:12px;">What should<br>we call you?</div>
+
+        <div class="section-label">BODY COPY · 14PX</div>
+        <div style="font-family:'GT America Trial',sans-serif;font-size:14px;font-weight:400;color:rgba(31,28,25,0.6);line-height:1.5;margin-bottom:16px;">Used to calibrate calorie estimates. Not shown publicly.</div>
+
+        <div class="section-label">PRIMARY CTA</div>
+        <div style="height:52px;border-radius:10px;background:#c8553d;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'GT America Trial',sans-serif;font-weight:700;font-size:16px;letter-spacing:2px;color:#fff;text-transform:uppercase;">START WORKOUT</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dark -->
+    <div class="col dark">
+      <div class="col-header">
+        <div class="col-tag">A2 · Dark mode</div>
+        <div class="col-name">GT America · GT America Mono</div>
+      </div>
+      <div class="ticker">
+        <span style="color:rgba(236,229,214,0.5);font-family:'GT America Mono Trial',monospace;letter-spacing:1px">CHEST</span>
+        <span class="up" style="font-family:'GT America Mono Trial',monospace">▲ +12.5%</span>
+        <span class="sep">·</span>
+        <span style="color:rgba(236,229,214,0.5);font-family:'GT America Mono Trial',monospace;letter-spacing:1px">STREAK</span>
+        <span style="font-family:'GT America Mono Trial',monospace;color:rgba(236,229,214,0.6)">13D</span>
+        <span class="sep">·</span>
+        <span style="color:rgba(236,229,214,0.5);font-family:'GT America Mono Trial',monospace;letter-spacing:1px">VOL</span>
+        <span class="up" style="font-family:'GT America Mono Trial',monospace">▲ 8.4%</span>
+      </div>
+      <div class="specimen">
+        <div class="section-label" style="color:rgba(255,255,255,0.25)">WORKOUT NAME · 22PX BOLD</div>
+        <div style="font-family:'GT America Trial',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.3px;color:#ece5d6;margin-bottom:14px;">PUSH DAY</div>
+
+        <div class="section-label" style="color:rgba(255,255,255,0.25)">HERO STAT · 64PX</div>
+        <div style="font-family:'GT America Mono Trial',monospace;font-weight:700;font-size:64px;color:#ece5d6;line-height:0.85;letter-spacing:-1px;margin-bottom:6px;">94</div>
+        <div style="font-family:'GT America Mono Trial',monospace;font-size:10px;color:rgba(236,229,214,0.45);letter-spacing:1.5px;margin-bottom:16px;">SETS THIS WEEK</div>
+
+        <div style="height:1px;background:rgba(255,255,255,0.07);margin-bottom:16px;"></div>
+
+        <div class="section-label" style="color:rgba(255,255,255,0.25)">ONBOARDING HEADING</div>
+        <div style="font-family:'GT America Trial',sans-serif;font-weight:300;font-size:30px;color:#ece5d6;letter-spacing:-0.5px;line-height:1.1;margin-bottom:12px;">What should<br>we call you?</div>
+
+        <div class="section-label" style="color:rgba(255,255,255,0.25)">BODY COPY</div>
+        <div style="font-family:'GT America Trial',sans-serif;font-size:14px;color:rgba(236,229,214,0.55);line-height:1.5;margin-bottom:16px;">Used to calibrate calorie estimates. Not shown publicly.</div>
+
+        <div style="height:52px;border-radius:10px;background:#dc7d4a;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'GT America Trial',sans-serif;font-weight:700;font-size:16px;letter-spacing:2px;color:#fff;text-transform:uppercase;">START WORKOUT</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAIRING 2: IBM Plex Sans + IBM Plex Mono ── -->
+  <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:#c8553d;font-weight:700;margin-bottom:12px;text-transform:uppercase;margin-top:16px;">B · IBM Plex Sans + IBM Plex Mono</div>
+  <div style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:#888;margin-bottom:20px;">The IBM sibling pair. Authoritative, slightly warmer than Helvetica, strong monospace tabular alignment. The most "tool-like" of the four — very credible for a data-dense app.</div>
+  <div class="row">
+    <div class="col">
+      <div class="col-header">
+        <div class="col-tag">B1 · Light mode</div>
+        <div class="col-name">IBM Plex Sans + IBM Plex Mono</div>
+        <div class="col-sub">DISPLAY: IBM PLEX SANS SEMIBOLD · LABELS: IBM PLEX MONO · BODY: IBM PLEX SANS</div>
+      </div>
+      <div class="ticker">
+        <span style="color:rgba(236,229,214,0.5);font-family:'IBM Plex Mono',monospace;letter-spacing:1px">CHEST</span>
+        <span class="up" style="font-family:'IBM Plex Mono',monospace">▲ +12.5%</span>
+        <span class="sep">·</span>
+        <span style="color:rgba(236,229,214,0.5);font-family:'IBM Plex Mono',monospace;letter-spacing:1px">BACK</span>
+        <span class="up" style="font-family:'IBM Plex Mono',monospace">▲ +11.1%</span>
+        <span class="sep">·</span>
+        <span style="color:rgba(236,229,214,0.5);font-family:'IBM Plex Mono',monospace;letter-spacing:1px">SHLDR</span>
+        <span class="dn" style="font-family:'IBM Plex Mono',monospace">▼ -14.3%</span>
+      </div>
+      <div class="specimen">
+        <div class="section-label">WORKOUT NAME</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:22px;letter-spacing:0.5px;color:#1f1c19;margin-bottom:14px;text-transform:uppercase;">Push Day</div>
+
+        <div class="section-label">HERO STAT</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:64px;color:#1f1c19;line-height:0.85;letter-spacing:-2px;margin-bottom:6px;">94</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(31,28,25,0.5);letter-spacing:1.5px;margin-bottom:16px;">SETS THIS WEEK</div>
+
+        <div class="section-rule"></div>
+        <div class="spacer"></div>
+
+        <div class="section-label">SET ROW</div>
+        <div style="display:grid;grid-template-columns:36px 24px 1fr 1fr 40px;gap:0;border:1px solid rgba(0,0,0,0.08);border-radius:8px;overflow:hidden;margin-bottom:16px;">
+          <div style="padding:8px 6px;background:#ece7d8;font-family:'IBM Plex Mono',monospace;font-size:7px;font-weight:600;color:#a17418;letter-spacing:0.5px;display:flex;align-items:center;justify-content:center;">WU</div>
+          <div style="padding:8px 4px;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:rgba(31,28,25,0.5);display:flex;align-items:center;justify-content:center;">01</div>
+          <div style="padding:8px;font-family:'IBM Plex Mono',monospace;font-size:18px;color:#1f1c19;display:flex;align-items:center;justify-content:center;">60</div>
+          <div style="padding:8px;font-family:'IBM Plex Mono',monospace;font-size:18px;color:#1f1c19;display:flex;align-items:center;justify-content:center;">8</div>
+          <div style="padding:8px;display:flex;align-items:center;justify-content:center;color:#1f8f5a;font-weight:700;font-size:13px;">✓</div>
+        </div>
+
+        <div class="section-label">ONBOARDING HEADING</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-weight:300;font-size:30px;color:#1f1c19;letter-spacing:-0.3px;line-height:1.1;margin-bottom:12px;">What should<br>we call you?</div>
+
+        <div class="section-label">BODY COPY</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:rgba(31,28,25,0.6);line-height:1.5;margin-bottom:16px;">Used to calibrate calorie estimates. Not shown publicly.</div>
+
+        <div style="height:52px;border-radius:10px;background:#c8553d;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:15px;letter-spacing:2px;color:#fff;text-transform:uppercase;">START WORKOUT</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col dark">
+      <div class="col-header">
+        <div class="col-tag">B2 · Dark mode</div>
+        <div class="col-name">IBM Plex Sans + IBM Plex Mono</div>
+      </div>
+      <div class="ticker">
+        <span style="color:rgba(236,229,214,0.5);font-family:'IBM Plex Mono',monospace;letter-spacing:1px">CHEST</span>
+        <span class="up" style="font-family:'IBM Plex Mono',monospace">▲ +12.5%</span>
+        <span class="sep">·</span>
+        <span style="color:rgba(236,229,214,0.5);font-family:'IBM Plex Mono',monospace;letter-spacing:1px">STREAK</span>
+        <span style="font-family:'IBM Plex Mono',monospace;color:rgba(236,229,214,0.6)">13D</span>
+      </div>
+      <div class="specimen">
+        <div class="section-label" style="color:rgba(255,255,255,0.25)">WORKOUT NAME</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:22px;letter-spacing:0.5px;color:#ece5d6;margin-bottom:14px;text-transform:uppercase;">Push Day</div>
+
+        <div class="section-label" style="color:rgba(255,255,255,0.25)">HERO STAT</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:64px;color:#ece5d6;line-height:0.85;letter-spacing:-2px;margin-bottom:6px;">94</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(236,229,214,0.45);letter-spacing:1.5px;margin-bottom:16px;">SETS THIS WEEK</div>
+
+        <div style="height:1px;background:rgba(255,255,255,0.07);margin-bottom:16px;"></div>
+
+        <div class="section-label" style="color:rgba(255,255,255,0.25)">ONBOARDING HEADING</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-weight:300;font-size:30px;color:#ece5d6;letter-spacing:-0.3px;line-height:1.1;margin-bottom:12px;">What should<br>we call you?</div>
+
+        <div class="section-label" style="color:rgba(255,255,255,0.25)">BODY COPY</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:rgba(236,229,214,0.55);line-height:1.5;margin-bottom:16px;">Used to calibrate calorie estimates. Not shown publicly.</div>
+
+        <div style="height:52px;border-radius:10px;background:#dc7d4a;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:15px;letter-spacing:2px;color:#fff;text-transform:uppercase;">START WORKOUT</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAIRING 3: Instrument Serif + IBM Plex Mono ── -->
+  <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:#c8553d;font-weight:700;margin-bottom:12px;text-transform:uppercase;margin-top:16px;">C · Instrument Serif (Insitu-like) + IBM Plex Mono</div>
+  <div style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:#888;margin-bottom:20px;">Insitu by Hoefler&Co isn't freely available, but Instrument Serif captures the same optical warmth — a slightly bracketed serif with editorial character. Used only for onboarding headings and display moments; IBM Plex Mono handles all data. The most "warm/human" of the four.</div>
+  <div class="row">
+    <div class="col">
+      <div class="col-header">
+        <div class="col-tag">C1 · Light mode</div>
+        <div class="col-name">Instrument Serif (Insitu-like) + IBM Plex Mono</div>
+        <div class="col-sub">DISPLAY HEADINGS: INSTRUMENT SERIF · LABELS + DATA: IBM PLEX MONO · BODY: IBM PLEX SANS</div>
+      </div>
+      <div class="ticker">
+        <span style="color:rgba(236,229,214,0.5);font-family:'IBM Plex Mono',monospace;letter-spacing:1px">CHEST</span>
+        <span class="up" style="font-family:'IBM Plex Mono',monospace">▲ +12.5%</span>
+        <span class="sep">·</span>
+        <span style="color:rgba(236,229,214,0.5);font-family:'IBM Plex Mono',monospace;letter-spacing:1px">VOL</span>
+        <span class="up" style="font-family:'IBM Plex Mono',monospace">▲ 8.4%</span>
+        <span class="sep">·</span>
+        <span style="color:rgba(236,229,214,0.5);font-family:'IBM Plex Mono',monospace;letter-spacing:1px">SHLDR</span>
+        <span class="dn" style="font-family:'IBM Plex Mono',monospace">▼ -14.3%</span>
+      </div>
+      <div class="specimen">
+        <div class="section-label">WORKOUT NAME (SANS FOR UI)</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:22px;letter-spacing:0.3px;color:#1f1c19;margin-bottom:14px;text-transform:uppercase;">Push Day</div>
+
+        <div class="section-label">HERO STAT</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:64px;color:#1f1c19;line-height:0.85;letter-spacing:-2px;margin-bottom:6px;">94</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(31,28,25,0.5);letter-spacing:1.5px;margin-bottom:16px;">SETS THIS WEEK</div>
+
+        <div class="section-rule"></div>
+        <div class="spacer"></div>
+
+        <div class="section-label">ONBOARDING HEADING — SERIF VOICE</div>
+        <div style="font-family:'Instrument Serif',serif;font-weight:400;font-size:32px;color:#1f1c19;letter-spacing:-0.3px;line-height:1.1;margin-bottom:12px;font-style:italic;">What should<br>we call you?</div>
+
+        <div class="section-label">BODY COPY</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:rgba(31,28,25,0.6);line-height:1.5;margin-bottom:16px;">Used to calibrate calorie estimates. Not shown publicly.</div>
+
+        <div style="height:52px;border-radius:10px;background:#c8553d;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:15px;letter-spacing:2px;color:#fff;text-transform:uppercase;">START WORKOUT</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col dark">
+      <div class="col-header">
+        <div class="col-tag">C2 · Dark mode</div>
+        <div class="col-name">Instrument Serif + IBM Plex Mono</div>
+      </div>
+      <div class="ticker">
+        <span style="color:rgba(236,229,214,0.5);font-family:'IBM Plex Mono',monospace;letter-spacing:1px">CHEST</span>
+        <span class="up" style="font-family:'IBM Plex Mono',monospace">▲ +12.5%</span>
+        <span class="sep">·</span>
+        <span style="color:rgba(236,229,214,0.5);font-family:'IBM Plex Mono',monospace;letter-spacing:1px">STREAK</span>
+        <span style="font-family:'IBM Plex Mono',monospace;color:rgba(236,229,214,0.6)">13D</span>
+      </div>
+      <div class="specimen">
+        <div class="section-label" style="color:rgba(255,255,255,0.25)">WORKOUT NAME</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:22px;letter-spacing:0.3px;color:#ece5d6;margin-bottom:14px;text-transform:uppercase;">Push Day</div>
+
+        <div class="section-label" style="color:rgba(255,255,255,0.25)">HERO STAT</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:64px;color:#ece5d6;line-height:0.85;letter-spacing:-2px;margin-bottom:6px;">94</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(236,229,214,0.45);letter-spacing:1.5px;margin-bottom:16px;">SETS THIS WEEK</div>
+
+        <div style="height:1px;background:rgba(255,255,255,0.07);margin-bottom:16px;"></div>
+
+        <div class="section-label" style="color:rgba(255,255,255,0.25)">ONBOARDING HEADING — SERIF VOICE</div>
+        <div style="font-family:'Instrument Serif',serif;font-weight:400;font-size:32px;color:#ece5d6;letter-spacing:-0.3px;line-height:1.1;margin-bottom:12px;font-style:italic;">What should<br>we call you?</div>
+
+        <div class="section-label" style="color:rgba(255,255,255,0.25)">BODY COPY</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:rgba(236,229,214,0.55);line-height:1.5;margin-bottom:16px;">Used to calibrate calorie estimates. Not shown publicly.</div>
+
+        <div style="height:52px;border-radius:10px;background:#dc7d4a;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:15px;letter-spacing:2px;color:#fff;text-transform:uppercase;">START WORKOUT</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAIRING 4: MD Nichrome + IBM Plex Mono ── -->
+  <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:#c8553d;font-weight:700;margin-bottom:12px;text-transform:uppercase;margin-top:16px;">D · MD Nichrome (Test) + IBM Plex Mono</div>
+  <div style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:#888;margin-bottom:20px;">MD Nichrome is a condensed display face from Mass-Driver, referencing 70s/80s sci-fi paperbacks. Extremely characterful — feels retro-futuristic, gritty, confident. Very different from the others. Best used for hero moments and CTAs, NOT body text.</div>
+  <div class="row">
+    <div class="col">
+      <div class="col-header">
+        <div class="col-tag">D1 · Light mode</div>
+        <div class="col-name">MD Nichrome Test + IBM Plex Mono</div>
+        <div class="col-sub">DISPLAY + CTAAS: MD NICHROME · LABELS + DATA: IBM PLEX MONO · BODY: IBM PLEX SANS</div>
+      </div>
+      <div class="ticker">
+        <span style="color:rgba(236,229,214,0.5);font-family:'IBM Plex Mono',monospace;letter-spacing:1px">CHEST</span>
+        <span class="up" style="font-family:'IBM Plex Mono',monospace">▲ +12.5%</span>
+        <span class="sep">·</span>
+        <span style="color:rgba(236,229,214,0.5);font-family:'IBM Plex Mono',monospace;letter-spacing:1px">BACK</span>
+        <span class="up" style="font-family:'IBM Plex Mono',monospace">▲ +11.1%</span>
+        <span class="sep">·</span>
+        <span style="color:rgba(236,229,214,0.5);font-family:'IBM Plex Mono',monospace;letter-spacing:1px">PR WATCH</span>
+        <span class="up" style="font-family:'IBM Plex Mono',monospace">▲ +1</span>
+      </div>
+      <div class="specimen">
+        <div class="section-label">WORKOUT NAME — NICHROME SHINES HERE</div>
+        <div style="font-family:'MD Nichrome Test',sans-serif;font-size:28px;letter-spacing:1px;color:#1f1c19;margin-bottom:14px;text-transform:uppercase;">PUSH DAY</div>
+
+        <div class="section-label">HERO STAT</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:64px;color:#1f1c19;line-height:0.85;letter-spacing:-2px;margin-bottom:6px;">94</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(31,28,25,0.5);letter-spacing:1.5px;margin-bottom:16px;">SETS THIS WEEK</div>
+
+        <div class="section-rule"></div>
+        <div class="spacer"></div>
+
+        <div class="section-label">APP NAME / LOGO TREATMENT</div>
+        <div style="font-family:'MD Nichrome Test',sans-serif;font-size:22px;letter-spacing:2px;color:#c8553d;margin-bottom:4px;text-transform:uppercase;">PULSE PUMP</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:rgba(31,28,25,0.4);letter-spacing:2px;margin-bottom:16px;">TRAIN SMARTER</div>
+
+        <div class="section-label">ONBOARDING (NICHROME FOR HEADER)</div>
+        <div style="font-family:'MD Nichrome Test',sans-serif;font-size:28px;letter-spacing:0.5px;color:#1f1c19;line-height:1.1;margin-bottom:4px;">WHAT SHOULD</div>
+        <div style="font-family:'MD Nichrome Test',sans-serif;font-size:28px;letter-spacing:0.5px;color:#1f1c19;line-height:1.1;margin-bottom:12px;">WE CALL YOU?</div>
+
+        <div class="section-label">BODY COPY (SANS — NICHROME NOT FOR BODY)</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:rgba(31,28,25,0.6);line-height:1.5;margin-bottom:16px;">Used to calibrate calorie estimates. Not shown publicly.</div>
+
+        <div style="height:52px;border-radius:10px;background:#c8553d;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'MD Nichrome Test',sans-serif;font-size:18px;letter-spacing:3px;color:#fff;text-transform:uppercase;">START WORKOUT</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col dark">
+      <div class="col-header">
+        <div class="col-tag">D2 · Dark mode</div>
+        <div class="col-name">MD Nichrome Test + IBM Plex Mono</div>
+      </div>
+      <div class="ticker">
+        <span style="color:rgba(236,229,214,0.5);font-family:'IBM Plex Mono',monospace;letter-spacing:1px">BENCH</span>
+        <span class="up" style="font-family:'IBM Plex Mono',monospace">▲ +5KG</span>
+        <span class="sep">·</span>
+        <span style="color:rgba(236,229,214,0.5);font-family:'IBM Plex Mono',monospace;letter-spacing:1px">STREAK</span>
+        <span style="font-family:'IBM Plex Mono',monospace;color:rgba(236,229,214,0.6)">13D</span>
+      </div>
+      <div class="specimen">
+        <div class="section-label" style="color:rgba(255,255,255,0.25)">WORKOUT NAME</div>
+        <div style="font-family:'MD Nichrome Test',sans-serif;font-size:28px;letter-spacing:1px;color:#ece5d6;margin-bottom:14px;text-transform:uppercase;">PUSH DAY</div>
+
+        <div class="section-label" style="color:rgba(255,255,255,0.25)">HERO STAT</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:64px;color:#ece5d6;line-height:0.85;letter-spacing:-2px;margin-bottom:6px;">94</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(236,229,214,0.45);letter-spacing:1.5px;margin-bottom:16px;">SETS THIS WEEK</div>
+
+        <div style="height:1px;background:rgba(255,255,255,0.07);margin-bottom:16px;"></div>
+
+        <div class="section-label" style="color:rgba(255,255,255,0.25)">APP NAME</div>
+        <div style="font-family:'MD Nichrome Test',sans-serif;font-size:22px;letter-spacing:2px;color:#dc7d4a;margin-bottom:4px;text-transform:uppercase;">PULSE PUMP</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:rgba(236,229,214,0.3);letter-spacing:2px;margin-bottom:16px;">TRAIN SMARTER</div>
+
+        <div class="section-label" style="color:rgba(255,255,255,0.25)">ONBOARDING</div>
+        <div style="font-family:'MD Nichrome Test',sans-serif;font-size:28px;letter-spacing:0.5px;color:#ece5d6;line-height:1.1;margin-bottom:4px;">WHAT SHOULD</div>
+        <div style="font-family:'MD Nichrome Test',sans-serif;font-size:28px;letter-spacing:0.5px;color:#ece5d6;line-height:1.1;margin-bottom:12px;">WE CALL YOU?</div>
+
+        <div class="section-label" style="color:rgba(255,255,255,0.25)">BODY COPY</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:rgba(236,229,214,0.55);line-height:1.5;margin-bottom:16px;">Used to calibrate calorie estimates. Not shown publicly.</div>
+
+        <div style="height:52px;border-radius:10px;background:#dc7d4a;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'MD Nichrome Test',sans-serif;font-size:18px;letter-spacing:3px;color:#fff;text-transform:uppercase;">START WORKOUT</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <div style="margin-top:32px;padding:20px;background:#fff;border-radius:12px;border:1px solid rgba(0,0,0,0.08);">
+    <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:#c8553d;font-weight:700;margin-bottom:10px;">NOTES ON EACH PAIRING</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;">
+      <div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">A · GT America</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:#666;line-height:1.5;">Most balanced. Warm but structured. The Mono has great tabular figures. Feels premium and editorial. ✦ Best all-rounder.</div>
+      </div>
+      <div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">B · IBM Plex</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:#666;line-height:1.5;">Most "credible tool" feel. Slightly clinical but authoritative. Tabular figures are excellent. Best choice if Bloomberg DNA is top priority.</div>
+      </div>
+      <div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">C · Instrument Serif</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:#666;line-height:1.5;">Most human/warm. The italic serif for onboarding questions creates a genuinely unique voice. Mixed serif+mono is a strong editorial statement.</div>
+      </div>
+      <div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">D · MD Nichrome</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:#666;line-height:1.5;">Most distinctive. Retro-futuristic, unlike any fitness app. PUSH DAY in Nichrome looks incredible. Risky but memorable. Strong for logo/branding.</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,498 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "warn",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "components/controls/**",
+              "components/data/**",
+              "components/feedback/**",
+              "components/logging/**",
+              "components/navigation/**",
+              "ui_kits/pump/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Archivo|Space Mono))/i]",
+        "message": "Font not provided by the design system. Available: Archivo, Space Mono."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='ConfidenceDots'] > JSXAttribute > JSXIdentifier[name!=/^(?:confidence|showLabel|style|key|ref|className|style|children)$/]",
+        "message": "<ConfidenceDots> doesn't accept that prop. Declared props: confidence, showLabel, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='DashedAdd'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|onClick|height|style|key|ref|className|style|children)$/]",
+        "message": "<DashedAdd> doesn't accept that prop. Declared props: label, onClick, height, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='ScrubberDay'] > JSXAttribute > JSXIdentifier[name!=/^(?:letter|date|logged|key|ref|className|style|children)$/]",
+        "message": "<ScrubberDay> doesn't accept that prop. Declared props: letter, date, logged."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='DockedCTA'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|overline|meta|metaOverline|variant|progress|onClick|style|key|ref|className|style|children)$/]",
+        "message": "<DockedCTA> doesn't accept that prop. Declared props: label, overline, meta, metaOverline, variant, progress, onClick, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='DockedCTA'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:primary|draft|destructive)$/]",
+        "message": "<DockedCTA> variant must be one of 'primary' | 'draft' | 'destructive'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='EmptyState'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|description|action|glyph|style|key|ref|className|style|children)$/]",
+        "message": "<EmptyState> doesn't accept that prop. Declared props: title, description, action, glyph, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='ExerciseCard'] > JSXAttribute > JSXIdentifier[name!=/^(?:index|name|equipment|pr|oneRm|delta|deltaDirection|setsDone|totalSets|lastNote|collapsed|onToggleCollapse|onOverflow|hasRIR|children|style|key|ref|className|style|children)$/]",
+        "message": "<ExerciseCard> doesn't accept that prop. Declared props: index, name, equipment, pr, oneRm, delta, deltaDirection, setsDone, totalSets, lastNote, collapsed, onToggleCollapse, onOverflow, hasRIR, children, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='ExerciseCard'] > JSXAttribute[name.name='deltaDirection'] > Literal[value!=/^(?:up|down)$/]",
+        "message": "<ExerciseCard> deltaDirection must be one of 'up' | 'down'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='FilterChip'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|selected|onClick|style|key|ref|className|style|children)$/]",
+        "message": "<FilterChip> doesn't accept that prop. Declared props: label, selected, onClick, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='KPIBlock'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|value|denominator|delta|direction|variant|align|style|key|ref|className|style|children)$/]",
+        "message": "<KPIBlock> doesn't accept that prop. Declared props: label, value, denominator, delta, direction, variant, align, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='KPIBlock'] > JSXAttribute[name.name='direction'] > Literal[value!=/^(?:up|down)$/]",
+        "message": "<KPIBlock> direction must be one of 'up' | 'down'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='KPIBlock'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:inline|hero|compact)$/]",
+        "message": "<KPIBlock> variant must be one of 'inline' | 'hero' | 'compact'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='KPIBlock'] > JSXAttribute[name.name='align'] > Literal[value!=/^(?:left|center|right)$/]",
+        "message": "<KPIBlock> align must be one of 'left' | 'center' | 'right'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Masthead'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|overline|showMark|onBack|right|style|key|ref|className|style|children)$/]",
+        "message": "<Masthead> doesn't accept that prop. Declared props: title, overline, showMark, onBack, right, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='PlateBar'] > JSXAttribute > JSXIdentifier[name!=/^(?:targetKg|barKg|showChips|style|key|ref|className|style|children)$/]",
+        "message": "<PlateBar> doesn't accept that prop. Declared props: targetKg, barKg, showChips, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='PRMark'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|label|style|key|ref|className|style|children)$/]",
+        "message": "<PRMark> doesn't accept that prop. Declared props: children, label, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='RestTimerPill'] > JSXAttribute > JSXIdentifier[name!=/^(?:seconds|total|onClick|style|key|ref|className|style|children)$/]",
+        "message": "<RestTimerPill> doesn't accept that prop. Declared props: seconds, total, onClick, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SectionLabel'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|meta|accent|style|key|ref|className|style|children)$/]",
+        "message": "<SectionLabel> doesn't accept that prop. Declared props: children, meta, accent, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SetRow'] > JSXAttribute > JSXIdentifier[name!=/^(?:index|type|kg|reps|rir|prevKg|prevReps|prevRir|state|isPR|hasRIR|onTypeClick|onClick|style|key|ref|className|style|children)$/]",
+        "message": "<SetRow> doesn't accept that prop. Declared props: index, type, kg, reps, rir, prevKg, prevReps, prevRir, state, isPR, hasRIR, onTypeClick, onClick, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SetRow'] > JSXAttribute[name.name='state'] > Literal[value!=/^(?:pending|active|done)$/]",
+        "message": "<SetRow> state must be one of 'pending' | 'active' | 'done'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SetTypeChip'] > JSXAttribute > JSXIdentifier[name!=/^(?:type|onClick|style|key|ref|className|style|children)$/]",
+        "message": "<SetTypeChip> doesn't accept that prop. Declared props: type, onClick, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='TabBar'] > JSXAttribute > JSXIdentifier[name!=/^(?:active|onSelect|style|key|ref|className|style|children)$/]",
+        "message": "<TabBar> doesn't accept that prop. Declared props: active, onSelect, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='TickerItem'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|value|direction|key|ref|className|style|children)$/]",
+        "message": "<TickerItem> doesn't accept that prop. Declared props: label, value, direction."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='TickerItem'] > JSXAttribute[name.name='direction'] > Literal[value!=/^(?:up|down)$/]",
+        "message": "<TickerItem> direction must be one of 'up' | 'down'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='TrendValue'] > JSXAttribute > JSXIdentifier[name!=/^(?:value|direction|size|bold|showArrow|style|key|ref|className|style|children)$/]",
+        "message": "<TrendValue> doesn't accept that prop. Declared props: value, direction, size, bold, showArrow, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='TrendValue'] > JSXAttribute[name.name='direction'] > Literal[value!=/^(?:up|down)$/]",
+        "message": "<TrendValue> direction must be one of 'up' | 'down'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='WeekBars'] > JSXAttribute > JSXIdentifier[name!=/^(?:data|labels|done|today|height|style|key|ref|className|style|children)$/]",
+        "message": "<WeekBars> doesn't accept that prop. Declared props: data, labels, done, today, height, style."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {
+      "ConfidenceDots": {
+        "replaces": []
+      },
+      "DashedAdd": {
+        "replaces": []
+      },
+      "ScrubberDay": {
+        "replaces": []
+      },
+      "DockedCTA": {
+        "replaces": []
+      },
+      "EmptyState": {
+        "replaces": []
+      },
+      "ExerciseCard": {
+        "replaces": []
+      },
+      "FilterChip": {
+        "replaces": []
+      },
+      "KPIBlock": {
+        "replaces": []
+      },
+      "Masthead": {
+        "replaces": []
+      },
+      "PlateBar": {
+        "replaces": []
+      },
+      "PRMark": {
+        "replaces": []
+      },
+      "RestTimerPill": {
+        "replaces": []
+      },
+      "SectionLabel": {
+        "replaces": []
+      },
+      "SetRow": {
+        "replaces": []
+      },
+      "SetTypeChip": {
+        "replaces": []
+      },
+      "TabBar": {
+        "replaces": []
+      },
+      "TickerItem": {
+        "replaces": []
+      },
+      "TrendValue": {
+        "replaces": []
+      },
+      "WeekBars": {
+        "replaces": []
+      }
+    },
+    "tokens": [
+      "--accent",
+      "--accent-border",
+      "--accent-row",
+      "--accent-soft",
+      "--accent-text",
+      "--border-active",
+      "--border-dash",
+      "--border-hair",
+      "--card-pad",
+      "--cta-height",
+      "--dash-pattern",
+      "--dur-default",
+      "--dur-micro",
+      "--dur-reorder",
+      "--dur-sheet",
+      "--ease-default",
+      "--ease-out",
+      "--font-body",
+      "--font-display",
+      "--font-mono",
+      "--pump-blue",
+      "--pump-blue-lift",
+      "--pump-blue-press",
+      "--pump-bone",
+      "--pump-bone-2",
+      "--pump-charcoal",
+      "--pump-charcoal-2",
+      "--pump-cream",
+      "--pump-cream-deep",
+      "--pump-cream-elevated",
+      "--pump-cream-sunken",
+      "--pump-dark",
+      "--pump-dark-deep",
+      "--pump-dark-elevated",
+      "--pump-dark-sunken",
+      "--pump-green",
+      "--pump-green-ticker-dark",
+      "--pump-green-ticker-light",
+      "--pump-plate-1-25",
+      "--pump-plate-10",
+      "--pump-plate-15",
+      "--pump-plate-2-5",
+      "--pump-plate-20",
+      "--pump-plate-25",
+      "--pump-plate-5",
+      "--pump-red",
+      "--pump-red-ticker",
+      "--pump-type-amrap",
+      "--pump-type-drop",
+      "--pump-type-fail",
+      "--pump-type-restpause",
+      "--pump-type-superset",
+      "--pump-type-warmup",
+      "--radius-card",
+      "--radius-chip",
+      "--radius-control",
+      "--radius-cta",
+      "--radius-none",
+      "--radius-pill-sm",
+      "--radius-round",
+      "--row-height",
+      "--rule-hair",
+      "--rule-strong",
+      "--screen-pad",
+      "--signal-down",
+      "--signal-up",
+      "--space-0",
+      "--space-1",
+      "--space-10",
+      "--space-2",
+      "--space-3",
+      "--space-4",
+      "--space-5",
+      "--space-6",
+      "--space-8",
+      "--surface-canvas",
+      "--surface-deep",
+      "--surface-elevated",
+      "--surface-inverse",
+      "--surface-sunken",
+      "--tabbar-height",
+      "--tap-min",
+      "--text-faint",
+      "--text-ghost",
+      "--text-inverse",
+      "--text-muted",
+      "--text-on-accent",
+      "--text-primary",
+      "--text-secondary",
+      "--ticker-bg",
+      "--ticker-cycle",
+      "--ticker-down",
+      "--ticker-fg",
+      "--ticker-height",
+      "--ticker-sep",
+      "--ticker-speed",
+      "--ticker-up",
+      "--type-body-leading",
+      "--type-body-size",
+      "--type-body-sm-size",
+      "--type-data-lg-size",
+      "--type-data-md-size",
+      "--type-data-sm-size",
+      "--type-hero-size",
+      "--type-l1-font",
+      "--type-l1-size",
+      "--type-l1-tracking",
+      "--type-l1-weight",
+      "--type-l2-font",
+      "--type-l2-size",
+      "--type-l2-tracking",
+      "--type-l2-weight",
+      "--type-l3-font",
+      "--type-l3-size",
+      "--type-l3-tracking",
+      "--type-l3-weight",
+      "--type-l4-font",
+      "--type-l4-size",
+      "--type-l4-tracking",
+      "--type-l4-transform",
+      "--type-l4-weight",
+      "--type-label-size",
+      "--type-label-tracking",
+      "--type-label-xs-size",
+      "--type-label-xs-tracking",
+      "--type-stat-size",
+      "--type-stat-sm-size",
+      "--weight-black",
+      "--weight-bold",
+      "--weight-light",
+      "--weight-regular",
+      "--weight-semibold"
+    ],
+    "tokenKinds": {
+      "--pump-cream": "color",
+      "--pump-cream-elevated": "color",
+      "--pump-cream-sunken": "color",
+      "--pump-cream-deep": "color",
+      "--pump-charcoal": "color",
+      "--pump-charcoal-2": "color",
+      "--pump-dark": "color",
+      "--pump-dark-elevated": "color",
+      "--pump-dark-sunken": "color",
+      "--pump-dark-deep": "color",
+      "--pump-bone": "color",
+      "--pump-bone-2": "color",
+      "--pump-blue": "color",
+      "--pump-blue-lift": "color",
+      "--pump-blue-press": "color",
+      "--pump-green": "color",
+      "--pump-green-ticker-light": "color",
+      "--pump-green-ticker-dark": "color",
+      "--pump-red": "color",
+      "--pump-red-ticker": "color",
+      "--pump-type-warmup": "font",
+      "--pump-type-drop": "font",
+      "--pump-type-superset": "font",
+      "--pump-type-amrap": "font",
+      "--pump-type-fail": "font",
+      "--pump-type-restpause": "font",
+      "--pump-plate-25": "color",
+      "--pump-plate-20": "color",
+      "--pump-plate-15": "color",
+      "--pump-plate-10": "color",
+      "--pump-plate-5": "color",
+      "--pump-plate-2-5": "color",
+      "--pump-plate-1-25": "color",
+      "--surface-canvas": "color",
+      "--surface-elevated": "color",
+      "--surface-sunken": "color",
+      "--surface-deep": "color",
+      "--surface-inverse": "color",
+      "--text-primary": "font",
+      "--text-secondary": "font",
+      "--text-muted": "font",
+      "--text-ghost": "font",
+      "--text-faint": "font",
+      "--text-inverse": "font",
+      "--text-on-accent": "font",
+      "--rule-hair": "color",
+      "--rule-strong": "color",
+      "--accent": "color",
+      "--accent-text": "font",
+      "--accent-soft": "color",
+      "--accent-row": "color",
+      "--accent-border": "color",
+      "--signal-up": "color",
+      "--signal-down": "color",
+      "--ticker-bg": "color",
+      "--ticker-fg": "color",
+      "--ticker-up": "color",
+      "--ticker-down": "color",
+      "--ticker-sep": "color",
+      "--font-display": "font",
+      "--font-body": "font",
+      "--font-mono": "font",
+      "--weight-light": "font",
+      "--weight-regular": "font",
+      "--weight-semibold": "font",
+      "--weight-bold": "font",
+      "--weight-black": "font",
+      "--type-l1-font": "font",
+      "--type-l1-weight": "font",
+      "--type-l1-size": "font",
+      "--type-l1-tracking": "font",
+      "--type-l2-font": "font",
+      "--type-l2-weight": "font",
+      "--type-l2-size": "font",
+      "--type-l2-tracking": "font",
+      "--type-l3-font": "font",
+      "--type-l3-weight": "font",
+      "--type-l3-size": "font",
+      "--type-l3-tracking": "font",
+      "--type-l4-font": "font",
+      "--type-l4-weight": "font",
+      "--type-l4-size": "font",
+      "--type-l4-tracking": "font",
+      "--type-l4-transform": "font",
+      "--type-hero-size": "font",
+      "--type-stat-size": "font",
+      "--type-stat-sm-size": "font",
+      "--type-data-lg-size": "font",
+      "--type-data-md-size": "font",
+      "--type-data-sm-size": "font",
+      "--type-body-size": "font",
+      "--type-body-sm-size": "font",
+      "--type-body-leading": "font",
+      "--type-label-size": "font",
+      "--type-label-xs-size": "font",
+      "--type-label-tracking": "font",
+      "--type-label-xs-tracking": "font",
+      "--space-0": "spacing",
+      "--space-1": "spacing",
+      "--space-2": "spacing",
+      "--space-3": "spacing",
+      "--space-4": "spacing",
+      "--space-5": "spacing",
+      "--space-6": "spacing",
+      "--space-8": "spacing",
+      "--space-10": "spacing",
+      "--radius-none": "radius",
+      "--radius-chip": "radius",
+      "--radius-pill-sm": "radius",
+      "--radius-control": "radius",
+      "--radius-cta": "radius",
+      "--radius-card": "radius",
+      "--radius-round": "radius",
+      "--border-hair": "spacing",
+      "--border-active": "spacing",
+      "--border-dash": "other",
+      "--dash-pattern": "other",
+      "--row-height": "spacing",
+      "--tap-min": "spacing",
+      "--ticker-height": "spacing",
+      "--tabbar-height": "spacing",
+      "--cta-height": "spacing",
+      "--screen-pad": "spacing",
+      "--card-pad": "spacing",
+      "--ease-default": "other",
+      "--ease-out": "other",
+      "--dur-micro": "other",
+      "--dur-default": "other",
+      "--dur-sheet": "other",
+      "--dur-reorder": "other",
+      "--ticker-speed": "spacing",
+      "--ticker-cycle": "other"
+    },
+    "fontFamilies": [
+      "Archivo",
+      "Space Mono"
+    ]
+  }
+}

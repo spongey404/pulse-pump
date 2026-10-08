@@ -1,0 +1,35 @@
+/* PUMP SPACING, RADIUS & BORDERS — 4pt grid */
+
+:root{
+  --space-0:0px;
+  --space-1:4px;
+  --space-2:8px;
+  --space-3:12px;   /* row internal padding */
+  --space-4:16px;   /* screen edge padding */
+  --space-5:20px;
+  --space-6:24px;   /* between unrelated sections */
+  --space-8:32px;
+  --space-10:40px;
+
+  --radius-none:0px;
+  --radius-chip:4px;    /* set-type pills, exercise chips */
+  --radius-pill-sm:6px; /* small inline pills */
+  --radius-control:8px; /* day tiles, secondary buttons, sheets */
+  --radius-cta:12px;    /* primary CTAs */
+  --radius-card:14px;   /* exercise cards, sheets */
+  --radius-round:999px; /* filter chips, avatars, rest pill ONLY */
+
+  --border-hair:1px;
+  --border-active:2px;  /* active-row left border */
+  --border-dash:1px dashed; /* @kind other */
+  --dash-pattern:4px 4px; /* @kind other */
+
+  --row-height:48px;    /* set rows / list rows — never below 44px */
+  --tap-min:44px;
+  --ticker-height:26px;
+  --tabbar-height:56px;
+  --cta-height:54px;
+
+  --screen-pad:16px;
+  --card-pad:12px;
+}

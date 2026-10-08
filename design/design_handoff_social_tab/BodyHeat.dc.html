@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center">
+<svg viewBox="0 0 200 320" width="100%" height="100%" style="display:block">
+<circle cx="100" cy="22" r="14" fill="{{ baseFill }}" stroke="{{ strokeCol }}" stroke-width="1"></circle>
+<rect x="94" y="34" width="12" height="10" fill="{{ baseFill }}" stroke="{{ strokeCol }}" stroke-width="1"></rect>
+<path d="M75 46 L100 42 L125 46 L120 56 L100 52 L80 56 Z" fill="{{ trapsFill }}" stroke="{{ strokeCol }}" stroke-width="1"></path>
+<path d="M70 56 Q100 48 130 56 L132 96 Q100 102 68 96 Z" fill="{{ chestFill }}" stroke="{{ strokeCol }}" stroke-width="1"></path>
+<path d="M55 60 Q48 70 50 90 L66 92 Q70 76 70 56 Z" fill="{{ shouldersFill }}" stroke="{{ strokeCol }}" stroke-width="1"></path>
+<path d="M145 60 Q152 70 150 90 L134 92 Q130 76 130 56 Z" fill="{{ shouldersFill }}" stroke="{{ strokeCol }}" stroke-width="1"></path>
+<path d="M40 90 Q34 110 36 130 L52 130 Q54 110 50 90 Z" fill="{{ bicepsFill }}" stroke="{{ strokeCol }}" stroke-width="1"></path>
+<path d="M160 90 Q166 110 164 130 L148 130 Q146 110 150 90 Z" fill="{{ bicepsFill }}" stroke="{{ strokeCol }}" stroke-width="1"></path>
+<path d="M30 130 Q26 154 30 172 L48 172 Q50 154 48 130 Z" fill="{{ forearmsFill }}" stroke="{{ strokeCol }}" stroke-width="1"></path>
+<path d="M170 130 Q174 154 170 172 L152 172 Q150 154 152 130 Z" fill="{{ forearmsFill }}" stroke="{{ strokeCol }}" stroke-width="1"></path>
+<path d="M75 96 Q100 100 125 96 L122 138 Q100 142 78 138 Z" fill="{{ coreFill }}" stroke="{{ strokeCol }}" stroke-width="1"></path>
+<path d="M76 138 L124 138 L128 158 L72 158 Z" fill="{{ glutesFill }}" stroke="{{ strokeCol }}" stroke-width="1"></path>
+<path d="M76 158 Q72 200 76 230 L98 230 Q100 200 98 158 Z" fill="{{ quadsFill }}" stroke="{{ strokeCol }}" stroke-width="1"></path>
+<path d="M124 158 Q128 200 124 230 L102 230 Q100 200 102 158 Z" fill="{{ quadsFill }}" stroke="{{ strokeCol }}" stroke-width="1"></path>
+<line x1="78" y1="232" x2="98" y2="232" stroke="{{ strokeCol }}" stroke-width="1"></line>
+<line x1="102" y1="232" x2="124" y2="232" stroke="{{ strokeCol }}" stroke-width="1"></line>
+<path d="M80 234 Q76 260 80 286 L96 286 Q98 260 96 234 Z" fill="{{ calvesFill }}" stroke="{{ strokeCol }}" stroke-width="1"></path>
+<path d="M120 234 Q124 260 120 286 L104 286 Q102 260 104 234 Z" fill="{{ calvesFill }}" stroke="{{ strokeCol }}" stroke-width="1"></path>
+<ellipse cx="88" cy="294" rx="11" ry="5" fill="{{ baseFill }}" stroke="{{ strokeCol }}" stroke-width="1"></ellipse>
+<ellipse cx="112" cy="294" rx="11" ry="5" fill="{{ baseFill }}" stroke="{{ strokeCol }}" stroke-width="1"></ellipse>
+</svg>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:180,&quot;height&quot;:290},&quot;base&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;rgba(31,28,25,0.035)&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;rgba(31,28,25,0.035)&quot;,&quot;rgba(236,229,214,0.10)&quot;]},&quot;stroke&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;rgba(31,28,25,0.07)&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;rgba(31,28,25,0.07)&quot;,&quot;rgba(236,229,214,0.12)&quot;]},&quot;chest&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;0.95&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;shoulders&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;0.78&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;biceps&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;0.8&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;forearms&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;core&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;0.18&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;glutes&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;quads&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;calves&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;traps&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;0.3&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  // Thermal ramp on the Pump blue accent; geometry is the repo's BodyMap path set
+  // (pump and fuel design html files/_mm_src.html).
+  thermal(t) {
+    const s = [[0,[236,229,214]],[0.2,[184,217,242]],[0.45,[107,176,232]],[0.7,[26,131,214]],[1,[10,111,192]]];
+    t = Math.max(0, Math.min(1, t));
+    for (let i = 0; i < s.length - 1; i++) {
+      const [a, ca] = s[i], [b, cb] = s[i + 1];
+      if (t <= b) {
+        const k = (t - a) / (b - a);
+        return `rgb(${Math.round(ca[0]+(cb[0]-ca[0])*k)},${Math.round(ca[1]+(cb[1]-ca[1])*k)},${Math.round(ca[2]+(cb[2]-ca[2])*k)})`;
+      }
+    }
+    return 'rgb(10,111,192)';
+  }
+  renderVals() {
+    const base = this.props.base ?? 'rgba(31,28,25,0.035)';
+    const fill = name => {
+      const raw = this.props[name];
+      const v = raw == null || raw === '' ? null : parseFloat(raw);
+      return v == null || isNaN(v) ? base : this.thermal(v);
+    };
+    const out = { baseFill: base, strokeCol: this.props.stroke ?? 'rgba(31,28,25,0.07)' };
+    ['chest','shoulders','biceps','forearms','core','glutes','quads','calves','traps'].forEach(k => { out[k + 'Fill'] = fill(k); });
+    return out;
+  }
+}
+</script>
+</body>
+</html>

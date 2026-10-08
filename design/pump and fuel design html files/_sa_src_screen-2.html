@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pulse Pump — Workout Logging v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700;800;900&family=Space+Mono:wght@400;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #f3f1ec; min-height: 100vh; font-family: 'Archivo', system-ui; color: #1a1a1a; }
+  .canvas { padding: 60px 40px 120px; }
+  h1 { font-family: 'Fraunces', serif; font-weight: 400; font-size: 56px; letter-spacing: -1.5px; line-height: 1; max-width: 1600px; margin: 0 auto 14px; }
+  .h1-sub { font-family: 'Archivo'; font-size: 16px; color: #666; max-width: 800px; margin: 0 auto 60px; line-height: 1.5; }
+  .section-label { font-family: 'Space Mono', monospace; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #c8553d; max-width: 1600px; margin: 60px auto 10px; font-weight: 700; }
+  .section-desc { font-family: 'Archivo'; font-size: 14px; color: #666; max-width: 800px; margin: 0 auto 32px; line-height: 1.5; }
+  .grid { display: grid; grid-template-columns: repeat(4, 360px); gap: 36px; max-width: 1600px; margin: 0 auto; }
+  .card { display: flex; flex-direction: column; gap: 12px; }
+  .card-label { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #777; }
+  .card-label .num { color: #c8553d; font-weight: 700; }
+  .card-label .vibe { color: #1a1a1a; font-weight: 600; margin-left: 6px; }
+  .card-desc { font-family: 'Archivo'; font-size: 11px; color: #777; line-height: 1.5; }
+  .frame { width: 360px; height: 760px; border-radius: 44px; padding: 4px; background: linear-gradient(135deg, #cbcac4, #b9b8b2); box-shadow: 0 30px 60px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.4); flex-shrink: 0; }
+  .screen { width: 100%; height: 100%; border-radius: 40px; overflow: hidden; position: relative; background: #fbf8f2; }
+
+</style>
+<template id="__bundler_thumbnail" data-bg-color="#fbf8f2"><svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg"><rect width="1200" height="800" fill="#fbf8f2"/><g transform="translate(540 320)"><rect width="120" height="120" rx="28" fill="#c8553d"/></g></svg></template>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+
+const L = {
+  bg: '#fbf8f2',
+  surf: '#f4f0e6',
+  surf2: '#ece7d8',
+  surf3: '#e2dccd',
+  ink: '#1f1c19',
+  ink2: '#3a342d',
+  muted: 'rgba(31,28,25,0.5)',
+  faint: 'rgba(31,28,25,0.18)',
+  hair: 'rgba(31,28,25,0.08)',
+  hair2: 'rgba(31,28,25,0.14)',
+  accent: '#c8553d',
+  accentSoft: 'rgba(200,85,61,0.07)',
+  up: '#1f8f5a',
+  down: '#e51b1b',
+  warn: '#c98a17',
+  blue: '#2c6da3',
+  purple: '#7d4a8c',
+  tickerBg: '#1a1816',
+  tickerFg: '#ece5d6',
+  st: {
+    standard:  { bg: 'transparent',              fg: 'rgba(31,28,25,0.55)', label: 'STD' },
+    warmup:    { bg: 'rgba(180,140,60,0.12)',     fg: '#a17418',             label: 'WU' },
+    superset:  { bg: 'rgba(125,74,140,0.13)',     fg: '#7d4a8c',             label: 'SS' },
+    dropset:   { bg: 'rgba(200,85,61,0.13)',      fg: '#a8442f',             label: 'DROP' },
+    restpause: { bg: 'rgba(31,28,25,0.08)',        fg: '#3a342d',             label: 'RP' },
+    amrap:     { bg: 'rgba(44,109,163,0.10)',     fg: '#2c6da3',             label: 'AMRAP' },
+    failure:   { bg: 'rgba(229,27,27,0.10)',      fg: '#c0341a',             label: 'FAIL' },
+    unilateral:{ bg: 'rgba(44,109,163,0.12)',     fg: '#2c6da3',             label: 'L/R' },
+  }
+};
+
+const StatusBar = ({ color = L.ink }) => (
+  <div style={{ position:'absolute', top:18, left:0, right:0, height:20, padding:'0 28px', display:'flex', justifyContent:'space-between', alignItems:'center', zIndex:50, color, fontFamily:'-apple-system', fontWeight:600, fontSize:14 }}>
+    <span>9:41</span>
+    <div style={{ width:120, height:32, borderRadius:18, background:'#000', position:'absolute', left:'50%', top:8, transform:'translateX(-50%)' }}/>
+    <div style={{ display:'flex', gap:5, fontSize:12 }}><span>●●●●</span><span>▭</span></div>
+  </div>
+);
+
+
+
+function Masthead({ restSecs=102, restTotal=150, onRestTap }) {
+  const m = Math.floor(restSecs/60), s = String(restSecs%60).padStart(2,'0');
+  const pct = restSecs/restTotal;
+  const running = restSecs > 0;
+  return (
+    <div style={{ position:'absolute', top:54, left:0, right:0, height:42, padding:'0 14px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid ${L.hair}`, background:L.bg }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        <span style={{ fontSize:18, color:L.muted, fontWeight:300 }}>‹</span>
+        <div>
+          <div style={{ fontFamily:'"Space Mono",monospace', fontSize:9, color:L.muted, letterSpacing:1.2 }}>SESSION</div>
+          <div style={{ fontFamily:'"Archivo",sans-serif', fontSize:18, lineHeight:1, letterSpacing:0.8 }}>PUSH · 24:18</div>
+        </div>
+      </div>
+      <div onClick={onRestTap} style={{ display:'flex', alignItems:'center', gap:8, background:running?L.ink:L.surf, color:running?L.tickerFg:L.muted, borderRadius:99, padding:'5px 6px 5px 12px', cursor:'pointer', border:running?'none':`1px solid ${L.hair2}` }}>
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', lineHeight:1 }}>
+          <span style={{ fontFamily:'"Space Mono",monospace', fontSize:8, opacity:0.7, letterSpacing:1 }}>REST</span>
+          <span style={{ fontFamily:'"Archivo",sans-serif', fontSize:18, letterSpacing:1, marginTop:1 }}>{running?`${m}:${s}`:'—:—'}</span>
+        </div>
+        <div style={{ width:24, height:24, position:'relative' }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" style={{ transform:'rotate(-90deg)' }}>
+            <circle cx="12" cy="12" r="9" fill="none" stroke={running?'rgba(236,229,214,0.18)':L.hair2} strokeWidth="2"/>
+            {running && <circle cx="12" cy="12" r="9" fill="none" stroke={L.accent} strokeWidth="2.5" strokeDasharray={2*Math.PI*9} strokeDashoffset={2*Math.PI*9*(1-pct)} strokeLinecap="round"/>}
+          </svg>
+          {!running && <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:L.muted }}>›</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SetTypeChip({ type='standard', onTap }) {
+  const cfg = L.st[type] || L.st.standard;
+  if (type === 'standard') {
+    return (
+      <div onClick={onTap} style={{ width:24, height:18, borderRadius:4, border:`1px dashed ${L.faint}`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:9, color:L.faint }}>+</div>
+    );
+  }
+  return (
+    <div onClick={onTap} style={{ height:18, padding:'0 5px', borderRadius:4, background:cfg.bg, color:cfg.fg, fontFamily:'"Space Mono",monospace', fontSize:8, fontWeight:700, letterSpacing:0.6, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', whiteSpace:'nowrap' }}>{cfg.label}</div>
+  );
+}
+
+function computePlates(targetKg, barKg) {
+  const plates = [25,20,15,10,5,2.5,1.25];
+  const perSide = (targetKg - barKg) / 2;
+  if (perSide <= 0) return { perSide:0, stack:[] };
+  let remaining = perSide;
+  const stack = [];
+  for (const p of plates) {
+    while (remaining >= p - 0.001) { stack.push(p); remaining = +(remaining-p).toFixed(3); }
+  }
+  return { perSide, stack, remainder:remaining };
+}
+
+const PLATE_COLORS = {
+  25:   { bg:'#e51b1b', fg:'#fff' },
+  20:   { bg:'#1f4ea3', fg:'#fff' },
+  15:   { bg:'#c98a17', fg:'#fff' },
+  10:   { bg:'#1f8f5a', fg:'#fff' },
+  5:    { bg:'#1f1c19', fg:'#f4f0e6' },
+  2.5:  { bg:'#a3a39a', fg:'#1f1c19' },
+  1.25: { bg:'#d6d2c4', fg:'#1f1c19' },
+};
+
+function PlateBar({ barKg=20, targetKg=100, compact=false }) {
+  const { stack } = computePlates(targetKg, barKg);
+  const sleeveLen = 80;
+  return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:compact?50:64 }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', width:sleeveLen, gap:1 }}>
+        {[...stack].reverse().map((p,i) => {
+          const c = PLATE_COLORS[p];
+          const h = compact ? 28+Math.min(p,25)*0.7 : 32+Math.min(p,25)*0.9;
+          const w = p>=20?9:p>=10?7:p>=5?6:5;
+          return <div key={i} style={{ width:w, height:h, background:c.bg, border:'1px solid rgba(0,0,0,0.25)', borderRadius:1.5 }}/>;
+        })}
+      </div>
+      <div style={{ position:'relative', width:60, display:'flex', flexDirection:'column', alignItems:'center' }}>
+        <div style={{ height:4, width:'100%', background:'#8a857c', borderTop:'1px solid #5a554d', borderBottom:'1px solid #5a554d' }}/>
+      </div>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-start', width:sleeveLen, gap:1 }}>
+        {stack.map((p,i) => {
+          const c = PLATE_COLORS[p];
+          const h = compact ? 28+Math.min(p,25)*0.7 : 32+Math.min(p,25)*0.9;
+          const w = p>=20?9:p>=10?7:p>=5?6:5;
+          return <div key={i} style={{ width:w, height:h, background:c.bg, border:'1px solid rgba(0,0,0,0.25)', borderRadius:1.5 }}/>;
+        })}
+      </div>
+    </div>
+  );
+}
+
+const BAR_TYPES = [
+  { id:'barbell', name:'BARBELL', kg:20 },
+  { id:'olympic', name:'OLY 15',  kg:15 },
+  { id:'ez',      name:'EZ',      kg:7.5 },
+  { id:'trap',    name:'TRAP',    kg:25 },
+  { id:'safety',  name:'SAFETY',  kg:32 },
+];
+
+function PlateCalcPopover({ targetKg=100, barKg=20, onBarChange, onClose }) {
+  const { stack, remainder } = computePlates(targetKg, barKg);
+  return (
+    <div style={{ background:L.surf, border:`1px solid ${L.hair2}`, borderRadius:12, padding:'10px 12px', boxShadow:'0 16px 40px rgba(0,0,0,0.18)', width:'100%' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:6 }}>
+        <div>
+          <div style={{ fontFamily:'"Space Mono",monospace', fontSize:9, letterSpacing:1.2, color:L.muted }}>PLATE CALCULATOR</div>
+          <div style={{ display:'flex', alignItems:'baseline', gap:6, marginTop:1 }}>
+            <span style={{ fontFamily:'"Archivo",sans-serif', fontSize:30, lineHeight:0.9, letterSpacing:0.8 }}>{targetKg}</span>
+            <span style={{ fontFamily:'"Space Mono",monospace', fontSize:10, color:L.muted }}>KG · BAR {barKg}</span>
+          </div>
+        </div>
+        <div onClick={onClose} style={{ fontFamily:'"Space Mono",monospace', fontSize:10, color:L.muted, cursor:'pointer', padding:'2px 6px' }}>CLOSE</div>
+      </div>
+      <PlateBar barKg={barKg} targetKg={targetKg}/>
+      <div style={{ display:'flex', justifyContent:'center', gap:6, flexWrap:'wrap', marginTop:6 }}>
+        {stack.length === 0
+          ? <span style={{ fontFamily:'"Space Mono",monospace', fontSize:10, color:L.muted }}>BAR ONLY</span>
+          : stack.map((p,i) => {
+              const c = PLATE_COLORS[p];
+              return <div key={i} style={{ background:c.bg, color:c.fg, fontFamily:'"Space Mono",monospace', fontSize:9, fontWeight:700, padding:'2px 6px', borderRadius:3 }}>{p}</div>;
+            })}
+        {remainder > 0.01 && <span style={{ fontFamily:'"Space Mono",monospace', fontSize:9, color:L.down }}>+{remainder.toFixed(2)}KG OFF</span>}
+      </div>
+      <div style={{ display:'flex', gap:4, marginTop:10, paddingTop:8, borderTop:`1px solid ${L.hair}` }}>
+        {BAR_TYPES.map((b) => (
+          <div key={b.id} onClick={() => onBarChange && onBarChange(b.kg)} style={{ flex:1, textAlign:'center', padding:'5px 2px', borderRadius:6, cursor:'pointer', background:b.kg===barKg?L.ink:'transparent', color:b.kg===barKg?L.tickerFg:L.muted, fontFamily:'"Space Mono",monospace', fontSize:9, fontWeight:700, letterSpacing:0.5, border:b.kg===barKg?'none':`1px solid ${L.hair2}` }}>
+            <div>{b.name}</div>
+            <div style={{ fontSize:8, opacity:0.7, marginTop:1 }}>{b.kg}KG</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SetTypeSheet({ current='standard', onPick, onClose }) {
+  const types = [
+    { id:'standard',   name:'Standard',   desc:'Normal working set' },
+    { id:'warmup',     name:'Warmup',     desc:'Excluded from volume' },
+    { id:'superset',   name:'Superset',   desc:'Paired with next exercise, no rest' },
+    { id:'dropset',    name:'Dropset',    desc:'Multiple weight drops in one set' },
+    { id:'restpause',  name:'Rest-Pause', desc:'Short rest, continue same set' },
+    { id:'amrap',      name:'AMRAP',      desc:'As many reps as possible' },
+    { id:'failure',    name:'To Failure', desc:'Last possible rep' },
+    { id:'unilateral', name:'Unilateral', desc:'Track left and right side separately' },
+  ];
+  return (
+    <div style={{ position:'absolute', inset:0, zIndex:80, background:'rgba(31,28,25,0.45)', backdropFilter:'blur(6px)', WebkitBackdropFilter:'blur(6px)', display:'flex', flexDirection:'column', justifyContent:'flex-end' }}>
+      <div onClick={onClose} style={{ flex:1 }}/>
+      <div style={{ background:L.bg, borderRadius:'18px 18px 0 0', padding:'12px 14px 28px', borderTop:`1px solid ${L.hair2}` }}>
+        <div style={{ width:36, height:4, background:L.faint, borderRadius:2, margin:'0 auto 12px' }}/>
+        <div style={{ fontFamily:'"Space Mono",monospace', fontSize:9, letterSpacing:1.5, color:L.muted, marginBottom:8 }}>SET TYPE</div>
+        {types.map((t) => {
+          const active = t.id === current;
+          const cfg = L.st[t.id];
+          return (
+            <div key={t.id} onClick={() => onPick && onPick(t.id)} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 4px', borderBottom:`1px solid ${L.hair}`, cursor:'pointer' }}>
+              <div style={{ width:42, height:22, borderRadius:4, background:cfg.bg, border:t.id==='standard'?`1px dashed ${L.faint}`:'none', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'"Space Mono",monospace', fontSize:9, fontWeight:700, color:cfg.fg }}>{cfg.label}</div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontFamily:'"Archivo",sans-serif', fontSize:14, fontWeight:600, color:L.ink }}>{t.name}</div>
+                <div style={{ fontFamily:'"Archivo",sans-serif', fontSize:11, color:L.muted, marginTop:1 }}>{t.desc}</div>
+              </div>
+              {active && <span style={{ color:L.accent, fontSize:18 }}>•</span>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function RestTimerModal({ secs=102, total=150, onClose }) {
+  const m = Math.floor(secs/60), s = String(secs%60).padStart(2,'0');
+  const pct = secs/total;
+  const r = 96, circ = 2*Math.PI*r;
+  const size = r*2 + 20;
+  return (
+    <div style={{ position:'absolute', inset:0, zIndex:90, background:'rgba(31,28,25,0.6)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div onClick={onClose} style={{ position:'absolute', inset:0 }}/>
+      <div style={{ position:'relative', zIndex:1, background:L.bg, borderRadius:24, padding:'28px 24px 24px', width:300, boxShadow:'0 32px 64px rgba(0,0,0,0.28)', border:`1px solid ${L.hair2}` }}>
+        <div style={{ width:36, height:4, background:L.faint, borderRadius:2, margin:'0 auto 20px' }}/>
+        {/* Ring */}
+        <div style={{ position:'relative', width:size, height:size, margin:'0 auto 20px' }}>
+          <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+            <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={L.hair2} strokeWidth="7"/>
+            <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={L.accent} strokeWidth="7" strokeDasharray={circ} strokeDashoffset={circ*(1-pct)} strokeLinecap="round" transform={`rotate(-90 ${size/2} ${size/2})`}/>
+          </svg>
+          <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
+            <div style={{ fontFamily:'"Archivo",sans-serif', fontSize:68, color:L.ink, letterSpacing:2, lineHeight:1 }}>{m}:{s}</div>
+            <div style={{ fontFamily:'"Space Mono",monospace', fontSize:9, color:L.muted, letterSpacing:1.5, marginTop:6 }}>REST · TGT 2:30</div>
+          </div>
+        </div>
+        {/* Time adjust buttons */}
+        <div style={{ display:'flex', gap:6, justifyContent:'center', marginBottom:12 }}>
+          {['−15s','+15s','+30s','+1m'].map((label,i) => (
+            <div key={i} style={{ height:34, borderRadius:8, padding:'0 12px', background:L.surf, border:`1px solid ${L.hair2}`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'"Space Mono",monospace', fontSize:11, fontWeight:700, color:L.ink, letterSpacing:0.5 }}>{label}</div>
+          ))}
+        </div>
+        {/* Default rest row */}
+        <div style={{ background:L.surf, borderRadius:10, padding:'8px 12px', border:`1px solid ${L.hair}`, display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+          <div>
+            <div style={{ fontFamily:'"Space Mono",monospace', fontSize:8, letterSpacing:1.2, color:L.muted }}>DEFAULT · BENCH</div>
+            <div style={{ fontFamily:'"Archivo",sans-serif', fontSize:20, lineHeight:1, marginTop:2 }}>2:30 PER SET</div>
+          </div>
+          <span style={{ fontFamily:'"Space Mono",monospace', fontSize:10, color:L.accent, fontWeight:700 }}>EDIT</span>
+        </div>
+        <div onClick={onClose} style={{ height:54, borderRadius:12, background:L.accent, color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'"Archivo",sans-serif', fontWeight:900, fontSize:20, letterSpacing:1.5, boxShadow:`0 8px 24px ${L.accent}44`, cursor:'pointer' }}>SKIP REST ›</div>
+      </div>
+    </div>
+  );
+}
+
+// ── VARIANT A: CARD STACK ─────────────────────────────────────
+
+function SetRowA({ set:s, setIdx, hasRIR, onSetTypeTap, onPlateTap, showPlate, onClosePlate, plateBar, onPlateBarChange, isBarbell }) {
+  const cols = hasRIR ? '36px 22px 1fr 1fr 38px 30px' : '36px 22px 1fr 1fr 30px';
+  return (
+    <>
+      <div style={{ display:'grid', gridTemplateColumns:cols, alignItems:'center', padding:'7px 12px', borderBottom:`1px solid ${L.hair}`, background:s.active?L.accentSoft:'transparent', borderLeft:s.active?`2px solid ${L.accent}`:'2px solid transparent', opacity:s.type==='warmup'?0.65:1 }}>
+        <SetTypeChip type={s.type||'standard'} onTap={onSetTypeTap}/>
+        <span style={{ fontFamily:'"Space Mono",monospace', fontSize:10, fontWeight:700, color:s.active?L.accent:L.muted }}>{String(setIdx+1).padStart(2,'0')}</span>
+        <div style={{ textAlign:'center', position:'relative' }}>
+          {s.kg
+            ? <span style={{ fontFamily:'"Archivo",sans-serif', fontSize:20, color:L.ink, letterSpacing:0.5 }}>{s.kg}{s.pr&&<span style={{ display:'inline-block', width:5, height:5, borderRadius:'50%', background:L.warn, marginLeft:4, verticalAlign:'middle' }}/>}</span>
+            : <span style={{ fontFamily:'"Archivo",sans-serif', fontSize:20, color:L.faint, letterSpacing:0.5 }}>{s.prevKg}</span>}
+        </div>
+        <div style={{ textAlign:'center' }}>
+          {s.reps
+            ? <span style={{ fontFamily:'"Archivo",sans-serif', fontSize:20, color:L.ink, letterSpacing:0.5 }}>{s.reps}</span>
+            : <span style={{ fontFamily:'"Archivo",sans-serif', fontSize:20, color:L.faint, letterSpacing:0.5 }}>{s.prevReps}</span>}
+        </div>
+        {hasRIR && (
+          <div style={{ textAlign:'center' }}>
+            {s.rir!=null
+              ? <span style={{ fontFamily:'"Space Mono",monospace', fontSize:11, fontWeight:700, color:L.ink2 }}>{s.rir}</span>
+              : <span style={{ fontFamily:'"Space Mono",monospace', fontSize:11, color:L.faint }}>{s.prevRir??'—'}</span>}
+          </div>
+        )}
+        <div style={{ textAlign:'right' }}>
+          {s.done
+            ? <span style={{ color:L.up, fontSize:13, fontWeight:700 }}>✓</span>
+            : s.active
+              ? <span style={{ width:12, height:12, display:'inline-block', border:`2px solid ${L.accent}`, borderRadius:'50%' }}/>
+              : <span style={{ width:12, height:12, display:'inline-block', border:`1.5px solid ${L.faint}`, borderRadius:'50%' }}/>}
+        </div>
+      </div>
+      {isBarbell && s.active && (
+        <div style={{ borderBottom:`1px solid ${L.hair}` }}>
+          <div onClick={showPlate?onClosePlate:onPlateTap} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'5px 12px', background:L.surf2, cursor:'pointer' }}>
+            <span style={{ fontFamily:'"Space Mono",monospace', fontSize:9, letterSpacing:1.2, color:L.muted }}>PLATES · {s.kg||s.prevKg}KG</span>
+            <span style={{ fontFamily:'"Space Mono",monospace', fontSize:9, color:L.muted }}>{showPlate?'▴ CLOSE':'▾ SHOW'}</span>
+          </div>
+          {showPlate && (
+            <div style={{ padding:'8px 12px', background:L.surf2 }}>
+              <PlateCalcPopover targetKg={s.kg?parseFloat(s.kg):parseFloat(s.prevKg)} barKg={plateBar} onBarChange={onPlateBarChange} onClose={onClosePlate}/>
+            </div>
+          )}
+        </div>
+      )}
+      {s.type==='unilateral' && (['L','R'].map(side => (
+        <div key={side} style={{ display:'grid', gridTemplateColumns:hasRIR?'36px 22px 1fr 1fr 38px 30px':'36px 22px 1fr 1fr 30px', alignItems:'center', padding:'5px 12px 5px 28px', background:side==='L'?'rgba(44,109,163,0.04)':'rgba(44,109,163,0.07)', borderBottom:`1px solid ${L.hair}` }}>
+          <div style={{ fontFamily:'"Space Mono",monospace', fontSize:9, fontWeight:700, color:'#2c6da3', textAlign:'center' }}>{side}</div>
+          <div/>
+          <div style={{ height:26, borderRadius:5, background:L.surf, border:`1px solid ${L.hair}`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'"Archivo",sans-serif', fontSize:16, color:L.faint, textAlign:'center' }}>{side==='L'?(s.lKg||s.prevKg):(s.rKg||s.prevKg)}</div>
+          <div style={{ height:26, borderRadius:5, background:L.surf, border:`1px solid ${L.hair}`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'"Archivo",sans-serif', fontSize:16, color:L.faint, textAlign:'center' }}>{side==='L'?(s.lReps||s.prevReps):(s.rReps||s.prevReps)}</div>
+          {hasRIR && <div/>}
+          <div/>
+        </div>
+      )))}
+    </>
+  );
+}
+
+function ExerciseCardA({ ex, exIdx, onSetTypeTap, onPlateTap, openPlateFor, onClosePlate, plateBar, onPlateBarChange, expandedNotes, onToggleNotes }) {
+  const [collapsed, setCollapsed] = React.useState(false);
+  const isBarbell = ex.equipment==='BARBELL'||ex.equipment==='EZ';
+  return (
+    <div style={{ background:L.surf, borderRadius:14, border:`1px solid ${L.hair}`, marginBottom:10, overflow:'hidden' }}>
+      <div style={{ padding:'10px 12px 8px', display:'flex', alignItems:'center', gap:8, borderBottom:collapsed?'none':`1px solid ${L.hair}` }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:2, opacity:0.4 }}>
+          <div style={{ width:12, height:1.5, background:L.ink }}/>
+          <div style={{ width:12, height:1.5, background:L.ink }}/>
+          <div style={{ width:12, height:1.5, background:L.ink }}/>
+        </div>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ display:'flex', alignItems:'baseline', gap:8 }}>
+            <span style={{ fontFamily:'"Space Mono",monospace', fontSize:9, color:L.muted, letterSpacing:1 }}>{String(exIdx+1).padStart(2,'0')}</span>
+            <span style={{ fontFamily:'"Archivo",sans-serif', fontWeight:700, fontSize:17, letterSpacing:0.3, lineHeight:1, color:L.ink, whiteSpace:'nowrap' }}>{ex.name}</span>
+          </div>
+          <div style={{ display:'flex', gap:10, marginTop:3, fontFamily:'"Space Mono",monospace', fontSize:9, color:L.muted, letterSpacing:0.4 }}>
+            <span>{ex.equipment}</span>
+            <span>·</span>
+            <span>PR <span style={{ color:L.ink, fontWeight:700 }}>{ex.pr}</span></span>
+            <span>·</span>
+            <span>1RM <span style={{ color:L.ink, fontWeight:700 }}>{ex.oneRm}</span></span>
+            {ex.delta && <><span>·</span><span style={{ color:ex.deltaUp?L.up:L.down, fontWeight:700 }}>{ex.deltaUp?'▲':'▼'} {ex.delta}</span></>}
+          </div>
+        </div>
+        <div style={{ fontFamily:'"Space Mono",monospace', fontSize:9, color:L.muted, fontWeight:700 }}>{ex.setsDone}/{ex.sets.length}</div>
+        <div onClick={() => onToggleNotes&&onToggleNotes(exIdx)} style={{ width:24, height:24, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:L.muted, fontSize:14 }}>···</div>
+        <div onClick={() => setCollapsed(!collapsed)} style={{ width:20, height:20, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:L.muted, fontSize:11, transform:collapsed?'rotate(-90deg)':'rotate(0deg)', transition:'transform 0.15s' }}>▾</div>
+      </div>
+      {expandedNotes && !collapsed && (
+        <div style={{ padding:'8px 12px', background:L.surf2, borderBottom:`1px solid ${L.hair}`, display:'flex', gap:8 }}>
+          <span style={{ fontFamily:'"Space Mono",monospace', fontSize:9, color:L.muted, letterSpacing:1 }}>LAST</span>
+          <span style={{ fontFamily:'"Archivo",sans-serif', fontSize:11, color:L.ink2, fontStyle:'italic', flex:1 }}>"{ex.lastNote}"</span>
+        </div>
+      )}
+      {!collapsed && (
+        <>
+          <div style={{ display:'grid', gridTemplateColumns:ex.hasRIR?'36px 22px 1fr 1fr 38px 30px':'36px 22px 1fr 1fr 30px', padding:'5px 12px', background:L.surf2, fontFamily:'"Space Mono",monospace', fontSize:8, letterSpacing:1.2, color:L.muted, borderBottom:`1px solid ${L.hair}` }}>
+            <span>TYPE</span><span>#</span>
+            <span style={{ textAlign:'center' }}>KG</span>
+            <span style={{ textAlign:'center' }}>REPS</span>
+            {ex.hasRIR && <span style={{ textAlign:'center' }}>RIR</span>}
+            <span style={{ textAlign:'right' }}>✓</span>
+          </div>
+          {ex.sets.map((s,i) => (
+            <SetRowA key={i} set={s} setIdx={i} hasRIR={ex.hasRIR} onSetTypeTap={() => onSetTypeTap(exIdx,i)} onPlateTap={() => onPlateTap(exIdx,i)} onClosePlate={onClosePlate} showPlate={openPlateFor&&openPlateFor.ex===exIdx&&openPlateFor.set===i} plateBar={plateBar} onPlateBarChange={onPlateBarChange} isBarbell={isBarbell}/>
+          ))}
+
+          <div style={{ padding:'8px 12px', display:'flex', gap:6 }}>
+            <div style={{ flex:1, height:30, borderRadius:6, border:`1px dashed ${L.faint}`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'"Space Mono",monospace', fontSize:10, color:L.muted, letterSpacing:0.8 }}>+ ADD SET</div>
+            {ex.hasRIR && <div style={{ height:30, padding:'0 10px', borderRadius:6, background:L.surf2, border:`1px solid ${L.hair}`, display:'flex', alignItems:'center', fontFamily:'"Space Mono",monospace', fontSize:9, color:L.muted, letterSpacing:0.5 }}>RIR ON</div>}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+const EXERCISES_DATA = [
+  {
+    name:'BENCH PRESS', equipment:'BARBELL', pr:'105×4', oneRm:'~118', delta:'+5KG', deltaUp:true,
+    hasRIR:true, setsDone:3, lastWeight:100, lastNote:'Pause at bottom. Felt strong.',
+    sets:[
+      { type:'warmup',   kg:'60',  reps:'8', rir:5,  done:true,  prevKg:'60',  prevReps:'8',  prevRir:5 },
+      { type:'standard', kg:'95',  reps:'6', rir:3,  done:true,  prevKg:'90',  prevReps:'6',  prevRir:3 },
+      { type:'standard', kg:'100', reps:'6', rir:2,  done:true,  pr:true, prevKg:'95',  prevReps:'6',  prevRir:3 },
+      { type:'standard', kg:null,  reps:null,rir:null,active:true,prevKg:'95',  prevReps:'6',  prevRir:3 },
+      { type:'dropset',  kg:null,  reps:null,rir:null,prevKg:'80',prevReps:'8', prevRir:1 },
+    ],
+  },
+  {
+    name:'OVERHEAD PRESS', equipment:'BARBELL', pr:'70×5', oneRm:'~80',
+    hasRIR:false, setsDone:0, lastWeight:65, lastNote:'Strict form, no leg drive.',
+    sets:[
+      { type:'standard', kg:null, reps:null, prevKg:'65', prevReps:'8' },
+      { type:'standard', kg:null, reps:null, prevKg:'65', prevReps:'8' },
+      { type:'standard', kg:null, reps:null, prevKg:'65', prevReps:'7' },
+    ],
+  },
+  {
+    name:'INCLINE DB PRESS', equipment:'DUMBBELL', pr:'34×10', oneRm:'~38',
+    hasRIR:true, setsDone:0, lastNote:'Bench at 30°. Right shoulder felt tight.',
+    sets:[
+      { type:'standard', kg:null, reps:null, rir:null, prevKg:'32', prevReps:'10', prevRir:2 },
+      { type:'standard', kg:null, reps:null, rir:null, prevKg:'32', prevReps:'10', prevRir:2 },
+      { type:'failure',  kg:null, reps:null, rir:null, prevKg:'30', prevReps:'9',  prevRir:0 },
+    ],
+  },
+  {
+    name:'CABLE FLY', equipment:'CABLE', pr:'18×12', oneRm:'—',
+    hasRIR:false, setsDone:0,
+    sets:[
+      { type:'standard',    kg:null, reps:null, prevKg:'15', prevReps:'12' },
+      { type:'unilateral',  kg:null, reps:null, prevKg:'13', prevReps:'12' },
+      { type:'amrap',       kg:null, reps:null, prevKg:'12', prevReps:'15' },
+    ],
+  },
+];
+
+function StageA({ stage='main' }) {
+  const [openPlate, setOpenPlate] = React.useState(stage==='plate'?{ex:0,set:2}:null);
+  const [plateBar, setPlateBar]   = React.useState(20);
+  const [setSheet, setSetSheet]   = React.useState(stage==='settype'?{ex:0,set:3}:null);
+  const [restModal, setRestModal] = React.useState(stage==='rest');
+  const [expandedNotes, setExpandedNotes] = React.useState({0:true});
+
+  const exercises = EXERCISES_DATA;
+  const totalSets = exercises.reduce((a,e)=>a+e.sets.length,0);
+  const doneSets  = exercises.reduce((a,e)=>a+e.setsDone,0);
+
+  return (
+    <div style={{ width:'100%', height:'100%', background:L.bg, color:L.ink, fontFamily:'"Archivo",sans-serif', position:'relative', overflow:'hidden' }}>
+      <StatusBar/>
+      <Masthead onRestTap={() => setRestModal(true)}/>
+      <div style={{ position:'absolute', top:96, left:0, right:0, bottom:108, overflowY:'auto', padding:'10px 10px 0' }}>
+        {exercises.map((ex,i) => (
+          <ExerciseCardA key={i} ex={ex} exIdx={i}
+            onSetTypeTap={(ei,si) => setSetSheet({ex:ei,set:si})}
+            onPlateTap={(ei,si) => setOpenPlate({ex:ei,set:si})}
+            openPlateFor={openPlate}
+            onClosePlate={() => setOpenPlate(null)}
+            plateBar={plateBar}
+            onPlateBarChange={setPlateBar}
+            expandedNotes={expandedNotes[i]}
+            onToggleNotes={(idx) => setExpandedNotes(p=>({...p,[idx]:!p[idx]}))}
+          />
+        ))}
+        <div style={{ borderTop:`1px solid ${L.hair2}`, padding:'10px 2px' }}>
+          <div style={{ height:36, borderRadius:8, border:`1px dashed ${L.faint}`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'"Space Mono",monospace', fontSize:10, color:L.muted, letterSpacing:1 }}>
+            <span style={{ fontSize:14, marginRight:6 }}>+</span> ADD EXERCISE
+          </div>
+        </div>
+      </div>
+      <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'10px 12px 28px', background:L.bg, borderTop:`1px solid ${L.hair2}` }}>
+        <div style={{ position:'relative', height:48, borderRadius:11, overflow:'hidden', background:L.accent, boxShadow:`0 6px 18px ${L.accent}44`, cursor:'pointer' }}>
+          <div style={{ position:'absolute', left:0, top:0, bottom:0, width:`${(doneSets/totalSets)*100}%`, background:'rgba(0,0,0,0.18)' }}/>
+          <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 14px' }}>
+            <span style={{ fontFamily:'"Archivo",sans-serif', fontWeight:900, fontSize:16, letterSpacing:1, color:'#fff', whiteSpace:'nowrap' }}>FINISH WORKOUT ›</span>
+            <span style={{ fontFamily:'"Space Mono",monospace', fontSize:9, fontWeight:700, color:'rgba(255,255,255,0.85)', letterSpacing:0.8, whiteSpace:'nowrap' }}>{totalSets-doneSets} SETS LEFT</span>
+          </div>
+        </div>
+      </div>
+      {setSheet && <SetTypeSheet current={exercises[setSheet.ex].sets[setSheet.set].type||'standard'} onPick={() => setSetSheet(null)} onClose={() => setSetSheet(null)}/>}
+      {restModal && <RestTimerModal secs={102} total={150} onClose={() => setRestModal(false)}/>}
+    </div>
+  );
+}
+
+// ── VARIANT B: LOGBOOK ────────────────────────────────────────
+
+function SetRowB({ set:s, setIdx, hasRIR, onSetTypeTap, showPlate, onPlateTap, onClosePlate, plateBar, onPlateBarChange, isBarbell }) {
+  const cols = hasRIR ? '36px 22px 1fr 1fr 38px 28px' : '36px 22px 1fr 1fr 28px';
+  return (
+    <>
+      <div style={{ display:'grid', gridTemplateColumns:cols, alignItems:'center', padding:'7px 14px', borderBottom:`1px solid ${L.hair}`, background:s.active?L.accentSoft:'transparent', borderLeft:s.active?`2px solid ${L.accent}`:'2px solid transparent', opacity:s.type==='warmup'?0.65:1 }}>
+        <SetTypeChip type={s.type||'standard'} onTap={onSetTypeTap}/>
+        <span style={{ fontFamily:'"Space Mono",monospace', fontSize:10, fontWeight:700, color:s.active?L.accent:L.muted }}>{String(setIdx+1).padStart(2,'0')}</span>
+        <div style={{ textAlign:'center' }}>
+          {s.kg
+            ? <span style={{ fontFamily:'"Archivo",sans-serif', fontSize:19, color:L.ink, letterSpacing:0.5 }}>{s.kg}{s.pr&&<span style={{ display:'inline-block', width:5, height:5, borderRadius:'50%', background:L.warn, marginLeft:4, verticalAlign:'middle' }}/>}</span>
+            : <span style={{ fontFamily:'"Archivo",sans-serif', fontSize:19, color:L.faint, letterSpacing:0.5 }}>{s.prevKg}</span>}
+        </div>
+        <div style={{ textAlign:'center' }}>
+          {s.reps
+            ? <span style={{ fontFamily:'"Archivo",sans-serif', fontSize:19, color:L.ink, letterSpacing:0.5 }}>{s.reps}</span>
+            : <span style={{ fontFamily:'"Archivo",sans-serif', fontSize:19, color:L.faint, letterSpacing:0.5 }}>{s.prevReps}</span>}
+        </div>
+        {hasRIR && (
+          <div style={{ textAlign:'center' }}>
+            {s.rir!=null
+              ? <span style={{ fontFamily:'"Space Mono",monospace', fontSize:11, fontWeight:700, color:L.ink2 }}>{s.rir}</span>
+              : <span style={{ fontFamily:'"Space Mono",monospace', fontSize:11, color:L.faint }}>{s.prevRir??'—'}</span>}
+          </div>
+        )}
+        <div style={{ textAlign:'right' }}>
+          {s.done
+            ? <span style={{ color:L.up, fontSize:13, fontWeight:700 }}>✓</span>
+            : s.active
+              ? <span style={{ width:11, height:11, display:'inline-block', border:`2px solid ${L.accent}`, borderRadius:'50%' }}/>
+              : <span style={{ width:11, height:11, display:'inline-block', border:`1.5px solid ${L.faint}`, borderRadius:'50%' }}/>}
+        </div>
+      </div>
+      {showPlate && (
+        <div style={{ padding:'8px 14px', background:L.surf, borderBottom:`1px solid ${L.hair}` }}>
+          <PlateCalcPopover targetKg={s.kg?parseFloat(s.kg):parseFloat(s.prevKg)} barKg={plateBar} onBarChange={onPlateBarChange} onClose={onClosePlate}/>
+        </div>
+      )}
+      {s.type==='unilateral' && (['L','R'].map(side => (
+        <div key={side} style={{ display:'grid', gridTemplateColumns:hasRIR?'36px 22px 1fr 1fr 38px 28px':'36px 22px 1fr 1fr 28px', alignItems:'center', padding:'4px 14px 4px 28px', background:side==='L'?'rgba(44,109,163,0.04)':'rgba(44,109,163,0.08)', borderBottom:`1px solid ${L.hair}` }}>
+          <div style={{ fontFamily:'"Space Mono",monospace', fontSize:9, fontWeight:700, color:'#2c6da3', textAlign:'center' }}>{side}</div>
+          <div/>
+          <div style={{ height:24, borderRadius:4, background:L.surf, border:`1px solid ${L.hair}`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'"Archivo",sans-serif', fontSize:15, color:L.faint }}>{side==='L'?(s.lKg||s.prevKg):(s.rKg||s.prevKg)}</div>
+          <div style={{ height:24, borderRadius:4, background:L.surf, border:`1px solid ${L.hair}`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'"Archivo",sans-serif', fontSize:15, color:L.faint }}>{side==='L'?(s.lReps||s.prevReps):(s.rReps||s.prevReps)}</div>
+          {hasRIR && <div/>}
+          <div/>
+        </div>
+      )))}
+    </>
+  );
+}
+
+function ExerciseBlockB({ ex, exIdx, onSetTypeTap, onPlateTap, openPlateFor, onClosePlate, plateBar, onPlateBarChange }) {
+  const isBarbell = ex.equipment==='BARBELL'||ex.equipment==='EZ';
+  return (
+    <div style={{ borderBottom:`1px solid ${L.hair2}` }}>
+      <div style={{ padding:'10px 14px 8px', display:'flex', alignItems:'center', gap:8, borderBottom:`1px solid ${L.hair}` }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:2, opacity:0.35 }}>
+          <div style={{ width:10, height:1.5, background:L.ink }}/>
+          <div style={{ width:10, height:1.5, background:L.ink }}/>
+          <div style={{ width:10, height:1.5, background:L.ink }}/>
+        </div>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ display:'flex', alignItems:'baseline', gap:8 }}>
+            <span style={{ fontFamily:'"Space Mono",monospace', fontSize:9, color:L.muted, letterSpacing:1 }}>{String(exIdx+1).padStart(2,'0')}</span>
+            <span style={{ fontFamily:'"Archivo",sans-serif', fontWeight:700, fontSize:16, letterSpacing:0.3, lineHeight:1, color:L.ink, whiteSpace:'nowrap' }}>{ex.name}</span>
+          </div>
+          <div style={{ display:'flex', gap:8, marginTop:2, fontFamily:'"Space Mono",monospace', fontSize:9, color:L.muted }}>
+            <span>{ex.equipment}</span>
+            <span>·</span>
+            <span>PR <span style={{ color:L.ink, fontWeight:700 }}>{ex.pr}</span></span>
+            {ex.delta && <><span>·</span><span style={{ color:ex.deltaUp?L.up:L.down, fontWeight:700 }}>{ex.deltaUp?'▲':'▼'} {ex.delta}</span></>}
+          </div>
+        </div>
+        <div style={{ fontFamily:'"Space Mono",monospace', fontSize:9, color:L.muted }}>{ex.setsDone}/{ex.sets.length}</div>
+        <div style={{ width:24, height:24, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:L.muted, fontSize:14 }}>···</div>
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:ex.hasRIR?'36px 22px 1fr 1fr 38px 28px':'36px 22px 1fr 1fr 28px', padding:'4px 14px', fontFamily:'"Space Mono",monospace', fontSize:8, letterSpacing:1.2, color:L.muted, background:L.surf, borderBottom:`1px solid ${L.hair}` }}>
+        <span>TYPE</span><span>#</span>
+        <span style={{ textAlign:'center' }}>KG</span>
+        <span style={{ textAlign:'center' }}>REPS</span>
+        {ex.hasRIR && <span style={{ textAlign:'center' }}>RIR</span>}
+        <span style={{ textAlign:'right' }}>✓</span>
+      </div>
+      {ex.sets.map((s,i) => (
+        <SetRowB key={i} set={s} setIdx={i} hasRIR={ex.hasRIR}
+          onSetTypeTap={() => onSetTypeTap(exIdx,i)}
+          onPlateTap={() => onPlateTap(exIdx,i)}
+          onClosePlate={onClosePlate}
+          showPlate={openPlateFor&&openPlateFor.ex===exIdx&&openPlateFor.set===i}
+          plateBar={plateBar}
+          onPlateBarChange={onPlateBarChange}
+          isBarbell={isBarbell}
+        />
+      ))}
+      <div style={{ padding:'8px 14px', display:'flex', gap:6 }}>
+        <div style={{ flex:1, height:30, borderRadius:6, border:`1px dashed ${L.faint}`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'"Space Mono",monospace', fontSize:10, color:L.muted, letterSpacing:0.8 }}>+ ADD SET</div>
+      </div>
+    </div>
+  );
+}
+
+function StageB({ stage='main' }) {
+  const [openPlate, setOpenPlate] = React.useState(stage==='plate'?{ex:0,set:2}:null);
+  const [plateBar, setPlateBar]   = React.useState(20);
+  const [setSheet, setSetSheet]   = React.useState(stage==='settype'?{ex:0,set:3}:null);
+  const [restModal, setRestModal] = React.useState(stage==='rest');
+
+  const exercises = EXERCISES_DATA;
+  const totalSets = exercises.reduce((a,e)=>a+e.sets.length,0);
+  const doneSets  = exercises.reduce((a,e)=>a+e.setsDone,0);
+
+  return (
+    <div style={{ width:'100%', height:'100%', background:L.bg, color:L.ink, fontFamily:'"Archivo",sans-serif', position:'relative', overflow:'hidden' }}>
+      <StatusBar/>
+      <Masthead onRestTap={() => setRestModal(true)}/>
+      <div style={{ position:'absolute', top:96, left:0, right:0 }}><Ticker/></div>
+      <div style={{ position:'absolute', top:120, left:0, right:0, bottom:108, overflowY:'auto' }}>
+        {exercises.map((ex,i) => (
+          <ExerciseBlockB key={i} ex={ex} exIdx={i}
+            onSetTypeTap={(ei,si) => setSetSheet({ex:ei,set:si})}
+            onPlateTap={(ei,si) => setOpenPlate({ex:ei,set:si})}
+            openPlateFor={openPlate}
+            onClosePlate={() => setOpenPlate(null)}
+            plateBar={plateBar}
+            onPlateBarChange={setPlateBar}
+          />
+        ))}
+        <div style={{ borderTop:`1px solid ${L.hair2}`, padding:'10px 14px' }}>
+          <div style={{ height:36, borderRadius:8, border:`1px dashed ${L.faint}`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'"Space Mono",monospace', fontSize:10, color:L.muted, letterSpacing:1 }}>
+            <span style={{ fontSize:14, marginRight:6 }}>+</span> ADD EXERCISE
+          </div>
+        </div>
+      </div>
+      <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'10px 12px 28px', background:L.bg, borderTop:`1px solid ${L.hair2}` }}>
+        <div style={{ position:'relative', height:48, borderRadius:11, overflow:'hidden', background:L.accent, boxShadow:`0 6px 18px ${L.accent}44`, cursor:'pointer' }}>
+          <div style={{ position:'absolute', left:0, top:0, bottom:0, width:`${(doneSets/totalSets)*100}%`, background:'rgba(0,0,0,0.18)' }}/>
+          <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 14px' }}>
+            <span style={{ fontFamily:'"Archivo",sans-serif', fontWeight:900, fontSize:16, letterSpacing:1, color:'#fff', whiteSpace:'nowrap' }}>FINISH WORKOUT ›</span>
+            <span style={{ fontFamily:'"Space Mono",monospace', fontSize:9, fontWeight:700, color:'rgba(255,255,255,0.85)', letterSpacing:0.8, whiteSpace:'nowrap' }}>{totalSets-doneSets} SETS LEFT</span>
+          </div>
+        </div>
+      </div>
+      {setSheet && <SetTypeSheet current={exercises[setSheet.ex].sets[setSheet.set].type||'standard'} onPick={() => setSetSheet(null)} onClose={() => setSetSheet(null)}/>}
+      {restModal && <RestTimerModal secs={102} total={150} onClose={() => setRestModal(false)}/>}
+    </div>
+  );
+}
+
+function Card({ num, vibe, desc, children }) {
+  return (
+    <div className="card">
+      <div>
+        <div className="card-label"><span className="num">{num}</span><span className="vibe">{vibe}</span></div>
+        <div className="card-desc">{desc}</div>
+      </div>
+      <div className="frame"><div className="screen">{children}</div></div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <div className="canvas">
+      <h1>Workout Logger · Card Stack</h1>
+      <p className="h1-sub">Card stack layout. Set-type chip on every row. RIR column. Persistent rest pill in masthead. Plate calc on active set only. Four states.</p>
+
+      <div className="section-label">CARD STACK</div>
+      <p className="section-desc">Each exercise in its own surface card. Plate calculator only accessible on the current active set.</p>
+      <div className="grid">
+        <Card num="A1" vibe="Main" desc="All open. Bench mid-set, note expanded under header, PR dot on set 3, unilateral sub-rows on Cable Fly set 2."><StageA stage="main"/></Card>
+        <Card num="A2" vibe="Rest Modal" desc="Tap rest pill → centered ring countdown, ±15/30/60s, default rest editor, skip CTA."><StageA stage="rest"/></Card>
+        <Card num="A3" vibe="Set Type Sheet" desc="Tap any set chip → 8 types: Std, Warmup, Superset, Dropset, Rest-Pause, AMRAP, Failure, Unilateral."><StageA stage="settype"/></Card>
+        <Card num="A4" vibe="Plate Calc" desc="Tap PLATES row under a barbell set → expands with color-coded stack visualizer, bar selector."><StageA stage="plate"/></Card>
+      </div>
+
+
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

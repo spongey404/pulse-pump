@@ -1,0 +1,118 @@
+/* PUMP COLOR SYSTEM
+   Warm-neutral canvas + one blue accent. Blue is FLAT #0A6FC0 on filled surfaces
+   (CTAs, tab-bar home key, selected pills) in BOTH modes; it lifts to #4DB8FF for
+   text, glyphs and borders on the dark canvas only.
+   Amber is reserved for the sibling app Fuel and never appears in Pump.
+   Green is a positive-delta signal only — never a filled surface. */
+
+:root{
+  /* ── Base neutrals — light ─────────────────────────── */
+  --pump-cream:#F9F8F4;
+  --pump-cream-elevated:#F4F0E6;
+  --pump-cream-sunken:#ECE7D8;
+  --pump-cream-deep:#E2DCCD;
+  --pump-charcoal:#1F1C19;
+  --pump-charcoal-2:#3A342D;
+
+  /* ── Base neutrals — dark ──────────────────────────── */
+  --pump-dark:#1A1917;
+  --pump-dark-elevated:#252220;
+  --pump-dark-sunken:#2E2A26;
+  --pump-dark-deep:#363028;
+  --pump-bone:#ECE5D6;
+  --pump-bone-2:#C8BFB0;
+
+  /* ── Accent ────────────────────────────────────────── */
+  --pump-blue:#0A6FC0;        /* flat fill — CTAs, tab bar, selected chips */
+  --pump-blue-lift:#4DB8FF;   /* text / glyph / border on dark canvas */
+  --pump-blue-press:#08589A;  /* pressed state of a filled blue surface */
+
+  /* ── Signals ───────────────────────────────────────── */
+  --pump-green:#00AA55;       /* positive delta — text and arrows only */
+  --pump-green-ticker-light:#2A7A4A; /* ▲ on the light-mode ticker */
+  --pump-green-ticker-dark:#00E07A;  /* ▲ on the dark-mode ticker */
+  --pump-red:#C0341A;
+  --pump-red-ticker:#FF3B30;
+
+  /* ── Set-type hues (workout logger) ────────────────── */
+  --pump-type-warmup:#A17418;
+  --pump-type-drop:#A8442F;
+  --pump-type-superset:#7D4A8C;
+  --pump-type-amrap:#2C6DA3;
+  --pump-type-fail:#C0341A;
+  --pump-type-restpause:#3A342D;
+
+  /* ── Plate colours (calibrated plate calculator) ───── */
+  --pump-plate-25:#E51B1B;
+  --pump-plate-20:#1F4EA3;
+  --pump-plate-15:#C98A17;
+  --pump-plate-10:#1F8F5A;
+  --pump-plate-5:#1F1C19;
+  --pump-plate-2-5:#A3A39A;
+  --pump-plate-1-25:#D6D2C4;
+
+  /* ════ SEMANTIC ALIASES — light mode (default) ════ */
+  --surface-canvas:var(--pump-cream);
+  --surface-elevated:var(--pump-cream-elevated);
+  --surface-sunken:var(--pump-cream-sunken);
+  --surface-deep:var(--pump-cream-deep);
+  --surface-inverse:var(--pump-charcoal);
+
+  --text-primary:var(--pump-charcoal);
+  --text-secondary:var(--pump-charcoal-2);
+  --text-muted:rgba(31,28,25,0.50);
+  --text-ghost:rgba(31,28,25,0.18);
+  --text-faint:rgba(31,28,25,0.13);
+  --text-inverse:var(--pump-bone);
+  --text-on-accent:#FFFFFF;
+
+  --rule-hair:rgba(31,28,25,0.08);
+  --rule-strong:rgba(31,28,25,0.14);
+
+  --accent:var(--pump-blue);
+  --accent-text:var(--pump-blue);
+  --accent-soft:rgba(10,111,192,0.08);
+  --accent-row:rgba(10,111,192,0.07);
+  --accent-border:rgba(10,111,192,0.33);
+
+  --signal-up:var(--pump-green);
+  --signal-down:var(--pump-red);
+
+  --ticker-bg:#F0EBE0;
+  --ticker-fg:#1A1917;
+  --ticker-up:var(--pump-green-ticker-light);
+  --ticker-down:var(--pump-red);
+  --ticker-sep:rgba(26,25,23,0.20);
+}
+
+/* ════ SEMANTIC ALIASES — dark mode ════ */
+[data-theme="dark"]{
+  --surface-canvas:var(--pump-dark);
+  --surface-elevated:var(--pump-dark-elevated);
+  --surface-sunken:var(--pump-dark-sunken);
+  --surface-deep:var(--pump-dark-deep);
+  --surface-inverse:var(--pump-bone);
+
+  --text-primary:var(--pump-bone);
+  --text-secondary:var(--pump-bone-2);
+  --text-muted:rgba(236,229,214,0.50);
+  --text-ghost:rgba(236,229,214,0.18);
+  --text-faint:rgba(236,229,214,0.13);
+  --text-inverse:var(--pump-charcoal);
+  --text-on-accent:#FFFFFF;
+
+  --rule-hair:rgba(236,229,214,0.08);
+  --rule-strong:rgba(236,229,214,0.14);
+
+  --accent:var(--pump-blue);
+  --accent-text:var(--pump-blue-lift);
+  --accent-soft:rgba(77,184,255,0.10);
+  --accent-row:rgba(77,184,255,0.10);
+  --accent-border:rgba(77,184,255,0.33);
+
+  --ticker-bg:#0E0C0A;
+  --ticker-fg:var(--pump-bone);
+  --ticker-up:var(--pump-green-ticker-dark);
+  --ticker-down:var(--pump-red-ticker);
+  --ticker-sep:rgba(236,229,214,0.18);
+}

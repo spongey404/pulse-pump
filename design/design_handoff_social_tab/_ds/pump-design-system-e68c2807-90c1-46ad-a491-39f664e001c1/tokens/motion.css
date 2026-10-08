@@ -1,0 +1,17 @@
+/* PUMP MOTION — precise and analog. No springs, no overshoot, no bounce. */
+
+:root{
+  /* ease-in-out */
+  --ease-default:cubic-bezier(0.4,0,0.2,1); /* @kind other */
+  --ease-out:cubic-bezier(0,0,0.2,1); /* @kind other */
+
+  /* micro = tap states and colour transitions; default = most transitions and header
+     collapse; sheet = modal present/dismiss; reorder = drag-and-drop settle */
+  --dur-micro:150ms; /* @kind other */
+  --dur-default:250ms; /* @kind other */
+  --dur-sheet:350ms; /* @kind other */
+  --dur-reorder:200ms; /* @kind other */
+
+  --ticker-speed:40px; /* per second, linear, continuous */
+  --ticker-cycle:45s; /* @kind other */
+}

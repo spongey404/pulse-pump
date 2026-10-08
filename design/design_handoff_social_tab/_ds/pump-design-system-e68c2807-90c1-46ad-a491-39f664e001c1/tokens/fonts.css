@@ -1,0 +1,8 @@
+/* Pump webfonts. Archivo = everything except numbers/labels/metadata; Space Mono = those. */
+@font-face{font-family:"Archivo";src:url("../assets/fonts/Archivo-Light.ttf") format("truetype");font-weight:300;font-style:normal;font-display:swap}
+@font-face{font-family:"Archivo";src:url("../assets/fonts/Archivo-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Archivo";src:url("../assets/fonts/Archivo-SemiBold.ttf") format("truetype");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Archivo";src:url("../assets/fonts/Archivo-Bold.ttf") format("truetype");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Archivo";src:url("../assets/fonts/Archivo-Black.ttf") format("truetype");font-weight:900;font-style:normal;font-display:swap}
+@font-face{font-family:"Space Mono";src:url("../assets/fonts/SpaceMono-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Space Mono";src:url("../assets/fonts/SpaceMono-Bold.ttf") format("truetype");font-weight:700;font-style:normal;font-display:swap}

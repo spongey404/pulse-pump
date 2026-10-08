@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pulse Pump — Modals & Confirmations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #edeae3; min-height: 100vh; font-family: 'Archivo', sans-serif; }
+  @keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="pump-modals-components.jsx"></script>
+<script type="text/babel" data-presets="react">
+
+// Phone frame wrapper
+function Phone({C, children, scrolly=false}) {
+  return (
+    <div style={{width:390,height:780,background:'#000',borderRadius:44,padding:5,boxShadow:'0 30px 60px rgba(0,0,0,0.18)'}}>
+      <div style={{width:'100%',height:'100%',background:C.bg,borderRadius:39,overflow:scrolly?'auto':'hidden',position:'relative',color:C.ink,fontFamily:'"Archivo",sans-serif'}}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// Background shell — mimics a screen behind the modal
+function ScreenShell({C, title='HOME', children}) {
+  const dark = C===TD;
+  return (
+    <div style={{width:'100%',height:'100%',background:C.bg,display:'flex',flexDirection:'column',color:C.ink,fontFamily:'"Archivo",sans-serif'}}>
+      <StatusBar dark={dark}/>
+      <div style={{background:C.tickerBg,height:24,padding:'0 14px',display:'flex',alignItems:'center',gap:14,flexShrink:0}}>
+        <span style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:'#dc7d4a',fontWeight:700,letterSpacing:1.5}}>● LIVE</span>
+        <span style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:C.tickerFg,opacity:0.6,letterSpacing:1.2}}>WK 14 · 247 SETS · 3 DAYS</span>
+      </div>
+      <div style={{padding:'14px 16px',borderBottom:`1px solid ${C.hair}`,display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
+        <span style={{fontFamily:'"Archivo",sans-serif',fontWeight:900,fontSize:26,letterSpacing:0.5,color:C.ink}}>{title}</span>
+        <span style={{fontFamily:'"Space Mono",monospace',fontSize:9,letterSpacing:1.5,color:C.muted,fontWeight:700}}>WED · 9:41</span>
+      </div>
+      <div style={{flex:1,padding:'14px 16px',opacity:0.5}}>
+        {children || (
+          <>
+            <div style={{height:60,background:C.surf,borderRadius:10,marginBottom:10,padding:12}}>
+              <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,letterSpacing:1.5,color:C.muted,fontWeight:700}}>NEXT WORKOUT</div>
+              <div style={{fontFamily:'"Archivo",sans-serif',fontWeight:700,fontSize:20,color:C.ink,marginTop:4}}>Push Day</div>
+            </div>
+            <div style={{height:80,background:C.surf,borderRadius:10,marginBottom:10}}/>
+            <div style={{height:120,background:C.surf,borderRadius:10}}/>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Icons ─────────────────────────────────────────────────────
+const I = {
+  trash: <><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></>,
+  edit: <><path d="M11 4H4v16h16v-7"/><path d="M18.5 2.5l3 3L12 15H9v-3z"/></>,
+  flag: <><path d="M4 21v-7M4 14V4l8 3 8-3v10l-8 3-8-3"/></>,
+  copy: <><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></>,
+  share: <><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></>,
+  save: <><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>,
+  hide: <><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></>,
+  camera: <><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></>,
+  photo: <><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></>,
+  user: <><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
+  heart: <><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></>,
+  bell: <><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></>,
+  clock: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
+};
+
+function ModalsApp() {
+  return (
+    <DesignCanvas title="Pulse Pump · Modals & Confirmations" subtitle="Custom replacements for native iOS alerts. 6 reusable patterns × multiple states.">
+
+      {/* ─── PATTERN A — INLINE CONFIRM ─────────────────────── */}
+      <DCSection id="pattern-a" title="A · Inline confirmation strip" subtitle="Slides in above the docked CTA. Low-stakes destructive confirms in the logger / Home. Already in use for ‘Discard current workout?'.">
+        <DCArtboard id="a-light-discard" label="Discard workout · Light" width={390} height={420}>
+          <div style={{width:'100%',height:'100%',background:TL.bg,display:'flex',flexDirection:'column',padding:16,gap:12,fontFamily:'"Archivo",sans-serif'}}>
+            <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,letterSpacing:1.8,color:TL.accent,fontWeight:700}}>● USED IN: HOME, LOGGER</div>
+            <div style={{height:160,background:TL.surf,borderRadius:10,opacity:0.4,padding:14}}>
+              <div style={{fontFamily:'"Space Mono",monospace',fontSize:8,letterSpacing:1.5,color:TL.muted,fontWeight:700,marginBottom:4}}>DRAFT · IN PROGRESS</div>
+              <div style={{fontFamily:'"Archivo",sans-serif',fontWeight:700,fontSize:18,color:TL.ink}}>Push Day · 3/6 sets</div>
+            </div>
+            <InlineConfirm C={TL} title="Discard current workout?" body="Your progress on Push Day will be lost. Drafts auto-save for 7 days." cancelLabel="CANCEL" confirmLabel="DISCARD + START NEW"/>
+          </div>
+        </DCArtboard>
+        <DCArtboard id="a-dark-discard" label="Discard workout · Dark" width={390} height={420}>
+          <div style={{width:'100%',height:'100%',background:TD.bg,display:'flex',flexDirection:'column',padding:16,gap:12,fontFamily:'"Archivo",sans-serif'}}>
+            <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,letterSpacing:1.8,color:TD.accent,fontWeight:700}}>● USED IN: HOME, LOGGER</div>
+            <div style={{height:160,background:TD.surf,borderRadius:10,opacity:0.4,padding:14}}>
+              <div style={{fontFamily:'"Space Mono",monospace',fontSize:8,letterSpacing:1.5,color:TD.muted,fontWeight:700,marginBottom:4}}>DRAFT · IN PROGRESS</div>
+              <div style={{fontFamily:'"Archivo",sans-serif',fontWeight:700,fontSize:18,color:TD.ink}}>Push Day · 3/6 sets</div>
+            </div>
+            <InlineConfirm C={TD} title="Discard current workout?" body="Your progress on Push Day will be lost. Drafts auto-save for 7 days." cancelLabel="CANCEL" confirmLabel="DISCARD + START NEW"/>
+          </div>
+        </DCArtboard>
+        <DCArtboard id="a-set" label="Delete set" width={390} height={260}>
+          <div style={{width:'100%',height:'100%',background:TL.bg,padding:16,fontFamily:'"Archivo",sans-serif'}}>
+            <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,letterSpacing:1.8,color:TL.accent,fontWeight:700,marginBottom:12}}>● USED IN: WORKOUT LOGGER</div>
+            <InlineConfirm C={TL} title="Delete set 3?" body="40kg × 8 reps. This can't be undone." cancelLabel="KEEP" confirmLabel="DELETE SET"/>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ─── PATTERN B — DESTRUCTIVE MODAL ──────────────────── */}
+      <DCSection id="pattern-b" title="B · Full-bleed destructive modal" subtitle="Centered card with consequence list. Heavy decisions only — replaces native iOS destructive alerts.">
+        <DCArtboard id="b-account-light" label="Delete account · Light" width={390} height={780}>
+          <Phone C={TL}>
+            <ScreenShell C={TL} title="MORE"/>
+            <DestructiveModal C={TL}
+              kicker="DELETE ACCOUNT"
+              title="Permanently delete your account?"
+              body="This will sign you out on every device and remove all your data from our servers within 30 days."
+              consequences={[
+                {value:'247', label:'workouts logged'},
+                {value:'14', label:'personal records'},
+                {value:'8', label:'custom programs'},
+                {value:'∞', label:'streak history'},
+              ]}
+              cancelLabel="KEEP ACCOUNT" confirmLabel="DELETE FOREVER"/>
+          </Phone>
+        </DCArtboard>
+        <DCArtboard id="b-account-dark" label="Delete account · Dark" width={390} height={780}>
+          <Phone C={TD}>
+            <ScreenShell C={TD} title="MORE"/>
+            <DestructiveModal C={TD}
+              kicker="DELETE ACCOUNT"
+              title="Permanently delete your account?"
+              body="This will sign you out on every device and remove all your data from our servers within 30 days."
+              consequences={[
+                {value:'247', label:'workouts logged'},
+                {value:'14', label:'personal records'},
+                {value:'8', label:'custom programs'},
+                {value:'∞', label:'streak history'},
+              ]}
+              cancelLabel="KEEP ACCOUNT" confirmLabel="DELETE FOREVER"/>
+          </Phone>
+        </DCArtboard>
+        <DCArtboard id="b-program" label="Delete program · Light" width={390} height={780}>
+          <Phone C={TL}>
+            <ScreenShell C={TL} title="PROGRAMS"/>
+            <DestructiveModal C={TL}
+              kicker="DELETE PROGRAM"
+              title="Delete Push Pull Legs?"
+              body="The program template will be removed. Workouts you've already logged using it will be kept in your history."
+              consequences={[
+                {value:'6', label:'workout days'},
+                {value:'18', label:'exercises'},
+                {value:'42', label:'past sessions kept'},
+              ]}
+              cancelLabel="KEEP" confirmLabel="DELETE"/>
+          </Phone>
+        </DCArtboard>
+        <DCArtboard id="b-cancel-sub" label="Cancel Pulse+ · Dark" width={390} height={780}>
+          <Phone C={TD}>
+            <ScreenShell C={TD} title="PULSE+"/>
+            <DestructiveModal C={TD}
+              kicker="CANCEL SUBSCRIPTION"
+              title="Cancel Pulse+ at end of period?"
+              body="You'll keep premium access until Jan 18. After that you'll lose cloud sync and AI features. Your data stays local on this device."
+              consequences={[
+                {value:'14d', label:'access remaining'},
+                {value:'OFF', label:'cloud sync'},
+                {value:'OFF', label:'AI predictions'},
+              ]}
+              cancelLabel="STAY ON PULSE+" confirmLabel="CANCEL PLAN"
+              accent={TD.pr}/>
+          </Phone>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ─── PATTERN C — ACTION SHEET ─────────────────────────── */}
+      <DCSection id="pattern-c" title="C · Bottom sheet action menu" subtitle="Slides up from bottom. Replaces native iOS action sheet. For ··· menus, share, photo picker.">
+        <DCArtboard id="c-post-light" label="Post ··· menu · Light" width={390} height={780}>
+          <Phone C={TL}>
+            <ScreenShell C={TL} title="SOCIAL"/>
+            <ActionSheet C={TL}
+              kicker="OPTIONS"
+              title="Mike's Push Day · 2h ago"
+              sub="POST OPTIONS"
+              items={[
+                {icon:I.share, label:'Share post', sub:'Send via Messages, Mail, more'},
+                {icon:I.copy, label:'Copy link'},
+                {icon:I.save, label:'Save image'},
+                {icon:I.hide, label:'Hide from feed', sub:"You won't see Mike's posts for 30 days"},
+                {icon:I.flag, label:'Report post', danger:true},
+              ]}/>
+          </Phone>
+        </DCArtboard>
+        <DCArtboard id="c-workout-dark" label="Workout ··· menu · Dark" width={390} height={780}>
+          <Phone C={TD}>
+            <ScreenShell C={TD} title="HISTORY"/>
+            <ActionSheet C={TD}
+              kicker="WORKOUT"
+              title="Push Day · 2 days ago"
+              sub="MANAGE THIS WORKOUT"
+              items={[
+                {icon:I.edit, label:'Edit', sub:'Rename, change date, add notes', shortcut:'⌘E'},
+                {icon:I.copy, label:'Duplicate', sub:'Use as template for next session'},
+                {icon:I.save, label:'Save as program', sub:'Reuse this structure'},
+                {icon:I.share, label:'Share to feed'},
+                {icon:I.trash, label:'Delete workout', danger:true},
+              ]}/>
+          </Phone>
+        </DCArtboard>
+        <DCArtboard id="c-photo-light" label="Photo picker · Light" width={390} height={780}>
+          <Phone C={TL}>
+            <ScreenShell C={TL} title="PROFILE"/>
+            <ActionSheet C={TL}
+              title="Update profile photo"
+              sub="CHOOSE A SOURCE"
+              items={[
+                {icon:I.camera, label:'Take photo', sub:'Use the camera'},
+                {icon:I.photo, label:'Choose from library'},
+                {icon:I.user, label:'Use initials', sub:'Plain text avatar'},
+                {icon:I.trash, label:'Remove photo', danger:true},
+              ]}/>
+          </Phone>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ─── PATTERN D — PRE-PERMISSION PRIMING ──────────────── */}
+      <DCSection id="pattern-d" title="D · Pre-permission priming screen" subtitle="Full-screen explanation BEFORE the native iOS permission alert fires. Apple-recommended pattern. Set up the ‘why' so users don't reflex-tap Don't Allow.">
+        <DCArtboard id="d-health-light" label="HealthKit priming · Light" width={390} height={780}>
+          <Phone C={TL}>
+            <PrimingScreen C={TL}
+              kicker="APPLE HEALTH"
+              title="Sync with Apple Health?"
+              body="Pulse Pump can read your weight and heart rate, and write your completed workouts back to Health."
+              icon={I.heart}
+              bullets={[
+                'Read body weight to recalculate one-rep maxes',
+                'Read heart rate during workouts (Apple Watch)',
+                'Write completed workouts as Functional Strength Training',
+                'Never read or write nutrition, sleep, or location data',
+              ]}
+              primaryLabel="CONTINUE TO HEALTH"
+              secondaryLabel="NOT NOW"/>
+          </Phone>
+        </DCArtboard>
+        <DCArtboard id="d-notif-dark" label="Notifications · Dark" width={390} height={780}>
+          <Phone C={TD}>
+            <PrimingScreen C={TD}
+              kicker="NOTIFICATIONS"
+              title="Stay on rhythm."
+              body="We send rest timer alerts and friend activity. Three notifications a week max — you can turn any of them off."
+              icon={I.bell}
+              bullets={[
+                'Rest timer ending — vibration + banner',
+                'Friend completes a workout (off by default)',
+                'Weekly volume summary every Sunday morning',
+              ]}
+              primaryLabel="ENABLE NOTIFICATIONS"
+              secondaryLabel="MAYBE LATER"/>
+          </Phone>
+        </DCArtboard>
+        <DCArtboard id="d-camera-light" label="Camera · Light" width={390} height={780}>
+          <Phone C={TL}>
+            <PrimingScreen C={TL}
+              kicker="CAMERA"
+              title="Snap a progress photo?"
+              body="The camera is used only when you tap the camera icon. Photos stay on your device unless you share them."
+              icon={I.camera}
+              bullets={[
+                'Take progress photos for your private body log',
+                'Scan a barcode on a fitness device',
+                'Photos never leave your device automatically',
+              ]}
+              primaryLabel="ALLOW CAMERA"
+              secondaryLabel="NOT NOW"/>
+          </Phone>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ─── PATTERN E — TOASTS ──────────────────────────────── */}
+      <DCSection id="pattern-e" title="E · Toast / banner system" subtitle="Top-of-screen ticker-style banner. Auto-dismisses after 2.5s. Stack max of 2.">
+        <DCArtboard id="e-light" label="Toasts · Light" width={390} height={520}>
+          <div style={{width:'100%',height:'100%',background:TL.surf2,padding:'18px 0',fontFamily:'"Archivo",sans-serif',display:'flex',flexDirection:'column',gap:10}}>
+            <div style={{padding:'0 16px',marginBottom:6}}>
+              <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,letterSpacing:1.8,color:TL.accent,fontWeight:700}}>● TOAST VARIANTS</div>
+            </div>
+            <Toast C={TL} kind="success" kicker="SAVED" title="Push Pull Legs saved" value="✓"/>
+            <Toast C={TL} kind="pr" kicker="PR" title="Bench Press · 102.5 KG" value="▲ +2.5"/>
+            <Toast C={TL} kind="info" kicker="SYNC" title="3 workouts synced to cloud" value="✓"/>
+            <Toast C={TL} kind="error" kicker="ERROR" title="Couldn't save — check connection"/>
+            <Toast C={TL} kind="offline" kicker="OFFLINE" title="Working offline · saving locally"/>
+            <Toast C={TL} kind="info" kicker="FRIEND" title="Sarah added you back" value="✓"/>
+          </div>
+        </DCArtboard>
+        <DCArtboard id="e-dark" label="Toasts · Dark" width={390} height={520}>
+          <div style={{width:'100%',height:'100%',background:TD.bg,padding:'18px 0',fontFamily:'"Archivo",sans-serif',display:'flex',flexDirection:'column',gap:10}}>
+            <div style={{padding:'0 16px',marginBottom:6}}>
+              <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,letterSpacing:1.8,color:TD.accent,fontWeight:700}}>● TOAST VARIANTS</div>
+            </div>
+            <Toast C={TD} kind="success" kicker="SAVED" title="Push Pull Legs saved" value="✓"/>
+            <Toast C={TD} kind="pr" kicker="PR" title="Bench Press · 102.5 KG" value="▲ +2.5"/>
+            <Toast C={TD} kind="info" kicker="SYNC" title="3 workouts synced to cloud" value="✓"/>
+            <Toast C={TD} kind="error" kicker="ERROR" title="Couldn't save — check connection"/>
+            <Toast C={TD} kind="offline" kicker="OFFLINE" title="Working offline · saving locally"/>
+            <Toast C={TD} kind="info" kicker="FRIEND" title="Sarah added you back" value="✓"/>
+          </div>
+        </DCArtboard>
+        <DCArtboard id="e-in-context" label="Toast over Home · Light" width={390} height={780}>
+          <Phone C={TL}>
+            <ScreenShell C={TL} title="HOME"/>
+            <div style={{position:'absolute',top:80,left:0,right:0,zIndex:60}}>
+              <Toast C={TL} kind="success" kicker="SAVED" title="Workout logged · Push Day" value="✓"/>
+            </div>
+          </Phone>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ─── PATTERN F — PR CELEBRATION ──────────────────────── */}
+      <DCSection id="pattern-f" title="F · PR celebration moment" subtitle="Special big moment for personal records. Triggered on the set's done-tap when the new lift exceeds previous best. Always shareable.">
+        <DCArtboard id="f-pr-light" label="PR Bench · Light" width={390} height={780}>
+          <Phone C={TL}>
+            <ScreenShell C={TL} title="LOGGER">
+              <div style={{height:200,background:TL.surf,borderRadius:10,opacity:0.4}}/>
+            </ScreenShell>
+            <PRCelebration C={TL} exercise="Bench Press" oldVal={100} newVal={102.5} unit="KG"/>
+          </Phone>
+        </DCArtboard>
+        <DCArtboard id="f-pr-dark" label="PR Squat · Dark" width={390} height={780}>
+          <Phone C={TD}>
+            <ScreenShell C={TD} title="LOGGER">
+              <div style={{height:200,background:TD.surf,borderRadius:10,opacity:0.4}}/>
+            </ScreenShell>
+            <PRCelebration C={TD} exercise="Back Squat" oldVal={140} newVal={147.5} unit="KG"/>
+          </Phone>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ─── PATTERN G — RENAME INPUT ────────────────────────── */}
+      <DCSection id="pattern-g" title="G · Rename / text input modal" subtitle="Replaces the native iOS text-input alert. For renaming programs, workouts, exercises, custom foods.">
+        <DCArtboard id="g-rename-light" label="Rename program · Light" width={390} height={780}>
+          <Phone C={TL}>
+            <ScreenShell C={TL} title="PROGRAMS"/>
+            <RenameModal C={TL} kicker="RENAME PROGRAM" title="Edit program name" currentValue="Push Pull Legs Hypertrophy" label="PROGRAM NAME" confirmLabel="SAVE"/>
+          </Phone>
+        </DCArtboard>
+        <DCArtboard id="g-rename-dark" label="Rename workout · Dark" width={390} height={780}>
+          <Phone C={TD}>
+            <ScreenShell C={TD} title="HISTORY"/>
+            <RenameModal C={TD} kicker="RENAME WORKOUT" title="Rename this session" currentValue="Heavy Push Day" label="WORKOUT NAME" confirmLabel="SAVE"/>
+          </Phone>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ─── COVERAGE MAP ────────────────────────────────────── */}
+      <DCSection id="coverage" title="Coverage map" subtitle="Every native iOS modal we replace, mapped to a pattern. Implementation reference for the dev team.">
+        <DCArtboard id="map" label="Native iOS → Pulse Pump pattern" width={1100} height={620}>
+          <div style={{width:'100%',height:'100%',background:'#fff',padding:24,fontFamily:'"Archivo",sans-serif',overflow:'auto'}}>
+            <div style={{fontFamily:'"Space Mono",monospace',fontSize:9,letterSpacing:2,color:'#c8553d',fontWeight:700,marginBottom:6}}>● COVERAGE MAP · 24 SPOTS</div>
+            <div style={{fontFamily:'"Archivo",sans-serif',fontWeight:900,fontSize:24,color:'#1f1c19',marginBottom:18}}>Where each pattern is used</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:18}}>
+              {[
+                {p:'A · Inline confirm', cases:['Discard workout (logger back)', 'Delete set (swipe)', 'Delete exercise (swipe)']},
+                {p:'B · Destructive modal', cases:['Delete account', 'Cancel Pulse+', 'Delete program', 'Delete custom exercise', 'Delete workout from history', 'Sign out', 'Remove friend']},
+                {p:'C · Action sheet', cases:['Post ··· menu', 'Workout ··· menu', 'Profile photo source', 'Share workout', 'Exercise variant menu']},
+                {p:'D · Permission priming', cases:['HealthKit', 'Notifications', 'Camera', 'Photos', 'Apple Health write']},
+                {p:'E · Toast banner', cases:['Saved / Synced', 'Network offline', 'Auto-saved as draft', 'Friend added', 'Generic errors']},
+                {p:'F · PR celebration', cases:['New 1RM achieved', 'Volume PR', 'Streak milestone']},
+                {p:'G · Rename input', cases:['Rename program', 'Rename workout', 'Rename exercise', 'Add note to set']},
+              ].map((g,i)=>(
+                <div key={i} style={{background:'#fbf8f2',borderRadius:10,padding:14,border:'1px solid rgba(31,28,25,0.08)'}}>
+                  <div style={{fontFamily:'"Archivo",sans-serif',fontWeight:900,fontSize:14,color:'#1f1c19',letterSpacing:0.3,marginBottom:8}}>{g.p}</div>
+                  {g.cases.map((c,j)=>(
+                    <div key={j} style={{display:'flex',gap:8,marginBottom:5}}>
+                      <span style={{fontFamily:'"Space Mono",monospace',fontSize:9,color:'#c8553d',fontWeight:700,minWidth:18}}>0{j+1}</span>
+                      <span style={{fontFamily:'"Archivo",sans-serif',fontSize:12,color:'#1f1c19'}}>{c}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<ModalsApp/>);
+</script>
+</body>
+</html>

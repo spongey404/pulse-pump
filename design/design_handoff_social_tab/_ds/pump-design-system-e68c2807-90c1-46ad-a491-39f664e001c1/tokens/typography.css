@@ -1,0 +1,60 @@
+/* PUMP TYPOGRAPHY
+   Two voices only. Archivo carries everything a human wrote; Space Mono carries
+   every number, label, unit, timestamp and column header — always uppercase,
+   always tracked. Mixing them the other way round breaks the aesthetic. */
+
+:root{
+  --font-display:"Archivo",system-ui,-apple-system,sans-serif;
+  --font-body:"Archivo",system-ui,-apple-system,sans-serif;
+  --font-mono:"Space Mono",ui-monospace,SFMono-Regular,monospace;
+
+  --weight-light:300;    /* conversational onboarding headings only */
+  --weight-regular:400;
+  --weight-semibold:600;
+  --weight-bold:700;
+  --weight-black:900;    /* screen titles, CTAs, hero stats */
+
+  /* ── Level 1 · screen titles, primary CTAs ── */
+  --type-l1-font:var(--font-display);
+  --type-l1-weight:900;
+  --type-l1-size:24px;
+  --type-l1-tracking:0.5px;
+
+  /* ── Level 2 · content titles, program + exercise names ── */
+  --type-l2-font:var(--font-display);
+  --type-l2-weight:700;
+  --type-l2-size:18px;
+  --type-l2-tracking:0.2px;
+
+  /* ── Level 3 · secondary content, list rows ── */
+  --type-l3-font:var(--font-display);
+  --type-l3-weight:600;
+  --type-l3-size:14px;
+  --type-l3-tracking:0.2px;
+
+  /* ── Level 4 · metadata + labels (Space Mono, all caps) ── */
+  --type-l4-font:var(--font-mono);
+  --type-l4-weight:400;
+  --type-l4-size:9px;
+  --type-l4-tracking:1.5px;
+  --type-l4-transform:uppercase;
+
+  /* ── Data scale (Space Mono / Archivo Black numerals) ── */
+  --type-hero-size:64px;      /* Space Mono 700 — page-dominant number */
+  --type-stat-size:36px;      /* Archivo 900 — prediction / stat heroes */
+  --type-stat-sm-size:22px;   /* Archivo 900 — 4-up KPI values */
+  --type-data-lg-size:20px;   /* set-row kg / reps */
+  --type-data-md-size:11px;   /* table cells, deltas */
+  --type-data-sm-size:9px;    /* micro stats, ticker */
+
+  /* ── Body ── */
+  --type-body-size:14px;
+  --type-body-sm-size:12px;
+  --type-body-leading:1.5;
+
+  /* ── Label sizes in use ── */
+  --type-label-size:9px;
+  --type-label-xs-size:8px;
+  --type-label-tracking:1.5px;
+  --type-label-xs-tracking:1.2px;
+}
