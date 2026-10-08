@@ -202,10 +202,9 @@ struct SettingsView: View {
             set: { newValue in
                 workoutReminders = newValue
                 Task {
-                    let granted = await NotificationService.shared.requestPermission()
-                    if granted {
+                    if newValue, await NotificationService.shared.requestPermission() {
                         await NotificationService.shared.scheduleWorkoutReminders(split: user.selectedSplit)
-                    } else if !newValue {
+                    } else {
                         NotificationService.shared.cancelWorkoutReminders()
                     }
                 }
@@ -219,10 +218,9 @@ struct SettingsView: View {
             set: { newValue in
                 restDayAlerts = newValue
                 Task {
-                    let granted = await NotificationService.shared.requestPermission()
-                    if granted {
+                    if newValue, await NotificationService.shared.requestPermission() {
                         await NotificationService.shared.scheduleRestDayAlerts(split: user.selectedSplit)
-                    } else if !newValue {
+                    } else {
                         NotificationService.shared.cancelRestDayAlerts()
                     }
                 }
@@ -304,10 +302,10 @@ struct SplitConfigView: View {
 
             Section {
                 Button("Save Split") {
-                    let split = Split(type: selectedType, name: selectedType.displayName)
-                    modelContext.insert(split)
-                    user.selectedSplit = split
+                    SplitSchedule.apply(type: selectedType, to: user, modelContext: modelContext)
                     user.updatedAt = Date()
+                    let split = user.selectedSplit
+                    Task { await NotificationService.shared.reschedule(split: split) }
                     dismiss()
                 }
                 .font(.archivo(16, weight: .semibold))
