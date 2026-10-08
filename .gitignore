@@ -37,3 +37,6 @@ PumpApp/dist/
 
 # Credentials
 # GoogleService-Info.plist is intentionally tracked for Firebase config
+
+# Dev data script build output
+build/
