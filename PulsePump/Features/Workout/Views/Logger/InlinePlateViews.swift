@@ -10,7 +10,7 @@ struct InlinePlateView: View {
     private var barKg: Double { equipmentType == .ezBar ? unit.kg(fromDisplay: unit == .kg ? 10 : 15) : unit.olympicBarKg }
 
     private var currentWeightKg: Double? {
-        let weights = entry.sets.compactMap { Double($0.weight) }.filter { $0 > 0 }   // SetEntry.weight is kg
+        let weights = entry.sets.compactMap { parseDecimal($0.weight) }.filter { $0 > 0 }   // SetEntry.weight is kg
         return weights.last
     }
 

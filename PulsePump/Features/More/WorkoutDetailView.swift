@@ -9,7 +9,7 @@ struct WorkoutDetailView: View {
     @State private var isEditing = false
     @State private var pulsePlusService = PulsePlusService()
 
-    private var totalSets: Int { workout.exerciseLogs.flatMap(\.sets).count }
+    private var totalSets: Int { workout.workingSetCount }
     private var totalExercises: Int { workout.exerciseLogs.count }
 
     var body: some View {
@@ -315,7 +315,7 @@ struct EditableSetRow: View {
                         .foregroundStyle(Color.inkPrimary)
                         .frame(width: 40)
                         .onChange(of: repsText) { _, v in
-                            setLog.reps = Int(v) ?? setLog.reps
+                            setLog.reps = parseWholeNumber(v) ?? setLog.reps
                         }
                 }
             } else {

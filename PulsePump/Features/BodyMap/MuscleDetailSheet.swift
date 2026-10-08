@@ -13,8 +13,8 @@ struct MuscleDetailSheet: View {
             ($0.isApproved || $0.isCustom) &&
             ($0.primaryMuscleGroups.contains(muscle) || $0.secondaryMuscleGroups.contains(muscle))
         }
-        let done = matching.filter { !$0.logs.isEmpty }
-        let notDone = matching.filter { $0.logs.isEmpty }
+        let done = matching.filter { !$0.finalLogs.isEmpty }
+        let notDone = matching.filter { $0.finalLogs.isEmpty }
         return (done, notDone)
     }
 
@@ -52,7 +52,7 @@ struct MuscleDetailSheet: View {
                                 Text(exercise.name)
                                 Spacer()
                                 VStack(alignment: .trailing, spacing: 2) {
-                                    Text("\(exercise.logs.count) sessions")
+                                    Text("\(exercise.finalLogs.count) sessions")
                                         .font(.mono(11))
                                         .foregroundStyle(.secondary)
                                     if pulsePlusService.isSubscribed {

@@ -45,3 +45,6 @@ build/
 *-debug.log
 .firebase/
 firebase/functions/node_modules/
+
+# Agent worktrees
+.claude/worktrees/

@@ -176,12 +176,12 @@ struct WidgetFixedDataTests {
     @Test func prLiftsFromHistory() throws {
         let c = try Self.container(); let ctx = ModelContext(c)
         let bench = Self.exercise(ctx, "Barbell Bench Press", .chest, .push)
-        Self.addWorkout(ctx, daysAgo: 60, exercise: bench, sets: [(100, 1)])
-        Self.addWorkout(ctx, daysAgo: 3, exercise: bench, sets: [(90, 5)])   // e1RM 105
+        Self.addWorkout(ctx, daysAgo: 60, exercise: bench, sets: [(100, 5)])   // all-time best e1RM 116.7
+        Self.addWorkout(ctx, daysAgo: 3, exercise: bench, sets: [(90, 5)])   // recent e1RM 105
         let all = try ctx.fetch(FetchDescriptor<Workout>())
         let f = WidgetDataService.buildFixed(workouts: all, modelContext: ctx, user: nil, snap: PumpWidgetSnapshot(), now: Self.now, defaults: Self.suite())
         #expect(f.prLifts.count == 1)
-        #expect(f.prLifts[0].pr == 100)
+        #expect(f.prLifts[0].pr == 116.7)   // best e1RM vs best e1RM, not best weight (100)
         #expect(f.prLifts[0].e1rm == 105)
         #expect(f.prLifts[0].series.count == 12)
     }
@@ -225,5 +225,48 @@ struct WidgetFixedDataTests {
         #expect(out.count == 2)
         #expect(out[0].initials == "MK" && out[0].name == "Maya K" && out[0].ago == "1H" && out[0].meta == "1 SET · 55 MIN")
         #expect(out[1].meta == "PR · DEADLIFT 140×3" && out[1].ago == "1D")
+    }
+
+    // MARK: PR watch maths + empty state
+
+    @Test func prWatchComparesBestE1RMToBestE1RMNotWeight() throws {
+        let c = try Self.container(); let ctx = ModelContext(c)
+        let squat = Self.exercise(ctx, "Back Squat", .quads, .squat)
+        // Heavy single 140 (e1RM 140) long ago; recently 120 x 8 (e1RM 152). Comparing weight (140) to
+        // e1RM (152) would claim the lift is already past its PR; e1RM vs e1RM says 152 IS the best.
+        Self.addWorkout(ctx, daysAgo: 70, exercise: squat, sets: [(140, 1)])
+        Self.addWorkout(ctx, daysAgo: 3, exercise: squat, sets: [(120, 8)])
+        let all = try ctx.fetch(FetchDescriptor<Workout>())
+        let f = WidgetDataService.buildFixed(workouts: all, modelContext: ctx, user: nil, snap: PumpWidgetSnapshot(), now: Self.now, defaults: Self.suite())
+        let lift = try #require(f.prLifts.first)
+        #expect(lift.pr == 152)
+        #expect(lift.e1rm == 152)
+        #expect(lift.pr >= lift.e1rm)                       // the all-time best can never trail the recent best
+    }
+
+    @Test func widgetsShowAnEmptyStateNotSampleDataWhenThereAreNoWorkouts() {
+        var stored = PumpWidgetSnapshot()                   // hasData == false: user has no workouts
+        let empty = PumpWidgetSnapshot.resolved(stored: stored)
+        #expect(!empty.hasData)
+        #expect(!empty.fixed.isPlus)                        // never the sample's unlocked Plus
+        #expect(PumpWidgetSnapshot.sample.fixed.isPlus && PumpWidgetSnapshot.sample.hasData)   // sample stays preview-only
+
+        stored.fixed.isPlus = true                          // a real subscriber with no workouts keeps their entitlement
+        #expect(PumpWidgetSnapshot.resolved(stored: stored).fixed.isPlus)
+
+        stored.hasData = true; stored.streak = 4
+        #expect(PumpWidgetSnapshot.resolved(stored: stored) == stored)
+    }
+
+    @Test func widgetBodyVolumeSkipsWarmups() throws {
+        let c = try Self.container(); let ctx = ModelContext(c)
+        let bench = Self.exercise(ctx, "Barbell Bench Press", .chest, .push)
+        let w = Self.addWorkout(ctx, daysAgo: 0, exercise: bench, sets: [(40, 10), (60, 8), (80, 5)])
+        w.exerciseLogs[0].sets[0].setType = .warmup
+        w.exerciseLogs[0].sets[1].setType = .warmup
+        w.date = Date()
+        let snap = WidgetDataService.buildSnapshot(workouts: [w], modelContext: ctx)
+        // One working set against a 16-set chest target (~0.06), not three sets' worth (~0.19).
+        #expect((snap.bodyVolume["chest"] ?? 0) < 0.1)
     }
 }

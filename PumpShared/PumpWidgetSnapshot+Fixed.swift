@@ -131,6 +131,16 @@ extension PumpWidgetSnapshot {
         set { _fixed = newValue }
     }
 
+    /// What a widget should draw for a stored snapshot: the snapshot itself once the user has
+    /// workouts, otherwise a real *empty* snapshot (placeholder state, `hasData == false`) that
+    /// keeps only the genuine Plus entitlement. Never `sample` — that has Plus unlocked.
+    static func resolved(stored: PumpWidgetSnapshot) -> PumpWidgetSnapshot {
+        if stored.hasData { return stored }
+        var empty = PumpWidgetSnapshot()
+        empty.fixed.isPlus = stored.fixed.isPlus
+        return empty
+    }
+
     /// The numbers printed in Pump Widgets.dc.html — used by the Widget Gallery, placeholders and previews.
     static var sample: PumpWidgetSnapshot {
         var s = PumpWidgetSnapshot()

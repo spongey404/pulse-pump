@@ -9,6 +9,9 @@ struct WorkoutCompletionView: View {
     @Environment(\.weightUnit) private var unit
 
     @State private var caption = ""
+    /// Guards the one-and-only post for this workout.
+    @State private var hasPosted = false
+    @AppStorage("autoShareToFeed") private var autoShare = true
     @State private var showComposerMenu = false
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var thumbnailImage: Image?
@@ -131,12 +134,14 @@ struct WorkoutCompletionView: View {
             }
             .safeAreaInset(edge: .bottom) {
                 DockedCTA(
-                    primaryLabel: "POST",
+                    // Auto-share off ("Never post automatically"): the screen defaults to DONE and
+                    // posting becomes an explicit choice in the overflow menu.
+                    primaryLabel: autoShare ? "POST" : "DONE",
                     secondaryIcon: "ellipsis",
                     secondaryAction: {
                         withAnimation(.spring(response: 0.22, dampingFraction: 0.82)) { showComposerMenu.toggle() }
                     },
-                    action: { postAndDismiss(includeBodyMap: true) }
+                    action: { autoShare ? postAndDismiss(includeBodyMap: true) : dismissWithoutPosting() }
                 )
             }
 
@@ -281,7 +286,7 @@ struct WorkoutCompletionView: View {
     // MARK: Stats Row
 
     private var volString: String {
-        let t = data.exercises.flatMap(\.sets).reduce(0.0) { $0 + $1.weight * Double($1.reps) }
+        let t = data.exercises.flatMap(\.workingSets).reduce(0.0) { $0 + $1.weight * Double($1.reps) }
         return unit.compactVolume(t)   // set weights are kg
     }
 
@@ -388,7 +393,7 @@ struct WorkoutCompletionView: View {
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    Text("\(ex.sets.count)")
+                    Text("\(ex.workingSets.count)")
                         .font(Font.spaceMono(10))
                         .foregroundStyle(Color.inkMuted)
                         .frame(width: 30, alignment: .center)
@@ -420,7 +425,7 @@ struct WorkoutCompletionView: View {
     }
 
     private func bestSetText(_ ex: FeedExercise) -> String {
-        guard let best = ex.sets.max(by: { $0.weight * Double($0.reps) < $1.weight * Double($1.reps) }) else { return "—" }
+        guard let best = ex.workingSets.max(by: { $0.weight * Double($0.reps) < $1.weight * Double($1.reps) }) else { return "—" }
         return best.weight > 0 ? "\(unit.number(best.weight))×\(best.reps)" : "\(best.reps)r"
     }
 
@@ -519,9 +524,17 @@ struct WorkoutCompletionView: View {
             composerMenuRow(title: "Post without body map", note: "STATS AND PHOTO ONLY") {
                 postAndDismiss(includeBodyMap: false)
             }
-            composerMenuRow(title: "Never post automatically", note: "TURNS THIS SCREEN OFF FOR GOOD") {
-                UserDefaults.standard.set(false, forKey: "autoShareToFeed")
-                dismissWithoutPosting()
+            Group {
+                if autoShare {
+                    composerMenuRow(title: "Never post automatically", note: "POSTING BECOMES OPT-IN") {
+                        autoShare = false
+                        dismissWithoutPosting()
+                    }
+                } else {
+                    composerMenuRow(title: "Post to feed", note: "SHARE THIS SESSION ONCE") {
+                        postAndDismiss(includeBodyMap: true)
+                    }
+                }
             }
             .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
         }
@@ -560,25 +573,19 @@ struct WorkoutCompletionView: View {
     ///   posts stats + photo only, `WorkoutFeedItem.includesBodyMap` gates the feed/session
     ///   sheet's body-map slide.
     private func postAndDismiss(includeBodyMap: Bool) {
-        Task {
-            let item = WorkoutFeedItem(
+        // At most one post per workout, and never when the audience is "Only me".
+        guard !hasPosted else { return }
+        hasPosted = true
+        if FeedPostBuilder.audience() != .onlyMe {
+            let item = FeedPostBuilder.makeItem(
+                data: data,
                 userId: Auth.auth().currentUser?.uid ?? "",
                 username: Auth.auth().currentUser?.displayName ?? "User",
-                templateName: data.workoutName,
-                exerciseCount: data.exerciseCount,
-                durationSeconds: Int(data.duration),
-                caloriesBurned: Int(data.calories),
-                musclesWorked: data.musclesWorked.map(\.displayName),
-                prCount: data.prCount,
-                improvedCount: data.improvedCount,
-                totalExercises: data.totalExercises,
-                date: Date(),
                 caption: caption,
-                exercises: data.exercises,
                 taggedFriendUids: taggedFriends.map(\.uid),
-                includesBodyMap: includeBodyMap
+                includeBodyMap: includeBodyMap
             )
-            try? await FirestoreService().shareWorkoutToFeed(item)
+            Task { try? await FirestoreService().shareWorkoutToFeed(item) }
         }
         onDismiss()
     }

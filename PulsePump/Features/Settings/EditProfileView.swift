@@ -92,13 +92,13 @@ struct EditProfileView: View {
         if user.unitPreference == .lbs {
             let ftIn = UnitPreference.feetInches(fromCm: user.height)
             if "\(ftIn.feet)" != heightFeet || "\(ftIn.inches)" != heightInches,
-               let ft = Double(heightFeet), ft > 0 {
-                user.height = UnitPreference.cm(feet: ft, inches: Double(heightInches) ?? 0)
+               let ft = parseDecimal(heightFeet), ft > 0 {
+                user.height = UnitPreference.cm(feet: ft, inches: parseDecimal(heightInches) ?? 0)
             }
-        } else if height != initialHeight, let h = Double(height), h > 0 {
+        } else if height != initialHeight, let h = parseDecimal(height), h > 0 {
             user.height = h
         }
-        if let a = Int(age) { user.age = a }
+        if let a = parseWholeNumber(age) { user.age = a }
         user.updatedAt = Date()
     }
 }

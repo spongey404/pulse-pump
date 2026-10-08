@@ -32,7 +32,7 @@ struct ExerciseDetailView: View {
             }
 
             Section("Progress") {
-                if exercise.logs.isEmpty {
+                if exercise.finalLogs.isEmpty {
                     ContentUnavailableView(
                         "No History Yet",
                         systemImage: "chart.line.uptrend.xyaxis",
@@ -46,7 +46,7 @@ struct ExerciseDetailView: View {
                 }
             }
 
-            if !exercise.logs.isEmpty {
+            if !exercise.finalLogs.isEmpty {
                 Section("Recent Sessions") {
                     ExerciseRecentSessionsSection(exercise: exercise)
                 }
@@ -56,7 +56,7 @@ struct ExerciseDetailView: View {
                 TemplatesContainingExercise(exerciseId: exercise.id)
             }
 
-            if !exercise.logs.isEmpty {
+            if !exercise.finalLogs.isEmpty {
                 Section("Notes") {
                     ExerciseNotesSection(exercise: exercise)
                 }
@@ -74,7 +74,7 @@ struct ExerciseStatsSection: View {
     let exercise: Exercise
 
     private var allSets: [SetLog] {
-        exercise.logs.flatMap(\.sets)
+        exercise.finalLogs.flatMap(\.workingSets)
     }
 
     private var weightPR: Double {
@@ -98,8 +98,8 @@ struct ExerciseStatsSection: View {
     }
 
     private var volumePR: Double {
-        exercise.logs.map { log in
-            log.sets.reduce(0.0) { $0 + $1.weight * Double($1.reps) }
+        exercise.finalLogs.map { log in
+            log.workingSets.reduce(0.0) { $0 + $1.weight * Double($1.reps) }
         }.max() ?? 0
     }
 
@@ -128,10 +128,10 @@ struct ExerciseTrendChart: View {
     let exercise: Exercise
 
     private var dataPoints: [(date: Date, maxWeight: Double)] {
-        exercise.logs
+        exercise.finalLogs
             .compactMap { log -> (Date, Double)? in
                 guard let date = log.workout?.date else { return nil }
-                let maxW = log.sets.map(\.weight).max() ?? 0
+                let maxW = log.workingSets.map(\.weight).max() ?? 0
                 guard maxW > 0 else { return nil }
                 return (date, maxW)
             }
@@ -192,7 +192,7 @@ struct ExerciseRecentSessionsSection: View {
     let exercise: Exercise
 
     private var recentLogs: [ExerciseLog] {
-        exercise.logs
+        exercise.finalLogs
             .sorted { ($0.workout?.date ?? .distantPast) > ($1.workout?.date ?? .distantPast) }
             .prefix(5)
             .map { $0 }
@@ -252,7 +252,7 @@ struct ExerciseNotesSection: View {
     let exercise: Exercise
 
     private var notesFromLogs: [(date: Date, note: String)] {
-        exercise.logs
+        exercise.finalLogs
             .filter { !$0.notes.isEmpty }
             .compactMap { log in
                 guard let date = log.workout?.date else { return nil }

@@ -252,7 +252,7 @@ struct BodyMapTabView: View {
         return VSInfo(label: "VS WK \(weekNum - 1)", value: pctText(p), color: pctColor(p), sub: "\(prevTotal) SETS")
     }
 
-    private func setCount(_ w: Workout) -> Int { w.exerciseLogs.reduce(0) { $0 + $1.sets.count } }
+    private func setCount(_ w: Workout) -> Int { w.workingSetCount }
 
     private func setsInWeek(offset: Int) -> Int {
         let cal = Calendar.current
@@ -436,8 +436,8 @@ struct BodyMapTabView: View {
         var setsByMuscle: [MuscleGroup: Int] = [:]
         for log in exerciseLogs {
             guard let ex = log.exercise, let w = log.workout, !w.isDraft, w.date >= weekAgo else { continue }
-            for m in ex.primaryMuscleGroups { if let t = tracked(m) { setsByMuscle[t, default: 0] += log.sets.count } }
-            for m in ex.secondaryMuscleGroups { if let t = tracked(m) { setsByMuscle[t, default: 0] += log.sets.count / 2 } }
+            for m in ex.primaryMuscleGroups { if let t = tracked(m) { setsByMuscle[t, default: 0] += log.workingSets.count } }
+            for m in ex.secondaryMuscleGroups { if let t = tracked(m) { setsByMuscle[t, default: 0] += log.workingSets.count / 2 } }
         }
         return Self.tracked.map { muscle in
             let sets = setsByMuscle[muscle] ?? 0
@@ -649,7 +649,7 @@ struct BodyMapTabView: View {
         }
     }
 
-    private var selectedTotalSets: Int { filteredLogs.reduce(0) { $0 + $1.sets.count } }
+    private var selectedTotalSets: Int { filteredLogs.reduce(0) { $0 + $1.workingSets.count } }
 
     private var selectedDayLabel: String {
         let calendar = Calendar.current
@@ -689,7 +689,7 @@ struct BodyMapTabView: View {
         var out: [MuscleGroup: Int] = [:]
         for log in filteredLogs {
             guard let exercise = log.exercise else { continue }
-            for m in exercise.primaryMuscleGroups { if let t = tracked(m) { out[t, default: 0] += log.sets.count } }
+            for m in exercise.primaryMuscleGroups { if let t = tracked(m) { out[t, default: 0] += log.workingSets.count } }
         }
         return out
     }

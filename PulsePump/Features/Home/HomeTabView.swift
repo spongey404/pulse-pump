@@ -30,7 +30,7 @@ struct HomeTabView: View {
     }
 
     private var weekSets: Int {
-        weekWorkouts.flatMap(\.exerciseLogs).flatMap(\.sets).count
+        weekWorkouts.reduce(0) { $0 + $1.workingSetCount }
     }
 
     private var weekPRs: Int {
@@ -41,7 +41,7 @@ struct HomeTabView: View {
             let isThisWeek = workout.date >= weekStart
             for log in workout.exerciseLogs {
                 guard let exercise = log.exercise else { continue }
-                let maxWeight = log.sets.map(\.weight).max() ?? 0
+                let maxWeight = log.workingSets.map(\.weight).max() ?? 0
                 if isThisWeek {
                     weekMaxByExercise[exercise.id] = max(weekMaxByExercise[exercise.id] ?? 0, maxWeight)
                 } else {
@@ -64,7 +64,7 @@ struct HomeTabView: View {
             let isPrevWeek = workout.date >= prevWeekStart && workout.date < weekStart
             for log in workout.exerciseLogs {
                 guard let exercise = log.exercise else { continue }
-                let bestVol = log.sets.map { $0.weight * Double($0.reps) }.max() ?? 0
+                let bestVol = log.workingSets.map { $0.weight * Double($0.reps) }.max() ?? 0
                 if isThisWeek { thisWeekBest[exercise.id] = max(thisWeekBest[exercise.id] ?? 0, bestVol) }
                 else if isPrevWeek { prevWeekBest[exercise.id] = max(prevWeekBest[exercise.id] ?? 0, bestVol) }
             }
@@ -79,7 +79,7 @@ struct HomeTabView: View {
         for workout in weekWorkouts {
             let weekday = cal.component(.weekday, from: workout.date) // 1=Sun…7=Sat
             let idx = (weekday + 5) % 7  // Mon=0…Sun=6
-            bars[idx] += workout.exerciseLogs.flatMap(\.sets).count
+            bars[idx] += workout.workingSetCount
         }
         return bars
     }
@@ -101,7 +101,24 @@ struct HomeTabView: View {
     private var predictedTemplate: WorkoutTemplate? {
         if let override = manualOverrideTemplate { return override }
         guard let name = basePredictedName else { return nil }
-        return workouts.compactMap(\.template).first { $0.name.lowercased() == name.lowercased() }
+        return templates.first { $0.name.lowercased() == name.lowercased() }
+    }
+
+    /// 0-1 confidence in the prediction — the same successor-frequency formula the Next Workout
+    /// widget uses (`WidgetDataService.predictionConfidence`), so the app and widget agree.
+    private var predictionConfidence: Double {
+        WidgetDataService.predictionConfidence(
+            names: workouts.prefix(14).compactMap { $0.template?.name },
+            hasSplit: user?.selectedSplit != nil,
+            predicted: basePredictedName != nil)
+    }
+    private var confidenceDots: Int { Int((predictionConfidence * 5).rounded()) }
+    private var confidenceLabel: String {
+        switch predictionConfidence {
+        case 0.75...: "HIGH\nCONF"
+        case 0.45...: "MED\nCONF"
+        default: "LOW\nCONF"
+        }
     }
 
     /// Detects split type from recent workout template names (PPL, U/L, etc.)
@@ -371,11 +388,11 @@ struct HomeTabView: View {
                         HStack(spacing: 3) {
                             ForEach(0..<5, id: \.self) { i in
                                 RoundedRectangle(cornerRadius: 1)
-                                    .fill(i < 4 ? Color.pumpAccent : Color.inkFaint)
+                                    .fill(i < confidenceDots ? Color.pumpAccent : Color.inkFaint)
                                     .frame(width: 5, height: 5)
                             }
                         }
-                        Text("HIGH\nCONF")
+                        Text(confidenceLabel)
                             .font(Font.mono(8))
                             .multilineTextAlignment(.trailing)
                             .foregroundStyle(Color.inkMuted)
@@ -588,7 +605,7 @@ struct HomeTabView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                        let sets = workout.exerciseLogs.flatMap(\.sets).count
+                        let sets = workout.workingSetCount
                         let improvedCount = improvedExercises(in: workout)
                         let totalExercises = max(workout.exerciseLogs.count, 1)
 
@@ -626,11 +643,11 @@ struct HomeTabView: View {
     }
 
     private func volumeDelta(for workout: Workout) -> String {
-        let curVol = workout.exerciseLogs.flatMap(\.sets).reduce(0.0) { $0 + ($1.weight * Double($1.reps)) }
+        let curVol = workout.workingVolume
         guard curVol > 0, let templateName = workout.template?.name else { return "—" }
         let prev = workouts.first { $0.id != workout.id && $0.template?.name.lowercased() == templateName.lowercased() && $0.date < workout.date }
         guard let prevWorkout = prev else { return "—" }
-        let prevVol = prevWorkout.exerciseLogs.flatMap(\.sets).reduce(0.0) { $0 + ($1.weight * Double($1.reps)) }
+        let prevVol = prevWorkout.workingVolume
         guard prevVol > 0 else { return "—" }
         let pct = Int(((curVol - prevVol) / prevVol) * 100)
         // Arrow alone carries direction — no redundant +/- sign, and a real space (not
@@ -643,12 +660,12 @@ struct HomeTabView: View {
     private func improvedExercises(in workout: Workout) -> Int {
         workout.exerciseLogs.filter { log in
             guard let exercise = log.exercise else { return false }
-            let thisVol = log.sets.map { $0.weight * Double($0.reps) }.max() ?? 0
+            let thisVol = log.workingSets.map { $0.weight * Double($0.reps) }.max() ?? 0
             let prevBest = workouts
                 .filter { $0.date < workout.date }
                 .flatMap(\.exerciseLogs)
                 .filter { $0.exercise?.id == exercise.id }
-                .flatMap(\.sets)
+                .flatMap(\.workingSets)
                 .map { $0.weight * Double($0.reps) }
                 .max() ?? 0
             return thisVol > prevBest && thisVol > 0
@@ -669,8 +686,8 @@ struct HomeTabView: View {
             for log in workout.exerciseLogs {
                 guard let exercise = log.exercise else { continue }
                 for muscle in exercise.primaryMuscleGroups {
-                    if isThisWeek { muscleVolume[muscle, default: 0] += log.sets.count }
-                    if isPrevWeek { prevVolume[muscle, default: 0] += log.sets.count }
+                    if isThisWeek { muscleVolume[muscle, default: 0] += log.workingSets.count }
+                    if isPrevWeek { prevVolume[muscle, default: 0] += log.workingSets.count }
                 }
             }
         }

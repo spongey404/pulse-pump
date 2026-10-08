@@ -31,6 +31,8 @@ struct RootView: View {
             #if DEBUG
             DevDataService.runIfRequested(modelContext: modelContext)   // -createDevData 1
             #endif
+            // One-time repair: a split picked before schedules existed gets its default days.
+            SplitSchedule.repairMissingDays(modelContext: modelContext)
             WidgetDataService.updateWidgetData(modelContext: modelContext)
             _ = await NotificationService.shared.requestPermission()
             await NotificationService.shared.reschedule(split: user?.selectedSplit)

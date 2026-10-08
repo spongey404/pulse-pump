@@ -54,7 +54,7 @@ struct RestTimerModalView: View {
                     ForEach([("−15s", -15), ("+15s", 15), ("+30s", 30), ("+1m", 60)], id: \.0) { label, delta in
                         Button {
                             if restTimer.isRunning {
-                                restTimer.remainingSeconds = max(0, restTimer.remainingSeconds + delta)
+                                restTimer.adjust(by: delta)
                             } else {
                                 // Start timer with the tapped duration
                                 let secs = max(15, delta)

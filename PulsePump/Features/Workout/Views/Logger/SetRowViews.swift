@@ -14,6 +14,7 @@ struct NewSetRowView: View {
     let isActive: Bool
     let onSetTypeTap: () -> Void
     let onLog: () -> Void
+    var onUnlog: () -> Void = {}
     let onDelete: () -> Void
     @Environment(\.weightUnit) private var unit
 
@@ -107,7 +108,7 @@ struct NewSetRowView: View {
                 // Checkmark / log button — 30px wide
                 Button {
                     if setEntry.isCompleted {
-                        setEntry.isCompleted = false
+                        onUnlog()
                     } else {
                         onLog()
                     }

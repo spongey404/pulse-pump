@@ -41,7 +41,7 @@ struct NotificationService {
 
         let center = UNUserNotificationCenter.current()
 
-        for day in split.days {
+        for day in split.days where (1...7).contains(day.dayOfWeek) {
             let content = UNMutableNotificationContent()
             content.title = "Time to train"
             content.body = "\(day.label) — let's go."
@@ -76,9 +76,9 @@ struct NotificationService {
         let status = await authorizationStatus()
         guard status == .authorized || status == .provisional else { return }
 
-        let trainingDays = Set(split?.days.map(\.dayOfWeek) ?? [])
-        let restDays = Set(1...7).subtracting(trainingDays)
-
+        // Without a known schedule every day would look like a rest day (and fire on training
+        // days), so no schedule means no rest-day alerts.
+        let restDays = Self.restWeekdays(for: split)
         guard !restDays.isEmpty else { return }
 
         let center = UNUserNotificationCenter.current()
@@ -90,7 +90,7 @@ struct NotificationService {
             "Active recovery day — a walk counts.",
         ]
 
-        for (i, dayOfWeek) in restDays.enumerated() {
+        for (i, dayOfWeek) in restDays.enumerated() {   // sorted, so messages rotate predictably
             let content = UNMutableNotificationContent()
             content.title = "Rest day"
             content.body = messages[i % messages.count]
@@ -127,6 +127,20 @@ struct NotificationService {
     func reschedule(split: Split?) async {
         await scheduleWorkoutReminders(split: split)
         await scheduleRestDayAlerts(split: split)
+    }
+
+    // MARK: - Schedule
+
+    /// Weekdays (1 = Sun … 7 = Sat) the split trains on.
+    static func trainingWeekdays(for split: Split?) -> Set<Int> {
+        Set((split?.days ?? []).map(\.dayOfWeek).filter { (1...7).contains($0) })
+    }
+
+    /// Weekdays with no training, sorted. Empty when the split has no schedule.
+    static func restWeekdays(for split: Split?) -> [Int] {
+        let training = trainingWeekdays(for: split)
+        guard !training.isEmpty else { return [] }
+        return Set(1...7).subtracting(training).sorted()
     }
 
     // MARK: - Helpers

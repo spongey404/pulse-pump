@@ -12,7 +12,7 @@ extension Array where Element == FeedExercise {
     func muscleSetCounts() -> [MuscleGroup: Double] {
         var counts: [MuscleGroup: Double] = [:]
         for exercise in self {
-            let setCount = Double(exercise.sets.count)
+            let setCount = Double(exercise.workingSets.count)   // warm-ups do not heat muscles
             for name in exercise.primaryMuscles {
                 guard let muscle = MuscleGroup.allCases.first(where: { $0.displayName == name }) else { continue }
                 counts[muscle, default: 0] += setCount

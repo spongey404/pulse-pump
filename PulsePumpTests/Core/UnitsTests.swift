@@ -234,7 +234,7 @@ struct UnitsTests {
         ctx.insert(user)
         let csv = "Date,Workout Name,Exercise Name,Set Order,Weight,Reps\n2026-01-05 10:00:00,Push,Bench Press,1,225,5\n"
         let n = try DataImportService.importStrongCSV(csv, modelContext: ctx, user: user, sourceUnit: .lbs)
-        #expect(n == 1)
+        #expect(n.imported == 1)
         let sets = try ctx.fetch(FetchDescriptor<SetLog>())
         #expect(sets.count == 1)
         #expect(abs(sets[0].weight - 102.0582) < 0.001)

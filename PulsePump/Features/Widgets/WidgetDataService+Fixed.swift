@@ -8,7 +8,7 @@ import WidgetKit
 // Thresholds (all in one place, see the constants below):
 //  - muscle "stale": 0 sets in the last 7 days or last trained more than 5 days ago
 //  - balances (4 weeks, working sets): PUSH:PULL 0.80-1.25, UPPER:LOWER 0.67-1.50, ANT:POST 0.80-1.25
-//  - PR watch: lift is "close" when 4-week best Epley e1RM is within 5% of the all-time PR weight
+//  - PR watch: lift is "close" when 4-week best Epley e1RM is within 5% of the all-time best e1RM
 //  - deload week: weekly load (sets x RPE, RPE = 10 - RIR, default 7) < 60% of the prior-4-week
 //    average, or any workout in that week flagged `isDeload`
 //  - rolling block = 6 weeks, program block = 8 weeks
@@ -178,7 +178,8 @@ extension WidgetDataService {
         for lift in bigLifts {
             let sets = flat.filter { bigLift($0.name)?.display == lift.display && $0.weight > 0 }
             guard !sets.isEmpty else { continue }
-            let pr = sets.map(\.weight).max() ?? 0
+            // PR watch compares best e1RM to best e1RM (not best weight to e1RM).
+            let pr = ((sets.map(\.e1rm).max() ?? 0) * 10).rounded() / 10
             let recentBest = sets.filter { $0.date >= window28 }.map(\.e1rm).max() ?? 0
             var weekly = [Double?](repeating: nil, count: 12)   // index 0 = oldest
             for s in sets {

@@ -234,7 +234,7 @@ struct WorkoutHistoryView: View {
     }
 
     private func calWorkoutCard(_ workout: Workout) -> some View {
-        let sets = workout.exerciseLogs.flatMap(\.sets).count
+        let sets = workout.workingSetCount
         let mins = Int(workout.duration) / 60
         let secs = Int(workout.duration) % 60
         let dateLabel = calDateLabel(workout.date)
@@ -347,7 +347,7 @@ struct WorkoutHistoryView: View {
     }
 
     private func listRow(_ workout: Workout) -> some View {
-        let sets = workout.exerciseLogs.flatMap(\.sets).count
+        let sets = workout.workingSetCount
         let mins = Int(workout.duration) / 60
 
         return HStack(spacing: 12) {
@@ -490,7 +490,7 @@ struct HistoryWorkoutRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text((workout.template?.name ?? "Workout").uppercased())
                         .font(.archivo(15, weight: .semibold)).foregroundStyle(Color.inkPrimary).lineLimit(1)
-                    let sets = workout.exerciseLogs.flatMap(\.sets).count
+                    let sets = workout.workingSetCount
                     Text("\(workout.exerciseLogs.count) EX · \(sets) SETS · \(Int(workout.duration)/60)M")
                         .font(.spaceMono(8)).foregroundStyle(Color.inkMuted)
                 }

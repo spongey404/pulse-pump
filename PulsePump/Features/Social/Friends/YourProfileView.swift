@@ -115,7 +115,7 @@ struct YourProfileView: View {
     }
 
     private var volumeLabel: String {
-        let total = recentPosts.flatMap(\.exercises).flatMap(\.sets).reduce(0.0) { $0 + $1.weight * Double($1.reps) }
+        let total = recentPosts.flatMap(\.exercises).flatMap(\.workingSets).reduce(0.0) { $0 + $1.weight * Double($1.reps) }
         return unit.compactVolume(total)   // feed weights are kg
     }
 

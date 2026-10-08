@@ -84,13 +84,13 @@ class OnboardingViewModel {
             return true
         case .height:
             if useImperialHeight {
-                guard let ft = Int(heightFeet), ft > 0 else { return false }
+                guard let ft = parseWholeNumber(heightFeet), ft > 0 else { return false }
                 return true
             }
-            guard let h = Double(heightText), h > 0 else { return false }
+            guard let h = parseDecimal(heightText), h > 0 else { return false }
             return true
         case .age:
-            guard let a = Int(ageText), a > 0, a < 120 else { return false }
+            guard let a = parseWholeNumber(ageText), a > 0, a < 120 else { return false }
             return true
         case .gender, .unitPreference, .experienceLevel, .splitSelection, .tutorialPrompt:
             return true
@@ -126,25 +126,25 @@ class OnboardingViewModel {
 
         var heightCm: Double
         if useImperialHeight {
-            let feet = Double(heightFeet) ?? 0
-            let inches = Double(heightInches) ?? 0
+            let feet = parseDecimal(heightFeet) ?? 0
+            let inches = parseDecimal(heightInches) ?? 0
             heightCm = UnitPreference.cm(feet: feet, inches: inches)
         } else {
-            heightCm = Double(heightText) ?? 0
+            heightCm = parseDecimal(heightText) ?? 0
         }
 
         let user = User(
             name: name.trimmingCharacters(in: .whitespaces),
             weight: weightValue,
             height: heightCm,
-            age: Int(ageText) ?? 0,
+            age: parseWholeNumber(ageText) ?? 0,
             gender: gender ?? .preferNotToSay,
             unitPreference: unitPreference,
             experienceLevel: experienceLevel ?? .beginner
         )
 
         if selectedSplitType != .none {
-            let split = Split(type: selectedSplitType)
+            let split = SplitSchedule.makeSplit(type: selectedSplitType)
             modelContext.insert(split)
             user.selectedSplit = split
         }

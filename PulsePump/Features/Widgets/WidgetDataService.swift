@@ -146,7 +146,7 @@ struct WidgetDataService {
                 guard let ex = log.exercise else { continue }
                 for m in ex.primaryMuscleGroups {
                     guard let r = region[m] else { continue }
-                    if w.date >= weekAgo { sets7[r, default: 0] += Double(log.sets.count) }
+                    if w.date >= weekAgo { sets7[r, default: 0] += Double(log.workingSets.count) }
                     if lastHit[r] == nil || w.date > lastHit[r]! { lastHit[r] = w.date }
                 }
             }

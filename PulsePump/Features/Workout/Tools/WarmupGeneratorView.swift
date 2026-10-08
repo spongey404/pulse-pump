@@ -8,7 +8,7 @@ struct WarmupGeneratorView: View {
     @State private var warmupSteps = 4
 
     private var warmupSets: [(weight: Double, reps: Int)] {
-        guard let working = Double(workingWeight), working > barWeight else { return [] }
+        guard let working = parseDecimal(workingWeight), working > barWeight else { return [] }
 
         var sets: [(Double, Int)] = []
 

@@ -283,7 +283,7 @@ struct LiftHistoryView: View {
         var runningBest = 0.0
         var built: [LiftHistorySession] = []
         for (date, ex) in matches {
-            let bestWeight = ex.sets.map(\.weight).max() ?? 0
+            let bestWeight = ex.workingSets.map(\.weight).max() ?? 0
             let isPR = bestWeight > runningBest
             runningBest = max(runningBest, bestWeight)
             built.append(LiftHistorySession(date: date, sets: ex.sets, isPR: isPR))

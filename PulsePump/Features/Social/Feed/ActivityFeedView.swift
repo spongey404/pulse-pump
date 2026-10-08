@@ -406,7 +406,7 @@ struct FeedPostCard: View {
 
     private var statsStrip: some View {
         HStack(spacing: 6) {
-            KPIBlock(label: "SETS", value: "\(item.exercises.reduce(0) { $0 + $1.sets.count })", alignment: .center)
+            KPIBlock(label: "SETS", value: "\(item.exercises.reduce(0) { $0 + $1.workingSets.count })", alignment: .center)
             KPIBlock(label: "VOLUME", value: volumeLabel, alignment: .center)
             KPIBlock(label: "IMPROVED", value: "\(item.improvedCount)", valueColor: .signalUp, delta: "/\(item.totalExercises)", alignment: .center)
             KPIBlock(label: "PRS", value: "\(item.prCount)", valueColor: .prGold, alignment: .center)
@@ -416,7 +416,7 @@ struct FeedPostCard: View {
     }
 
     private var volumeLabel: String {
-        let total = item.exercises.flatMap(\.sets).reduce(0.0) { $0 + $1.weight * Double($1.reps) }
+        let total = item.exercises.flatMap(\.workingSets).reduce(0.0) { $0 + $1.weight * Double($1.reps) }
         return unit.compactVolume(total)   // feed weights are kg
     }
 
@@ -542,7 +542,7 @@ struct FeedSessionSheet: View {
                             BodyHeat(intensities: feedBodyHeatIntensities(item: item))
                                 .frame(width: 66, height: 106)
                             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())], spacing: 18) {
-                                sessionStat(label: "SETS", value: "\(item.exercises.reduce(0) { $0 + $1.sets.count })")
+                                sessionStat(label: "SETS", value: "\(item.exercises.reduce(0) { $0 + $1.workingSets.count })")
                                 sessionStat(label: "VOLUME", value: volumeLabel)
                                 sessionStat(label: "IMPROVED", value: "\(item.improvedCount)", valueColor: Color.signalUp, delta: "/\(item.totalExercises)")
                                 sessionStat(label: "PRS", value: "\(item.prCount)", valueColor: Color.prGold, glow: true)
@@ -594,7 +594,7 @@ struct FeedSessionSheet: View {
     }
 
     private var volumeLabel: String {
-        let total = item.exercises.flatMap(\.sets).reduce(0.0) { $0 + $1.weight * Double($1.reps) }
+        let total = item.exercises.flatMap(\.workingSets).reduce(0.0) { $0 + $1.weight * Double($1.reps) }
         return unit.compactVolume(total)   // feed weights are kg
     }
 

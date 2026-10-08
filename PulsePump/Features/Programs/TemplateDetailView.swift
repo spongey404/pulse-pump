@@ -451,7 +451,7 @@ struct TemplateDetailView: View {
                                 if isEditing {
                                     TextField("—", text: Binding(
                                         get: { ex.targetReps.map { "\($0)" } ?? "" },
-                                        set: { str in mutateExercise(id: ex.id) { $0.targetReps = Int(str) } }
+                                        set: { str in mutateExercise(id: ex.id) { $0.targetReps = parseWholeNumber(str) } }
                                     ))
                                     .font(.spaceMono(10, weight: .bold))
                                     .foregroundStyle(Color.inkPrimary)
@@ -472,7 +472,7 @@ struct TemplateDetailView: View {
                                 if showRIR && isEditing {
                                     TextField("—", text: Binding(
                                         get: { ex.targetRIR.map { "\($0)" } ?? "" },
-                                        set: { str in mutateExercise(id: ex.id) { $0.targetRIR = Int(str) } }
+                                        set: { str in mutateExercise(id: ex.id) { $0.targetRIR = parseWholeNumber(str) } }
                                     ))
                                     .font(.spaceMono(10, weight: .bold))
                                     .foregroundStyle(Color.inkPrimary)
