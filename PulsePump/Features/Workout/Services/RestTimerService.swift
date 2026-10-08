@@ -12,53 +12,85 @@ class RestTimerService {
     var completedAt: Date?
 
     var mode: RestTimerMode {
-        get { RestTimerMode(rawValue: UserDefaults.standard.string(forKey: "restTimerMode") ?? "") ?? .autoStart }
-        set { UserDefaults.standard.set(newValue.rawValue, forKey: "restTimerMode") }
+        get { RestTimerMode(rawValue: defaults.string(forKey: "restTimerMode") ?? "") ?? .autoStart }
+        set { defaults.set(newValue.rawValue, forKey: "restTimerMode") }
     }
 
     var alertType: AlertType {
-        get { AlertType(rawValue: UserDefaults.standard.string(forKey: "restTimerAlertType") ?? "") ?? .sound }
-        set { UserDefaults.standard.set(newValue.rawValue, forKey: "restTimerAlertType") }
+        get { AlertType(rawValue: defaults.string(forKey: "restTimerAlertType") ?? "") ?? .sound }
+        set { defaults.set(newValue.rawValue, forKey: "restTimerAlertType") }
     }
+
+    /// When the running rest ends. The countdown is derived from this (not decremented per tick),
+    /// so it stays correct across backgrounding, scrolling and dropped timer fires.
+    private(set) var endDate: Date?
 
     private var timer: Timer?
     private var audioPlayer: AVAudioPlayer?
+    private let notifier: RestEndNotifying
+    let defaults: UserDefaults
 
     static let defaultCompoundSeconds = 180
     static let defaultIsolationSeconds = 90
 
-    func start(seconds: Int) {
+    init(notifier: RestEndNotifying = SystemRestEndNotifier(), defaults: UserDefaults = .standard) {
+        self.notifier = notifier
+        self.defaults = defaults
+    }
+
+    func start(seconds: Int, now: Date = Date()) {
         stop()
+        guard seconds > 0 else { return }
         totalSeconds = seconds
         remainingSeconds = seconds
+        endDate = now.addingTimeInterval(TimeInterval(seconds))
         isRunning = true
-        let timerInstance = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+        // `.common` mode keeps the display ticking while the user scrolls.
+        let timerInstance = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
-                self?.tick()
+                self?.refresh()
             }
         }
+        RunLoop.main.add(timerInstance, forMode: .common)
         timer = timerInstance
+        if let endDate { notifier.scheduleRestEnd(at: endDate, playSound: alertType != .silent) }
     }
 
     func clearCompletion() { completedAt = nil }
 
     func stop() {
         completedAt = nil
-        timer?.invalidate()
-        timer = nil
+        cancelTimer()
+        notifier.cancelRestEnd()
         isRunning = false
         remainingSeconds = 0
+        endDate = nil
+    }
+
+    /// Recomputes the countdown from the end date. Call when the app returns to the foreground;
+    /// the repeating timer also calls it. Finishes the rest once the end date has passed.
+    func refresh(now: Date = Date()) {
+        guard isRunning, let endDate else { return }
+        let remaining = Int((endDate.timeIntervalSince(now)).rounded(.up))
+        if remaining <= 0 {
+            // Only buzz if the rest ended just now; if we were suspended, the notification already did.
+            timerCompleted(endedAt: endDate, alert: now.timeIntervalSince(endDate) < 2)
+        } else if remaining != remainingSeconds {
+            remainingSeconds = remaining
+        }
     }
 
     /// Adds/removes seconds from the running rest (Live Activity -15S / +15S). Finishes the rest if it hits 0.
-    func adjust(by delta: Int) {
-        guard isRunning else { return }
-        let newRemaining = remainingSeconds + delta
-        if newRemaining <= 0 {
-            timerCompleted()
+    func adjust(by delta: Int, now: Date = Date()) {
+        guard isRunning, let current = endDate else { return }
+        let newEnd = current.addingTimeInterval(TimeInterval(delta))
+        if newEnd.timeIntervalSince(now) <= 0 {
+            timerCompleted(endedAt: now, alert: true)
         } else {
-            remainingSeconds = newRemaining
-            totalSeconds = max(totalSeconds, newRemaining)
+            endDate = newEnd
+            remainingSeconds = Int(newEnd.timeIntervalSince(now).rounded(.up))
+            totalSeconds = max(totalSeconds, remainingSeconds)
+            notifier.scheduleRestEnd(at: newEnd, playSound: alertType != .silent)
         }
     }
 
@@ -69,15 +101,16 @@ class RestTimerService {
         stop()
     }
 
-    func restDuration(isCompound: Bool, exerciseId: UUID? = nil) -> Int {
-        // Check per-exercise override first
+    /// Rest length for a just-logged set: the user's per-exercise override wins, then the
+    /// template's `restSeconds`, then the global compound/isolation setting.
+    func restDuration(isCompound: Bool, exerciseId: UUID? = nil, templateSeconds: Int? = nil) -> Int {
         if let exerciseId,
-           let override = UserDefaults.standard.object(forKey: "restOverride_\(exerciseId.uuidString)") as? Int {
+           let override = defaults.object(forKey: "restOverride_\(exerciseId.uuidString)") as? Int {
             return override
         }
-        // Fall back to global compound/isolation setting
-        let compound = UserDefaults.standard.object(forKey: "compoundRestSeconds") as? Int ?? Self.defaultCompoundSeconds
-        let isolation = UserDefaults.standard.object(forKey: "isolationRestSeconds") as? Int ?? Self.defaultIsolationSeconds
+        if let templateSeconds, templateSeconds > 0 { return templateSeconds }
+        let compound = defaults.object(forKey: "compoundRestSeconds") as? Int ?? Self.defaultCompoundSeconds
+        let isolation = defaults.object(forKey: "isolationRestSeconds") as? Int ?? Self.defaultIsolationSeconds
         return isCompound ? compound : isolation
     }
 
@@ -104,21 +137,15 @@ class RestTimerService {
         return 1.0 - Double(remainingSeconds) / Double(totalSeconds)
     }
 
-    private func tick() {
-        guard remainingSeconds > 0 else {
-            timerCompleted()
-            return
-        }
-        remainingSeconds -= 1
-        if remainingSeconds == 0 {
-            timerCompleted()
-        }
+    private func cancelTimer() {
+        timer?.invalidate()
+        timer = nil
     }
 
-    private func timerCompleted() {
+    private func timerCompleted(endedAt: Date, alert: Bool) {
         stop()
-        completedAt = Date()
-        playAlert()
+        completedAt = endedAt
+        if alert { playAlert() }
     }
 
     private func playAlert() {
