@@ -4,7 +4,7 @@ import SwiftData
 struct MuscleDetailSheet: View {
     let muscle: MuscleGroup
     var subRegion: MuscleSubRegion?
-    @Query(sort: \Exercise.name) private var allExercises: [Exercise]
+    @Query(filter: #Predicate<Exercise> { $0.deletedAt == nil }, sort: \Exercise.name) private var allExercises: [Exercise]
     @Environment(\.dismiss) private var dismiss
     @State private var pulsePlusService = PulsePlusService()
 

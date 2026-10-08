@@ -66,7 +66,7 @@ struct ExerciseGroupEntry: Identifiable, Hashable {
 // MARK: - Main View
 
 struct ExercisePickerView: View {
-    @Query(sort: \Exercise.name) private var exercises: [Exercise]
+    @Query(filter: #Predicate<Exercise> { $0.deletedAt == nil }, sort: \Exercise.name) private var exercises: [Exercise]
     @State private var searchText = ""
     @State private var movementFilter: MovementPattern? = nil
     @State private var path = NavigationPath()

@@ -40,7 +40,7 @@ struct DataExportService {
     static let exportUnit = "kg"
 
     static func exportWorkouts(from context: ModelContext) throws -> Data {
-        let descriptor = FetchDescriptor<Workout>(sortBy: [SortDescriptor(\.date, order: .reverse)])
+        let descriptor = FetchDescriptor<Workout>(predicate: #Predicate { !$0.isDraft && $0.deletedAt == nil }, sortBy: [SortDescriptor(\.date, order: .reverse)])
         let workouts = try context.fetch(descriptor)
 
         let exported = WorkoutExportData(
@@ -79,7 +79,7 @@ struct DataExportService {
     }
 
     static func generateCSV(from context: ModelContext) throws -> String {
-        let descriptor = FetchDescriptor<Workout>(sortBy: [SortDescriptor(\.date, order: .reverse)])
+        let descriptor = FetchDescriptor<Workout>(predicate: #Predicate { !$0.isDraft && $0.deletedAt == nil }, sortBy: [SortDescriptor(\.date, order: .reverse)])
         let workouts = try context.fetch(descriptor)
 
         var csv = "Date,Exercise,Set,Weight,Unit,Reps,RIR,Type,Duration(min),Calories\n"   // Weight is always kg

@@ -9,7 +9,7 @@ struct WidgetDataService {
         guard let defaults = UserDefaults(suiteName: appGroupId) else { return }
 
         let descriptor = FetchDescriptor<Workout>(
-            predicate: #Predicate { !$0.isDraft },
+            predicate: #Predicate { !$0.isDraft && $0.deletedAt == nil },
             sortBy: [SortDescriptor(\.date, order: .reverse)]
         )
         guard let workouts = try? modelContext.fetch(descriptor) else { return }
@@ -160,7 +160,7 @@ struct WidgetDataService {
         }
 
         // Next workout (prediction) + quick-start templates
-        let templates = (try? modelContext.fetch(FetchDescriptor<WorkoutTemplate>())) ?? []
+        let templates = (try? modelContext.fetch(FetchDescriptor<WorkoutTemplate>(predicate: #Predicate { $0.deletedAt == nil }))) ?? []
         snap.templates = templates.map { .init(name: $0.name, exercises: $0.templateExercises.count) }
         if let user, let name = WorkoutViewModel().predictNextWorkout(user: user, modelContext: modelContext) {
             snap.nextName = name

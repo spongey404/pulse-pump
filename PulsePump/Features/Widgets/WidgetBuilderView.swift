@@ -16,8 +16,8 @@ struct WidgetBuilderView: View {
     let snapshot: PumpWidgetSnapshot
     let onClose: () -> Void
 
-    @Query(sort: \Exercise.name) private var exercises: [Exercise]
-    @Query(sort: \WorkoutTemplate.name) private var templates: [WorkoutTemplate]
+    @Query(filter: #Predicate<Exercise> { $0.deletedAt == nil }, sort: \Exercise.name) private var exercises: [Exercise]
+    @Query(filter: #Predicate<WorkoutTemplate> { $0.deletedAt == nil }, sort: \WorkoutTemplate.name) private var templates: [WorkoutTemplate]
 
     @State private var draft: PumpCustomWidget
     @State private var selected: String?

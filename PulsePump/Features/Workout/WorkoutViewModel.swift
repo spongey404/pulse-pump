@@ -236,11 +236,12 @@ class WorkoutViewModel {
 
         workout.duration = TimeInterval(elapsedSeconds)
         workout.notes = workoutNotes
-        workout.updatedAt = Date()
+        workout.markUpdated()
 
         // Convert the draft in place: reconcile the already-persisted logs, drop empty exercises.
         persistDraft(modelContext: modelContext, final: true)
         workout.isDraft = false
+        workout.markUpdated()   // now a finished workout: dirty for cloud sync
         try? modelContext.save()
 
         let exerciseById = Self.exerciseLookup(modelContext)
@@ -350,7 +351,7 @@ class WorkoutViewModel {
         }
 
         let allWorkoutDates = (try? modelContext.fetch(FetchDescriptor<Workout>(
-            predicate: #Predicate<Workout> { !$0.isDraft }
+            predicate: #Predicate<Workout> { !$0.isDraft && $0.deletedAt == nil }
         )).map(\.date)) ?? []
         let streakCount = max(1, StreakCalculator.currentStreak(from: allWorkoutDates))
 
@@ -491,12 +492,12 @@ class WorkoutViewModel {
     /// otherwise the split's next day (resolved to a template when possible) is used.
     func predictNextWorkout(user: User, modelContext: ModelContext) -> String? {
         let descriptor = FetchDescriptor<Workout>(
-            predicate: #Predicate<Workout> { !$0.isDraft },
+            predicate: #Predicate<Workout> { !$0.isDraft && $0.deletedAt == nil },
             sortBy: [SortDescriptor(\Workout.date, order: .reverse)]
         )
         let recent = (try? modelContext.fetch(descriptor)) ?? []
         let history = recent.prefix(14).compactMap { $0.template?.name }
-        let templateNames = ((try? modelContext.fetch(FetchDescriptor<WorkoutTemplate>())) ?? []).map(\.name)
+        let templateNames = ((try? modelContext.fetch(FetchDescriptor<WorkoutTemplate>(predicate: #Predicate { $0.deletedAt == nil }))) ?? []).map(\.name)
         return WorkoutPredictor.predict(
             history: Array(history),
             templateNames: templateNames,

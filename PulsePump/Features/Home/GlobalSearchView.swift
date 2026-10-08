@@ -10,8 +10,8 @@ enum SearchCategory: String, CaseIterable {
 
 struct GlobalSearchView: View {
     @Environment(\.dismiss) private var dismiss
-    @Query(sort: \Exercise.name) private var exercises: [Exercise]
-    @Query(filter: #Predicate<Workout> { !$0.isDraft }, sort: \Workout.date, order: .reverse)
+    @Query(filter: #Predicate<Exercise> { $0.deletedAt == nil }, sort: \Exercise.name) private var exercises: [Exercise]
+    @Query(filter: #Predicate<Workout> { !$0.isDraft && $0.deletedAt == nil }, sort: \Workout.date, order: .reverse)
     private var workouts: [Workout]
 
     @State private var searchText = ""

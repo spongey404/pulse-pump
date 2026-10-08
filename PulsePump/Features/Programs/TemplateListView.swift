@@ -3,7 +3,7 @@ import SwiftData
 
 struct TemplateListView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \WorkoutTemplate.name) private var templates: [WorkoutTemplate]
+    @Query(filter: #Predicate<WorkoutTemplate> { $0.deletedAt == nil }, sort: \WorkoutTemplate.name) private var templates: [WorkoutTemplate]
     @State private var showCreateTemplate = false
     let onStartWorkout: (WorkoutTemplate) -> Void
 
@@ -15,7 +15,7 @@ struct TemplateListView: View {
                 }
                 .swipeActions(edge: .trailing) {
                     Button(role: .destructive) {
-                        modelContext.delete(template)
+                        modelContext.softDelete(template)
                     } label: {
                         Label("Delete", systemImage: "trash")
                     }

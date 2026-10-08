@@ -6,7 +6,7 @@ struct ExerciseLibraryView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @Query(sort: \Exercise.name) private var exercises: [Exercise]
+    @Query(filter: #Predicate<Exercise> { $0.deletedAt == nil }, sort: \Exercise.name) private var exercises: [Exercise]
 
     @State private var searchText = ""
     @State private var selectedMuscleGroups: Set<MuscleGroup> = []

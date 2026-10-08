@@ -174,7 +174,7 @@ struct DataImportService {
     static func commit(_ rows: [ParsedRow], modelContext: ModelContext, user: User, into result: inout ImportResult) {
         // Existing keys, so re-imports are no-ops.
         var existingKeys = Set<String>()
-        let existing = (try? modelContext.fetch(FetchDescriptor<Workout>(predicate: #Predicate { !$0.isDraft }))) ?? []
+        let existing = (try? modelContext.fetch(FetchDescriptor<Workout>(predicate: #Predicate { !$0.isDraft && $0.deletedAt == nil }))) ?? []
         for w in existing {
             for log in w.exerciseLogs {
                 guard let name = log.exercise?.name else { continue }

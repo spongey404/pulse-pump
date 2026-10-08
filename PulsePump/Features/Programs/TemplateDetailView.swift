@@ -137,7 +137,7 @@ struct TemplateDetailView: View {
                         .tracking(1.2)
                         .foregroundStyle(Color.inkMuted)
                 } else {
-                    Text("\(sortedExercises.count) EXERCISES · \(activeTemplate.workouts.count) LOGGED")
+                    Text("\(sortedExercises.count) EXERCISES · \(activeTemplate.liveWorkouts.count) LOGGED")
                         .font(.spaceMono(9))
                         .tracking(1.2)
                         .foregroundStyle(Color.inkMuted)

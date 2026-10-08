@@ -11,7 +11,7 @@ struct ProgramGroup: Identifiable {
 
     var totalExercises: Int { templates.flatMap(\.templateExercises).count }
     var daysPerWeek: Int { splitDays.isEmpty ? max(1, templates.count) : splitDays.count }
-    var lastUsedDate: Date? { templates.flatMap(\.workouts).map(\.date).max() }
+    var lastUsedDate: Date? { templates.flatMap(\.liveWorkouts).map(\.date).max() }
 
     var lastUsedText: String {
         guard let date = lastUsedDate else { return "NEVER" }

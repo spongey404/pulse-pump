@@ -6,7 +6,7 @@ struct EquipmentProfilesView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(\.weightUnit) private var unit
-    @Query(sort: \EquipmentProfile.name) private var profiles: [EquipmentProfile]
+    @Query(filter: #Predicate<EquipmentProfile> { $0.deletedAt == nil }, sort: \EquipmentProfile.name) private var profiles: [EquipmentProfile]
     @State private var showCreate = false
     @State private var selectedId: UUID? = nil
     @State private var showEditEquipment = false

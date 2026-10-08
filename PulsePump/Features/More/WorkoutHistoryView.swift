@@ -5,7 +5,7 @@ struct WorkoutHistoryView: View {
     var onBack: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<Workout> { !$0.isDraft }, sort: \Workout.date, order: .reverse)
+    @Query(filter: #Predicate<Workout> { !$0.isDraft && $0.deletedAt == nil }, sort: \Workout.date, order: .reverse)
     private var workouts: [Workout]
 
     @State private var viewMode: HistoryViewMode = .list
@@ -54,7 +54,7 @@ struct WorkoutHistoryView: View {
             set: { if !$0 { workoutToDelete = nil } }
         )) {
             Button("Delete", role: .destructive) {
-                if let w = workoutToDelete { modelContext.delete(w); workoutToDelete = nil }
+                if let w = workoutToDelete { modelContext.softDelete(w); workoutToDelete = nil }
             }
         } message: {
             Text("This workout will be permanently deleted.")

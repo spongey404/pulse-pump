@@ -7,7 +7,7 @@ struct MoreTabView: View {
     @Bindable var tutorialViewModel: TutorialViewModel
     @Environment(\.modelContext) private var modelContext
     @Query private var users: [User]
-    @Query(filter: #Predicate<Workout> { !$0.isDraft }, sort: \Workout.date, order: .reverse)
+    @Query(filter: #Predicate<Workout> { !$0.isDraft && $0.deletedAt == nil }, sort: \Workout.date, order: .reverse)
     private var workouts: [Workout]
 
     #if DEBUG
@@ -138,7 +138,7 @@ struct MoreTabView: View {
     }
 
     private var activeEquipmentName: String {
-        let profiles = user?.equipmentProfiles ?? []
+        let profiles = user?.liveEquipmentProfiles ?? []
         return (profiles.first?.name ?? "").uppercased()
     }
 

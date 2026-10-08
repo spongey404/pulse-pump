@@ -110,14 +110,14 @@ struct StartWorkoutDock: View {
 
     private func startDock(user: User) -> some View {
         let predictionName = overrideName ?? viewModel.predictNextWorkout(user: user, modelContext: modelContext)
-        let allTemplates: [WorkoutTemplate] = (try? modelContext.fetch(FetchDescriptor<WorkoutTemplate>())) ?? []
+        let allTemplates: [WorkoutTemplate] = (try? modelContext.fetch(FetchDescriptor<WorkoutTemplate>(predicate: #Predicate { $0.deletedAt == nil }))) ?? []
         let predictedTemplate = predictionName.flatMap { name in
             allTemplates.first { $0.name.lowercased() == name.lowercased() }
         }
         let splitLbl = detectSplitLabel(modelContext: modelContext)
         let estMins = predictedTemplate.flatMap { t -> Int? in
             let workoutDescriptor = FetchDescriptor<Workout>(
-                predicate: #Predicate { !$0.isDraft },
+                predicate: #Predicate { !$0.isDraft && $0.deletedAt == nil },
                 sortBy: [SortDescriptor(\Workout.date, order: .reverse)]
             )
             let recentWorkouts = (try? modelContext.fetch(workoutDescriptor)) ?? []
@@ -167,7 +167,7 @@ struct StartWorkoutDock: View {
 
     private func detectSplitLabel(modelContext: ModelContext) -> String {
         let descriptor = FetchDescriptor<Workout>(
-            predicate: #Predicate { !$0.isDraft },
+            predicate: #Predicate { !$0.isDraft && $0.deletedAt == nil },
             sortBy: [SortDescriptor(\Workout.date, order: .reverse)]
         )
         let recent = (try? modelContext.fetch(descriptor))?.prefix(9) ?? []

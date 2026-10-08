@@ -36,7 +36,7 @@ extension WorkoutViewModel {
         guard let workout else { return }
         workout.duration = TimeInterval(elapsedSeconds)
         workout.notes = workoutNotes
-        workout.updatedAt = Date()
+        workout.markUpdated()
 
         let exerciseById = Self.exerciseLookup(modelContext)
         let existingLogs = Dictionary(workout.exerciseLogs.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })

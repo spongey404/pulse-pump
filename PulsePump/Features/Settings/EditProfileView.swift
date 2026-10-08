@@ -99,6 +99,6 @@ struct EditProfileView: View {
             user.height = h
         }
         if let a = parseWholeNumber(age) { user.age = a }
-        user.updatedAt = Date()
+        user.markUpdated()
     }
 }

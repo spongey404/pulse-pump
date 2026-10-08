@@ -222,7 +222,7 @@ struct ExerciseRecentSessionsSection: View {
 
 struct TemplatesContainingExercise: View {
     let exerciseId: UUID
-    @Query private var templates: [WorkoutTemplate]
+    @Query(filter: #Predicate<WorkoutTemplate> { $0.deletedAt == nil }) private var templates: [WorkoutTemplate]
 
     init(exerciseId: UUID) {
         self.exerciseId = exerciseId
