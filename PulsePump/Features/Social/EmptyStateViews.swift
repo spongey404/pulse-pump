@@ -14,7 +14,7 @@ struct NoFriendsEmptyState: View {
                 Text("No friends yet.")
                     .font(.archivo(20, weight: .bold))
                     .foregroundStyle(Color.inkPrimary)
-                Text("Sessions from people you follow appear here.")
+                Text("Sessions your friends post appear here. Friends are people you follow who follow you back.")
                     .font(.archivo(13))
                     .foregroundStyle(Color.inkMuted)
                     .multilineTextAlignment(.center)
@@ -31,6 +31,29 @@ struct NoFriendsEmptyState: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 80)
+        .padding(.horizontal, 40)
+    }
+}
+
+/// Friends exist but nobody has posted yet (or everything is private to the viewer).
+struct NoPostsEmptyState: View {
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "figure.strengthtraining.traditional")
+                .font(.system(size: 40, weight: .light))
+                .foregroundStyle(Color.inkPrimary.opacity(0.18))
+            VStack(spacing: 6) {
+                Text("Nothing posted yet.")
+                    .font(.archivo(20, weight: .bold))
+                    .foregroundStyle(Color.inkPrimary)
+                Text("When you or your friends post a session, it shows up here.")
+                    .font(.archivo(13))
+                    .foregroundStyle(Color.inkMuted)
+                    .multilineTextAlignment(.center)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 80)

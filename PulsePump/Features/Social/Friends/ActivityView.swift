@@ -1,63 +1,68 @@
 import SwiftUI
 
-/// 6g — activity and privacy.
+/// 6g — activity and privacy. "Needs you" is driven by real inbox items only: friend requests (fans
+/// waiting for a follow back) and challenge invites. There is no event history to show, so there is
+/// no "Earlier" list.
 struct ActivityView: View {
     @Bindable var viewModel: SocialViewModel
     @Environment(\.dismiss) private var dismiss
 
-    // Stubbed history — the app doesn't log a like/join event feed today.
-    // TODO: back with a real event-log collection once one exists.
-    private var earlierEvents: [(text: String, time: String)] {
-        guard DevFlags.socialFixtures else { return [] }
-        return [("Priya liked your post", "2H"), ("Jay joined Bench 100 Club", "1D")]
-    }
-
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button { dismiss() } label: { Text("‹").font(Font.spaceMono(20)).foregroundStyle(Color.inkPrimary) }
-                    .buttonStyle(.plain)
-                Text("ACTIVITY").font(.archivo(22, weight: .black)).tracking(0.5).foregroundStyle(Color.inkPrimary)
-                Spacer()
-            }
-            .padding(.horizontal, 16).padding(.vertical, 10)
-            .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 0.5) }
+            SocialScreenHeader(title: "ACTIVITY", onBack: { dismiss() })
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    if !viewModel.pendingRequests.isEmpty || !viewModel.pendingChallengeInvites.isEmpty {
-                        SectionLabel(title: "Needs You").padding(.top, 16).padding(.bottom, 6)
-                        ForEach(viewModel.pendingRequests, id: \.docId) { request in
-                            needsYouRow(
-                                title: "\(request.profile?.displayName ?? "Someone") wants to be friends",
-                                accept: { Task { await viewModel.acceptFriendRequest(docId: request.docId) } },
-                                decline: { Task { await viewModel.removeFriend(docId: request.docId) } }
-                            )
-                        }
-                        ForEach(viewModel.pendingChallengeInvites, id: \.docId) { entry in
-                            needsYouRow(
-                                title: "\(entry.invite.fromUsername) invited you to \(entry.invite.challengeName)",
-                                accept: { Task { await viewModel.respondToChallengeInvite(docId: entry.docId, accept: true) } },
-                                decline: { Task { await viewModel.respondToChallengeInvite(docId: entry.docId, accept: false) } }
-                            )
-                        }
+                    SectionLabel(title: "Needs You", meta: viewModel.inboxCount == 0 ? nil : "\(viewModel.inboxCount)").padding(.top, 16).padding(.bottom, 6)
+
+                    if viewModel.inboxCount == 0 {
+                        Text("NOTHING NEEDS YOU RIGHT NOW")
+                            .font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted)
+                            .frame(minHeight: 44, alignment: .leading)
                     }
 
-                    SectionLabel(title: "Earlier").padding(.top, 22).padding(.bottom, 6)
-                    ForEach(earlierEvents, id: \.text) { event in
-                        HStack {
-                            Text(event.text).font(.archivo(14)).foregroundStyle(Color.inkPrimary)
-                            Spacer()
-                            Text(event.time).font(Font.spaceMono(9)).foregroundStyle(Color.inkMuted)
-                        }
-                        .frame(minHeight: 44)
-                        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+                    ForEach(viewModel.fanRequests) { fan in
+                        needsYouRow(
+                            title: "\(fan.shownName) wants to be friends",
+                            detail: fan.username.isEmpty ? "FOLLOWS YOU" : "@\(fan.username.uppercased()) FOLLOWS YOU",
+                            accept: { Task { await viewModel.accept(fan.uid) } },
+                            decline: { viewModel.ignore(fan.uid) }
+                        )
+                    }
+                    ForEach(viewModel.pendingChallengeInvites) { invite in
+                        needsYouRow(
+                            title: "\(invite.fromUsername.isEmpty ? "Someone" : invite.fromUsername) invited you to \(invite.challengeName)",
+                            detail: "CHALLENGE INVITE",
+                            accept: { Task { await viewModel.respond(to: invite, accept: true) } },
+                            decline: { Task { await viewModel.respond(to: invite, accept: false) } }
+                        )
                     }
 
                     SectionLabel(title: "Privacy").padding(.top, 22).padding(.bottom, 6)
                     ForEach(PrivacyRow.allCases) { row in
-                        PrivacyRowView(row: row)
+                        PrivacyRowView(row: row, viewModel: viewModel)
                     }
+                    Text("CHANGES APPLY TO POSTS YOU MAKE FROM NOW ON · SAVED TO YOUR ACCOUNT")
+                        .font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted).padding(.top, 8)
+                    if let error = viewModel.privacyService.lastError {
+                        Text(error.uppercased()).font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.signalDown).padding(.top, 6)
+                    }
+
+                    SectionLabel(title: "Safety").padding(.top, 22).padding(.bottom, 6)
+                    NavigationLink {
+                        BlockedUsersView(viewModel: viewModel)
+                    } label: {
+                        HStack {
+                            Text("Blocked people").font(.archivo(15, weight: .semibold)).foregroundStyle(Color.inkPrimary)
+                            Spacer()
+                            Text("\(viewModel.blockedUsers.count)").font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted)
+                            Text("›").font(Font.spaceMono(12)).foregroundStyle(Color.inkMuted)
+                        }
+                        .frame(minHeight: 52)
+                        .contentShape(Rectangle())
+                        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 24)
@@ -66,39 +71,33 @@ struct ActivityView: View {
         .background(Color.canvasBg)
         .navigationBarBackButtonHidden(true)
         .task {
-            await viewModel.loadChallengeInvites()
+            await viewModel.loadGraph()
+            await viewModel.loadInvites()
+            await viewModel.restorePrivacy()
         }
     }
 
-    private func needsYouRow(title: String, accept: @escaping () -> Void, decline: @escaping () -> Void) -> some View {
-        HStack {
-            Text(title).font(.archivo(14, weight: .semibold)).foregroundStyle(Color.inkPrimary)
-            Spacer()
-            Button("ACCEPT", action: accept)
-                .font(Font.spaceMono(9, weight: .bold)).tracking(1).foregroundStyle(.white)
-                .padding(.horizontal, 12).padding(.vertical, 7)
-                .background(Color.pumpAccent).clipShape(RoundedRectangle(cornerRadius: 8))
-            Button("IGNORE", action: decline)
-                .font(Font.spaceMono(9, weight: .bold)).tracking(1).foregroundStyle(Color.inkMuted)
-                .padding(.horizontal, 12).padding(.vertical, 7)
-                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.ruleStrong, lineWidth: 1))
+    private func needsYouRow(title: String, detail: String, accept: @escaping () -> Void, decline: @escaping () -> Void) -> some View {
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.archivo(14, weight: .semibold)).foregroundStyle(Color.inkPrimary).fixedSize(horizontal: false, vertical: true)
+                Text(detail).font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
+            }
+            Spacer(minLength: 4)
+            SocialPill(title: "ACCEPT", style: .filled, action: accept)
+            SocialPill(title: "IGNORE", style: .outlined, action: decline)
         }
-        .frame(minHeight: 56)
+        .frame(minHeight: 64)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
     }
 }
 
 private struct PrivacyRowView: View {
     let row: PrivacyRow
-    @AppStorage private var rawValue: String
+    @Bindable var viewModel: SocialViewModel
     @State private var showPicker = false
 
-    init(row: PrivacyRow) {
-        self.row = row
-        _rawValue = AppStorage(wrappedValue: PrivacyLevel.friendsOnly.rawValue, row.storageKey)
-    }
-
-    private var level: PrivacyLevel { PrivacyLevel(rawValue: rawValue) ?? .friendsOnly }
+    private var level: PrivacyLevel { viewModel.privacy[row] }
 
     var body: some View {
         Button { showPicker = true } label: {
@@ -108,16 +107,58 @@ private struct PrivacyRowView: View {
                     Text(level.note(for: row)).font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
                 }
                 Spacer()
-                Text(level.displayName.uppercased()).font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.accentInk)
+                Text(row.label(for: level).uppercased()).font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.accentInk)
             }
             .frame(minHeight: 52)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
         .confirmationDialog(row.title, isPresented: $showPicker) {
-            ForEach(PrivacyLevel.allCases) { option in
-                Button(option.displayName) { rawValue = option.rawValue }
+            ForEach(row.options) { option in
+                Button(row.label(for: option)) { Task { await viewModel.setPrivacy(row, option) } }
             }
         }
+    }
+}
+
+/// People I blocked, with UNBLOCK. Their profile is unreadable while blocked, so the name and handle
+/// stored at block time are shown.
+struct BlockedUsersView: View {
+    @Bindable var viewModel: SocialViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            SocialScreenHeader(title: "BLOCKED", onBack: { dismiss() })
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    if viewModel.blockedUsers.isEmpty {
+                        Text("YOU HAVEN'T BLOCKED ANYONE")
+                            .font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted).padding(.top, 24)
+                    }
+                    ForEach(viewModel.blockedUsers) { blocked in
+                        HStack(spacing: 12) {
+                            Avatar(initial: blocked.displayName.isEmpty ? blocked.username : blocked.displayName, size: 36)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(blocked.displayName.isEmpty ? "Pump user" : blocked.displayName)
+                                    .font(.archivo(16, weight: .semibold)).foregroundStyle(Color.inkPrimary)
+                                if !blocked.username.isEmpty {
+                                    Text("@\(blocked.username)").font(Font.spaceMono(9)).foregroundStyle(Color.inkMuted)
+                                }
+                            }
+                            Spacer()
+                            SocialPill(title: "UNBLOCK", style: .outlined) { Task { await viewModel.unblock(uid: blocked.uid) } }
+                        }
+                        .frame(minHeight: 60)
+                        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+        }
+        .background(Color.canvasBg)
+        .navigationBarBackButtonHidden(true)
+        .task { await viewModel.loadBlocked() }
     }
 }

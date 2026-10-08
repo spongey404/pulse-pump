@@ -18,7 +18,7 @@ struct MoreTabView: View {
     #endif
     @State private var showSignOutAlert = false
     @State private var pulsePlusService = PulsePlusService()
-    @State private var social = SocialViewModel()
+    @State private var social = SocialViewModel.shared
 
     private var user: User? { users.first }
     private var streak: Int { StreakCalculator.currentStreak(from: workouts.map(\.date)) }
@@ -133,7 +133,10 @@ struct MoreTabView: View {
         }
         .task {
             await pulsePlusService.refreshSubscriptionStatus()
-            await social.loadFriends()
+            SocialServices.localName = user?.name
+            await social.loadMyProfile()
+            await social.loadGraph()
+            await social.syncOwnStats(streak: streak, totalWorkouts: workouts.count)
         }
     }
 
@@ -181,8 +184,8 @@ struct MoreTabView: View {
         let stats: [(String, String)] = [
             ("\(workouts.count)", "WORKOUTS"),
             ("\(streak)D", "STREAK"),
-            ("\(social.friends.count)", "FOLLOWERS"),
-            ("\(social.friends.count)", "FOLLOWING"),
+            ("\(social.friendCount)", "FRIENDS"),
+            ("\(social.fanCount)", "FANS"),
         ]
         return HStack(spacing: 0) {
             ForEach(Array(stats.enumerated()), id: \.offset) { i, k in

@@ -1,17 +1,14 @@
 import SwiftUI
 import SwiftData
-import FirebaseAuth
 
+/// "Marcus +2 others trained today" — from the same feed the Social tab shows (real friends' posts only;
+/// nothing is shown when no friend has posted today).
 struct FriendActivityBanner: View {
-    @State private var trainedToday: [WorkoutFeedItem] = []
-    @State private var loaded = false
+    @State private var viewModel = SocialViewModel.shared
 
-    private static var fixtureItems: [WorkoutFeedItem] { DevFlags.socialFixtures ? demoItems : [] }
-    private static let demoItems: [WorkoutFeedItem] = [
-        WorkoutFeedItem(id: "d1", userId: "u1", username: "Marcus", templateName: "Push Day",  exerciseCount: 5, durationSeconds: 3600, caloriesBurned: 418, musclesWorked: ["Chest"], date: Date()),
-        WorkoutFeedItem(id: "d2", userId: "u2", username: "Priya",  templateName: "Leg Day",   exerciseCount: 5, durationSeconds: 3300, caloriesBurned: 390, musclesWorked: ["Quads"], date: Date()),
-        WorkoutFeedItem(id: "d3", userId: "u3", username: "Jake",   templateName: "Pull Day",  exerciseCount: 5, durationSeconds: 3480, caloriesBurned: 452, musclesWorked: ["Back"],  date: Date()),
-    ]
+    private var trainedToday: [WorkoutFeedItem] {
+        viewModel.feedItems.filter { $0.userId != viewModel.currentUid && Calendar.current.isDateInToday($0.date) }
+    }
 
     var body: some View {
         Group {
@@ -21,28 +18,13 @@ struct FriendActivityBanner: View {
                     .padding(.vertical, 8)
             }
         }
-        .task {
-            guard !loaded else { return }
-            loaded = true
-            guard let uid = Auth.auth().currentUser?.uid else {
-                trainedToday = Self.fixtureItems
-                return
-            }
-            let uids = (try? await FirestoreService().fetchFriendUids(for: uid)) ?? []
-            if uids.isEmpty {
-                trainedToday = Self.fixtureItems
-                return
-            }
-            let posts = (try? await FirestoreService().fetchFeed(friendUids: uids)) ?? []
-            let real = posts.filter { Calendar.current.isDateInToday($0.date) }
-            trainedToday = real.isEmpty ? Self.fixtureItems : real
-        }
+        .task { await viewModel.loadFeed() }
     }
 
     private var banner: some View {
         let names = uniqueNames(from: trainedToday)
         let first = names.first ?? ""
-        let others = max(0, trainedToday.count - 1)
+        let others = max(0, names.count - 1)
         let label = others > 0
             ? "\(first) +\(others) other\(others == 1 ? "" : "s") trained today"
             : "\(first) trained today"

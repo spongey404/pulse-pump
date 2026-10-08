@@ -16,9 +16,19 @@ struct GlobalSearchView: View {
 
     @State private var searchText = ""
     @State private var activeCategory: SearchCategory = .all
-    @State private var friendResults: [FirestoreUserProfile] = []
+    @State private var social = SocialViewModel.shared
     @FocusState private var searchFocused: Bool
-    private let firestoreService = FirestoreService()
+
+    /// Friends whose name or handle matches, plus an exact-handle hit (users can't be listed).
+    private var friendResults: [FirestoreUserProfile] {
+        guard !searchText.isEmpty, activeCategory == .all || activeCategory == .friends else { return [] }
+        let local = social.friends.filter {
+            $0.shownName.localizedCaseInsensitiveContains(searchText) || $0.username.localizedCaseInsensitiveContains(searchText)
+        }
+        let exact = social.searchResults.compactMap(\.profile)
+        var seen = Set<String>()
+        return (local + exact).filter { seen.insert($0.uid).inserted }
+    }
 
     private var matchingExercises: [Exercise] {
         guard activeCategory == .all || activeCategory == .exercises else { return [] }
@@ -70,24 +80,12 @@ struct GlobalSearchView: View {
             }
         }
         .ignoresSafeArea(.keyboard)
-        .onChange(of: searchText) { _, newValue in
-            guard !newValue.isEmpty,
-                  activeCategory == .all || activeCategory == .friends else {
-                if newValue.isEmpty { friendResults = [] }
-                return
-            }
-            Task {
-                friendResults = (try? await firestoreService.searchUsers(query: newValue)) ?? []
-            }
-        }
-        .onChange(of: activeCategory) { _, cat in
-            if cat == .friends || cat == .all, !searchText.isEmpty {
-                Task {
-                    friendResults = (try? await firestoreService.searchUsers(query: searchText)) ?? []
-                }
-            } else {
-                friendResults = []
-            }
+        .task(id: searchText) {
+            guard !searchText.isEmpty, activeCategory == .all || activeCategory == .friends else { return }
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            if !social.graphLoaded { await social.loadGraph() }
+            await social.searchUsers(query: searchText)
         }
     }
 
