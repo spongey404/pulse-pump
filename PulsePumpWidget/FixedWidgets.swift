@@ -44,16 +44,18 @@ struct PWEntry: TimelineEntry {
     var metric: PWBodyMetric = .volume
 }
 
-private func currentSnapshot() -> PumpWidgetSnapshot {
-    let s = PumpWidgetStore.loadSnapshot()
-    return s.hasData ? s : PumpWidgetSnapshot.sample     // widget gallery / first run shows the design's sample
+/// Real data when the user has workouts; otherwise a real *empty* snapshot (placeholder state),
+/// never the design's sample with Plus unlocked. The sample is only for previews (gallery).
+private func currentSnapshot(isPreview: Bool = false) -> PumpWidgetSnapshot {
+    if isPreview { return .sample }
+    return PumpWidgetSnapshot.resolved(stored: PumpWidgetStore.loadSnapshot())
 }
 private var nextRefresh: Date { Calendar.current.date(byAdding: .minute, value: 30, to: Date()) ?? Date() }
 
 struct PWVariantProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> PWEntry { PWEntry(date: Date(), snap: .sample) }
     func snapshot(for c: PWVariantIntent, in context: Context) async -> PWEntry {
-        PWEntry(date: Date(), snap: context.isPreview ? .sample : currentSnapshot(), variant: c.layout.variant)
+        PWEntry(date: Date(), snap: currentSnapshot(isPreview: context.isPreview), variant: c.layout.variant)
     }
     func timeline(for c: PWVariantIntent, in context: Context) async -> Timeline<PWEntry> {
         Timeline(entries: [PWEntry(date: Date(), snap: currentSnapshot(), variant: c.layout.variant)], policy: .after(nextRefresh))
@@ -63,7 +65,7 @@ struct PWVariantProvider: AppIntentTimelineProvider {
 struct PWBodyProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> PWEntry { PWEntry(date: Date(), snap: .sample) }
     func snapshot(for c: PWBodyMapIntent, in context: Context) async -> PWEntry {
-        PWEntry(date: Date(), snap: context.isPreview ? .sample : currentSnapshot(), variant: c.layout.variant, metric: c.shows.metric)
+        PWEntry(date: Date(), snap: currentSnapshot(isPreview: context.isPreview), variant: c.layout.variant, metric: c.shows.metric)
     }
     func timeline(for c: PWBodyMapIntent, in context: Context) async -> Timeline<PWEntry> {
         Timeline(entries: [PWEntry(date: Date(), snap: currentSnapshot(), variant: c.layout.variant, metric: c.shows.metric)], policy: .after(nextRefresh))
