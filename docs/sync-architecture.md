@@ -1,0 +1,70 @@
+# Pump cloud sync — architecture and data contract (v1)
+
+Status: agreed design, implementation in progress. This document is the contract shared by the iOS app,
+the future Android app, the Firestore security rules and the Cloud Functions.
+
+## Decisions
+- **Backend:** Firebase — Auth, Firestore (`pulsepump-81986`, `australia-southeast1`), Cloud Functions (Blaze plan).
+- **Accounts are required.** The app needs a signed-in user (Apple, Google or Email). Sync is always on.
+- **Offline-first.** SwiftData (iOS) / Room (Android) is the local source of truth for the UI, widgets and Live Activity.
+  A sync layer mirrors it to Firestore.
+- **What syncs:** profile, preferences, privacy settings, workouts, templates, splits, equipment profiles, custom exercises,
+  bodyweight log. **Not synced:** in-progress drafts (stay on the device that started them), widget library/snapshot.
+- **Conflicts:** last write wins by `updatedAt` (server-assigned on push is NOT used; client clock, UTC, ms). Deletes are soft (`deletedAt`).
+- **Units:** all weights stored in **kg**, distances in metres, durations in seconds, timestamps UTC. Display converts at the UI edge.
+- **IDs:** every record has a stable client-generated UUID (lower-case) used as the Firestore document id.
+- **Schema versioning:** every synced document has `schemaVersion` (int, currently 1). Readers must ignore unknown fields.
+- **Friends and fans:** following is one-way. If both A→B and B→A exist they are **friends**; if only one exists the follower is a **fan**
+  of the followee. A "friend request" in the UI is simply a fan; *Accept* = follow back (becomes friends), *Ignore* = stay a fan.
+- **Privacy (defaults from the Social design, screen 6g):** Workout posts = friends, Body map = friends, Global leaderboards = visible,
+  Profile = everyone. Only what a user *posts* is ever visible to others; raw workouts are owner-only. Enforced in rules/functions, not just UI.
+- **Server-side logic (Cloud Functions):** challenge scoring and ranks, friend/fan counters, like/comment counters, account deletion.
+  Personal-data sync does NOT use functions.
+- **App Store requirements covered:** account deletion, report and block for user-generated content, Sign in with Apple.
+
+## Firestore data model
+
+### Private to the owner (`users/{uid}/…`) — readable and writable only by `uid`
+| Path | Fields |
+|---|---|
+| `users/{uid}` | `name, username, unit ("kg"/"lbs"), experienceLevel, gender, age, heightCm, weightKg, selectedSplitId?, settings{…}, privacy{workoutPosts, bodyMap, globalLeaderboards, profile}, schemaVersion, createdAt, updatedAt` |
+| `users/{uid}/workouts/{id}` | `date, durationSec, notes, calories, isDeload, templateId?, templateName?, exercises[{exerciseId, exerciseName, order, notes, sets[{order, weightKg, reps, rir?, durationSec?, distanceM?, setType, side}]}], schemaVersion, updatedAt, deletedAt?` |
+| `users/{uid}/templates/{id}` | `name, exercises[{exerciseId, exerciseName, order, targetSets, targetReps?, targetRIR?, restSeconds?, notes?}], splitDays[], notes, schemaVersion, updatedAt, deletedAt?` |
+| `users/{uid}/splits/{id}` | `type, name, days[{dayOfWeek(1=Sun…7=Sat), label, workoutType}], schemaVersion, updatedAt, deletedAt?` |
+| `users/{uid}/equipmentProfiles/{id}` | `name, equipment[], platesKg[], bars[{name, weightKg}], schemaVersion, updatedAt, deletedAt?` |
+| `users/{uid}/customExercises/{id}` | exercise fields (`name, primaryMuscles[], secondaryMuscles[], equipmentType, movementPattern, exerciseType, isUnilateral, …`), `schemaVersion, updatedAt, deletedAt?` |
+| `users/{uid}/bodyweight/{yyyyMMdd}` | `kg, updatedAt` |
+| `users/{uid}/blocked/{otherUid}` | `createdAt` |
+
+### Social / shared
+| Path | Written by | Read by |
+|---|---|---|
+| `profiles/{uid}` — `displayName, username, streak, totalWorkouts, friendCount, fanCount, profileVisibility, globalLeaderboardVisible, updatedAt` | owner (counters by function) | per `profileVisibility` (everyone → any signed-in user; friends → friends; only me → owner) |
+| `usernames/{handle}` — `uid` | owner, create-only (uniqueness) | any signed-in |
+| `follows/{followerUid}_{followeeUid}` — `followerUid, followeeUid, createdAt` | the follower (create/delete) | the two users |
+| `posts/{postId}` — `authorUid, authorName, authorUsername, date, workoutName, audience("everyone"/"friends"/"onlyMe"), bodyMapAudience, stats{sets, volumeKg, durationSec, prCount}, exercises[…], likeCount, commentCount, createdAt` | author (counters by function) | per `audience` |
+| `posts/{postId}/extras/bodymap` — `muscleSets{group: sets}` | author | per `bodyMapAudience` (or author) |
+| `posts/{postId}/comments/{id}` — `authorUid, text, createdAt` | any reader of the post | readers of the post |
+| `posts/{postId}/likes/{uid}` | that user | readers of the post |
+| `challenges/{id}` — `creatorUid, name, metric, exerciseName?, startAt, endAt, isGlobal, visibility, status("active"/"ended"), memberCount, schemaVersion` | creator (status by function) | members, invitees, creator (global: anyone signed in) |
+| `challenges/{id}/members/{uid}` — `username, joinedAt` | that user (join) | members |
+| `challenges/{id}/entries/{uid}` — `username?, score, rank, previousRank, updatedAt` | **functions only** | members (global: any signed-in, honouring `globalLeaderboardVisible`) |
+| `invites/{id}` — `challengeId, fromUid, toUid, status` | sender creates; recipient updates status | sender + recipient |
+| `reports/{id}` — `reporterUid, targetType, targetId, reason, createdAt` | any signed-in user, create-only | nobody (admin/console) |
+
+`friends(a,b)` ⇔ `follows/a_b` and `follows/b_a` both exist (rules check with `exists()`).
+
+## Sync algorithm (client)
+1. **Outbox:** every synced record has `updatedAt` and `syncedAt?`. A record is dirty when `syncedAt == nil || updatedAt > syncedAt`. Mutation points
+   set `updatedAt = now`. Deletes set `deletedAt` and `updatedAt`.
+2. **Push:** batch dirty records (≤ 400 writes/batch), set `syncedAt` after success. Retry with backoff; safe to repeat (idempotent by id).
+3. **Pull:** per collection, query `updatedAt > lastPulledAt` ordered by `updatedAt`, apply records whose `updatedAt` is newer than local
+   (last write wins), apply `deletedAt` as a local delete, advance `lastPulledAt`.
+4. **Triggers:** sign-in, app foreground, after a workout completes or an edit is saved (debounced), and a manual "Sync now".
+5. **New device / reinstall:** pull everything (paged) before showing the main UI; show progress.
+6. **Sign-out / account switch:** wipe local user data when a different uid signs in.
+
+## Rules and functions
+See `firebase/firestore.rules`, `firebase/firestore.indexes.json`, `firebase/functions/`. Rules are tested with the emulator
+(`firebase/rules-tests`). Functions: `onWorkoutWritten` (scoring), `onFollowWritten` (friend/fan counters), `onLikeWritten` /
+`onCommentWritten` (counters), `deleteAccount` (callable).

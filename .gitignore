@@ -40,3 +40,8 @@ PumpApp/dist/
 
 # Dev data script build output
 build/
+
+# Firebase emulator output
+*-debug.log
+.firebase/
+firebase/functions/node_modules/
