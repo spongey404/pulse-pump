@@ -9,20 +9,17 @@ iOS workout logging app. Part of the Pulse ecosystem.
 ## Build Commands
 
 ```bash
-# Build (simulator)
-xcodebuild -scheme PulsePump -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build
+bin/test.sh               # unit tests exactly as CI runs them (first available iPhone simulator)
+bin/test.sh --release     # + Release build, and fails if DEBUG-only DevData code ships
+bin/createdevdata.sh      # build, clean-install and seed fake data (see "Dev data")
 
-# Run tests
-xcodebuild -scheme PulsePump -destination 'platform=iOS Simulator,name=iPhone 16 Pro' test
-
-# Run a single test class
-xcodebuild -scheme PulsePump -destination 'platform=iOS Simulator,name=iPhone 16 Pro' -only-testing:PulsePumpTests/StreakCalculatorTests test
-
-# Build widget extension
-xcodebuild -scheme PulsePumpWidget -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build
+# Raw xcodebuild (pick any installed simulator, e.g. iPhone 17 Pro)
+xcodebuild -scheme PulsePump -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
+xcodebuild -scheme PulsePump -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:PulsePumpTests/StreakCalculatorTests test
+xcodebuild -scheme PulsePumpWidgetExtension -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
 ```
 
-Xcode version: 26.4. Target: iOS 17+.
+Xcode version: 26.4. Target: iOS 17+. CI: `.github/workflows/ci.yml` runs `bin/test.sh --release` on every PR and on pushes to `main`/`develop`. UI tests (`PulsePumpUITests`) are stale and not run in CI until rewritten.
 
 ## Tech Stack
 
@@ -36,30 +33,36 @@ Xcode version: 26.4. Target: iOS 17+.
 
 ## Project Structure
 
+Feature-first inside the app target; shared code in `Core/`. Targets use Xcode synchronized folders, so adding/moving a file needs no project edit.
+
 ```
-PulsePump/
-├── App/PulsePumpApp.swift   # Entry point; ModelContainer, deep-link handling
-├── Models/                  # SwiftData models + value-type structs
-│   └── Enums/               # All enum types (Codable + CaseIterable + Identifiable)
-├── Views/
-│   ├── BodyMap/             # Muscle heatmap tab
-│   ├── ExerciseLibrary/     # Browse + search + create exercises
-│   ├── Home/                # Widgets, global search, start-workout dock
-│   ├── More/                # History, profile, workout detail
-│   ├── Onboarding/          # Multi-step onboarding container + step views
-│   ├── Programs/            # Template list, detail, create, edit
-│   ├── Settings/            # Settings, profile edit, Pulse+, data export
-│   ├── Social/              # Feed, friends, comments, challenges
-│   ├── Tutorial/            # CoachMark overlay + hint system
-│   ├── Utilities/           # Plate calculator, warmup generator, equipment profiles
-│   └── Workout/             # Active workout, exercise picker, completion, share card
-├── ViewModels/              # WorkoutViewModel, SocialViewModel, OnboardingViewModel, TutorialViewModel
-├── Services/                # Business logic (see Service Layer below)
-├── Utilities/StreakCalculator.swift
-├── Extensions/Color+Theme.swift
-└── ContentView.swift        # Tab bar + HomeTabView + ProgramsTabView
-PulsePumpWidget/             # Widget + Live Activity extension
+PulsePump/                      app target
+├── App/                        entry point (PulsePumpApp), RootView (onboarding vs app), ContentView (tab shell), deep links
+├── Core/
+│   ├── DesignSystem/           Color+Theme, Font+Design, Components/ (Avatar, buttons, ticker, tab bar, modals, ledger rows, KPIBlock, FilterChip…)
+│   ├── Models/                 SwiftData models, Enums/, Firestore/ (Codable structs mirroring Firestore)
+│   ├── Persistence/            exercise/template seeding, Strong/Hevy import, JSON/CSV export
+│   ├── Services/               Auth/, Firestore/ (FirestoreService), Notifications/
+│   └── Utilities/              StreakCalculator, String+Search
+├── Features/                   one folder per feature: its Views + ViewModel + Services together
+│   ├── Home/  Workout/ (Views/, Views/Logger/, Tools/, WorkoutViewModel, Services/: rest timer, live activity, calories)
+│   ├── Programs/  BodyMap/  Exercises/  Equipment/  Social/ (Feed/, Friends/, Challenges/, SocialViewModel)
+│   ├── More/  Settings/  PulsePlus/ (paywall, StoreKit service, upsell banner)  Onboarding/  Tutorial/
+│   └── Widgets/                widget builder UI, gallery, WidgetDataService (snapshot for the extension), BodyweightLog
+├── DevData/                    DEBUG-only fake-data seeder (see "Dev data")
+├── Resources/Fonts/            Archivo + Space Mono
+└── Assets.xcassets, Info.plist, entitlements, GoogleService-Info.plist
+PumpShared/                     compiled into BOTH app and widget extension (widget layouts, catalog, snapshot, BodyHeat, Live Activity attributes/intents)
+PulsePumpWidget/                WidgetKit extension: providers, intents, bundle, Live Activity
+PulsePumpTests/                 mirrors the app: Core/, Features/…, DevData/
+PulsePumpUITests/               (stale)
+bin/                            test.sh, createdevdata.sh
+docs/                           spec, design reference, audit/
+design/                         Claude Design handoffs, HTML prototypes, font sources
+PumpApp/                        old Expo scaffold (unused)
 ```
+
+Where things go: a screen and everything only it uses → its `Features/<Name>/`; a view/modifier two or more features use → `Core/DesignSystem/Components/`; a model/enum → `Core/Models/`; cross-feature infrastructure → `Core/Services/`; anything the widget extension also needs → `PumpShared/` (must not import app-only code). One primary type per file; name the file after it.
 
 ## Naming
 
@@ -129,8 +132,8 @@ Lowercase prefixes, present tense:
 - `TemplateExercise.targetReps` is `Int?` — nil means no target; sets are always required
 - `WorkoutActivityAttributes` is defined in **both** the main app (`LiveActivityService.swift`) and the widget extension (`WorkoutLiveActivity.swift`) — must be kept in sync manually until a shared framework is added
 - Feed caching: `SocialViewModel` stores `lastFeedFetch` timestamp with a 5-min TTL; pull-to-refresh forces a network fetch
-- `StreakCalculator` (Utilities/) is the single source of truth for streak logic — gap-based, 3-day expiry window
-- `Color.pumpAccent` is the canonical accent token (`Extensions/Color+Theme.swift` + xcassets `PumpAccent.colorset`). Set to blue `#0A6FC0` (same light/dark — filled surfaces stay this flat value so white text keeps contrast). `Color.accentInk` (xcassets `AccentInk.colorset`) is the text/glyph/border variant, which lifts to `#4DB8FF` on the dark canvas; use it instead of `pumpAccent` for anything that isn't a filled surface. `Color.pumpPrimary` is a deprecated alias — do not use it. Full rationale in `design_handoff_pulse_color_system/README.md` (Claude Design project "App color system redesign").
+- `StreakCalculator` (Core/Utilities/) is the single source of truth for streak logic — gap-based, 3-day expiry window
+- `Color.pumpAccent` is the canonical accent token (`Core/DesignSystem/Color+Theme.swift` + xcassets `PumpAccent.colorset`). Set to blue `#1AA7FF` (Pump Design System e68c2807, same light/dark). `Color.accentInk` (xcassets `AccentInk.colorset`) is the same hex today but is the token for text/glyph/border use — use it instead of `pumpAccent` for anything that isn't a filled surface. `Color.pumpPrimary` is a deprecated alias — do not use it. Full rationale in `design_handoff_pulse_color_system/README.md` (Claude Design project "App color system redesign").
 
 ## UI Patterns
 
@@ -144,14 +147,14 @@ Lowercase prefixes, present tense:
 
 | File | Purpose |
 |------|---------|
-| `Utilities/StreakCalculator.swift` | Shared streak logic |
-| `Views/Social/FeedBodyMapView.swift` | Compact front/back silhouette for feed posts |
+| `Core/Utilities/StreakCalculator.swift` | Shared streak logic |
+| `Features/Social/Feed/FeedBodyMapView.swift` | Compact front/back silhouette for feed posts |
 | `PulsePumpWidget/WorkoutLiveActivity.swift` | Dynamic Island + lock screen Live Activity |
-| `Models/Enums/MuscleSubRegion.swift` | 35 anatomical sub-regions |
+| `Core/Models/Enums/MuscleSubRegion.swift` | 35 anatomical sub-regions |
 
-## Design Refresh (pump and fuel design html files/)
+## Design Refresh (design/pump and fuel design html files/)
 
-The `pump and fuel design html files/` directory (renamed from `pump-and-fuel/project/`)
+The `design/pump and fuel design html files/` directory (renamed from `pump-and-fuel/project/`)
 contains HTML prototype files from Claude Design that define the target UI. These are
 the reference screens for the ongoing UI/UX update:
 
@@ -164,23 +167,19 @@ the reference screens for the ongoing UI/UX update:
 | `Pump Social Feed.html` | Feed, post detail, friend profile |
 | `Pump Programs Exercise Library.html` | Programs list, template detail, exercise picker |
 
-Design system reference: `pump and fuel design html files/uploads/pulse-design-system.md`
+Design system reference: `design/pump and fuel design html files/uploads/pulse-design-system.md`
 (multi-app master doc). Pump-only reference with the confirmed token values:
-`PULSE_PUMP_DESIGN_REFERENCE.md`. Color token rationale and contrast numbers:
+`docs/PULSE_PUMP_DESIGN_REFERENCE.md`. Color token rationale and contrast numbers:
 `design_handoff_pulse_color_system/README.md` (Claude Design project "App color system
 redesign", also covers `Set Row States.dc.html`, the active-row/completed-row/PR states spec).
 
 Key design tokens implemented in Swift:
-- **Accent:** `#0A6FC0` blue, flat in both color schemes on filled surfaces (`pumpAccent`);
-  lifts to `#4DB8FF` on the dark canvas for text/glyphs/borders (`accentInk`)
-- **Canvas bg:** `#f9f8f4` light / `#1a1917` dark
-- **Ticker bg:** `#1a1816`, always-dark per spec — but the implemented `TickerStripView`
-  switches to a light cream (`#f0ebe0`) in light mode, a deliberate deviation. Its
-  up-arrow green follows suit: `#00e07a` in dark mode, `#2a7a4a` in light mode (the
-  bright green washes out on the light bg).
+- **Accent:** `#1AA7FF` blue, flat in both color schemes (`pumpAccent`, `accentInk`)
+- **Canvas bg:** `#F6F7F9` (Cool Paper) light / `#1A1917` dark; elevated `#ECEFF3`/`#252220`, sunken `#E0E5EB`/`#2E2A26`, deep `#D4DAE2`/`#363028`; ink `#151A21`/`#ECE5D6`
+- **Ticker bg:** `--ticker-bg` per scheme: `#E0E5EB` light / `#0E0C0A` dark. ▲ `#00AA55` light / `#00E07A` dark; ▼ `#E5281C` light / `#FF3B30` dark.
 - **Fonts:** Archivo (display/headers/body) + Space Mono (all numbers and labels, no
   exception) — both registered and bundled (`Info.plist` `UIAppFonts`,
-  `Extensions/Font+Design.swift`). Not Bebas Neue/DM Mono/Inter — that was an earlier,
+  `Core/DesignSystem/Font+Design.swift`). Not Bebas Neue/DM Mono/Inter — that was an earlier,
   superseded plan.
 - **No drop shadows.** Elevation via background tint only. (Some pre-existing accent
   shadows remain in the codebase as a known deviation, not yet swept.)
@@ -189,9 +188,30 @@ Key design tokens implemented in Swift:
 - **PR is a treatment, not a color** — `inkPrimary` text + 1.5px `inkPrimary` underline,
   not amber. Amber (`#c9892e`) is reserved app-wide for Fuel's over-target signal.
 
+## Widgets (PumpShared + PulsePumpWidget)
+
+- `PumpShared/` is a synchronized folder compiled into **both** the app and the widget extension (`WorkoutActivityAttributes`, `BodyHeat`, the custom-widget catalog/canvas, the fixed widget layouts). Nothing in it may import app-only code; it uses `Color("…")` asset names and the `.archivo` / `.spaceMono` / `Color(hex:)` helpers, which the extension mirrors in `PulsePumpWidget/WidgetSupport.swift`.
+- **Fixed widgets** (Pump Widgets.dc.html): every layout is a pure SwiftUI view in `PumpShared/Widgets/*Widget.swift` drawn at the design's point size (`PWFamily.size`: small 170², medium 364×170, large 364×382) and scaled to the real container by `PWHost`. Data comes only from `PumpWidgetSnapshot` (`snap.fixed` = `PWFixedData`); `PumpWidgetSnapshot.sample` mirrors the numbers printed in the design. Add a widget by writing the view + `static var gallery`, registering it in `PWRegistry`, and adding a descriptor in `PulsePumpWidget/FixedWidgets.swift` + the bundle.
+- **Widget Gallery** (More › Widgets › Widget gallery) renders every registered widget in light / dark / tinted — what you see is what WidgetKit draws. DEBUG: launch with `-debugGallery <section id|all>` to open it directly.
+- **Custom widgets** (Widget Builder): library saved in the App Group (`PumpWidgetStore`); builder in `Features/Widgets/`; "Pump Custom" extension widget picks a saved widget via an App Intent.
+- `WidgetDataService` computes the snapshot (app side) after workouts / on launch; the extension never touches SwiftData or Firebase.
+- Plus widgets (04-07) show `LockedWidgetPreview` (`PWPlusGate`) when `snap.fixed.isPlus` is false; its button opens `pulsepump://pulse-plus`.
+
+## Dev data (fake data for testing)
+
+DEBUG-only seeder in `PulsePump/DevData/` (compiled out of Release) — the iOS counterpart of `manage.py createdevdata`.
+
+```bash
+bin/createdevdata.sh                       # build, clean-install on the simulator, seed, launch
+bin/createdevdata.sh --scenario lapsed     # busy (default) | lapsed (no sessions in 12 days) | new-user (empty states)
+bin/createdevdata.sh --weeks 24 --seed 7 --units lb --plus --draft --help
+```
+
+It works through launch arguments (`-createDevData 1 -devDataReset 1 -devDataScenario … -devDataWeeks … -devDataSeed … -devDataUnits … -devDataPlus 1 -devDataDraft 1 -devDataSocialFixtures 1`), so the same flags can be added in the Xcode scheme, `simctl launch`, or XCUITest. Same seed → identical data. Dataset: user "Dev Lifter", PPL split with days populated, Home/Commercial equipment profiles, Push/Pull/Leg templates with real exercise ids, ~5 sessions/week with progressive overload, warm-ups, a deload week, fresh PRs, a 60-day bodyweight log, and (for Firestore-backed screens that can't be seeded locally) the built-in demo friends/feed/challenges via `DevFlags.socialFixtures`. Add new models to `DevDataFactory` / `DevDataService.reset` when you add them to the schema. Demo/fixture data is never reachable in Release.
+
 ## Known Gaps (from spec)
 
-See `pulse-pump-spec.md` §"Known Gaps & Backlog" for the full list. High-priority items:
+See `docs/pulse-pump-spec.md` §"Known Gaps & Backlog" for the full list. High-priority items:
 - Template share-via-link (`pulsepump://template?data=<base64>`) — URL handling exists but Firestore backend not wired
 - Challenges not gated behind Pulse+ check
 - Friend profile tap destination missing

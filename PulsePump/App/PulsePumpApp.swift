@@ -52,7 +52,16 @@ struct PulsePumpApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            Group {
+                #if DEBUG
+                // `-debugGallery <section id or all>` shows the widget gallery on launch (no onboarding needed).
+                if let g = UserDefaults.standard.string(forKey: "debugGallery") {
+                    WidgetGalleryView(section: g == "all" ? nil : g)
+                } else { RootView() }
+                #else
+                RootView()
+                #endif
+            }
                 .preferredColorScheme(preferredColorScheme)
                 .onOpenURL { url in
                     if url.scheme == "pulsepump" {
@@ -69,7 +78,12 @@ struct PulsePumpApp: App {
         guard url.scheme == "pulsepump" else { return }
         switch url.host {
         case "start-workout":
-            NotificationCenter.default.post(name: .startWorkoutFromWidget, object: nil)
+            let template = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first(where: { $0.name == "template" })?.value
+            NotificationCenter.default.post(name: .startWorkoutFromWidget, object: template)
+        case "pulse-plus":
+            // Locked-widget "UNLOCK PULSE+" — jump to More › Pulse+.
+            NotificationCenter.default.post(name: .openPulsePlus, object: nil)
         case "template":
             if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
                let dataParam = components.queryItems?.first(where: { $0.name == "data" })?.value,
@@ -85,4 +99,5 @@ struct PulsePumpApp: App {
 extension Notification.Name {
     static let startWorkoutFromWidget = Notification.Name("startWorkoutFromWidget")
     static let importTemplate = Notification.Name("importTemplate")
+    static let openPulsePlus = Notification.Name("openPulsePlus")
 }

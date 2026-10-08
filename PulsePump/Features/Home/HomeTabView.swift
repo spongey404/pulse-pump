@@ -1,0 +1,695 @@
+import SwiftUI
+import SwiftData
+import FirebaseAuth
+
+struct HomeTabView: View {
+    @Bindable var workoutViewModel: WorkoutViewModel
+    @Environment(\.modelContext) private var modelContext
+    @Query private var users: [User]
+    @Query(filter: #Predicate<Workout> { !$0.isDraft }, sort: \Workout.date, order: .reverse)
+    private var workouts: [Workout]
+    @Query(sort: \WorkoutTemplate.name) private var templates: [WorkoutTemplate]
+    @State private var showSearch = false
+    @State private var barsAppeared = false
+    @State private var showDayPicker = false
+    @State private var manualOverrideTemplate: WorkoutTemplate? = nil
+    @State private var showProfileMenu = false
+    @State private var showDiscardConfirmation = false
+    @State private var pendingDiscardDraft: Workout? = nil
+
+    private var user: User? { users.first }
+
+    // MARK: Computed KPIs
+    private var currentStreak: Int {
+        StreakCalculator.currentStreak(from: workouts.map(\.date))
+    }
+
+    private var weekWorkouts: [Workout] {
+        let start = Calendar.current.date(from: Calendar.current.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date())) ?? Date()
+        return workouts.filter { $0.date >= start }
+    }
+
+    private var weekSets: Int {
+        weekWorkouts.flatMap(\.exerciseLogs).flatMap(\.sets).count
+    }
+
+    private var weekPRs: Int {
+        let weekStart = Calendar.current.date(from: Calendar.current.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date())) ?? Date()
+        var weekMaxByExercise: [UUID: Double] = [:]
+        var prevMaxByExercise: [UUID: Double] = [:]
+        for workout in workouts {
+            let isThisWeek = workout.date >= weekStart
+            for log in workout.exerciseLogs {
+                guard let exercise = log.exercise else { continue }
+                let maxWeight = log.sets.map(\.weight).max() ?? 0
+                if isThisWeek {
+                    weekMaxByExercise[exercise.id] = max(weekMaxByExercise[exercise.id] ?? 0, maxWeight)
+                } else {
+                    prevMaxByExercise[exercise.id] = max(prevMaxByExercise[exercise.id] ?? 0, maxWeight)
+                }
+            }
+        }
+        return weekMaxByExercise.filter { id, weekMax in
+            weekMax > (prevMaxByExercise[id] ?? 0) && weekMax > 0
+        }.count
+    }
+
+    private var weekImproved: Int {
+        let weekStart = Calendar.current.date(from: Calendar.current.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date())) ?? Date()
+        let prevWeekStart = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: weekStart) ?? Date()
+        var thisWeekBest: [UUID: Double] = [:]
+        var prevWeekBest: [UUID: Double] = [:]
+        for workout in workouts {
+            let isThisWeek = workout.date >= weekStart
+            let isPrevWeek = workout.date >= prevWeekStart && workout.date < weekStart
+            for log in workout.exerciseLogs {
+                guard let exercise = log.exercise else { continue }
+                let bestVol = log.sets.map { $0.weight * Double($0.reps) }.max() ?? 0
+                if isThisWeek { thisWeekBest[exercise.id] = max(thisWeekBest[exercise.id] ?? 0, bestVol) }
+                else if isPrevWeek { prevWeekBest[exercise.id] = max(prevWeekBest[exercise.id] ?? 0, bestVol) }
+            }
+        }
+        return thisWeekBest.filter { id, vol in vol > (prevWeekBest[id] ?? 0) && vol > 0 }.count
+    }
+
+    /// Sets per day for the current week (Mon=0 … Sun=6)
+    private var weekDayBars: [Int] {
+        var bars = [Int](repeating: 0, count: 7)
+        let cal = Calendar.current
+        for workout in weekWorkouts {
+            let weekday = cal.component(.weekday, from: workout.date) // 1=Sun…7=Sat
+            let idx = (weekday + 5) % 7  // Mon=0…Sun=6
+            bars[idx] += workout.exerciseLogs.flatMap(\.sets).count
+        }
+        return bars
+    }
+
+    private var todayDayIndex: Int {
+        let weekday = Calendar.current.component(.weekday, from: Date())
+        return (weekday + 5) % 7
+    }
+
+    private var basePredictedName: String? {
+        guard let user else { return nil }
+        return workoutViewModel.predictNextWorkout(user: user, modelContext: modelContext)
+    }
+
+    private var predictedTemplateName: String? {
+        manualOverrideTemplate?.name ?? basePredictedName
+    }
+
+    private var predictedTemplate: WorkoutTemplate? {
+        if let override = manualOverrideTemplate { return override }
+        guard let name = basePredictedName else { return nil }
+        return workouts.compactMap(\.template).first { $0.name.lowercased() == name.lowercased() }
+    }
+
+    /// Detects split type from recent workout template names (PPL, U/L, etc.)
+    private var splitLabel: String {
+        let recentNames = workouts.prefix(9).compactMap { $0.template?.name.lowercased() }
+        let hasPush = recentNames.contains { $0.contains("push") }
+        let hasPull = recentNames.contains { $0.contains("pull") }
+        let hasLegs = recentNames.contains { $0.contains("leg") }
+        if hasPush && hasPull && hasLegs { return "PPL" }
+        let hasUpper = recentNames.contains { $0.contains("upper") }
+        let hasLower = recentNames.contains { $0.contains("lower") }
+        if hasUpper && hasLower { return "U/L" }
+        let hasFull = recentNames.contains { $0.contains("full") }
+        if hasFull { return "FULL BODY" }
+        return user?.selectedSplit?.type.displayName ?? "PROGRAM"
+    }
+
+    private var lastDoneLabel: String {
+        guard let name = predictedTemplateName,
+              let last = workouts.first(where: { $0.template?.name.lowercased() == name.lowercased() }) else { return "" }
+        let days = Calendar.current.dateComponents([.day], from: last.date, to: Date()).day ?? 0
+        if days == 0 { return "TODAY" }
+        if days == 1 { return "YESTERDAY" }
+        return "\(days) DAYS AGO"
+    }
+
+    private var estDuration: String {
+        guard let name = predictedTemplateName,
+              let last = workouts.first(where: { $0.template?.name.lowercased() == name.lowercased() }),
+              last.duration > 60 else { return "~55 MIN" }
+        let mins = Int(last.duration / 60)
+        return "~\(mins) MIN"
+    }
+
+    private var recentWorkouts: [Workout] { Array(workouts.prefix(3)) }
+
+    // MARK: - Week number helper (relative to user's join date, so week 1 = first week)
+    private var currentWeekNumber: Int {
+        let origin = user?.createdAt ?? workouts.last?.date ?? Date()
+        let weeks = Calendar.current.dateComponents([.weekOfYear], from: origin, to: Date()).weekOfYear ?? 0
+        return max(1, weeks + 1)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Only show ticker when there is real volume data
+            let tickerItems = buildTickerItems()
+            if !tickerItems.isEmpty {
+                TickerStripView(items: tickerItems)
+            }
+
+            ScrollView {
+                VStack(spacing: 0) {
+                    // 1. Masthead row — full-width with bottom hairline
+                    mastheadRow
+
+                    // 2. Prediction block — surf background, bottom hairline
+                    if let name = predictedTemplateName {
+                        predictionBlock(name: name)
+                    }
+
+                    // 3. KPI 4-up grid — bottom hairline, no outer card
+                    kpiGrid
+
+                    // 4. Week volume bars — bottom hairline
+                    weekBarsSection
+
+                    // 5. Friends trained today banner
+                    FriendActivityBanner()
+
+                    // 6. Recent workouts table
+                    if !recentWorkouts.isEmpty {
+                        recentWorkoutsTable
+                    }
+
+                    Color.clear.frame(height: 80)
+                }
+            }
+        }
+        .background(Color.canvasBg.ignoresSafeArea())
+        .safeAreaInset(edge: .bottom) {
+            StartWorkoutDock(
+                viewModel: workoutViewModel,
+                overrideName: predictedTemplateName,
+                onRequestDiscard: { draft in
+                    pendingDiscardDraft = draft
+                    showDiscardConfirmation = true
+                }
+            )
+        }
+        .sheet(isPresented: $showSearch) {
+            GlobalSearchView()
+        }
+        .sheet(isPresented: $showDayPicker) {
+            WorkoutDayPickerSheet(templates: templates) { selected in
+                manualOverrideTemplate = selected
+                showDayPicker = false
+            }
+        }
+        .workoutModal(
+            isPresented: $showDiscardConfirmation,
+            title: "Discard current workout?",
+            message: "Your progress on \(pendingDiscardDraft?.template?.name ?? "this workout") will be lost. Drafts auto-save for 7 days.",
+            primaryLabel: "DISCARD + START NEW",
+            primaryDestructive: true,
+            onPrimary: {
+                if let draft = pendingDiscardDraft, let user {
+                    workoutViewModel.discardDraftAndStart(draft: draft, modelContext: modelContext, user: user)
+                }
+                pendingDiscardDraft = nil
+            }
+        )
+        .overlay {
+            if showProfileMenu {
+                Color.black.opacity(0.20)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                            showProfileMenu = false
+                        }
+                    }
+                profileModal
+                    .transition(.scale(scale: 0.96).combined(with: .opacity))
+            }
+        }
+        .animation(.spring(response: 0.28, dampingFraction: 0.82), value: showProfileMenu)
+        .onAppear {
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.8).delay(0.15)) {
+                barsAppeared = true
+            }
+        }
+    }
+
+    private var profileModal: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // User info header
+            VStack(alignment: .leading, spacing: 3) {
+                Text((user?.name ?? "ATHLETE").uppercased())
+                    .font(.archivo(13, weight: .semibold))
+                    .foregroundStyle(Color.inkPrimary)
+                if let username = user?.username, !username.isEmpty {
+                    Text("@\(username)")
+                        .font(.archivo(12))
+                        .foregroundStyle(Color.inkMuted)
+                } else {
+                    Text("Tap sign out to switch accounts")
+                        .font(.archivo(12))
+                        .foregroundStyle(Color.inkMuted)
+                }
+            }
+
+            HStack(spacing: 8) {
+                Button {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                        showProfileMenu = false
+                    }
+                } label: {
+                    Text("CANCEL")
+                        .font(.archivo(11, weight: .black))
+                        .tracking(0.8)
+                        .foregroundStyle(Color.inkMuted)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 40)
+                        .background(Color.surf2)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.inkPrimary.opacity(0.13), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    try? FirebaseAuthService().signOut()
+                    showProfileMenu = false
+                } label: {
+                    Text("SIGN OUT")
+                        .font(.archivo(11, weight: .black))
+                        .tracking(0.6)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 40)
+                        .background(Color.signalDown)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .shadow(color: Color.signalDown.opacity(0.33), radius: 8, y: 4)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(14)
+        .frame(width: UIScreen.main.bounds.width - 40)
+        .background(Color.surf)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.inkPrimary.opacity(0.13), lineWidth: 1))
+        .shadow(color: Color.black.opacity(0.10), radius: 20, y: 6)
+    }
+
+    // MARK: - 1. Masthead Row
+
+    private var mastheadRow: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .center, spacing: 0) {
+                // Left: accent rect + "PULSE/PUMP" monospaced
+                HStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.pumpAccent)
+                        .frame(width: 14, height: 14)
+                    Text("PULSE/PUMP")
+                        .font(.spaceMono(10, weight: .bold))
+                        .tracking(2)
+                        .foregroundStyle(Color.inkPrimary)
+                }
+                #if DEBUG
+                .onLongPressGesture { workoutViewModel.showPreviewCompletion() }
+                #endif
+                Spacer()
+                // Right: search icon + avatar
+                HStack(spacing: 10) {
+                    Button { showSearch = true } label: {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundStyle(Color.inkPrimary)
+                    }
+                    Button { showProfileMenu = true } label: {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.surf2)
+                            .frame(width: 30, height: 30)
+                            .overlay(
+                                Text(user?.name.prefix(1).uppercased() ?? "?")
+                                    .font(.archivo(13, weight: .black))
+                                    .foregroundStyle(Color.inkPrimary)
+                            )
+                    }
+                    .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.92))
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
+
+            Rectangle().fill(Color.dsHairLine).frame(height: 1)
+        }
+    }
+
+    // MARK: - 2. Prediction Block
+
+    private func predictionBlock(name: String) -> some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("PREDICTED TODAY · \(splitLabel)")
+                            .font(.spaceMono(9))
+                            .tracking(1.5)
+                            .foregroundStyle(Color.accentInk)
+                        Text(name.uppercased())
+                            .font(.archivo(28, weight: .black))
+                            .foregroundStyle(Color.inkPrimary)
+                            .lineLimit(1)
+                        HStack(spacing: 8) {
+                            if !lastDoneLabel.isEmpty {
+                                Text(lastDoneLabel)
+                                    .font(.spaceMono(9)).tracking(0.5).foregroundStyle(Color.inkMuted)
+                            }
+                            Text(estDuration)
+                                .font(.spaceMono(9)).tracking(0.5).foregroundStyle(Color.inkMuted)
+                        }
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 4) {
+                        HStack(spacing: 3) {
+                            ForEach(0..<5, id: \.self) { i in
+                                RoundedRectangle(cornerRadius: 1)
+                                    .fill(i < 4 ? Color.pumpAccent : Color.inkFaint)
+                                    .frame(width: 5, height: 5)
+                            }
+                        }
+                        Text("HIGH\nCONF")
+                            .font(Font.mono(8))
+                            .multilineTextAlignment(.trailing)
+                            .foregroundStyle(Color.inkMuted)
+                            .tracking(0.5)
+                    }
+                    .padding(.top, 20)
+                }
+
+                // Exercise chips — wrapping flow layout
+                if let template = predictedTemplate {
+                    ChipFlowLayout(spacing: 6) {
+                        ForEach(template.templateExercises.sorted(by: { $0.order < $1.order })) { ex in
+                            Text(ex.exerciseName.uppercased())
+                                .font(.spaceMono(8))
+                                .foregroundStyle(Color.inkMuted)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 4)
+                                .background(Color.surf2)
+                                .clipShape(RoundedRectangle(cornerRadius: 5))
+                        }
+                        Button {
+                            showDayPicker = true
+                        } label: {
+                            Text("NOT TODAY? ›")
+                                .font(.spaceMono(9))
+                                .tracking(0.5)
+                                .foregroundStyle(Color.accentInk.opacity(0.8))
+                                .padding(.vertical, 4)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.top, 2)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Color.surf)
+
+            Rectangle().fill(Color.dsHairLine).frame(height: 1)
+        }
+    }
+
+    // MARK: - 3. KPI 4-up Grid
+
+    private var kpiGrid: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                kpiCell(
+                    label: "STREAK",
+                    value: "\(currentStreak)",
+                    sub: "DAYS",
+                    valueColor: Color.accentInk
+                )
+                Rectangle().fill(Color.dsHairLine).frame(width: 1)
+                kpiCell(
+                    label: "IMPROVED",
+                    value: "\(weekImproved)",
+                    sub: "THIS WK",
+                    valueColor: Color.inkPrimary
+                )
+                Rectangle().fill(Color.dsHairLine).frame(width: 1)
+                kpiCell(
+                    label: "PRs",
+                    value: "\(weekPRs)",
+                    sub: "THIS WK",
+                    valueColor: Color.inkPrimary
+                )
+                Rectangle().fill(Color.dsHairLine).frame(width: 1)
+                kpiCell(
+                    label: "SETS",
+                    value: "\(weekSets)",
+                    sub: "THIS WK",
+                    valueColor: Color.inkPrimary
+                )
+            }
+            .frame(maxWidth: .infinity)
+
+            Rectangle().fill(Color.dsHairLine).frame(height: 1)
+        }
+    }
+
+    private func kpiCell(label: String, value: String, sub: String, valueColor: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(label)
+                .font(.spaceMono(8))
+                .tracking(1.5)
+                .textCase(.uppercase)
+                .foregroundStyle(Color.inkMuted)
+            Text(value)
+                .font(.spaceMono(24, weight: .bold))
+                .foregroundStyle(valueColor)
+                .contentTransition(.numericText())
+            Text(sub)
+                .font(.spaceMono(7))
+                .tracking(1.5)
+                .foregroundStyle(Color.inkMuted)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 9)
+        .padding(.horizontal, 10)
+    }
+
+    // MARK: - 4. Week Volume Bars
+
+    private var weekBarsSection: some View {
+        let bars = weekDayBars
+        let maxVal = max(bars.max() ?? 1, 1)
+        let labels = ["M", "T", "W", "T", "F", "S", "S"]
+        let today = todayDayIndex
+        let totalSets = bars.reduce(0, +)
+
+        return VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 8) {
+                // Header row
+                HStack {
+                    Text("WEEKLY VOLUME · SETS")
+                        .font(.spaceMono(9))
+                        .tracking(1.5)
+                        .foregroundStyle(Color.accentInk)
+                    Spacer()
+                    Text("WK \(currentWeekNumber) · \(totalSets) TOTAL")
+                        .font(.spaceMono(9))
+                        .tracking(0.5)
+                        .foregroundStyle(Color.inkMuted)
+                }
+
+                // 7 bars
+                HStack(alignment: .bottom, spacing: 4) {
+                    ForEach(0..<7, id: \.self) { i in
+                        let v = bars[i]
+                        let isPast = i < today
+                        let isToday = i == today
+                        let pct = v > 0 ? Double(v) / Double(maxVal) : 0
+                        let barH = max(pct * 40, v > 0 ? 4 : 3)
+                        let animH = barsAppeared ? max(barH, 3) : 3
+
+                        VStack(spacing: 3) {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(
+                                    isToday ? Color.pumpAccent :
+                                    (isPast && v > 0 ? Color.pumpAccent.opacity(0.70) :
+                                     Color.inkFaint.opacity(0.15))
+                                )
+                                .frame(height: animH)
+                                .frame(maxWidth: .infinity)
+                                .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(Double(i) * 0.04), value: barsAppeared)
+                            Text(labels[i])
+                                .font(Font.mono(7))
+                                .foregroundStyle(isToday ? Color.accentInk : Color.inkMuted)
+                                .fontWeight(isToday ? .bold : .regular)
+                        }
+                    }
+                }
+                .frame(height: 50)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
+
+            Rectangle().fill(Color.dsHairLine).frame(height: 1)
+        }
+    }
+
+    // MARK: - 5. Recent Workouts Table
+
+    private var recentWorkoutsTable: some View {
+        VStack(spacing: 0) {
+            // Header row — surf2 background
+            HStack(spacing: 0) {
+                Text("RECENT")
+                    .font(.spaceMono(9))
+                    .tracking(1.5)
+                    .foregroundStyle(Color.accentInk)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("SETS")
+                    .font(.spaceMono(8))
+                    .tracking(1.5)
+                    .foregroundStyle(Color.inkMuted)
+                    .frame(width: 56, alignment: .center)
+                Text("IMPR")
+                    .font(.spaceMono(8))
+                    .tracking(1.5)
+                    .foregroundStyle(Color.inkMuted)
+                    .frame(width: 56, alignment: .center)
+                Text("VOL▲")
+                    .font(.spaceMono(8))
+                    .tracking(1.5)
+                    .foregroundStyle(Color.inkMuted)
+                    .frame(width: 56, alignment: .trailing)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 5)
+            .background(Color.surf2)
+
+            Rectangle().fill(Color.dsHairLine).frame(height: 1)
+
+            // Workout rows
+            ForEach(Array(recentWorkouts.enumerated()), id: \.element.id) { idx, workout in
+                VStack(spacing: 0) {
+                    HStack(spacing: 0) {
+                        // Name + date column
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text((workout.template?.name ?? "Workout").uppercased())
+                                .font(.archivo(15, weight: .semibold))
+                                .foregroundStyle(Color.inkPrimary)
+                                .lineLimit(1)
+                            Text(relativeDate(workout.date))
+                                .font(.spaceMono(8))
+                                .foregroundStyle(Color.inkMuted)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        let sets = workout.exerciseLogs.flatMap(\.sets).count
+                        let improvedCount = improvedExercises(in: workout)
+                        let totalExercises = max(workout.exerciseLogs.count, 1)
+
+                        Text("\(sets)")
+                            .font(.spaceMono(11, weight: .bold))
+                            .foregroundStyle(Color.inkMuted)
+                            .frame(width: 56, alignment: .center)
+
+                        Text("\(improvedCount)/\(totalExercises)")
+                            .font(.spaceMono(11, weight: .bold))
+                            .foregroundStyle(Color.accentInk)
+                            .frame(width: 56, alignment: .center)
+
+                        let volDelta = volumeDelta(for: workout)
+                        Text(volDelta)
+                            .font(.spaceMono(11, weight: .bold))
+                            .foregroundStyle(volDelta.hasPrefix("▲") ? Color.signalUp : (volDelta == "—" ? Color.inkMuted : Color.signalDown))
+                            .frame(width: 56, alignment: .trailing)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+
+                    if idx < recentWorkouts.count - 1 {
+                        Rectangle().fill(Color.dsHairLine).frame(height: 1)
+                    }
+                }
+            }
+        }
+    }
+
+    private func relativeDate(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: date, relativeTo: Date()).uppercased()
+    }
+
+    private func volumeDelta(for workout: Workout) -> String {
+        let curVol = workout.exerciseLogs.flatMap(\.sets).reduce(0.0) { $0 + ($1.weight * Double($1.reps)) }
+        guard curVol > 0, let templateName = workout.template?.name else { return "—" }
+        let prev = workouts.first { $0.id != workout.id && $0.template?.name.lowercased() == templateName.lowercased() && $0.date < workout.date }
+        guard let prevWorkout = prev else { return "—" }
+        let prevVol = prevWorkout.exerciseLogs.flatMap(\.sets).reduce(0.0) { $0 + ($1.weight * Double($1.reps)) }
+        guard prevVol > 0 else { return "—" }
+        let pct = Int(((curVol - prevVol) / prevVol) * 100)
+        // Arrow alone carries direction — no redundant +/- sign, and a real space (not
+        // glued to the number) matching the ticker's own arrow-to-value gap.
+        if pct > 0 { return "▲ \(pct)%" }
+        if pct < 0 { return "▼ \(abs(pct))%" }
+        return "▲ 0%"
+    }
+
+    private func improvedExercises(in workout: Workout) -> Int {
+        workout.exerciseLogs.filter { log in
+            guard let exercise = log.exercise else { return false }
+            let thisVol = log.sets.map { $0.weight * Double($0.reps) }.max() ?? 0
+            let prevBest = workouts
+                .filter { $0.date < workout.date }
+                .flatMap(\.exerciseLogs)
+                .filter { $0.exercise?.id == exercise.id }
+                .flatMap(\.sets)
+                .map { $0.weight * Double($0.reps) }
+                .max() ?? 0
+            return thisVol > prevBest && thisVol > 0
+        }.count
+    }
+
+    // MARK: - Ticker Data
+
+    private func buildTickerItems() -> [TickerItem] {
+        var muscleVolume: [MuscleGroup: Int] = [:]
+        let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        let prevWeekStart = Calendar.current.date(byAdding: .day, value: -14, to: Date()) ?? Date()
+
+        var prevVolume: [MuscleGroup: Int] = [:]
+        for workout in workouts {
+            let isThisWeek = workout.date >= weekAgo
+            let isPrevWeek = workout.date >= prevWeekStart && workout.date < weekAgo
+            for log in workout.exerciseLogs {
+                guard let exercise = log.exercise else { continue }
+                for muscle in exercise.primaryMuscleGroups {
+                    if isThisWeek { muscleVolume[muscle, default: 0] += log.sets.count }
+                    if isPrevWeek { prevVolume[muscle, default: 0] += log.sets.count }
+                }
+            }
+        }
+
+        let all = MuscleGroup.allCases
+        return all.compactMap { muscle -> TickerItem? in
+            let cur = muscleVolume[muscle] ?? 0
+            let prev = prevVolume[muscle] ?? 0
+            guard cur > 0 || prev > 0 else { return nil }
+            let label = String(muscle.displayName.uppercased().prefix(6))
+            if prev == 0 {
+                return TickerItem(label: label, value: "\(cur)", direction: .up)
+            } else {
+                let pct = Int(((Double(cur) - Double(prev)) / Double(prev)) * 100)
+                let dir: TickerItem.Direction = pct >= 0 ? .up : .down
+                return TickerItem(label: label, value: "\(abs(pct))%", direction: dir)
+            }
+        }
+    }
+}
+
+// MARK: - Friend Activity Banner
