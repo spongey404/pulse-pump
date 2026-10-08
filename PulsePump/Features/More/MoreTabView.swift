@@ -6,6 +6,7 @@ import SwiftData
 struct MoreTabView: View {
     @Bindable var tutorialViewModel: TutorialViewModel
     @Environment(\.modelContext) private var modelContext
+    @Environment(AuthSession.self) private var session
     @Query private var users: [User]
     @Query(filter: #Predicate<Workout> { !$0.isDraft }, sort: \Workout.date, order: .reverse)
     private var workouts: [Workout]
@@ -126,10 +127,10 @@ struct MoreTabView: View {
         .alert("Sign Out", isPresented: $showSignOutAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Sign Out", role: .destructive) {
-                try? FirebaseAuthService().signOut()
+                Task { await session.signOut() }
             }
         } message: {
-            Text("You'll need to sign back in to access your data.")
+            Text("This removes your data from this device. It stays safe in your account and comes back when you sign in.")
         }
         .task {
             await pulsePlusService.refreshSubscriptionStatus()

@@ -5,6 +5,7 @@ import FirebaseAuth
 struct ProfileMenuSheet: View {
     let user: User?
     @Environment(\.dismiss) private var dismiss
+    @Environment(AuthSession.self) private var session
 
     var body: some View {
         VStack(spacing: 0) {
@@ -51,8 +52,8 @@ struct ProfileMenuSheet: View {
             // Menu rows
             VStack(spacing: 0) {
                 menuRow(icon: "arrow.right.square", label: "SIGN OUT", destructive: true) {
-                    try? FirebaseAuthService().signOut()
                     dismiss()
+                    Task { await session.signOut() }
                 }
             }
             .padding(.top, 8)
