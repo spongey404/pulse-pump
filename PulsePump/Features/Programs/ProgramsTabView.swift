@@ -5,8 +5,8 @@ import FirebaseAuth
 struct ProgramsTabView: View {
     let onStartFromTemplate: (WorkoutTemplate) -> Void
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \WorkoutTemplate.name) private var templates: [WorkoutTemplate]
-    @Query(filter: #Predicate<Workout> { !$0.isDraft }, sort: \Workout.date, order: .reverse)
+    @Query(filter: #Predicate<WorkoutTemplate> { $0.deletedAt == nil }, sort: \WorkoutTemplate.name) private var templates: [WorkoutTemplate]
+    @Query(filter: #Predicate<Workout> { !$0.isDraft && $0.deletedAt == nil }, sort: \Workout.date, order: .reverse)
     private var recentWorkouts: [Workout]
     @State private var showPresetPicker = false
     @State private var showCreateBlank = false
@@ -144,7 +144,7 @@ struct ProgramsTabView: View {
             body: "The program template will be removed. Workouts you've already logged using it will be kept in your history.",
             consequences: deleteProgramConsequences,
             onConfirm: {
-                groupToDelete?.templates.forEach { modelContext.delete($0) }
+                groupToDelete?.templates.forEach { modelContext.softDelete($0) }
             }
         )
     }
@@ -153,7 +153,7 @@ struct ProgramsTabView: View {
         guard let group = groupToDelete else { return [] }
         let days = group.templates.count
         let exercises = group.totalExercises
-        let sessions = group.templates.flatMap(\.workouts).count
+        let sessions = group.templates.flatMap(\.liveWorkouts).count
         return [
             DestructiveConsequence(value: "\(days)", label: "workout days"),
             DestructiveConsequence(value: "\(exercises)", label: "exercises"),

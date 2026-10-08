@@ -24,8 +24,8 @@ struct BodyMapTabView: View {
     @State private var selectedCalendarDate: Date? = nil
     @State private var coldSpotsMode: ColdSpotsMode = .freq
     @State private var sheetDetent: PresentationDetent = .height(440)
-    @Query private var exerciseLogs: [ExerciseLog]
-    @Query private var workouts: [Workout]
+    @Query(filter: #Predicate<ExerciseLog> { $0.workout?.deletedAt == nil }) private var exerciseLogs: [ExerciseLog]
+    @Query(filter: #Predicate<Workout> { $0.deletedAt == nil }) private var workouts: [Workout]
     @State private var pulsePlusService = PulsePlusService()
 
     // MARK: Targets (sets per week) and training cadence (days) for the 17 tracked groups
@@ -542,7 +542,7 @@ struct BodyMapTabView: View {
     private var calendarSheet: some View {
         let calendar = Calendar.current
         let canGoNext = calendar.date(byAdding: .month, value: 1, to: calendarMonth)! <= Date()
-        let earliest = workouts.filter { !$0.isDraft }.map(\.date).min() ?? Date()
+        let earliest = workouts.filter { !$0.isDraft && $0.deletedAt == nil }.map(\.date).min() ?? Date()
         let canGoPrev = calendar.date(byAdding: .month, value: -1, to: calendarMonth)! >= calendar.date(from: calendar.dateComponents([.year, .month], from: earliest))!
         let df = DateFormatter(); df.dateFormat = "MMMM yyyy"
         let cols = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)

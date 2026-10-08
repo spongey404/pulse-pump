@@ -9,7 +9,7 @@ struct WeeklyRecapView: View {
     let onBack: () -> Void
     @Environment(\.weightUnit) private var unit
 
-    @Query(filter: #Predicate<Workout> { !$0.isDraft }, sort: \Workout.date, order: .reverse)
+    @Query(filter: #Predicate<Workout> { !$0.isDraft && $0.deletedAt == nil }, sort: \Workout.date, order: .reverse)
     private var workouts: [Workout]
     @Query private var users: [User]
 

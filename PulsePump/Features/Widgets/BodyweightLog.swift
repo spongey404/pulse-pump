@@ -7,6 +7,10 @@ enum BodyweightLog {
     struct Entry: Codable, Equatable {
         var day: String   // "yyyy-MM-dd" in the user's calendar
         var kg: Double
+        /// When this value was last changed (cloud sync, last write wins). Absent in entries saved before sync existed.
+        var updatedAt: Date? = nil
+        /// The `updatedAt` last pushed to / received from the cloud; nil = never synced.
+        var syncedAt: Date? = nil
     }
 
     struct Summary: Equatable {
@@ -37,10 +41,67 @@ enum BodyweightLog {
         guard kg > 0, let store = defaults ?? defaultStore() else { return }
         var log = load(defaults: store)
         let k = dayKey(date, calendar)
-        if let i = log.firstIndex(where: { $0.day == k }) { log[i].kg = kg } else { log.append(Entry(day: k, kg: kg)) }
+        let now = Date()
+        if let i = log.firstIndex(where: { $0.day == k }) {
+            guard log[i].kg != kg else { return }   // unchanged (the widget refresh re-records constantly): not an edit
+            log[i].kg = kg
+            log[i].updatedAt = max(now, (log[i].updatedAt ?? now).addingTimeInterval(0.001))
+        } else {
+            log.append(Entry(day: k, kg: kg, updatedAt: now))
+        }
         log.sort { $0.day < $1.day }
         if log.count > maxEntries { log.removeFirst(log.count - maxEntries) }
         if let data = try? JSONEncoder().encode(log) { store.set(data, forKey: key) }
+    }
+
+    // MARK: Cloud sync (users/{uid}/bodyweight/{yyyyMMdd})
+
+    private static func save(_ log: [Entry], to store: UserDefaults) {
+        if let data = try? JSONEncoder().encode(log) { store.set(data, forKey: key) }
+    }
+
+    /// Entries not yet pushed, or edited since the last push.
+    static func dirtyEntries(defaults: UserDefaults? = nil) -> [Entry] {
+        load(defaults: defaults).filter { e in
+            guard let synced = e.syncedAt else { return true }
+            return (e.updatedAt ?? synced).syncMs > synced.syncMs
+        }
+    }
+
+    /// Marks entries as pushed (stores the `updatedAt` that was sent, so a later edit is still dirty).
+    static func markSynced(_ sent: [Entry], defaults: UserDefaults? = nil) {
+        guard let store = defaults ?? defaultStore() else { return }
+        var log = load(defaults: store)
+        for s in sent {
+            // Legacy entries (saved before sync) have no updatedAt: adopt the one that was sent.
+            guard let i = log.firstIndex(where: { $0.day == s.day }),
+                  log[i].updatedAt == nil || log[i].updatedAt == s.updatedAt else { continue }
+            if log[i].updatedAt == nil { log[i].updatedAt = s.updatedAt }
+            log[i].syncedAt = s.updatedAt
+        }
+        save(log, to: store)
+    }
+
+    /// Applies a cloud entry when it is newer than the local one (last write wins). Returns whether it changed.
+    @discardableResult
+    static func applyRemote(day: String, kg: Double, updatedAt: Date, defaults: UserDefaults? = nil) -> Bool {
+        guard kg > 0, let store = defaults ?? defaultStore() else { return false }
+        var log = load(defaults: store)
+        if let i = log.firstIndex(where: { $0.day == day }) {
+            guard updatedAt.syncMs > (log[i].updatedAt ?? Date(syncMs: 0)).syncMs else { return false }
+            log[i].kg = kg; log[i].updatedAt = updatedAt; log[i].syncedAt = updatedAt
+        } else {
+            log.append(Entry(day: day, kg: kg, updatedAt: updatedAt, syncedAt: updatedAt))
+        }
+        log.sort { $0.day < $1.day }
+        if log.count > maxEntries { log.removeFirst(log.count - maxEntries) }
+        save(log, to: store)
+        return true
+    }
+
+    /// Sign-out / account switch.
+    static func clear(defaults: UserDefaults? = nil) {
+        (defaults ?? defaultStore())?.removeObject(forKey: key)
     }
 
     /// Last `days` daily points ending today. Days without an entry carry the previous value

@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class WorkoutTemplate {
+final class WorkoutTemplate: SyncRecord {
     var id: UUID
     var name: String
     var templateExercises: [TemplateExercise]
@@ -10,6 +10,11 @@ final class WorkoutTemplate {
     var notes: String = ""
     var createdAt: Date
     var updatedAt: Date
+    // Cloud sync bookkeeping (docs/sync-architecture.md); all optional/defaulted so the store migrates lightly.
+    var deletedAt: Date?
+    var syncedAt: Date?
+    var syncDigest: String?
+    var schemaVersion: Int = 1
 
     @Relationship(deleteRule: .nullify, inverse: \Workout.template) var workouts: [Workout]
 

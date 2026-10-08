@@ -72,7 +72,7 @@ extension WidgetDataService {
             s.lowercased().hasSuffix(" day") ? String(s.dropLast(4)) : s
         }
 
-        let done = workouts.filter { !$0.isDraft }.sorted { $0.date > $1.date }   // newest first
+        let done = workouts.filter { !$0.isDraft && $0.deletedAt == nil }.sorted { $0.date > $1.date }   // newest first
         let allSets = done.map { ($0, fsets($0)) }
         let flat = allSets.flatMap { $0.1 }
 
@@ -295,7 +295,7 @@ extension WidgetDataService {
         f.goalLeftLine = "\(left) LEFT · \(6 - todayIdx) DAYS"
 
         // --- 01 Next workout
-        let templates = (try? modelContext.fetch(FetchDescriptor<WorkoutTemplate>())) ?? []
+        let templates = (try? modelContext.fetch(FetchDescriptor<WorkoutTemplate>(predicate: #Predicate { $0.deletedAt == nil }))) ?? []
         let nextTemplate = nextName.isEmpty ? nil : templates.first { $0.name.lowercased() == nextName.lowercased() }
         f.nextConfidence = predictionConfidence(names: done.prefix(14).compactMap { $0.template?.name }, hasSplit: split != nil, predicted: !nextName.isEmpty)
         let trainedToday = loggedDays.contains(today)

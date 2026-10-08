@@ -66,7 +66,7 @@ struct WorkoutDetailView: View {
         .task { await pulsePlusService.refreshSubscriptionStatus() }
         .confirmationDialog("Delete Workout?", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive) {
-                modelContext.delete(workout)
+                modelContext.softDelete(workout)   // tombstone, so the deletion syncs
                 dismiss()
             }
         } message: {
@@ -103,7 +103,7 @@ struct WorkoutDetailView: View {
 
             if isEditing {
                 Button {
-                    workout.updatedAt = Date()
+                    workout.markUpdated()
                     isEditing = false
                 } label: {
                     Text("DONE")
@@ -260,6 +260,7 @@ struct DetailExerciseSectionView: View {
         let sorted = log.sets.sorted(by: { $0.order < $1.order })
         for index in offsets { modelContext.delete(sorted[index]) }
         for (i, s) in log.sets.sorted(by: { $0.order < $1.order }).enumerated() { s.order = i }
+        modelContext.markUpdated(log)
     }
 
     private func addSet() {
@@ -271,6 +272,7 @@ struct DetailExerciseSectionView: View {
         )
         newSet.exerciseLog = log
         modelContext.insert(newSet)
+        modelContext.markUpdated(log)
     }
 }
 

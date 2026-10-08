@@ -213,6 +213,6 @@ struct EditTemplateView: View {
                 targetReps: entry.targetReps
             )
         }
-        template.updatedAt = Date()
+        template.markUpdated()
     }
 }

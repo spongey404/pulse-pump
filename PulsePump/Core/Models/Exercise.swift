@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class Exercise {
+final class Exercise: SyncRecord {
     var id: UUID
     var name: String
     var primaryMuscleGroups: [MuscleGroup]
@@ -17,6 +17,11 @@ final class Exercise {
     var secondarySubRegions: [MuscleSubRegion]
     var createdAt: Date
     var updatedAt: Date
+    // Cloud sync bookkeeping (docs/sync-architecture.md); all optional/defaulted so the store migrates lightly.
+    var deletedAt: Date?
+    var syncedAt: Date?
+    var syncDigest: String?
+    var schemaVersion: Int = 1
 
     @Relationship(deleteRule: .cascade, inverse: \ExerciseLog.exercise) var logs: [ExerciseLog]
 

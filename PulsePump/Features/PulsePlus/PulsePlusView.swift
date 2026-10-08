@@ -7,7 +7,7 @@ struct PulsePlusView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query private var users: [User]
-    @Query(filter: #Predicate<Workout> { !$0.isDraft }, sort: \Workout.date, order: .reverse)
+    @Query(filter: #Predicate<Workout> { !$0.isDraft && $0.deletedAt == nil }, sort: \Workout.date, order: .reverse)
     private var workouts: [Workout]
     @State private var service = PulsePlusService()
     @State private var billingPeriod: BillingPeriod = .annual

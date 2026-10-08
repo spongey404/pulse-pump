@@ -13,7 +13,7 @@ struct ContentView: View {
     #endif
     @Environment(\.modelContext) private var modelContext
     @Query private var users: [User]
-    @Query private var templates: [WorkoutTemplate]
+    @Query(filter: #Predicate<WorkoutTemplate> { $0.deletedAt == nil }) private var templates: [WorkoutTemplate]
 
     private var user: User? { users.first }
 

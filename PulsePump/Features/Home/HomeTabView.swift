@@ -6,9 +6,9 @@ struct HomeTabView: View {
     @Bindable var workoutViewModel: WorkoutViewModel
     @Environment(\.modelContext) private var modelContext
     @Query private var users: [User]
-    @Query(filter: #Predicate<Workout> { !$0.isDraft }, sort: \Workout.date, order: .reverse)
+    @Query(filter: #Predicate<Workout> { !$0.isDraft && $0.deletedAt == nil }, sort: \Workout.date, order: .reverse)
     private var workouts: [Workout]
-    @Query(sort: \WorkoutTemplate.name) private var templates: [WorkoutTemplate]
+    @Query(filter: #Predicate<WorkoutTemplate> { $0.deletedAt == nil }, sort: \WorkoutTemplate.name) private var templates: [WorkoutTemplate]
     @State private var showSearch = false
     @State private var barsAppeared = false
     @State private var showDayPicker = false

@@ -6,7 +6,7 @@ struct ExerciseSubstitutionView: View {
     let onSelect: (Exercise) -> Void
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @Query private var allExercises: [Exercise]
+    @Query(filter: #Predicate<Exercise> { $0.deletedAt == nil }) private var allExercises: [Exercise]
     @State private var searchText = ""
 
     private var currentExercise: Exercise? { allExercises.first { $0.id == currentExerciseId } }

@@ -47,20 +47,23 @@ enum SplitSchedule {
     @discardableResult
     static func apply(type: SplitType, to user: User, modelContext: ModelContext) -> Split? {
         guard type != .none else {
-            if let old = user.selectedSplit { modelContext.delete(old) }
+            if let old = user.selectedSplit { modelContext.softDelete(old) }   // tombstone so the change syncs
             user.selectedSplit = nil
+            user.markUpdated()
             return nil
         }
         if let split = user.selectedSplit {
             split.type = type
             split.name = type.displayName
             split.days = defaultDays(for: type)
-            split.updatedAt = Date()
+            split.markUpdated()
+            user.markUpdated()
             return split
         }
         let split = makeSplit(type: type)
         modelContext.insert(split)
         user.selectedSplit = split
+        user.markUpdated()
         return split
     }
 
@@ -70,9 +73,9 @@ enum SplitSchedule {
     static func repairMissingDays(modelContext: ModelContext) -> Int {
         let splits = (try? modelContext.fetch(FetchDescriptor<Split>())) ?? []
         var repaired = 0
-        for split in splits where split.days.isEmpty && split.type != .none {
+        for split in splits where split.days.isEmpty && split.type != .none && split.deletedAt == nil {
             split.days = defaultDays(for: split.type)
-            split.updatedAt = Date()
+            split.markUpdated()
             repaired += 1
         }
         return repaired

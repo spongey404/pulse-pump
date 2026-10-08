@@ -105,15 +105,15 @@ struct SettingsView: View {
         MoreSectionLabel(title: "UNITS & MEASUREMENTS")
         MoreMenuRow(icon: "scalemass", label: "Weight Unit",
                     selection: Binding(get: { user.unitPreference },
-                                       set: { user.unitPreference = $0; user.updatedAt = Date() }),
+                                       set: { user.unitPreference = $0; user.markUpdated() }),
                     options: Array(UnitPreference.allCases), title: { $0.displayName })
         MoreMenuRow(icon: "person.fill", label: "Gender",
                     selection: Binding(get: { user.gender },
-                                       set: { user.gender = $0; user.updatedAt = Date() }),
+                                       set: { user.gender = $0; user.markUpdated() }),
                     options: Array(Gender.allCases), title: { $0.displayName })
         MoreMenuRow(icon: "chart.bar", label: "Experience Level",
                     selection: Binding(get: { user.experienceLevel },
-                                       set: { user.experienceLevel = $0; user.updatedAt = Date() }),
+                                       set: { user.experienceLevel = $0; user.markUpdated() }),
                     options: Array(ExperienceLevel.allCases), title: { $0.displayName })
 
         // WORKOUT
@@ -156,6 +156,9 @@ struct SettingsView: View {
         MoreSectionLabel(title: "DATA")
         MoreRow(icon: "square.and.arrow.down", label: "Import / Export Data") { showData = true }
         MoreRow(icon: "dumbbell", label: "Equipment Profiles") { showEquipment = true }
+
+        // CLOUD SYNC
+        CloudSyncSection()
 
         // ABOUT
         MoreSectionLabel(title: "ABOUT")
@@ -303,7 +306,7 @@ struct SplitConfigView: View {
             Section {
                 Button("Save Split") {
                     SplitSchedule.apply(type: selectedType, to: user, modelContext: modelContext)
-                    user.updatedAt = Date()
+                    user.markUpdated()
                     let split = user.selectedSplit
                     Task { await NotificationService.shared.reschedule(split: split) }
                     dismiss()

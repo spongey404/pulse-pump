@@ -44,7 +44,7 @@ struct TemplateSeedService {
                     unmatched.append(items[i].exerciseName)
                 }
             }
-            if changed { template.templateExercises = items; template.updatedAt = Date() }
+            if changed { template.templateExercises = items; template.markUpdated() }
         }
         return unmatched
     }

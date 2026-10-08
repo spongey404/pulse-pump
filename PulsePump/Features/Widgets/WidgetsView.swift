@@ -39,7 +39,7 @@ struct WidgetsView: View {
         library = stored.isEmpty ? PumpWidgetCatalog.presets() : stored
         if stored.isEmpty { PumpWidgetStore.saveLibrary(library) }
         let workouts = (try? modelContext.fetch(FetchDescriptor<Workout>(
-            predicate: #Predicate { !$0.isDraft }, sortBy: [SortDescriptor(\.date, order: .reverse)]))) ?? []
+            predicate: #Predicate { !$0.isDraft && $0.deletedAt == nil }, sortBy: [SortDescriptor(\.date, order: .reverse)]))) ?? []
         snapshot = WidgetDataService.buildSnapshot(workouts: workouts, modelContext: modelContext)
     }
 

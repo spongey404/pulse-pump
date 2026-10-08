@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 struct DataExportView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var users: [User]
-    @Query(filter: #Predicate<Workout> { !$0.isDraft }) private var finishedWorkouts: [Workout]
+    @Query(filter: #Predicate<Workout> { !$0.isDraft && $0.deletedAt == nil }) private var finishedWorkouts: [Workout]
     @State private var exportedJSON: Data?
     @State private var exportedCSV: String?
     @State private var showShareSheet = false

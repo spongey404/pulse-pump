@@ -9,7 +9,7 @@ struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @Query private var users: [User]
     @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<Workout> { !$0.isDraft }, sort: \Workout.date, order: .reverse)
+    @Query(filter: #Predicate<Workout> { !$0.isDraft && $0.deletedAt == nil }, sort: \Workout.date, order: .reverse)
     private var workouts: [Workout]
     @State private var photoItem: PhotosPickerItem?
     @State private var navigateToEdit = false
@@ -68,7 +68,7 @@ struct ProfileView: View {
             Task {
                 if let data = try? await newItem.loadTransferable(type: Data.self) {
                     user?.avatarData = data
-                    user?.updatedAt = Date()
+                    user?.markUpdated()
                 }
             }
         }
