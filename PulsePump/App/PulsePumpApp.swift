@@ -23,6 +23,7 @@ struct PulsePumpApp: App {
     let sharedModelContainer: ModelContainer
     @State private var session: AuthSession
     @State private var gate: AccountGate
+    @State private var syncLifecycle: SyncServiceLifecycle
 
     init() {
         // Firebase must be configured (and pointed at the emulator, if requested) before any Auth/Firestore access.
@@ -30,13 +31,13 @@ struct PulsePumpApp: App {
         let container = Self.makeModelContainer()
         sharedModelContainer = container
 
-        // The lead replaces these defaults with the SyncService-backed lifecycle / restore gate.
-        let lifecycle = SwiftDataSyncLifecycle(container: container)
+        let lifecycle = SyncServiceLifecycle(container: container)
+        _syncLifecycle = State(initialValue: lifecycle)
         let session = AuthSession(provider: FirebaseAuthProvider(), lifecycle: lifecycle)
         session.start()
         _session = State(initialValue: session)
         _gate = State(initialValue: AccountGate(session: session, remote: FirestoreProfileRemote(),
-                                                lifecycle: lifecycle, restoreGate: ImmediateRestoreGate()))
+                                                lifecycle: lifecycle, restoreGate: lifecycle))
     }
 
     private static func makeModelContainer() -> ModelContainer {
@@ -74,9 +75,9 @@ struct PulsePumpApp: App {
                 // `-debugGallery <section id or all>` shows the widget gallery on launch (no onboarding needed).
                 if let g = UserDefaults.standard.string(forKey: "debugGallery") {
                     WidgetGalleryView(section: g == "all" ? nil : g)
-                } else { RootView(session: session, gate: gate) }
+                } else { RootView(session: session, gate: gate, syncLifecycle: syncLifecycle) }
                 #else
-                RootView(session: session, gate: gate)
+                RootView(session: session, gate: gate, syncLifecycle: syncLifecycle)
                 #endif
             }
                 .preferredColorScheme(preferredColorScheme)

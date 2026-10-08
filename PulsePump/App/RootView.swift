@@ -10,6 +10,7 @@ struct RootView: View {
 
     let session: AuthSession
     let gate: AccountGate
+    let syncLifecycle: SyncServiceLifecycle
 
     private var user: User? { users.first }
     private var hasLocalUser: Bool { !users.isEmpty }
@@ -62,6 +63,11 @@ struct RootView: View {
         .environment(\.weightUnit, weightUnit)
         .onAppear { UnitPreference.current = weightUnit }
         .task(id: reconcileKey) { await gate.reconcile(hasLocalUser: hasLocalUser) }
+        .task(id: "\(session.user?.uid ?? "-")|\(route == .main || route == .restoring)") {
+            // Sync runs whenever a signed-in user owns the local store; the pull creates the User on a new device.
+            guard let uid = session.user?.uid, route == .main || route == .restoring else { return }
+            syncLifecycle.ensureRunning(uid: uid)
+        }
         .onChange(of: weightUnit) { _, unit in
             UnitPreference.current = unit
             WidgetDataService.updateWidgetData(modelContext: modelContext)   // widgets label from the snapshot
