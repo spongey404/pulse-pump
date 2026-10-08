@@ -85,7 +85,8 @@ struct WidgetDataService {
         snap.todayIndex = ((cal.component(.weekday, from: now) + 5) % 7)
 
         let user = (try? modelContext.fetch(FetchDescriptor<User>()))?.first
-        snap.bodyweight = user?.weight ?? 0
+        snap.weightUnit = user?.unitPreference ?? UnitPreference.current   // widgets convert + label from this
+        snap.bodyweight = user?.weight ?? 0   // kg
         let goal = user?.selectedSplit?.days.count ?? 0
         snap.sessionGoal = goal > 0 ? goal : 5
 

@@ -15,6 +15,7 @@ struct NewSetRowView: View {
     let onSetTypeTap: () -> Void
     let onLog: () -> Void
     let onDelete: () -> Void
+    @Environment(\.weightUnit) private var unit
 
     /// A previous-session value the user hasn't logged yet this session — dimmer than
     /// a plain pending row, per the Ghost state in the states spec.
@@ -55,7 +56,7 @@ struct NewSetRowView: View {
                     .foregroundStyle(isActive ? Color.accentInk : Color.inkMuted)
                     .frame(width: 22, alignment: .leading)
 
-                // KG field
+                // WEIGHT field (SetEntry.weight is kg; the field shows/accepts the user's unit)
                 Group {
                     switch exerciseType {
                     case .timeBased:
@@ -75,8 +76,9 @@ struct NewSetRowView: View {
                         // the post-workout summary, not spoiled mid-set.
                         weightOrGhostField(
                             entered: $setEntry.weight,
-                            ghost: ghostText?.weight,
-                            keyboard: .decimalPad
+                            ghost: ghostText.map { unit.displayText(kgString: $0.weight) },
+                            keyboard: .decimalPad,
+                            isKgString: true
                         )
                     }
                 }
@@ -164,7 +166,8 @@ struct NewSetRowView: View {
     private func weightOrGhostField(
         entered: Binding<String>,
         ghost: String?,
-        keyboard: UIKeyboardType
+        keyboard: UIKeyboardType,
+        isKgString: Bool = false
     ) -> some View {
         ZStack {
             if entered.wrappedValue.isEmpty, let ghost = ghost, !ghost.isEmpty {
@@ -173,13 +176,19 @@ struct NewSetRowView: View {
                     .foregroundStyle(Color.inkFaint)
                     .allowsHitTesting(false)
             }
-            TextField("", text: entered)
-                .keyboardType(keyboard)
-                .multilineTextAlignment(.center)
-                .font(.spaceMono(18, weight: .bold))
-                .foregroundStyle(
-                    entered.wrappedValue.isEmpty ? Color.clear : Color.inkPrimary
-                )
+            Group {
+                if isKgString {
+                    KgTextField(kgString: entered, unit: unit)
+                } else {
+                    TextField("", text: entered)
+                }
+            }
+            .keyboardType(keyboard)
+            .multilineTextAlignment(.center)
+            .font(.spaceMono(18, weight: .bold))
+            .foregroundStyle(
+                entered.wrappedValue.isEmpty ? Color.clear : Color.inkPrimary
+            )
         }
         .overlay(alignment: .bottom) {
             let hasGhost = !(ghost ?? "").isEmpty
@@ -246,5 +255,28 @@ struct SetRowView: View {
             onLog: onLog,
             onDelete: {}
         )
+    }
+}
+
+
+/// Text field bound to a kg string but edited in the user's unit. Keeps its own text buffer so partial
+/// input ("22.") isn't reformatted mid-typing; kg mode is a plain pass-through.
+struct KgTextField: View {
+    @Binding var kgString: String
+    let unit: UnitPreference
+    var placeholder: String = ""
+    @State private var text = ""
+
+    var body: some View {
+        TextField(placeholder, text: $text)
+            .onAppear { text = unit.displayText(kgString: kgString) }
+            .onChange(of: text) { _, new in
+                let kg = unit.kgString(displayText: new)
+                if kg != kgString { kgString = kg }
+            }
+            .onChange(of: kgString) { _, new in
+                if unit.kgString(displayText: text) != new { text = unit.displayText(kgString: new) }
+            }
+            .onChange(of: unit) { _, _ in text = unit.displayText(kgString: kgString) }
     }
 }

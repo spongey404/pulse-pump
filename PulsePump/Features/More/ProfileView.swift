@@ -243,10 +243,7 @@ struct ProfileView: View {
             detailRow("UNITS", user.unitPreference.displayName)
             detailRow("GENDER", user.gender.displayName)
             if user.weight > 0 {
-                let weightVal = user.unitPreference == .lbs
-                    ? "\(Int(user.weight * 2.20462)) LBS"
-                    : "\(Int(user.weight)) KG"
-                detailRow("BODY WEIGHT", weightVal, mono: true)
+                detailRow("BODY WEIGHT", user.unitPreference.format(user.weight), mono: true)   // stored kg, shown in pref
             }
             detailRow("MEMBER SINCE", memberSince(user: user), mono: true)
         }

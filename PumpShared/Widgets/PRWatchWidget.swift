@@ -25,8 +25,8 @@ struct PRWatchWidget: View {
     let snap: PumpWidgetSnapshot
 
     private var lifts: [PWLift] { snap.fixed.prLifts }
-    private func f1(_ v: Double) -> String { String(format: "%.1f", v) }
-    private func gap(_ l: PWLift) -> String { String(format: "-%.1f", abs(l.pr - l.e1rm)) }
+    private func f1(_ kg: Double) -> String { String(format: "%.1f", snap.unit.display(kg)) }   // values are kg
+    private func gap(_ l: PWLift) -> String { "-" + f1(abs(l.pr - l.e1rm)) }
 
     var body: some View {
         Group {
@@ -49,7 +49,7 @@ struct PRWatchWidget: View {
                 Text(l.name).pwBody(14).lineLimit(1).padding(.top, 8)
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(f1(l.e1rm)).pwMono(30, bold: true)
-                    Text("KG E1RM").pwCap(8, tracking: 1.2)
+                    Text("\(snap.unit.label) E1RM").pwCap(8, tracking: 1.2)
                 }
                 .padding(.top, 2)
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -77,7 +77,7 @@ struct PRWatchWidget: View {
                         Spacer()
                         Text("\(Int((l.e1rm / l.pr * 100).rounded()))%").pwMono(12, bold: true)
                     }
-                    Text("\(f1(l.e1rm)) / \(f1(l.pr)) KG").pwCap(8, tracking: 1)
+                    Text("\(f1(l.e1rm)) / \(f1(l.pr)) \(snap.unit.label)").pwCap(8, tracking: 1)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .frame(maxHeight: .infinity)
@@ -122,7 +122,7 @@ struct PRWatchWidget: View {
                 HStack(alignment: .firstTextBaseline) {
                     Text(l.name).pwBody(18, weight: .bold)
                     Spacer()
-                    Text("\(f1(abs(l.pr - l.e1rm))) KG TO PR").pwCap(9, tracking: 1)
+                    Text("\(f1(abs(l.pr - l.e1rm))) \(snap.unit.label) TO PR").pwCap(9, tracking: 1)
                 }
                 .padding(.top, 10)
                 PWPRSpark(values: l.series, lineWidth: 1.6)

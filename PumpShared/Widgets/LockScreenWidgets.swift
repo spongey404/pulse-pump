@@ -106,11 +106,11 @@ struct LockRectPR: View {
             Text("PR WATCH").pwMono(8, color: lockDim, tracking: 1.2)
             Text(lift?.name ?? "—").pwBody(14, color: .white).lineLimit(1)
             HStack(spacing: 0) {
-                Text(lift.map { String(format: "%.1f", $0.e1rm) } ?? "—").pwMono(11, bold: true, color: .white)
+                Text(lift.map { String(format: "%.1f", snap.unit.display($0.e1rm)) } ?? "—").pwMono(11, bold: true, color: .white)
                 Text(" / ").pwMono(11, color: .white)
-                Text(lift.map { String(format: "%.1f", $0.pr) } ?? "—").pwMono(11, color: .white)
+                Text(lift.map { String(format: "%.1f", snap.unit.display($0.pr)) } ?? "—").pwMono(11, color: .white)
                     .overlay(alignment: .bottom) { Rectangle().fill(Color.white).frame(height: 1.5).offset(y: 2) }
-                Text(" KG").pwMono(11, color: .white)
+                Text(" \(snap.unit.label)").pwMono(11, color: .white)
             }
         }
     }

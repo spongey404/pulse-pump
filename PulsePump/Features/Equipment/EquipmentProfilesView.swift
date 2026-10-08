@@ -5,6 +5,7 @@ struct EquipmentProfilesView: View {
     var onBack: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.weightUnit) private var unit
     @Query(sort: \EquipmentProfile.name) private var profiles: [EquipmentProfile]
     @State private var showCreate = false
     @State private var selectedId: UUID? = nil
@@ -212,7 +213,7 @@ struct EquipmentProfilesView: View {
             // Plate chips
             PlateFlow(spacing: 5) {
                 ForEach(plates, id: \.self) { plate in
-                    Text("\(formatPlate(plate))KG")
+                    Text("\(formatPlate(plate))\(unit.label)")
                         .font(.spaceMono(9, weight: .bold))
                         .foregroundStyle(plateTextColor(plate))
                         .padding(.horizontal, 9)
@@ -238,29 +239,30 @@ struct EquipmentProfilesView: View {
             .frame(width: w, height: h)
     }
 
+    /// Colour by physical size (plates are stored in kg; a 45 lb plate colours like a 20 kg one).
     private func plateColor(_ plate: Double) -> Color {
-        switch plate {
-        case 25:   return Color(hex: "#e51b1b")
-        case 20:   return Color(hex: "#1f4ea3")
-        case 15:   return Color(hex: "#c98a17")
-        case 10:   return Color(hex: "#1f8f5a")
-        case 5:    return Color(hex: "#1f1c19")
-        case 2.5:  return Color(hex: "#a3a39a")
-        case 1.25: return Color(hex: "#b8b4a6")
-        default:   return Color.inkMuted
+        switch PlateMath.tier(forKg: plate) {
+        case .red:    return Color(hex: "#e51b1b")
+        case .blue:   return Color(hex: "#1f4ea3")
+        case .yellow: return Color(hex: "#c98a17")
+        case .green:  return Color(hex: "#1f8f5a")
+        case .black:  return Color(hex: "#1f1c19")
+        case .grey:   return Color(hex: "#a3a39a")
+        case .light:  return Color(hex: "#b8b4a6")
         }
     }
 
     private func plateTextColor(_ plate: Double) -> Color {
-        switch plate {
-        case 5: return Color(hex: "#F4F0E6")
-        case 2.5, 1.25: return Color(hex: "#1F1C19")
+        switch PlateMath.tier(forKg: plate) {
+        case .black: return Color(hex: "#F4F0E6")
+        case .grey, .light: return Color(hex: "#1F1C19")
         default: return .white
         }
     }
 
+    /// Plate stored in kg, shown as its nominal size in the user's unit ("45", "2.5").
     private func formatPlate(_ plate: Double) -> String {
-        plate == floor(plate) ? "\(Int(plate))" : "\(plate)"
+        UnitPreference.trim(PlateMath.nominal(plate, unit: unit))
     }
 
     // MARK: - Add equipment button
@@ -331,6 +333,7 @@ private struct PlateFlow: Layout {
 
 struct CreateEquipmentProfileView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.weightUnit) private var unit
     @Environment(\.dismiss) private var dismiss
 
     @State private var name = ""
@@ -375,7 +378,8 @@ struct CreateEquipmentProfileView: View {
                     Button("Save") {
                         let profile = EquipmentProfile(
                             name: name.trimmingCharacters(in: .whitespaces),
-                            availableEquipment: Array(selectedEquipment)
+                            availableEquipment: Array(selectedEquipment),
+                            availablePlates: unit.defaultPlatesKg   // stored kg; lb users get 45/35/25/10/5/2.5 lb
                         )
                         modelContext.insert(profile)
                         dismiss()

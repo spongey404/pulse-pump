@@ -21,10 +21,30 @@ struct DataImportService {
         }
     }
 
+    // MARK: - Units
+    //
+    // Everything is stored in kg. Hevy writes `weight_kg` or `weight_lbs` in the header; Strong writes a bare
+    // "Weight" column in whatever unit the exporting account used (newer files say "Weight (kg)"/"Weight (lbs)").
+    // `sourceUnit` is what the user says the file is in; an explicit unit in the header wins; otherwise `sourceUnit` (the UI asks), then the importing user's preference.
+
+    /// Unit named by a weight column header, if any.
+    static func detectUnit(headers: [String]) -> UnitPreference? {
+        for h in headers.map({ $0.lowercased().trimmingCharacters(in: .whitespaces) }) {
+            if h == "weight_kg" || h == "weight (kg)" || h == "weight(kg)" { return .kg }
+            if h == "weight_lbs" || h == "weight_lb" || h == "weight (lbs)" || h == "weight (lb)" || h == "weight(lbs)" { return .lbs }
+        }
+        return nil
+    }
+
+    /// Index of the weight column (unit-suffixed variants included).
+    static func weightColumn(headers: [String]) -> Int? {
+        headers.firstIndex { ["weight", "weight_kg", "weight_lbs", "weight_lb", "weight (kg)", "weight (lbs)", "weight (lb)", "weight(kg)", "weight(lbs)"].contains($0.lowercased()) }
+    }
+
     // MARK: - Strong CSV Import
     // Strong CSV columns: Date,Workout Name,Exercise Name,Set Order,Weight,Reps,Distance,Seconds,Notes,Workout Notes,RPE
 
-    static func importStrongCSV(_ csvString: String, modelContext: ModelContext, user: User) throws -> Int {
+    static func importStrongCSV(_ csvString: String, modelContext: ModelContext, user: User, sourceUnit: UnitPreference? = nil) throws -> Int {
         let rows = parseCSV(csvString)
         guard rows.count > 1 else { return 0 }
 
@@ -32,8 +52,9 @@ struct DataImportService {
         let dateIdx = headers.firstIndex(of: "Date") ?? 0
         let workoutNameIdx = headers.firstIndex(of: "Workout Name")
         let exerciseNameIdx = headers.firstIndex(of: "Exercise Name") ?? 2
-        let weightIdx = headers.firstIndex(of: "Weight") ?? 4
+        let weightIdx = weightColumn(headers: headers) ?? 4
         let repsIdx = headers.firstIndex(of: "Reps") ?? 5
+        let unit = detectUnit(headers: headers) ?? sourceUnit ?? user.unitPreference   // file's unit -> kg below
         let notesIdx = headers.firstIndex(of: "Notes")
 
         var workoutsByDate: [String: (name: String?, exercises: [(name: String, sets: [(weight: Double, reps: Int, notes: String)])])] = [:]
@@ -43,7 +64,7 @@ struct DataImportService {
 
             let dateStr = row[dateIdx]
             let exerciseName = row[exerciseNameIdx]
-            let weight = Double(row[weightIdx]) ?? 0
+            let weight = unit.kg(fromDisplay: Double(row[weightIdx]) ?? 0)
             let reps = Int(row[repsIdx]) ?? 0
             let notes = notesIdx.flatMap { row.indices.contains($0) ? row[$0] : nil } ?? ""
             let workoutName = workoutNameIdx.flatMap { row.indices.contains($0) ? row[$0] : nil }
@@ -102,7 +123,7 @@ struct DataImportService {
     // MARK: - Hevy CSV Import
     // Hevy CSV columns: title,start_time,end_time,description,exercise_title,superset_id,set_index,set_type,weight_kg,reps,distance_km,duration_seconds,rpe
 
-    static func importHevyCSV(_ csvString: String, modelContext: ModelContext, user: User) throws -> Int {
+    static func importHevyCSV(_ csvString: String, modelContext: ModelContext, user: User, sourceUnit: UnitPreference? = nil) throws -> Int {
         let rows = parseCSV(csvString)
         guard rows.count > 1 else { return 0 }
 
@@ -110,8 +131,9 @@ struct DataImportService {
         let titleIdx = headers.firstIndex(of: "title") ?? 0
         let startTimeIdx = headers.firstIndex(of: "start_time") ?? 1
         let exerciseTitleIdx = headers.firstIndex(of: "exercise_title") ?? 4
-        let weightIdx = headers.firstIndex(of: "weight_kg") ?? 8
+        let weightIdx = weightColumn(headers: headers) ?? 8
         let repsIdx = headers.firstIndex(of: "reps") ?? 9
+        let unit = detectUnit(headers: headers) ?? sourceUnit ?? .kg   // Hevy's default header is weight_kg
 
         var workoutsByTitle: [String: (date: String, exercises: [(name: String, sets: [(weight: Double, reps: Int)])])] = [:]
 
@@ -121,7 +143,7 @@ struct DataImportService {
             let title = row[titleIdx]
             let dateStr = row[startTimeIdx]
             let exerciseName = row[exerciseTitleIdx]
-            let weight = Double(row[weightIdx]) ?? 0
+            let weight = unit.kg(fromDisplay: Double(row[weightIdx]) ?? 0)
             let reps = Int(row[repsIdx]) ?? 0
 
             let key = "\(title)_\(dateStr)"

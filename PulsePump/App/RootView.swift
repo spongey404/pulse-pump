@@ -7,6 +7,8 @@ struct RootView: View {
     @Query private var users: [User]
 
     private var user: User? { users.first }
+    /// Single source for the display unit; views read `@Environment(\.weightUnit)`.
+    private var weightUnit: UnitPreference { user?.unitPreference ?? .kg }
 
     var body: some View {
         Group {
@@ -15,6 +17,12 @@ struct RootView: View {
             } else {
                 ContentView()
             }
+        }
+        .environment(\.weightUnit, weightUnit)
+        .onAppear { UnitPreference.current = weightUnit }
+        .onChange(of: weightUnit) { _, unit in
+            UnitPreference.current = unit
+            WidgetDataService.updateWidgetData(modelContext: modelContext)   // widgets label from the snapshot
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active, !users.isEmpty { WidgetDataService.updateWidgetData(modelContext: modelContext) }

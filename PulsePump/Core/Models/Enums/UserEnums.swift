@@ -1,22 +1,6 @@
 import Foundation
 
-enum UnitPreference: String, Codable, CaseIterable, Identifiable {
-    case kg
-    case lbs
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .kg: "Kilograms (kg)"
-        case .lbs: "Pounds (lbs)"
-        }
-    }
-
-    var abbreviation: String {
-        rawValue
-    }
-}
+// UnitPreference (kg / lbs) lives in PumpShared/WeightUnit.swift so the widget extension shares it.
 
 enum ExperienceLevel: String, Codable, CaseIterable, Identifiable {
     case beginner

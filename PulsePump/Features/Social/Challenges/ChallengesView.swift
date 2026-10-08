@@ -4,6 +4,7 @@ import SwiftUI
 struct ChallengesView: View {
     @Bindable var viewModel: SocialViewModel
     @State private var showCreateChallenge = false
+    @Environment(\.weightUnit) private var weightUnit
 
     private var globalChallenge: FirestoreChallenge? {
         viewModel.activeChallenges.first { $0.isGlobal }
@@ -15,8 +16,8 @@ struct ChallengesView: View {
 
     /// Only appends "K" once the value actually crosses into the thousands — a raw 500-point
     /// gap must read "500", not "500.0K".
-    private func formattedScore(_ score: Double) -> String {
-        score >= 1000 ? String(format: "%.1fK", score / 1000) : "\(Int(score))"
+    private func formattedScore(_ score: Double, _ metric: ChallengeMetric) -> String {
+        metric.formatScoreCompact(score, weightUnit)   // weight-based scores are kg
     }
 
     var body: some View {
@@ -86,15 +87,15 @@ struct ChallengesView: View {
                         .font(.archivo(26, weight: .black)).tracking(0.5).lineSpacing(0)
                         .foregroundStyle(Color.inkPrimary)
                         .padding(.bottom, 3)
-                    Text(metric.globalSubheading)
+                    Text(metric.globalSubheading(weightUnit))
                         .font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted)
                 }
                 .padding(.horizontal, 14).padding(.top, 14).padding(.bottom, 12)
 
                 HStack(spacing: 0) {
-                    kpiCell(label: "Your Total", value: myEntry.map { formattedScore($0.score) } ?? "—", showTrailingBorder: true)
+                    kpiCell(label: "Your Total", value: myEntry.map { formattedScore($0.score, metric) } ?? "—", showTrailingBorder: true)
                     kpiCell(label: "Rank", value: myEntry.map { "\($0.rank)" } ?? "—", delta: "OF \(challenge.participantIds.count.formatted())", showTrailingBorder: true)
-                    kpiCell(label: "To Next", value: nextAbove.flatMap { above in myEntry.map { formattedScore(max(0, above.score - $0.score)) } } ?? "—", showTrailingBorder: false)
+                    kpiCell(label: "To Next", value: nextAbove.flatMap { above in myEntry.map { formattedScore(max(0, above.score - $0.score), metric) } } ?? "—", showTrailingBorder: false)
                 }
                 .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
 
@@ -139,7 +140,7 @@ struct ChallengesView: View {
                 .font(Font.spaceMono(9)).tracking(1).foregroundStyle(Color.inkMuted)
 
             HStack {
-                KPIBlock(label: "You", value: myEntry.map { String(format: "%.0f", $0.score) } ?? "—")
+                KPIBlock(label: "You", value: myEntry.map { (ChallengeMetric(rawValue: challenge.metric) ?? .totalVolume).formatScore($0.score, weightUnit) } ?? "—")
                 Spacer()
                 KPIBlock(label: "Position", value: myEntry.map { "\($0.rank)" } ?? "—", alignment: .trailing)
                 Text("›").font(.system(size: 14)).foregroundStyle(Color.inkMuted).padding(.leading, 8)

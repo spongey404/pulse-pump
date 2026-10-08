@@ -2,6 +2,7 @@ import SwiftUI
 
 /// 6b — friend profile: stats, 30-day body map, this week's training days.
 struct FriendProfileView: View {
+    @Environment(\.weightUnit) private var unit
     let initialProfile: FirestoreUserProfile
     @Bindable var viewModel: SocialViewModel
     @Environment(\.dismiss) private var dismiss
@@ -136,7 +137,7 @@ struct FriendProfileView: View {
 
     private var volumeLabel: String {
         let total = recentPosts.flatMap(\.exercises).flatMap(\.sets).reduce(0.0) { $0 + $1.weight * Double($1.reps) }
-        return total >= 1000 ? String(format: "%.1fK", total / 1000) : "\(Int(total))"
+        return unit.compactVolume(total)   // feed weights are kg
     }
 
     private func dayRow(_ day: (date: Date, post: WorkoutFeedItem?)) -> some View {

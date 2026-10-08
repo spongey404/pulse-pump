@@ -64,12 +64,23 @@ class OnboardingViewModel {
         self.authService = authService
     }
 
+    /// Switch the weight unit, re-expressing any weight already typed so the same body weight is kept.
+    /// Height defaults to the matching system (ft/in for lbs, cm for kg).
+    func setUnit(_ unit: UnitPreference) {
+        guard unit != unitPreference else { return }
+        if let kg = unitPreference.parseKg(weightText), kg > 0 {
+            weightText = unit.number(kg)
+        }
+        unitPreference = unit
+        useImperialHeight = (unit == .lbs)
+    }
+
     var canContinue: Bool {
         switch currentStep {
         case .welcome:     return isAuthenticated
         case .name:        return !name.trimmingCharacters(in: .whitespaces).isEmpty
         case .weight:
-            guard let w = Double(weightText), w > 0 else { return false }
+            guard let kg = unitPreference.parseKg(weightText), kg > 0 else { return false }
             return true
         case .height:
             if useImperialHeight {
@@ -110,13 +121,14 @@ class OnboardingViewModel {
     }
 
     func completeOnboarding(modelContext: ModelContext) {
-        let weightValue = Double(weightText) ?? 0
+        // weightText is typed in `unitPreference`; User.weight is always kg.
+        let weightValue = unitPreference.parseKg(weightText) ?? 0
 
         var heightCm: Double
         if useImperialHeight {
             let feet = Double(heightFeet) ?? 0
             let inches = Double(heightInches) ?? 0
-            heightCm = (feet * 30.48) + (inches * 2.54)
+            heightCm = UnitPreference.cm(feet: feet, inches: inches)
         } else {
             heightCm = Double(heightText) ?? 0
         }

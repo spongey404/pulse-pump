@@ -18,6 +18,7 @@ struct ExerciseCardView: View {
     var onDragChanged: ((CGFloat) -> Void)? = nil
     var onDragEnded: ((CGFloat) -> Void)? = nil
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.weightUnit) private var unit
     @State private var isCollapsed = false
     @State private var openPlateForSetIdx: Int? = nil
     @State private var plateBarWeight: Double = 20
@@ -77,7 +78,7 @@ struct ExerciseCardView: View {
                                     }
                                 } label: {
                                     HStack {
-                                        Text("PLATES · \(weightStr)KG")
+                                        Text("PLATES · \(unit.formatTight(weightVal))")
                                             .font(.spaceMono(9))
                                             .tracking(1.2)
                                             .foregroundStyle(Color.inkMuted)
@@ -178,6 +179,8 @@ struct ExerciseCardView: View {
                 .strokeBorder(Color.dsHairLine, lineWidth: 1)
         )
         .task(id: entry.exerciseId) { loadAnalytics() }
+        .onAppear { if PlateMath.sameBar(plateBarWeight, 20) { plateBarWeight = unit.olympicBarKg } }
+        .onChange(of: unit) { _, u in plateBarWeight = u.olympicBarKg }
     }
 
     private func loadAnalytics() {
@@ -257,15 +260,15 @@ struct ExerciseCardView: View {
                     if let a = analytics {
                         Text("·").font(.spaceMono(9)).foregroundStyle(Color.inkMuted)
                         Text("PR").font(.spaceMono(8)).foregroundStyle(Color.inkMuted)
-                        Text(String(format: "%g×%d", a.prWeight, a.prReps))
+                        Text("\(unit.number(a.prWeight))×\(a.prReps)")
                             .font(.spaceMono(9, weight: .bold)).foregroundStyle(Color.inkPrimary)
                         Text("·").font(.spaceMono(9)).foregroundStyle(Color.inkMuted)
                         Text("1RM").font(.spaceMono(8)).foregroundStyle(Color.inkMuted)
-                        Text("~\(Int(a.estimated1RM))")
+                        Text("~\(Int(unit.display(a.estimated1RM).rounded()))")
                             .font(.spaceMono(9, weight: .bold)).foregroundStyle(Color.inkPrimary)
                         if let delta = a.deltaKg, abs(delta) > 0.01 {
                             Text("·").font(.spaceMono(9)).foregroundStyle(Color.inkMuted)
-                            Text("\(delta > 0 ? "▲" : "▼") \(String(format: "%g", abs(delta)))KG")
+                            Text("\(delta > 0 ? "▲" : "▼") \(unit.formatTight(abs(delta)))")
                                 .font(.spaceMono(9, weight: .bold))
                                 .foregroundStyle(delta > 0 ? Color.signalUp : Color.signalDown)
                         }
@@ -355,7 +358,7 @@ struct ExerciseCardView: View {
                 .frame(width: 36, alignment: .leading)
             Text("#")
                 .frame(width: 22, alignment: .leading)
-            Text("KG")
+            Text(unit.label)
                 .frame(maxWidth: .infinity, alignment: .center)
             Text("REPS")
                 .frame(maxWidth: .infinity, alignment: .center)

@@ -279,6 +279,7 @@ struct DetailExerciseSectionView: View {
 struct EditableSetRow: View {
     @Bindable var setLog: SetLog
     let isEditing: Bool
+    @Environment(\.weightUnit) private var unit
 
     @State private var weightText = ""
     @State private var repsText = ""
@@ -301,7 +302,8 @@ struct EditableSetRow: View {
                         .foregroundStyle(Color.inkPrimary)
                         .frame(width: 64)
                         .onChange(of: weightText) { _, v in
-                            setLog.weight = Double(v) ?? setLog.weight
+                            // Field is in the display unit; SetLog.weight stays kg. Only write on a real edit.
+                            if v != unit.inputText(setLog.weight), let kg = unit.parseKg(v) { setLog.weight = kg }
                         }
                     Text("×")
                         .font(.spaceMono(11))
@@ -318,7 +320,7 @@ struct EditableSetRow: View {
                 }
             } else {
                 if setLog.weight > 0 || setLog.reps > 0 {
-                    Text("\(String(format: "%g", setLog.weight)) × \(setLog.reps)")
+                    Text("\(unit.number(setLog.weight)) \(unit.label) × \(setLog.reps)")
                         .font(.spaceMono(13, weight: .bold))
                         .foregroundStyle(Color.inkPrimary)
                 }
@@ -330,7 +332,7 @@ struct EditableSetRow: View {
             }
         }
         .onAppear {
-            weightText = setLog.weight > 0 ? String(format: "%g", setLog.weight) : ""
+            weightText = setLog.weight > 0 ? unit.inputText(setLog.weight) : ""
             repsText = setLog.reps > 0 ? "\(setLog.reps)" : ""
         }
     }
