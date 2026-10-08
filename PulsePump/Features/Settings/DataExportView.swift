@@ -15,7 +15,7 @@ struct DataExportView: View {
     @State private var showImportPicker = false
     @State private var selectedImportSource: DataImportService.ImportSource = .strong
     @State private var showImportSuccess = false
-    @State private var importedCount = 0
+    @State private var importResult = DataImportService.ImportResult()
 
     private var user: User? { users.first }
 
@@ -79,8 +79,19 @@ struct DataExportView: View {
         .alert("Import Complete", isPresented: $showImportSuccess) {
             Button("OK") {}
         } message: {
-            Text("Successfully imported \(importedCount) workouts from \(selectedImportSource.displayName).")
+            Text(importMessage)
         }
+    }
+
+    private var importMessage: String {
+        var lines = ["\(selectedImportSource.displayName): \(importResult.summary)."]
+        if importResult.warmupSets > 0 { lines.append("\(importResult.warmupSets) warm-up sets were kept but are not counted in stats.") }
+        if !importResult.unmatchedExercises.isEmpty {
+            lines.append("Not in the library (added as custom): " + importResult.unmatchedExercises.prefix(5).joined(separator: ", ")
+                + (importResult.unmatchedExercises.count > 5 ? "…" : ""))
+        }
+        if let firstError = importResult.errors.first { lines.append("e.g. \(firstError)") }
+        return lines.joined(separator: "\n")
     }
 
     private func handleImport(_ result: Result<URL, Error>) {
@@ -95,9 +106,9 @@ struct DataExportView: View {
 
                 switch selectedImportSource {
                 case .strong:
-                    importedCount = try DataImportService.importStrongCSV(csvString, modelContext: modelContext, user: user)
+                    importResult = try DataImportService.importStrongCSV(csvString, modelContext: modelContext, user: user)
                 case .hevy:
-                    importedCount = try DataImportService.importHevyCSV(csvString, modelContext: modelContext, user: user)
+                    importResult = try DataImportService.importHevyCSV(csvString, modelContext: modelContext, user: user)
                 }
                 showImportSuccess = true
             } catch {

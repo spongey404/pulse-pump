@@ -88,7 +88,7 @@ struct ContentView: View {
         }
         .onAppear {
             ExerciseSeedService.seedIfNeeded(modelContext: modelContext)
-            TemplateSeedService.seedIfNeeded(modelContext: modelContext)
+            TemplateSeedService.seedIfNeeded(modelContext: modelContext)   // links presets to the catalogue by name
             if UserDefaults.standard.bool(forKey: "wantsTutorial") {
                 tutorialViewModel.start()
                 #if DEBUG
