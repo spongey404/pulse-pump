@@ -13,7 +13,7 @@ struct UnitPreferenceStepView: View {
         ) {
             VStack(spacing: 8) {
                 ForEach(UnitPreference.allCases) { unit in
-                    Button { viewModel.unitPreference = unit } label: {
+                    Button { viewModel.setUnit(unit) } label: {
                         HStack(spacing: 12) {
                             ZStack {
                                 Circle()

@@ -4,7 +4,7 @@ struct WeightStepView: View {
     @Bindable var viewModel: OnboardingViewModel
     @FocusState private var isFocused: Bool
 
-    private var unitLabel: String { viewModel.unitPreference == .kg ? "KG" : "LBS" }
+    private var unitLabel: String { viewModel.unitPreference.label }
     var body: some View {
         OnboardingStepLayout(
             label: "02 / BODY",
@@ -49,8 +49,8 @@ struct WeightStepView: View {
         HStack(spacing: 2) {
             ForEach([UnitPreference.kg, .lbs], id: \.self) { unit in
                 let selected = viewModel.unitPreference == unit
-                Button { viewModel.unitPreference = unit } label: {
-                    Text(unit.rawValue.uppercased())
+                Button { viewModel.setUnit(unit) } label: {
+                    Text(unit.label)
                         .font(.spaceMono(10, weight: .bold))
                         .tracking(1)
                         .foregroundStyle(selected ? Color.accentInk : Color.inkMuted)
