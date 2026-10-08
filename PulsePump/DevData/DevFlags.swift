@@ -4,11 +4,24 @@ import Foundation
 /// with launch arguments such as `-devDataPlus 1`). In Release every flag is a constant `false`,
 /// so fixture code paths are unreachable for real users.
 enum DevFlags {
-    /// Show the built-in demo friends / feed / challenges when Firestore has nothing to show.
-    /// Firestore users can't be created locally, so social screens need these fixtures in dev.
-    static var socialFixtures: Bool {
+    /// `-useFirebaseEmulator 1`: the app talks to the local Firebase emulators.
+    static var usesFirebaseEmulator: Bool { usesFirebaseEmulator(defaults: .standard) }
+
+    static func usesFirebaseEmulator(defaults: UserDefaults) -> Bool {
         #if DEBUG
-        UserDefaults.standard.bool(forKey: "devDataSocialFixtures")
+        defaults.bool(forKey: "useFirebaseEmulator")
+        #else
+        false
+        #endif
+    }
+
+    /// Use the seeded in-memory social backend (`SocialFixtures`) instead of Firestore. DEBUG only,
+    /// off by default, and never while the emulator is in use (the emulator has real data).
+    static var socialFixtures: Bool { socialFixtures(defaults: .standard) }
+
+    static func socialFixtures(defaults: UserDefaults) -> Bool {
+        #if DEBUG
+        !usesFirebaseEmulator(defaults: defaults) && defaults.bool(forKey: "devDataSocialFixtures")
         #else
         false
         #endif
