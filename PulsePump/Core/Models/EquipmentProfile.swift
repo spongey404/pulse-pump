@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class EquipmentProfile {
+final class EquipmentProfile: SyncRecord {
     var id: UUID
     var name: String
     var availableEquipment: [EquipmentType]
@@ -10,6 +10,11 @@ final class EquipmentProfile {
     var barTypes: [BarConfig]
     var createdAt: Date
     var updatedAt: Date
+    // Cloud sync bookkeeping (docs/sync-architecture.md); all optional/defaulted so the store migrates lightly.
+    var deletedAt: Date?
+    var syncedAt: Date?
+    var syncDigest: String?
+    var schemaVersion: Int = 1
 
     @Relationship var user: User?
 

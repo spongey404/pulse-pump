@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class Workout {
+final class Workout: SyncRecord {
     var id: UUID
     var date: Date
     var duration: TimeInterval
@@ -12,6 +12,11 @@ final class Workout {
     var isDeload: Bool
     var createdAt: Date
     var updatedAt: Date
+    // Cloud sync bookkeeping (docs/sync-architecture.md); all optional/defaulted so the store migrates lightly.
+    var deletedAt: Date?
+    var syncedAt: Date?
+    var syncDigest: String?
+    var schemaVersion: Int = 1
 
     @Relationship var user: User?
     @Relationship var template: WorkoutTemplate?

@@ -5,7 +5,8 @@ import SwiftData
 //  - warm-up sets are saved and shown in the logger/history rows, but never counted in
 //    set totals, volume, PRs, muscle heat or exercise stats ("working sets");
 //  - a draft workout (in-progress, crash-recoverable) is not history, so its logs are
-//    excluded from anything computed across past sessions.
+//    excluded from anything computed across past sessions;
+//  - a soft-deleted workout (`deletedAt` set, kept as a sync tombstone) is gone from every stat and list.
 
 extension SetLog {
     /// False for warm-up sets.
@@ -14,8 +15,8 @@ extension SetLog {
 
 extension ExerciseLog {
     var workingSets: [SetLog] { sets.filter(\.isWorking) }
-    /// Belongs to a finished (non-draft) workout. Orphan logs count as finished.
-    var isFinal: Bool { workout?.isDraft != true }
+    /// Belongs to a finished (non-draft), non-deleted workout. Orphan logs count as finished.
+    var isFinal: Bool { workout?.isDraft != true && workout?.deletedAt == nil }
 }
 
 extension Workout {
@@ -44,7 +45,7 @@ extension ModelContext {
     /// Logs of one exercise from finished workouts, newest first (drafts excluded).
     func finalLogs(forExercise exerciseId: UUID, limit: Int? = nil) -> [ExerciseLog] {
         var descriptor = FetchDescriptor<ExerciseLog>(
-            predicate: #Predicate<ExerciseLog> { $0.exercise?.id == exerciseId && $0.workout?.isDraft == false },
+            predicate: #Predicate<ExerciseLog> { $0.exercise?.id == exerciseId && $0.workout?.isDraft == false && $0.workout?.deletedAt == nil },
             sortBy: [SortDescriptor(\ExerciseLog.createdAt, order: .reverse)]
         )
         if let limit { descriptor.fetchLimit = limit }

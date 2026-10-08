@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class User {
+final class User: SyncRecord {
     var id: UUID
     var name: String
     var username: String
@@ -15,6 +15,11 @@ final class User {
     var avatarData: Data?
     var createdAt: Date
     var updatedAt: Date
+    // Cloud sync bookkeeping (docs/sync-architecture.md); all optional/defaulted so the store migrates lightly.
+    var deletedAt: Date?
+    var syncedAt: Date?
+    var syncDigest: String?
+    var schemaVersion: Int = 1
 
     @Relationship(deleteRule: .nullify) var selectedSplit: Split?
     @Relationship(deleteRule: .cascade, inverse: \Workout.user) var workouts: [Workout]

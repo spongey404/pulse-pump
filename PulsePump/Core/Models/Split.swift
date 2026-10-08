@@ -2,13 +2,18 @@ import Foundation
 import SwiftData
 
 @Model
-final class Split {
+final class Split: SyncRecord {
     var id: UUID
     var type: SplitType
     var name: String
     var days: [SplitDay]
     var createdAt: Date
     var updatedAt: Date
+    // Cloud sync bookkeeping (docs/sync-architecture.md); all optional/defaulted so the store migrates lightly.
+    var deletedAt: Date?
+    var syncedAt: Date?
+    var syncDigest: String?
+    var schemaVersion: Int = 1
 
     init(
         type: SplitType,
