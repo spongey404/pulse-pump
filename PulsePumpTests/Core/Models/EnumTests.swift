@@ -114,10 +114,17 @@ struct EnumTests {
         }
     }
 
-    // MARK: - FriendshipStatus
+    // MARK: - Social enums (raw values are the strings the security rules check)
 
-    @Test func friendshipStatusRawValues() {
-        #expect(FriendshipStatus.pending.rawValue == "pending")
-        #expect(FriendshipStatus.accepted.rawValue == "accepted")
+    @Test func postAudienceRawValues() {
+        #expect(PostAudience.allCases.map(\.rawValue) == ["everyone", "friends", "onlyMe"])
+        #expect(PrivacyLevel.friendsOnly.audience == .friends)
+        #expect(PrivacyLevel(audience: .friends) == .friendsOnly)
+    }
+
+    @Test func inviteStatusRawValues() {
+        #expect(ChallengeInviteStatus.pending.rawValue == "pending")
+        #expect(ChallengeInviteStatus.accepted.rawValue == "accepted")
+        #expect(ChallengeInviteStatus.declined.rawValue == "declined")
     }
 }
