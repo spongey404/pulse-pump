@@ -30,6 +30,9 @@ struct FeedSetLog: Codable {
     var distance: Double // metres/feet, for distance-based (0 otherwise)
     var setType: String  // SetType.rawValue
     var side: String?    // Side.rawValue, nil when bilateral
+
+    /// False for warm-up sets, which are shown in the breakdown but never counted in totals.
+    var isWorking: Bool { setType != SetType.warmup.rawValue }
 }
 
 struct FeedExercise: Codable, Identifiable {
@@ -48,6 +51,9 @@ struct FeedExercise: Codable, Identifiable {
     // time (see `WorkoutViewModel.completeWorkout`) — real per-exercise tags, not derived.
     var primaryMuscles: [String] = []
     var secondaryMuscles: [String] = []
+
+    /// Sets that count toward set totals / volume (warm-ups excluded).
+    var workingSets: [FeedSetLog] { sets.filter(\.isWorking) }
 }
 
 // MARK: - Feed post
@@ -77,13 +83,18 @@ struct WorkoutFeedItem: Codable, Identifiable {
     /// False when posted via the composer overflow's "Post without body map" (stats and
     /// photo only) — feed/session-sheet rendering skips the body-map slide when false.
     var includesBodyMap: Bool
+    /// Who the poster chose to share this with (`PrivacyLevel.rawValue`: everyone / friendsOnly /
+    /// onlyMe), captured at post time. nil on posts that pre-date the field. Enforcement is the
+    /// backend's job; this only carries the choice.
+    var audience: String?
 
     init(id: String = UUID().uuidString, userId: String, username: String,
          templateName: String? = nil, exerciseCount: Int, durationSeconds: Int,
          caloriesBurned: Int, musclesWorked: [String], prCount: Int = 0,
          improvedCount: Int = 0, totalExercises: Int = 0, date: Date,
          caption: String = "", exercises: [FeedExercise] = [],
-         photoURL: String? = nil, taggedFriendUids: [String] = [], includesBodyMap: Bool = true) {
+         photoURL: String? = nil, taggedFriendUids: [String] = [], includesBodyMap: Bool = true,
+         audience: String? = nil) {
         self.id = id
         self.userId = userId
         self.username = username
@@ -103,6 +114,7 @@ struct WorkoutFeedItem: Codable, Identifiable {
         self.photoURL = photoURL
         self.taggedFriendUids = taggedFriendUids
         self.includesBodyMap = includesBodyMap
+        self.audience = audience
     }
 }
 

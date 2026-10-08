@@ -57,7 +57,7 @@ struct ProgramsTabView: View {
     private func setCount(for muscle: MuscleGroup) -> Int {
         recentWorkouts.flatMap(\.exerciseLogs)
             .filter { $0.exercise?.primaryMuscleGroups.contains(muscle) == true }
-            .flatMap(\.sets).count
+            .flatMap(\.workingSets).count
     }
 
     private var programsTickerItems: [TickerItem] {

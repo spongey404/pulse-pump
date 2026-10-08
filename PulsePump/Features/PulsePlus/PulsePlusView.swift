@@ -128,11 +128,11 @@ struct PulsePlusView: View {
         let logs = last.exerciseLogs.sorted { $0.order < $1.order }.prefix(3)
         return logs.compactMap { log -> PredictionRow? in
             guard let ex = log.exercise else { return nil }
-            let tops = log.sets.filter { $0.weight > 0 }
+            let tops = log.workingSets.filter { $0.weight > 0 }
             guard let top = tops.max(by: { $0.weight < $1.weight }) else { return nil }
             // Prior sessions of the same exercise, newest first.
             let history = workouts.compactMap { w in
-                w.exerciseLogs.first(where: { $0.exercise?.id == ex.id })?.sets.map(\.weight).max()
+                w.exerciseLogs.first(where: { $0.exercise?.id == ex.id })?.workingSets.map(\.weight).max()
             }
             var target = top.weight
             if history.count >= 2, history[0] > history[1] { target = history[0] + (history[0] - history[1]) }

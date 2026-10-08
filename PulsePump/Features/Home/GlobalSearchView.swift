@@ -356,7 +356,7 @@ struct GlobalSearchView: View {
                     Text(relativeDate(workout.date))
                         .font(.spaceMono(9)).foregroundStyle(Color.inkMuted)
                     Text("·").font(.spaceMono(9)).foregroundStyle(Color.inkFaint)
-                    Text("\(workout.exerciseLogs.flatMap(\.sets).count) SETS")
+                    Text("\(workout.workingSetCount) SETS")
                         .font(.spaceMono(9)).foregroundStyle(Color.inkMuted)
                 }
             }

@@ -135,7 +135,7 @@ struct FriendProfileView: View {
     }
 
     private var volumeLabel: String {
-        let total = recentPosts.flatMap(\.exercises).flatMap(\.sets).reduce(0.0) { $0 + $1.weight * Double($1.reps) }
+        let total = recentPosts.flatMap(\.exercises).flatMap(\.workingSets).reduce(0.0) { $0 + $1.weight * Double($1.reps) }
         return total >= 1000 ? String(format: "%.1fK", total / 1000) : "\(Int(total))"
     }
 
@@ -144,7 +144,7 @@ struct FriendProfileView: View {
             Text(day.date.formatted(.dateTime.weekday(.wide))).font(.archivo(15, weight: .medium)).foregroundStyle(Color.inkPrimary)
             Spacer()
             if let post = day.post {
-                Text("\(post.exercises.reduce(0) { $0 + $1.sets.count }) SETS").font(Font.spaceMono(10)).foregroundStyle(Color.inkMuted)
+                Text("\(post.exercises.reduce(0) { $0 + $1.workingSets.count }) SETS").font(Font.spaceMono(10)).foregroundStyle(Color.inkMuted)
                 Text("›").font(Font.spaceMono(12)).foregroundStyle(Color.inkMuted)
             } else {
                 Text("—").font(Font.spaceMono(10)).foregroundStyle(Color.inkFaint)
