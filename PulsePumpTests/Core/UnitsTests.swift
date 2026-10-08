@@ -176,12 +176,12 @@ struct UnitsTests {
 
     @Test func lbsOnboardingInputIsStoredAsKgOnce() throws {
         let ctx = ModelContext(try WidgetFixedDataTests.container())
-        let vm = OnboardingViewModel()
+        let vm = OnboardingViewModel(uid: "test", remote: FakeProfileRemote())
         vm.setUnit(.lbs)
         vm.weightText = "180"
         vm.heightFeet = "5"; vm.heightInches = "11"
         #expect(vm.useImperialHeight)
-        vm.completeOnboarding(modelContext: ctx)
+        vm.createLocalUser(modelContext: ctx)
         let user = try #require(try ctx.fetch(FetchDescriptor<User>()).first)
         #expect(abs(user.weight - 81.6466) < 0.001)           // 180 lb, not 180 kg and not converted twice
         #expect(abs(user.height - 180.34) < 0.01)
@@ -190,7 +190,7 @@ struct UnitsTests {
     }
 
     @Test func switchingOnboardingUnitKeepsTheSameBodyWeight() {
-        let vm = OnboardingViewModel()
+        let vm = OnboardingViewModel(uid: "test", remote: FakeProfileRemote())
         vm.weightText = "80"
         vm.setUnit(.lbs)
         #expect(vm.weightText == "176.5")                     // 176.37 lb snapped to 0.5

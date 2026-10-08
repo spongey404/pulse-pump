@@ -6,7 +6,7 @@ struct AgeStepView: View {
 
     var body: some View {
         OnboardingStepLayout(
-            label: "04 / BODY",
+            label: "05 / BODY",
             title: "How old are you?",
             subtitle: "Used to calibrate calorie estimates. Not shown publicly.",
             canContinue: viewModel.canContinue,

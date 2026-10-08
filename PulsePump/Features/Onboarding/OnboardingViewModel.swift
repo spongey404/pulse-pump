@@ -1,39 +1,31 @@
 import SwiftUI
 import SwiftData
-import AuthenticationServices
-import FirebaseAuth
 import Observation
 
+/// Onboarding is only for a brand-new account (signed in, nothing in the cloud, nothing local).
+/// Sign-in itself lives in `Features/Auth`; returning users never reach this flow.
 enum OnboardingStep: Int, CaseIterable {
-    case welcome = 0
-    case name
+    case name = 0
+    case handle
     case weight
     case height
     case age
     case gender
-    case unitPreference  // kept for Codable compat, skipped in flow
     case experienceLevel
     case splitSelection
     case tutorialPrompt
 
-    // Ordered flow — no separate unit-preference step; units collected inline
-    static let flow: [OnboardingStep] = [
-        .welcome, .name, .weight, .height, .age, .gender, .experienceLevel, .splitSelection, .tutorialPrompt
-    ]
-
-    // Steps that show the progress bar (1 of 8 … 8 of 8)
-    static let progressSteps: [OnboardingStep] = [
-        .name, .weight, .height, .age, .gender, .experienceLevel, .splitSelection, .tutorialPrompt
-    ]
+    static let flow: [OnboardingStep] = allCases
+    /// Steps that show the progress bar.
+    static let progressSteps: [OnboardingStep] = allCases
 }
 
 @MainActor
 @Observable
 class OnboardingViewModel {
-    var currentStep: OnboardingStep = .welcome
-    var isAuthenticated = false
-    var isLoading = false
-    var authError: String?
+    var currentStep: OnboardingStep = .name
+    var isSubmitting = false
+    var submitError: String?
 
     // Profile
     var name = ""
@@ -49,19 +41,19 @@ class OnboardingViewModel {
     var selectedSplitType: SplitType = .none
     var wantsTutorial = false
 
-    // Set to true after sign-in (not sign-up) so container skips profile steps
-    var shouldSkipToComplete = false
+    /// Username entry + live availability.
+    let handleInput: HandleInput
+    let uid: String
 
-    // Email auth
-    var showEmailAuth = false
-    var isSignUp = false
-    var email = ""
-    var password = ""
+    @ObservationIgnored private let remote: ProfileRemote
+    /// Called after the cloud profile and local user both exist (the gate claims the local store).
+    @ObservationIgnored var onAccountCreated: ((String) -> Void)?
 
-    let authService: FirebaseAuthService
-
-    init(authService: FirebaseAuthService = .init()) {
-        self.authService = authService
+    init(uid: String, prefilledName: String = "", remote: ProfileRemote, debounce: Duration = .milliseconds(350)) {
+        self.uid = uid
+        self.remote = remote
+        self.name = prefilledName
+        self.handleInput = HandleInput(remote: remote, uid: uid, debounce: debounce)
     }
 
     /// Switch the weight unit, re-expressing any weight already typed so the same body weight is kept.
@@ -75,10 +67,12 @@ class OnboardingViewModel {
         useImperialHeight = (unit == .lbs)
     }
 
+    var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
+
     var canContinue: Bool {
         switch currentStep {
-        case .welcome:     return isAuthenticated
-        case .name:        return !name.trimmingCharacters(in: .whitespaces).isEmpty
+        case .name:        return !trimmedName.isEmpty
+        case .handle:      return handleInput.isAvailable
         case .weight:
             guard let kg = unitPreference.parseKg(weightText), kg > 0 else { return false }
             return true
@@ -92,7 +86,7 @@ class OnboardingViewModel {
         case .age:
             guard let a = parseWholeNumber(ageText), a > 0, a < 120 else { return false }
             return true
-        case .gender, .unitPreference, .experienceLevel, .splitSelection, .tutorialPrompt:
+        case .gender, .experienceLevel, .splitSelection, .tutorialPrompt:
             return true
         }
     }
@@ -111,7 +105,9 @@ class OnboardingViewModel {
     func advance() {
         let flow = OnboardingStep.flow
         guard let idx = flow.firstIndex(of: currentStep), idx + 1 < flow.count else { return }
-        withAnimation(.easeInOut(duration: 0.25)) { currentStep = flow[idx + 1] }
+        let next = flow[idx + 1]
+        if next == .handle { Task { await suggestHandleIfEmpty() } }
+        withAnimation(.easeInOut(duration: 0.25)) { currentStep = next }
     }
 
     func goBack() {
@@ -120,22 +116,80 @@ class OnboardingViewModel {
         withAnimation(.easeInOut(duration: 0.25)) { currentStep = flow[idx - 1] }
     }
 
-    func completeOnboarding(modelContext: ModelContext) {
-        // weightText is typed in `unitPreference`; User.weight is always kg.
-        let weightValue = unitPreference.parseKg(weightText) ?? 0
+    /// First suggestion from the name ("Alex Smith" -> "alex_smith"), checked right away.
+    func suggestHandleIfEmpty() async {
+        guard handleInput.handle.isEmpty else { return }
+        let suggestion = HandleValidator.suggestion(from: trimmedName)
+        guard !suggestion.isEmpty else { return }
+        await handleInput.prefill(suggestion)
+    }
 
-        var heightCm: Double
+    // MARK: - Building the account
+
+    /// Height in cm from whichever input system is active.
+    var heightCm: Double {
         if useImperialHeight {
-            let feet = parseDecimal(heightFeet) ?? 0
-            let inches = parseDecimal(heightInches) ?? 0
-            heightCm = UnitPreference.cm(feet: feet, inches: inches)
-        } else {
-            heightCm = parseDecimal(heightText) ?? 0
+            return UnitPreference.cm(feet: parseDecimal(heightFeet) ?? 0, inches: parseDecimal(heightInches) ?? 0)
         }
+        return parseDecimal(heightText) ?? 0
+    }
 
+    /// weightText is typed in `unitPreference`; stored weight is always kg.
+    var weightKg: Double { unitPreference.parseKg(weightText) ?? 0 }
+
+    /// The cloud-side base fields. Contains no stats or counters.
+    func makeNewAccountProfile() -> NewAccountProfile {
+        NewAccountProfile(
+            uid: uid,
+            handle: handleInput.handle,
+            displayName: trimmedName,
+            unit: unitPreference.rawValue,
+            experienceLevel: (experienceLevel ?? .beginner).rawValue,
+            gender: (gender ?? .preferNotToSay).rawValue,
+            age: parseWholeNumber(ageText) ?? 0,
+            heightCm: heightCm,
+            weightKg: weightKg
+        )
+    }
+
+    /// Creates `users/{uid}`, `profiles/{uid}` and `usernames/{handle}` atomically, then the local `User`.
+    /// Nothing local is created if the remote write fails. Returns true on success.
+    @discardableResult
+    func submit(modelContext: ModelContext) async -> Bool {
+        guard !isSubmitting else { return false }
+        if let problem = HandleValidator.validate(handleInput.handle) {
+            submitError = problem.message
+            currentStep = .handle
+            return false
+        }
+        isSubmitting = true
+        submitError = nil
+        defer { isSubmitting = false }
+        do {
+            try await remote.createAccount(makeNewAccountProfile())
+        } catch let error as ProfileRemoteError {
+            if error == .handleTaken {
+                handleInput.markTaken()
+                withAnimation(.easeInOut(duration: 0.25)) { currentStep = .handle }
+            }
+            submitError = error.message
+            return false
+        } catch {
+            submitError = "Couldn't create your account. Please try again."
+            return false
+        }
+        createLocalUser(modelContext: modelContext)
+        onAccountCreated?(uid)
+        return true
+    }
+
+    /// Local half of onboarding: `User` (+ split, bodyweight entry, tutorial flag).
+    @discardableResult
+    func createLocalUser(modelContext: ModelContext) -> User {
         let user = User(
-            name: name.trimmingCharacters(in: .whitespaces),
-            weight: weightValue,
+            name: trimmedName,
+            username: handleInput.handle,
+            weight: weightKg,
             height: heightCm,
             age: parseWholeNumber(ageText) ?? 0,
             gender: gender ?? .preferNotToSay,
@@ -152,155 +206,6 @@ class OnboardingViewModel {
         modelContext.insert(user)
         BodyweightLog.record(kg: user.weight)
         UserDefaults.standard.set(wantsTutorial, forKey: "wantsTutorial")
-
-        // Sync user profile to Firestore
-        if let uid = Auth.auth().currentUser?.uid {
-            let username = name.trimmingCharacters(in: .whitespaces).lowercased().replacingOccurrences(of: " ", with: "")
-            let profile = FirestoreUserProfile(
-                uid: uid,
-                username: username,
-                displayName: name.trimmingCharacters(in: .whitespaces)
-            )
-            Task {
-                try? await FirestoreService().createOrUpdateUserProfile(profile)
-            }
-        }
-    }
-
-    // MARK: - Apple Sign In
-
-    private var appleCoordinator: AppleSignInCoordinator?
-
-    func signInWithApple() {
-        let nonceData = authService.prepareAppleSignIn()
-        let request = ASAuthorizationAppleIDProvider().createRequest()
-        request.requestedScopes = [.fullName, .email]
-        request.nonce = nonceData.hashedNonce
-
-        let coordinator = AppleSignInCoordinator(viewModel: self)
-        appleCoordinator = coordinator
-
-        let controller = ASAuthorizationController(authorizationRequests: [request])
-        controller.delegate = coordinator
-        controller.presentationContextProvider = coordinator
-        controller.performRequests()
-    }
-
-    func processAppleCredential(_ credential: ASAuthorizationAppleIDCredential) {
-        Task {
-            isLoading = true
-            defer { isLoading = false }
-            do {
-                let authResult = try await authService.signInWithApple(credential: credential)
-                if name.isEmpty, let displayName = authResult.displayName {
-                    name = displayName
-                }
-                isAuthenticated = true
-                if authResult.isNewUser {
-                    advance()
-                } else {
-                    shouldSkipToComplete = true
-                }
-            } catch {
-                authError = error.localizedDescription
-            }
-        }
-    }
-
-    // Legacy callbacks kept for any remaining SignInWithAppleButton usage
-    func handleAppleSignInRequest(_ request: ASAuthorizationAppleIDRequest) {
-        let nonceData = authService.prepareAppleSignIn()
-        request.requestedScopes = [.fullName, .email]
-        request.nonce = nonceData.hashedNonce
-    }
-
-    func handleAppleSignInCompletion(_ result: Result<ASAuthorization, Error>) {
-        switch result {
-        case .success(let authorization):
-            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else { return }
-            processAppleCredential(credential)
-        case .failure(let error):
-            if (error as NSError).code == ASAuthorizationError.canceled.rawValue { return }
-            authError = error.localizedDescription
-        }
-    }
-
-    // MARK: - Google Sign In
-
-    func signInWithGoogle() {
-        Task {
-            isLoading = true
-            defer { isLoading = false }
-            do {
-                let result = try await authService.signInWithGoogle()
-                if name.isEmpty, let displayName = result.displayName {
-                    name = displayName
-                }
-                isAuthenticated = true
-                if result.isNewUser {
-                    advance()
-                } else {
-                    shouldSkipToComplete = true
-                }
-            } catch {
-                authError = error.localizedDescription
-            }
-        }
-    }
-
-    // MARK: - Email Auth
-
-    func submitEmailAuth() {
-        Task {
-            isLoading = true
-            defer { isLoading = false }
-            do {
-                if isSignUp {
-                    _ = try await authService.signUpWithEmail(email: email, password: password)
-                    isAuthenticated = true
-                    showEmailAuth = false
-                    advance()
-                } else {
-                    _ = try await authService.signInWithEmail(email: email, password: password)
-                    isAuthenticated = true
-                    showEmailAuth = false
-                    shouldSkipToComplete = true
-                }
-            } catch {
-                authError = error.localizedDescription
-            }
-        }
-    }
-}
-
-// MARK: - Apple Sign In coordinator (programmatic flow, no SignInWithAppleButton required)
-
-final class AppleSignInCoordinator: NSObject,
-    ASAuthorizationControllerDelegate,
-    ASAuthorizationControllerPresentationContextProviding
-{
-    private weak var viewModel: OnboardingViewModel?
-
-    init(viewModel: OnboardingViewModel) {
-        self.viewModel = viewModel
-    }
-
-    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap { $0.windows }
-            .first { $0.isKeyWindow } ?? ASPresentationAnchor()
-    }
-
-    func authorizationController(controller: ASAuthorizationController,
-                                 didCompleteWithAuthorization authorization: ASAuthorization) {
-        guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else { return }
-        Task { @MainActor in self.viewModel?.processAppleCredential(credential) }
-    }
-
-    func authorizationController(controller: ASAuthorizationController,
-                                 didCompleteWithError error: Error) {
-        guard (error as NSError).code != ASAuthorizationError.canceled.rawValue else { return }
-        Task { @MainActor in self.viewModel?.authError = error.localizedDescription }
+        return user
     }
 }

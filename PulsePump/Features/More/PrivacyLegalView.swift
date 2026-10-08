@@ -46,12 +46,7 @@ struct PrivacyLegalView: View {
             }
         }
         .background(Color.canvasBg.ignoresSafeArea())
-        .alert("Delete Account", isPresented: $showDeleteConfirm) {
-            Button("Cancel", role: .cancel) { }
-            Button("Delete", role: .destructive) { }
-        } message: {
-            Text("Account deletion isn't available in the app yet. Contact support to delete your data.")
-        }
+        .deleteAccountFlow(isPresented: $showDeleteConfirm)
     }
 
     /// Legal document URLs aren't defined yet; wire these once the hosted pages exist.

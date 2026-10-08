@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import FirebaseCore
 import GoogleSignIn
 
 class AppDelegate: NSObject, UIApplicationDelegate {
@@ -8,7 +7,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        FirebaseApp.configure()
         return true
     }
 
@@ -22,7 +20,26 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 struct PulsePumpApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 
-    var sharedModelContainer: ModelContainer = {
+    let sharedModelContainer: ModelContainer
+    @State private var session: AuthSession
+    @State private var gate: AccountGate
+
+    init() {
+        // Firebase must be configured (and pointed at the emulator, if requested) before any Auth/Firestore access.
+        FirebaseBootstrap.configure()
+        let container = Self.makeModelContainer()
+        sharedModelContainer = container
+
+        // The lead replaces these defaults with the SyncService-backed lifecycle / restore gate.
+        let lifecycle = SwiftDataSyncLifecycle(container: container)
+        let session = AuthSession(provider: FirebaseAuthProvider(), lifecycle: lifecycle)
+        session.start()
+        _session = State(initialValue: session)
+        _gate = State(initialValue: AccountGate(session: session, remote: FirestoreProfileRemote(),
+                                                lifecycle: lifecycle, restoreGate: ImmediateRestoreGate()))
+    }
+
+    private static func makeModelContainer() -> ModelContainer {
         let schema = Schema([
             User.self,
             Exercise.self,
@@ -42,7 +59,7 @@ struct PulsePumpApp: App {
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
-    }()
+    }
 
     @AppStorage("appTheme") private var appTheme: String = AppTheme.system.rawValue
 
@@ -57,9 +74,9 @@ struct PulsePumpApp: App {
                 // `-debugGallery <section id or all>` shows the widget gallery on launch (no onboarding needed).
                 if let g = UserDefaults.standard.string(forKey: "debugGallery") {
                     WidgetGalleryView(section: g == "all" ? nil : g)
-                } else { RootView() }
+                } else { RootView(session: session, gate: gate) }
                 #else
-                RootView()
+                RootView(session: session, gate: gate)
                 #endif
             }
                 .preferredColorScheme(preferredColorScheme)

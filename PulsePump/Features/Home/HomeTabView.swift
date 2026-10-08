@@ -5,6 +5,7 @@ import FirebaseAuth
 struct HomeTabView: View {
     @Bindable var workoutViewModel: WorkoutViewModel
     @Environment(\.modelContext) private var modelContext
+    @Environment(AuthSession.self) private var session
     @Query private var users: [User]
     @Query(filter: #Predicate<Workout> { !$0.isDraft && $0.deletedAt == nil }, sort: \Workout.date, order: .reverse)
     private var workouts: [Workout]
@@ -289,8 +290,8 @@ struct HomeTabView: View {
                 .buttonStyle(.plain)
 
                 Button {
-                    try? FirebaseAuthService().signOut()
                     showProfileMenu = false
+                    Task { await session.signOut() }
                 } label: {
                     Text("SIGN OUT")
                         .font(.archivo(11, weight: .black))

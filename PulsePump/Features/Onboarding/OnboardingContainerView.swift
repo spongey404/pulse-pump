@@ -2,24 +2,29 @@ import SwiftUI
 import SwiftData
 
 struct OnboardingContainerView: View {
-    @State private var viewModel = OnboardingViewModel()
+    @State private var viewModel: OnboardingViewModel
     @Environment(\.modelContext) private var modelContext
+
+    /// `onCreated` runs once the cloud profile and the local user both exist.
+    init(uid: String, prefilledName: String, remote: ProfileRemote, onCreated: @escaping (String) -> Void) {
+        let model = OnboardingViewModel(uid: uid, prefilledName: prefilledName, remote: remote)
+        model.onAccountCreated = onCreated
+        _viewModel = State(initialValue: model)
+    }
 
     var body: some View {
         ZStack {
             Color.canvasBg.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                if viewModel.currentStep != .welcome {
-                    progressHeader
-                }
+                progressHeader
 
                 Group {
                     switch viewModel.currentStep {
-                    case .welcome:
-                        WelcomeView(viewModel: viewModel)
                     case .name:
                         NameStepView(viewModel: viewModel)
+                    case .handle:
+                        HandleStepView(viewModel: viewModel)
                     case .weight:
                         WeightStepView(viewModel: viewModel)
                     case .height:
@@ -28,16 +33,13 @@ struct OnboardingContainerView: View {
                         AgeStepView(viewModel: viewModel)
                     case .gender:
                         GenderStepView(viewModel: viewModel)
-                    case .unitPreference:
-                        // Unit captured inline in weight/height — skip straight through
-                        Color.clear.onAppear { viewModel.advance() }
                     case .experienceLevel:
                         ExperienceLevelStepView(viewModel: viewModel)
                     case .splitSelection:
                         SplitSelectionStepView(viewModel: viewModel)
                     case .tutorialPrompt:
                         TutorialPromptStepView(viewModel: viewModel) {
-                            viewModel.completeOnboarding(modelContext: modelContext)
+                            Task { await viewModel.submit(modelContext: modelContext) }
                         }
                     }
                 }
@@ -47,16 +49,26 @@ struct OnboardingContainerView: View {
                 ))
             }
         }
-        .onChange(of: viewModel.shouldSkipToComplete) { _, skip in
-            if skip { viewModel.completeOnboarding(modelContext: modelContext) }
+        .overlay {
+            if viewModel.isSubmitting {
+                ZStack {
+                    Color.canvasBg.opacity(0.8).ignoresSafeArea()
+                    VStack(spacing: 10) {
+                        ProgressView().tint(Color.accentInk)
+                        Text("CREATING YOUR ACCOUNT")
+                            .font(.spaceMono(10, weight: .bold)).tracking(1.5)
+                            .foregroundStyle(Color.inkMuted)
+                    }
+                }
+            }
         }
-        .alert("Error", isPresented: .init(
-            get: { viewModel.authError != nil },
-            set: { if !$0 { viewModel.authError = nil } }
+        .alert("Couldn't finish setup", isPresented: .init(
+            get: { viewModel.submitError != nil },
+            set: { if !$0 { viewModel.submitError = nil } }
         )) {
-            Button("OK") { viewModel.authError = nil }
+            Button("OK") { viewModel.submitError = nil }
         } message: {
-            Text(viewModel.authError ?? "")
+            Text(viewModel.submitError ?? "")
         }
     }
 

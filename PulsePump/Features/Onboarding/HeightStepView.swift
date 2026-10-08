@@ -7,7 +7,7 @@ struct HeightStepView: View {
 
     var body: some View {
         OnboardingStepLayout(
-            label: "03 / BODY",
+            label: "04 / BODY",
             title: "How tall are you?",
             subtitle: "Used with weight to estimate your baseline metabolism.",
             canContinue: viewModel.canContinue,

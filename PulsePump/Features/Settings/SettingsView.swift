@@ -29,6 +29,7 @@ struct SettingsView: View {
     var onBack: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(AuthSession.self) private var session
     @Query private var users: [User]
     @State private var pulsePlusService = PulsePlusService()
     @State private var navigateToEditProfile = false
@@ -36,6 +37,8 @@ struct SettingsView: View {
     @State private var showData = false
     @State private var showEquipment = false
     @State private var showSignOutAlert = false
+    @State private var showDeleteAccount = false
+    @State private var showChangeUsername = false
 
     @AppStorage("calorieFormula") private var calorieFormulaRaw = ""
     @AppStorage("restTimerMode") private var restTimerModeRaw = ""
@@ -77,8 +80,12 @@ struct SettingsView: View {
             Button("Cancel", role: .cancel) {}
             Button("Sign Out", role: .destructive) { signOut() }
         } message: {
-            Text("You'll need to sign back in to access your data.")
+            Text("This removes your data from this device. It stays safe in your account and comes back when you sign in.")
         }
+        .sheet(isPresented: $showChangeUsername) {
+            if let user { ChangeUsernameSheet(user: user) }
+        }
+        .deleteAccountFlow(isPresented: $showDeleteAccount)
     }
 
     private var mainContent: some View {
@@ -100,6 +107,11 @@ struct SettingsView: View {
         // ACCOUNT
         MoreSectionLabel(title: "ACCOUNT")
         MoreRow(icon: "person.crop.circle", label: "Edit Profile") { navigateToEditProfile = true }
+        MoreRow(icon: "envelope", label: "Email", value: session.user?.email ?? "—", chevron: false) { }
+        MoreRow(icon: "key", label: "Signed In With", value: (session.user?.providerSummary ?? "").uppercased(), chevron: false) { }
+        MoreRow(icon: "at", label: "Username", value: user.username.isEmpty ? "—" : "@\(user.username)") {
+            showChangeUsername = true
+        }
 
         // UNITS & MEASUREMENTS
         MoreSectionLabel(title: "UNITS & MEASUREMENTS")
@@ -170,6 +182,7 @@ struct SettingsView: View {
         MoreSectionLabel(title: "")
         MoreRow(icon: "rectangle.portrait.and.arrow.right", label: "Sign Out",
                 destructive: true, chevron: false) { showSignOutAlert = true }
+        MoreRow(icon: "trash", label: "Delete Account", destructive: true, chevron: false) { showDeleteAccount = true }
     }
 
     // MARK: - Bindings
@@ -234,7 +247,7 @@ struct SettingsView: View {
     // MARK: - Actions
 
     private func signOut() {
-        try? FirebaseAuthService().signOut()
+        Task { await session.signOut() }
     }
 }
 

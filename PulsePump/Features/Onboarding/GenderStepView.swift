@@ -5,7 +5,7 @@ struct GenderStepView: View {
 
     var body: some View {
         OnboardingStepLayout(
-            label: "05 / BODY",
+            label: "06 / BODY",
             title: "Which best describes you?",
             subtitle: "Used only for calorie burn calculations.",
             canContinue: viewModel.canContinue,
