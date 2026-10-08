@@ -6,6 +6,7 @@ struct WorkoutCompletionView: View {
     let data: WorkoutCompletionData
     let userName: String
     let onDismiss: () -> Void
+    @Environment(\.weightUnit) private var unit
 
     @State private var caption = ""
     @State private var showComposerMenu = false
@@ -281,13 +282,13 @@ struct WorkoutCompletionView: View {
 
     private var volString: String {
         let t = data.exercises.flatMap(\.sets).reduce(0.0) { $0 + $1.weight * Double($1.reps) }
-        return t >= 1000 ? String(format: "%.1fK", t / 1000) : "\(Int(t))"
+        return unit.compactVolume(t)   // set weights are kg
     }
 
     private var statsRow: some View {
         HStack(spacing: 6) {
             KPIBlock(label: "SETS", value: "\(data.totalSets)", alignment: .center)
-            KPIBlock(label: "VOLUME", value: volString, alignment: .center)
+            KPIBlock(label: "VOL · \(unit.label)", value: volString, alignment: .center)
             KPIBlock(label: "STREAK", value: "\(data.streakCount)D", alignment: .center)
             KPIBlock(label: "PRS", value: "\(data.prCount)", valueColor: .prGold, alignment: .center)
         }
@@ -335,7 +336,7 @@ struct WorkoutCompletionView: View {
                                     .tracking(1.2)
                                     .lineLimit(1)
                                 Text(firstPR.isWeightPR
-                                     ? "\(String(format: "%g", firstPR.weightDelta))KG"
+                                     ? unit.formatTight(firstPR.weightDelta)
                                      : "\(firstPR.repsDelta) REP\(firstPR.repsDelta == 1 ? "" : "S")")
                                     .font(Font.spaceMono(8, weight: .bold))
                                     .foregroundStyle(Color.signalUp)
@@ -420,7 +421,7 @@ struct WorkoutCompletionView: View {
 
     private func bestSetText(_ ex: FeedExercise) -> String {
         guard let best = ex.sets.max(by: { $0.weight * Double($0.reps) < $1.weight * Double($1.reps) }) else { return "—" }
-        return best.weight > 0 ? "\(String(format: "%g", best.weight))×\(best.reps)" : "\(best.reps)r"
+        return best.weight > 0 ? "\(unit.number(best.weight))×\(best.reps)" : "\(best.reps)r"
     }
 
     // MARK: - Caption Composer

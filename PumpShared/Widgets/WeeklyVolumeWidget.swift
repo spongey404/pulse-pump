@@ -56,7 +56,7 @@ struct WeeklyVolumeWidget: View {
     private var smallB: some View {
         let quotes: [(String, String, Double)] = [
             ("SETS", "\(f.setsThisWeek)", setsDeltaPct),
-            ("VOL T", PWFormat.trimmed(f.volumeTonnes), f.volumeDeltaPct),
+            (snap.unit == .kg ? "VOL T" : "VOL KLB", PWFormat.trimmed(snap.unit.display(f.volumeTonnes * 1000) / 1000), f.volumeDeltaPct),
             ("HRS", f.trainingHours, f.hoursDeltaPct),
         ]
         return VStack(spacing: 0) {

@@ -60,7 +60,7 @@ struct NextWorkoutWidget: View {
             PWHair().padding(.top, 12)
             Text("FIRST UP").pwCap(8, tracking: 1.2).padding(.top, 10)
             Text(first?.name ?? "—").pwBody(14).lineLimit(1).padding(.top, 4)
-            Text(first.map { "\($0.target) · \($0.kg) KG" } ?? "").pwMono(10).padding(.top, 2)
+            Text(first.map { "\($0.target) · \($0.kg) \(snap.unit.label)" } ?? "").pwMono(10).padding(.top, 2)
             Spacer(minLength: 0)
             PWConfidenceDots(confidence: f.nextConfidence)
         }
@@ -149,7 +149,7 @@ struct NextWorkoutWidget: View {
             HStack {
                 Text("EXERCISE").pwCap(8, tracking: 1.2).frame(maxWidth: .infinity, alignment: .leading)
                 Text("SETS").pwCap(8, tracking: 1.2).frame(width: 44, alignment: .trailing)
-                Text("KG").pwCap(8, tracking: 1.2).frame(width: 52, alignment: .trailing)
+                Text(snap.unit.label).pwCap(8, tracking: 1.2).frame(width: 52, alignment: .trailing)
             }
             .padding(.horizontal, 16).padding(.vertical, 6)
             .background(PumpTheme.sunken)

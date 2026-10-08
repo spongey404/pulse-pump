@@ -259,7 +259,7 @@ extension WidgetDataService {
             }
             if let (s, _) = best {
                 f.recapPRName = s.name
-                f.recapPRValue = "\(fmt(s.weight))×\(s.reps)"
+                f.recapPRValue = "\(snap.unit.number(s.weight))×\(s.reps)"   // display string; numeric fields stay kg
             }
         }
 
@@ -312,7 +312,7 @@ extension WidgetDataService {
                 if let ls = lastSession {
                     let sameDay = flat.filter { $0.name == ls.name && cal.isDate($0.date, inSameDayAs: ls.date) }
                     let top = sameDay.map(\.weight).max() ?? ls.weight
-                    kg = fmt(top)
+                    kg = snap.unit.number(top)   // display string in the user's unit
                     if te.targetReps == nil, let r = sameDay.first(where: { $0.weight == top })?.reps { reps = String(r) }
                 }
                 return PWExercise(name: te.exerciseName, target: "\(te.targetSets)×\(reps)", kg: kg)
@@ -540,7 +540,7 @@ extension WidgetDataService {
             var meta: String
             if item.prCount > 0, let ex = item.exercises.max(by: { $0.improvementScore < $1.improvementScore }),
                let top = ex.sets.filter({ $0.setType != "warmup" }).max(by: { $0.weight < $1.weight }) {
-                meta = "PR · \(ex.name.uppercased()) \(fmt(top.weight))×\(top.reps)"
+                meta = "PR · \(ex.name.uppercased()) \(UnitPreference.current.number(top.weight))×\(top.reps)"
             } else {
                 let sets = item.exercises.flatMap(\.sets).filter { $0.setType != "warmup" }.count
                 let mins = item.durationSeconds / 60

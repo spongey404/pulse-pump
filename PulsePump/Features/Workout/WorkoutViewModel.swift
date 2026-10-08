@@ -642,6 +642,9 @@ class WorkoutViewModel {
         return (weight, reps)
     }
 
+    /// Display unit for Live Activity text. All VM values (SetEntry.weight, SetLog.weight) stay kg.
+    private var displayUnit: UnitPreference { workout?.user?.unitPreference ?? UnitPreference.current }
+
     private func lastTime(for entry: ExerciseEntry) -> (line: String, date: String) {
         if let cached = lastTimeCache[entry.exerciseId] { return cached }
         var result = (line: "", date: "")
@@ -653,7 +656,7 @@ class WorkoutViewModel {
             )
             if let log = try? ctx.fetch(descriptor).first {
                 let sets = log.sets.sorted { $0.order < $1.order }.prefix(4)
-                result.line = sets.map { String(format: "%g", $0.weight) + " × " + String($0.reps) }.joined(separator: " · ")
+                result.line = sets.map { displayUnit.number($0.weight) + " × " + String($0.reps) }.joined(separator: " · ")
                 var parts: [String] = []
                 if let name = log.workout?.template?.name { parts.append(name.uppercased()) }
                 if let d = log.workout?.duration, d > 0 {
@@ -704,7 +707,8 @@ class WorkoutViewModel {
             state.exerciseShort = String((entry.exerciseName.uppercased().split(separator: " ").first ?? "").prefix(8))
             state.setIndex = pos.set + 1
             state.setCount = entry.sets.count
-            state.nextWeight = planned.weight
+            state.nextWeight = displayUnit.displayText(kgString: planned.weight)   // planned.weight is kg
+            state.weightUnit = displayUnit.label
             state.nextReps = planned.reps
             state.lastTime = last.line
             state.lastTimeDate = last.date

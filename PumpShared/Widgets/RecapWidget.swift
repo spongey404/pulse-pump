@@ -35,8 +35,8 @@ struct RecapWidget: View {
             Text("LAST · \(f.lastWorkoutWeekday)").pwCap()
             Text(f.lastWorkoutName).pwBody(18, weight: .bold).lineLimit(1).padding(.top, 8)
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(PWFormat.thousands(f.recapVolumeKg)).pwMono(24, bold: true)
-                Text("KG").pwCap(8, tracking: 1.2)
+                Text(PWFormat.thousands(snap.unit.display(f.recapVolumeKg))).pwMono(24, bold: true)
+                Text(snap.unit.label).pwCap(8, tracking: 1.2)
             }
             .padding(.top, 6)
             delta
@@ -74,8 +74,8 @@ struct RecapWidget: View {
             VStack(spacing: 0) {
                 PWHair()
                 HStack(alignment: .top, spacing: 0) {
-                    cell("VOLUME KG", width: unit * 1.3, first: true) {
-                        Text(PWFormat.thousands(f.recapVolumeKg)).pwMono(18, bold: true)
+                    cell("VOLUME \(snap.unit.label)", width: unit * 1.3, first: true) {
+                        Text(PWFormat.thousands(snap.unit.display(f.recapVolumeKg))).pwMono(18, bold: true)
                         delta
                     }
                     cell("SETS", width: unit, first: false) { Text("\(f.recapSets)").pwMono(18, bold: true) }

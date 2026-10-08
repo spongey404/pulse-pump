@@ -4,65 +4,55 @@ import SwiftData
 struct InlinePlateView: View {
     let entry: ExerciseEntry
     let equipmentType: EquipmentType
+    @Environment(\.weightUnit) private var unit
 
-    private var barWeight: Double { equipmentType == .ezBar ? 10.0 : 20.0 }
+    /// Bar in kg (20 kg / 45 lb Olympic, EZ 10 kg / 15 lb nominal).
+    private var barKg: Double { equipmentType == .ezBar ? unit.kg(fromDisplay: unit == .kg ? 10 : 15) : unit.olympicBarKg }
 
-    private var availablePlates: [Double] {
-        if let data = UserDefaults.standard.data(forKey: "customPlates"),
-           let plates = try? JSONDecoder().decode([Double].self, from: data) { return plates }
-        return [1.25, 2.5, 5, 10, 15, 20, 25]
-    }
-
-    private var currentWeight: Double? {
-        let weights = entry.sets.compactMap { Double($0.weight) }.filter { $0 > 0 }
+    private var currentWeightKg: Double? {
+        let weights = entry.sets.compactMap { Double($0.weight) }.filter { $0 > 0 }   // SetEntry.weight is kg
         return weights.last
     }
 
-    private var platesPerSide: [(plate: Double, count: Int)] {
-        guard let target = currentWeight, target > barWeight else { return [] }
-        let perSide = (target - barWeight) / 2.0
-        var remaining = perSide
-        var counts: [Double: Int] = [:]
-        for plate in availablePlates.sorted(by: >) {
-            while remaining >= plate - 0.001 { counts[plate, default: 0] += 1; remaining -= plate }
-        }
-        return counts.sorted { $0.key > $1.key }.map { (plate: $0.key, count: $0.value) }
+    private var load: PlateMath.Load? {
+        guard let target = currentWeightKg, target > barKg else { return nil }
+        return PlateMath.load(targetKg: target, barKg: barKg, platesKg: PlateMath.storedPlatesKg(unit: unit), unit: unit)
     }
 
     var body: some View {
-        if let weight = currentWeight, weight > barWeight, !platesPerSide.isEmpty {
+        if let load, !load.plates.isEmpty {
+            let counts = Dictionary(grouping: load.plates, by: \.display).sorted { $0.key > $1.key }
             HStack(spacing: 6) {
                 Image(systemName: "scalemass").font(.mono(9)).foregroundStyle(Color.inkMuted)
                 Text("PER SIDE:")
                     .font(Font.mono(9)).foregroundStyle(Color.inkMuted).tracking(0.5)
-                ForEach(platesPerSide, id: \.plate) { plate, count in
-                    plateChip(plate: plate, count: count)
+                ForEach(counts, id: \.key) { size, plates in
+                    plateChip(plate: plates[0], count: plates.count, size: size)
                 }
                 Spacer()
             }
         }
     }
 
-    private func plateChip(plate: Double, count: Int) -> some View {
-        let col = plateColor(plate)
-        return Text("\(String(format: "%g", plate))×\(count)")
+    private func plateChip(plate: PlateMath.Plate, count: Int, size: Double) -> some View {
+        Text("\(UnitPreference.trim(size))×\(count)")
             .font(Font.mono(10))
             .foregroundStyle(.white)
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
-            .background(col)
+            .background(plateColor(plate.kg))
             .clipShape(Capsule())
     }
 
     private func plateColor(_ kg: Double) -> Color {
-        switch kg {
-        case 25:   return Color(hex: "#c0341a")
-        case 20:   return Color(hex: "#1a5ca8")
-        case 15:   return Color(hex: "#b8a200")
-        case 10:   return Color(hex: "#1a7a1a")
-        case 5:    return Color(hex: "#2a2a2a")
-        case 2.5:  return Color(hex: "#888888")
-        default:   return Color(hex: "#bbbbbb")
+        switch PlateMath.tier(forKg: kg) {
+        case .red:    return Color(hex: "#c0341a")
+        case .blue:   return Color(hex: "#1a5ca8")
+        case .yellow: return Color(hex: "#b8a200")
+        case .green:  return Color(hex: "#1a7a1a")
+        case .black:  return Color(hex: "#2a2a2a")
+        case .grey:   return Color(hex: "#888888")
+        case .light:  return Color(hex: "#bbbbbb")
         }
     }
 }
@@ -70,60 +60,36 @@ struct InlinePlateView: View {
 // MARK: - Inline Plate Calculator
 
 struct InlinePlateCalculatorView: View {
+    /// Both in kg (stored); everything shown and loaded is in the user's unit.
     let targetWeight: Double
     @Binding var barWeight: Double
+    @Environment(\.weightUnit) private var unit
 
-    private let plateSizes: [Double] = [25, 20, 15, 10, 5, 2.5, 1.25]
-    private let barTypes: [(name: String, sub: String, kg: Double)] = [
-        ("BARBELL", "20KG", 20),
-        ("OLY 15",  "15KG", 15),
-        ("EZ",      "7.5KG", 7.5),
-        ("TRAP",    "25KG", 25),
-        ("SAFETY",  "32KG", 32),
-    ]
-
-    private var perSideStack: [Double] {
-        let perSide = (targetWeight - barWeight) / 2
-        guard perSide > 0 else { return [] }
-        var remaining = perSide
-        var stack: [Double] = []
-        for p in plateSizes {
-            while remaining >= p - 0.001 {
-                stack.append(p)
-                remaining = (remaining - p).rounded(toPlaces: 3)
-            }
-        }
-        return stack
+    private var load: PlateMath.Load {
+        PlateMath.load(targetKg: targetWeight, barKg: barWeight,
+                       platesKg: PlateMath.storedPlatesKg(unit: unit), unit: unit)
     }
+    private var perSideStack: [PlateMath.Plate] { load.plates }
+    private var remainder: Double { load.remainder }
 
-    private var remainder: Double {
-        let perSide = (targetWeight - barWeight) / 2
-        guard perSide > 0 else { return 0 }
-        var remaining = perSide
-        for p in plateSizes {
-            while remaining >= p - 0.001 { remaining = (remaining - p).rounded(toPlaces: 3) }
-        }
-        return remaining
-    }
-
-    private func plateColor(_ p: Double) -> (bg: Color, fg: Color) {
-        switch p {
-        case 25:   return (Color(hex: "#e51b1b"), .white)
-        case 20:   return (Color(hex: "#1f4ea3"), .white)
-        case 15:   return (Color(hex: "#c98a17"), .white)
-        case 10:   return (Color(hex: "#1f8f5a"), .white)
-        case 5:    return (Color(hex: "#1f1c19"), Color(hex: "#f0efeb"))
-        case 2.5:  return (Color(hex: "#a3a39a"), Color(hex: "#1f1c19"))
-        default:   return (Color(hex: "#d6d2c4"), Color(hex: "#1f1c19"))
+    private func plateColor(_ kg: Double) -> (bg: Color, fg: Color) {
+        switch PlateMath.tier(forKg: kg) {
+        case .red:    return (Color(hex: "#e51b1b"), .white)
+        case .blue:   return (Color(hex: "#1f4ea3"), .white)
+        case .yellow: return (Color(hex: "#c98a17"), .white)
+        case .green:  return (Color(hex: "#1f8f5a"), .white)
+        case .black:  return (Color(hex: "#1f1c19"), Color(hex: "#f0efeb"))
+        case .grey:   return (Color(hex: "#a3a39a"), Color(hex: "#1f1c19"))
+        case .light:  return (Color(hex: "#d6d2c4"), Color(hex: "#1f1c19"))
         }
     }
 
-    private func plateHeight(_ p: Double) -> CGFloat {
-        32 + min(p, 25) * 0.9
+    private func plateHeight(_ kg: Double) -> CGFloat {
+        32 + min(kg, 25) * 0.9
     }
 
-    private func plateWidth(_ p: Double) -> CGFloat {
-        p >= 20 ? 9 : p >= 10 ? 7 : p >= 5 ? 6 : 5
+    private func plateWidth(_ kg: Double) -> CGFloat {
+        kg >= 18 ? 9 : kg >= 9 ? 7 : kg >= 4.5 ? 6 : 5
     }
 
     var body: some View {
@@ -137,11 +103,11 @@ struct InlinePlateCalculatorView: View {
                             .tracking(1.2)
                             .foregroundStyle(Color.inkMuted)
                         HStack(alignment: .firstTextBaseline, spacing: 5) {
-                            Text(targetWeight.clean)
+                            Text(unit.number(targetWeight))
                                 .font(.archivo(30, weight: .black))
                                 .foregroundStyle(Color.inkPrimary)
                                 .monospacedDigit()
-                            Text("KG · BAR \(barWeight.clean)")
+                            Text("\(unit.label) · BAR \(unit.number(barWeight))")
                                 .font(.spaceMono(10))
                                 .foregroundStyle(Color.inkMuted)
                         }
@@ -161,8 +127,8 @@ struct InlinePlateCalculatorView: View {
                     HStack(spacing: 6) {
                         Spacer()
                         ForEach(Array(perSideStack.enumerated()), id: \.offset) { _, p in
-                            let c = plateColor(p)
-                            Text(p.clean)
+                            let c = plateColor(p.kg)
+                            Text(UnitPreference.trim(p.display))
                                 .font(.spaceMono(9, weight: .bold))
                                 .foregroundStyle(c.fg)
                                 .padding(.horizontal, 6)
@@ -171,7 +137,7 @@ struct InlinePlateCalculatorView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 3))
                         }
                         if remainder > 0.01 {
-                            Text("+\(String(format: "%.2f", remainder))KG OFF")
+                            Text("+\(UnitPreference.trim(remainder))\(unit.label) OFF")
                                 .font(.spaceMono(9))
                                 .foregroundStyle(Color.accentInk)
                         }
@@ -182,26 +148,28 @@ struct InlinePlateCalculatorView: View {
                 // Bar type selector
                 Rectangle().fill(Color.dsHairLine).frame(height: 1)
                 HStack(spacing: 4) {
-                    ForEach(barTypes, id: \.name) { bt in
+                    ForEach(PlateMath.barOptions, id: \.name) { bt in
+                        let bar = bt.weightKg(unit)
+                        let selected = PlateMath.sameBar(barWeight, bar)
                         Button {
-                            withAnimation(.easeInOut(duration: 0.15)) { barWeight = bt.kg }
+                            withAnimation(.easeInOut(duration: 0.15)) { barWeight = bar }
                         } label: {
                             VStack(spacing: 2) {
                                 Text(bt.name)
                                     .font(.spaceMono(8, weight: .bold))
                                     .tracking(0.5)
-                                Text(bt.sub)
+                                Text(bt.label(unit))
                                     .font(.spaceMono(7))
                                     .opacity(0.7)
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 5)
-                            .background(barWeight == bt.kg ? Color.pumpAccent : Color.clear)
-                            .foregroundStyle(barWeight == bt.kg ? Color.white : Color.inkMuted)
+                            .background(selected ? Color.pumpAccent : Color.clear)
+                            .foregroundStyle(selected ? Color.white : Color.inkMuted)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 6)
-                                    .strokeBorder(barWeight == bt.kg ? Color.clear : Color.dsHairLine, lineWidth: 1)
+                                    .strokeBorder(selected ? Color.clear : Color.dsHairLine, lineWidth: 1)
                             )
                         }
                         .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.95))
@@ -219,10 +187,10 @@ struct InlinePlateCalculatorView: View {
             // Left plates (reversed)
             HStack(alignment: .center, spacing: 1) {
                 ForEach(Array(perSideStack.reversed().enumerated()), id: \.offset) { _, p in
-                    let c = plateColor(p)
+                    let c = plateColor(p.kg)
                     RoundedRectangle(cornerRadius: 1.5)
                         .fill(c.bg)
-                        .frame(width: plateWidth(p), height: plateHeight(p))
+                        .frame(width: plateWidth(p.kg), height: plateHeight(p.kg))
                 }
             }
             // Bar sleeve
@@ -232,10 +200,10 @@ struct InlinePlateCalculatorView: View {
             // Right plates
             HStack(alignment: .center, spacing: 1) {
                 ForEach(Array(perSideStack.enumerated()), id: \.offset) { _, p in
-                    let c = plateColor(p)
+                    let c = plateColor(p.kg)
                     RoundedRectangle(cornerRadius: 1.5)
                         .fill(c.bg)
-                        .frame(width: plateWidth(p), height: plateHeight(p))
+                        .frame(width: plateWidth(p.kg), height: plateHeight(p.kg))
                 }
             }
             Spacer()

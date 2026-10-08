@@ -12,15 +12,15 @@ struct BodyweightWidget: View {
     private var deltaText: String {
         let d = f.bodyweightDelta7d
         let arrow = d < 0 ? "▼" : d > 0 ? "▲" : "•"
-        return "\(arrow) \(d > 0 ? "+" : "")\(String(format: "%.1f", d)) · 7D"
+        return "\(arrow) \(d > 0 ? "+" : "")\(String(format: "%.1f", snap.unit.display(d))) · 7D"
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("BODYWEIGHT").pwCap()
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(String(format: "%.1f", snap.bodyweight)).pwMono(36, bold: true)
-                Text("KG").pwCap(8, tracking: 1.2)
+                Text(String(format: "%.1f", snap.unit.display(snap.bodyweight))).pwMono(36, bold: true)
+                Text(snap.unit.label).pwCap(8, tracking: 1.2)
             }
             .frame(height: 36 * 1.1, alignment: .leading).padding(.top, 6)
             Text(deltaText).pwMono(10, color: PumpTheme.secondary)

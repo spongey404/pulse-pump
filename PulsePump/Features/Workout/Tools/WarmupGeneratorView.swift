@@ -2,9 +2,10 @@ import SwiftUI
 
 struct WarmupGeneratorView: View {
     @State private var workingWeight = ""
+    @Environment(\.weightUnit) private var unit
+    /// Everything on this screen is typed and shown in the user's unit; nothing is stored.
     @State private var barWeight: Double = 20
     @State private var warmupSteps = 4
-    @State private var unit: UnitPreference = .kg
 
     private var warmupSets: [(weight: Double, reps: Int)] {
         guard let working = Double(workingWeight), working > barWeight else { return [] }
@@ -20,8 +21,9 @@ struct WarmupGeneratorView: View {
         for i in 1...increments {
             let fraction = Double(i) / Double(increments + 1)
             let weight = barWeight + (working - barWeight) * fraction
-            // Round to nearest 2.5
-            let rounded = (weight / 2.5).rounded() * 2.5
+            // Round to the nearest loadable jump: 2.5 kg / 5 lb
+            let step = unit.stepperIncrement
+            let rounded = (weight / step).rounded() * step
             let reps = max(3, 10 - (i * 2))
             if rounded > barWeight {
                 sets.append((rounded, reps))
@@ -38,7 +40,7 @@ struct WarmupGeneratorView: View {
                     TextField("0", text: $workingWeight)
                         .keyboardType(.decimalPad)
                         .font(.title2.monospacedDigit())
-                    Text(unit.abbreviation)
+                    Text(unit.lowercaseLabel)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -47,10 +49,12 @@ struct WarmupGeneratorView: View {
                 Stepper("Warmup Sets: \(warmupSteps)", value: $warmupSteps, in: 2...6)
 
                 Picker("Bar Weight", selection: $barWeight) {
-                    Text("Olympic (20 kg)").tag(20.0)
-                    Text("EZ Curl (10 kg)").tag(10.0)
-                    Text("Trap Bar (25 kg)").tag(25.0)
+                    Text("Olympic (\(unit == .kg ? "20 kg" : "45 lb"))").tag(unit == .kg ? 20.0 : 45.0)
+                    Text("EZ Curl (\(unit == .kg ? "10 kg" : "25 lb"))").tag(unit == .kg ? 10.0 : 25.0)
+                    Text("Trap Bar (\(unit == .kg ? "25 kg" : "55 lb"))").tag(unit == .kg ? 25.0 : 55.0)
                 }
+                .onChange(of: unit) { _, u in barWeight = u == .kg ? 20 : 45 }
+                .onAppear { barWeight = unit == .kg ? 20 : 45 }
             }
 
             if !warmupSets.isEmpty {
@@ -61,7 +65,7 @@ struct WarmupGeneratorView: View {
                                 .font(.mono(15))
                                 .foregroundStyle(.secondary)
                                 .frame(width: 50, alignment: .leading)
-                            Text("\(String(format: "%g", set.weight)) \(unit.abbreviation)")
+                            Text("\(UnitPreference.trim(set.weight)) \(unit.lowercaseLabel)")
                                 .font(.callout.monospacedDigit().weight(.medium))
                             Spacer()
                             Text("\(set.reps) reps")
@@ -75,7 +79,7 @@ struct WarmupGeneratorView: View {
                             .font(.mono(15, weight: .medium))
                             .foregroundStyle(Color.accentInk)
                         Spacer()
-                        Text("\(workingWeight) \(unit.abbreviation)")
+                        Text("\(workingWeight) \(unit.lowercaseLabel)")
                             .font(.callout.monospacedDigit().weight(.semibold))
                     }
                 }

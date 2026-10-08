@@ -13,6 +13,11 @@ struct PumpWidgetSnapshot: Codable, Equatable {
     var hasData = false
     var updated = Date()
 
+    /// Display unit chosen by the user. ALL numeric weights in this snapshot are kg (like everywhere
+    /// else); widget views convert and label through `unit`. Optional so older stored snapshots still decode.
+    var weightUnit: UnitPreference?
+    var unit: UnitPreference { weightUnit ?? .kg }
+
     var streak = 0
     var sessionsThisWeek = 0
     var sessionGoal = 5
@@ -50,6 +55,8 @@ struct PumpWidgetSnapshot: Codable, Equatable {
 
 extension PumpWidgetSnapshot {
     private func fmt(_ v: Double) -> String { v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v) }
+    /// Weight (stored kg) in the display unit, one decimal at most.
+    private func fmtW(_ kg: Double) -> String { fmt(unit.display(kg)) }
 
     private func ago(_ date: Date) -> String {
         let days = Calendar.current.dateComponents([.day], from: date, to: Date()).day ?? 0
@@ -75,15 +82,16 @@ extension PumpWidgetSnapshot {
             case "sessions": m.v = "\(sessionsThisWeek)/\(sessionGoal)"
             case "improved": m.v = "\(improvedCount)/\(improvedTotal)"
             case "topgain":
-                m.v = (topGainKg >= 0 ? "+" : "") + fmt(topGainKg)
-                m.u = topGainExercise.isEmpty ? "KG" : "KG · " + shortCaption(topGainExercise)
-            case "bw": m.v = bodyweight > 0 ? fmt(bodyweight) : "—"; m.d = ""
+                m.v = (topGainKg >= 0 ? "+" : "") + fmtW(topGainKg)
+                m.u = topGainExercise.isEmpty ? unit.label : unit.label + " · " + shortCaption(topGainExercise)
+            case "bw": m.v = bodyweight > 0 ? fmtW(bodyweight) : "—"; m.d = ""; m.u = unit.label
             default: break
             }
         case .pr:
             m.label = piece.metric
             m.k = shortCaption(piece.metric) + " PR"
-            if let pr = bestPR(for: piece.metric) { m.v = fmt(pr.weight); m.ago = ago(pr.date) } else { m.v = "—"; m.ago = "" }
+            m.u = unit.label
+            if let pr = bestPR(for: piece.metric) { m.v = fmtW(pr.weight); m.ago = ago(pr.date) } else { m.v = "—"; m.ago = "" }
         case .bars:
             switch piece.metric {
             case "volume": m.data = volumePerDay
@@ -94,7 +102,7 @@ extension PumpWidgetSnapshot {
         case .spark:
             let name = piece.metric == "e1rm_squat" ? "Squat" : "Bench Press"
             if piece.metric != "bw", let series = e1rm[name], series.count > 1 {
-                m.data = series; m.v = fmt(series.last ?? 0)
+                m.data = series.map(unit.display); m.v = fmtW(series.last ?? 0); m.u = unit.label
             }
         case .body:
             m.body = piece.metric == "recency" ? bodyRecency : bodyVolume
