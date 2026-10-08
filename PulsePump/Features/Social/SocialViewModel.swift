@@ -1,509 +1,863 @@
 import Foundation
-import FirebaseAuth
 import Observation
 
+/// Challenge leaderboard as shown by 3c/3d/7b.
+struct ChallengeBoard: Equatable {
+    var rows: [LeaderboardRow]
+    var mine: LeaderboardRow?
+    var isMember: Bool
+}
+
+/// A profile page (6b / 7c) for the signed-in viewer.
+struct ProfilePage: Equatable {
+    var uid: String
+    var relationship: Relationship
+    var access: ProfileAccess
+    var profile: FirestoreUserProfile?
+    var posts: [WorkoutFeedItem]
+}
+
+/// Owns everything the Social tab shows: the follow graph (friends / fans), the feed, comments and
+/// likes, profiles, challenges and invites, blocks and reports, and privacy.
+///
+/// Rules this type follows (docs/sync-architecture.md):
+/// - Counters (`likeCount`, `commentCount`, `friendCount`, `fanCount`, `memberCount`, scores, ranks)
+///   are never written. Likes and comments adjust the shown count optimistically and roll back on failure.
+/// - Posts are only queried per author with an audience the viewer may see; blocked users are never queried.
+/// - There are no demo fixtures here. DEBUG fixtures, if any, arrive through the `SocialRemote`.
 @MainActor
 @Observable
-class SocialViewModel {
-    let firestoreService = FirestoreService()
+final class SocialViewModel {
+    @ObservationIgnored let remote: SocialRemote
+    @ObservationIgnored let me: CurrentUser
+    @ObservationIgnored let privacyService: PrivacyService
+    @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored private let displayName: () -> String
+    @ObservationIgnored private let now: () -> Date
+    @ObservationIgnored private let onFeedLoaded: ([WorkoutFeedItem], String) -> Void
+
+    // MARK: State
+
+    /// The uid the current state belongs to. When Auth reports a different uid every cache is dropped.
+    @ObservationIgnored private var stateUid: String?
+
+    private(set) var myProfile: FirestoreUserProfile?
+
+    // Follow graph
+    private(set) var graph = FriendGraph()
+    private(set) var graphLoaded = false
+    private(set) var profileCache: [String: FirestoreUserProfile] = [:]
+    /// Accounts that no longer exist; dropped from every list.
+    private(set) var goneUids: Set<String> = []
+    private(set) var blockedUsers: [BlockedUser] = []
+
+    // Search
+    private(set) var searchResults: [UserLookup] = []
+    private(set) var isSearching = false
+    @ObservationIgnored private var searchToken = UUID()
 
     // Feed
-    var feedItems: [WorkoutFeedItem] = []
-    var isLoadingFeed = false
-    private var lastFeedFetch: Date?
-    private static let cacheTTL: TimeInterval = 5 * 60  // 5 minutes
+    private(set) var feedItems: [WorkoutFeedItem] = []
+    private(set) var isLoadingFeed = false
+    private(set) var isLoadingMoreFeed = false
+    private(set) var hasMoreFeed = false
+    private(set) var feedError: String?
+    @ObservationIgnored private var lastFeedFetch: Date?
+    @ObservationIgnored private var singleAuthorQueries = false
+    private(set) var hiddenPostIds: Set<String> = []
+    static let cacheTTL: TimeInterval = 5 * 60
 
-    // Friends
-    var friends: [FirestoreUserProfile] = []
-    var pendingRequests: [(docId: String, friendship: FriendshipDoc, profile: FirestoreUserProfile?)] = []
-    var searchResults: [FirestoreUserProfile] = []
-    var contactMatches: [FirestoreUserProfile] = []
-    var isSearching = false
+    // Comments
+    private(set) var comments: [String: [FeedComment]] = [:]
 
     // Challenges
-    var activeChallenges: [FirestoreChallenge] = []
-    var myChallenges: [FirestoreChallenge] = []
-    var isLoadingChallenges = false
-    var pendingChallengeInvites: [(docId: String, invite: ChallengeInvite)] = []
+    private(set) var myChallenges: [SocialChallenge] = []
+    private(set) var globalChallenges: [SocialChallenge] = []
+    private(set) var pendingChallengeInvites: [ChallengeInvite] = []
+    private(set) var boards: [String: ChallengeBoard] = [:]
+    private(set) var isLoadingChallenges = false
+    private(set) var challengesError: String?
 
-    var currentUid: String? { Auth.auth().currentUser?.uid }
+    // Posting
+    /// A post that could not be published; shown with a RETRY.
+    private(set) var pendingPost: PostPayload?
+    @ObservationIgnored private var publishedPostIds: Set<String> = []
 
-    // MARK: - Demo data (shown when feed is empty and user has no friends yet)
+    /// Set when an optimistic action fails and was rolled back; views surface it once.
+    var lastError: String?
 
-    // Demo fixtures only surface when `DevFlags.socialFixtures` is on (DEBUG dev data) — never in Release.
-    static var fixtureFeed: [WorkoutFeedItem] { DevFlags.socialFixtures ? demoFeedItems : [] }
-    static var fixtureFriends: [FirestoreUserProfile] { DevFlags.socialFixtures ? demoFriends : [] }
+    @ObservationIgnored private var likeInFlight: Set<String> = []
 
-    static let demoFeedItems: [WorkoutFeedItem] = {
-        let cal = Calendar.current
-        let now = Date()
-        return [
-            WorkoutFeedItem(
-                id: "demo-1",
-                userId: "demo-alex",
-                username: "alex_lifts",
-                templateName: "PUSH DAY",
-                exerciseCount: 6,
-                durationSeconds: 3720,
-                caloriesBurned: 412,
-                musclesWorked: ["Chest", "Shoulders", "Triceps"],
-                prCount: 2,
-                improvedCount: 4,
-                totalExercises: 6,
-                date: cal.date(byAdding: .hour, value: -2, to: now) ?? now,
-                caption: "Huge session today. New PR on bench — finally hit 100kg! 🔥",
-                exercises: [
-                    FeedExercise(id: "fe-1", name: "Barbell Bench Press", sets: [
-                        FeedSetLog(weight: 100, reps: 5, duration: 0, distance: 0, setType: "standard", side: nil),
-                        FeedSetLog(weight: 95, reps: 6, duration: 0, distance: 0, setType: "standard", side: nil),
-                        FeedSetLog(weight: 90, reps: 8, duration: 0, distance: 0, setType: "standard", side: nil),
-                    ], primaryMuscles: ["Chest"], secondaryMuscles: ["Triceps", "Front Delts"]),
-                    FeedExercise(id: "fe-2", name: "Incline Dumbbell Press", sets: [
-                        FeedSetLog(weight: 34, reps: 10, duration: 0, distance: 0, setType: "standard", side: nil),
-                        FeedSetLog(weight: 34, reps: 10, duration: 0, distance: 0, setType: "standard", side: nil),
-                    ], primaryMuscles: ["Chest"], secondaryMuscles: ["Triceps", "Front Delts"]),
-                    FeedExercise(id: "fe-3", name: "Lateral Raise", sets: [
-                        FeedSetLog(weight: 12, reps: 15, duration: 0, distance: 0, setType: "standard", side: nil),
-                        FeedSetLog(weight: 12, reps: 15, duration: 0, distance: 0, setType: "standard", side: nil),
-                        FeedSetLog(weight: 12, reps: 12, duration: 0, distance: 0, setType: "standard", side: nil),
-                    ], primaryMuscles: ["Side Delts", "Shoulders"], secondaryMuscles: []),
-                ]
-            ),
-            WorkoutFeedItem(
-                id: "demo-2",
-                userId: "demo-priya",
-                username: "priya.trains",
-                templateName: "LEG DAY",
-                exerciseCount: 5,
-                durationSeconds: 4200,
-                caloriesBurned: 536,
-                musclesWorked: ["Quads", "Hamstrings", "Glutes"],
-                prCount: 1,
-                improvedCount: 3,
-                totalExercises: 5,
-                date: cal.date(byAdding: .hour, value: -5, to: now) ?? now,
-                caption: "First leg day in 2 weeks and I'm already dreading stairs tomorrow",
-                exercises: [
-                    FeedExercise(id: "fe-4", name: "Barbell Squat", sets: [
-                        FeedSetLog(weight: 80, reps: 5, duration: 0, distance: 0, setType: "standard", side: nil),
-                        FeedSetLog(weight: 80, reps: 5, duration: 0, distance: 0, setType: "standard", side: nil),
-                        FeedSetLog(weight: 75, reps: 6, duration: 0, distance: 0, setType: "standard", side: nil),
-                    ], primaryMuscles: ["Quads", "Glutes"], secondaryMuscles: ["Hamstrings", "Lower Back"]),
-                    FeedExercise(id: "fe-5", name: "Romanian Deadlift", sets: [
-                        FeedSetLog(weight: 60, reps: 10, duration: 0, distance: 0, setType: "standard", side: nil),
-                        FeedSetLog(weight: 60, reps: 10, duration: 0, distance: 0, setType: "standard", side: nil),
-                    ], primaryMuscles: ["Hamstrings", "Glutes"], secondaryMuscles: ["Lower Back"]),
-                ]
-            ),
-            WorkoutFeedItem(
-                id: "demo-3",
-                userId: "demo-james",
-                username: "james_bulk",
-                templateName: "PULL DAY",
-                exerciseCount: 7,
-                durationSeconds: 4500,
-                caloriesBurned: 489,
-                musclesWorked: ["Back", "Biceps"],
-                prCount: 0,
-                improvedCount: 5,
-                totalExercises: 7,
-                date: cal.date(byAdding: .day, value: -1, to: now) ?? now,
-                caption: "Back width is coming along nicely. Weighted pull-ups feeling strong.",
-                exercises: [
-                    FeedExercise(id: "fe-6", name: "Weighted Pull Up", sets: [
-                        FeedSetLog(weight: 10, reps: 8, duration: 0, distance: 0, setType: "standard", side: nil),
-                        FeedSetLog(weight: 10, reps: 7, duration: 0, distance: 0, setType: "standard", side: nil),
-                        FeedSetLog(weight: 7.5, reps: 8, duration: 0, distance: 0, setType: "standard", side: nil),
-                    ], primaryMuscles: ["Back", "Lats"], secondaryMuscles: ["Biceps", "Rear Delts"]),
-                    FeedExercise(id: "fe-7", name: "Barbell Row", sets: [
-                        FeedSetLog(weight: 70, reps: 8, duration: 0, distance: 0, setType: "standard", side: nil),
-                        FeedSetLog(weight: 70, reps: 8, duration: 0, distance: 0, setType: "standard", side: nil),
-                        FeedSetLog(weight: 65, reps: 10, duration: 0, distance: 0, setType: "standard", side: nil),
-                    ], primaryMuscles: ["Back", "Lats"], secondaryMuscles: ["Biceps", "Rear Delts"]),
-                ]
-            ),
-        ]
-    }()
-
-    // MARK: - Demo friends (shown when signed out or no real friendships yet)
-
-    static let demoFriends: [FirestoreUserProfile] = [
-        FirestoreUserProfile(uid: "demo-priya", username: "priyastrength", displayName: "Priya", totalWorkouts: 214, currentStreak: 5, longestStreak: 22),
-        FirestoreUserProfile(uid: "demo-jay", username: "jaypump", displayName: "Jay", totalWorkouts: 188, currentStreak: 1, longestStreak: 30),
-        FirestoreUserProfile(uid: "demo-marc", username: "marclifts", displayName: "Marc", totalWorkouts: 142, currentStreak: 2, longestStreak: 15),
-        FirestoreUserProfile(uid: "demo-sanne", username: "sanne.b", displayName: "Sanne", totalWorkouts: 96, currentStreak: 3, longestStreak: 9),
-        FirestoreUserProfile(uid: "demo-tom", username: "tom_pressed", displayName: "Tom", totalWorkouts: 61, currentStreak: 0, longestStreak: 12),
-        FirestoreUserProfile(uid: "demo-kate", username: "kf_barbell", displayName: "Kate", totalWorkouts: 133, currentStreak: 4, longestStreak: 18),
-    ]
-
-    // MARK: - Demo challenges (shown when signed out or no real challenges yet)
-    // Values pulled from the design mockups (3d's RANK 47 OF 2,412, 7b's PRIYA WINNER
-    // 112KG / YOU 2ND 105KG / GAINED +5KG) so every leaderboard/challenge screen renders
-    // realistic, spec-matching content instead of an empty state.
-
-    static let demoChallenges: [FirestoreChallenge] = {
-        let cal = Calendar.current
-        let now = Date()
-
-        var global = FirestoreChallenge(
-            name: "August Volume",
-            challengeDescription: "Total volume lifted this month, everyone on Pump.",
-            creatorId: "pulse-admin",
-            metric: .totalVolume,
-            winCondition: .highest,
-            startDate: cal.date(byAdding: .day, value: -11, to: now) ?? now,
-            endDate: cal.date(byAdding: .day, value: 19, to: now) ?? now,
-            runsFor: "restOfMonth",
-            isGlobal: true
-        )
-        global.id = "demo-global-august-volume"
-        global.participantIds = (0..<2412).map { "demo-p\($0)" }
-        global.leaderboard = [
-            LeaderboardEntry(userId: "demo-alex", username: "alex_lifts", score: 212_400, rank: 1, previousRank: 1),
-            LeaderboardEntry(userId: "demo-priya", username: "priyastrength", score: 198_100, rank: 2, previousRank: 2),
-            LeaderboardEntry(userId: "demo-jay", username: "jaypump", score: 184_600, rank: 3, previousRank: 4),
-            LeaderboardEntry(userId: "demo-marc", username: "marclifts", score: 171_200, rank: 4, previousRank: 3),
-            LeaderboardEntry(userId: "demo-sanne", username: "sanne.b", score: 163_800, rank: 5, previousRank: 5),
-            LeaderboardEntry(userId: "demo-p45", username: "kelvin.h", score: 49_100, rank: 45, previousRank: 44),
-            LeaderboardEntry(userId: "demo-p46", username: "reneelifts", score: 48_700, rank: 46, previousRank: 46),
-            LeaderboardEntry(userId: "you", username: "You", score: 48_200, rank: 47, previousRank: 52),
-            LeaderboardEntry(userId: "demo-p48", username: "diego_r", score: 47_600, rank: 48, previousRank: 47),
-            LeaderboardEntry(userId: "demo-p49", username: "millie.b", score: 46_900, rank: 49, previousRank: 49),
-        ]
-
-        var friend = FirestoreChallenge(
-            name: "Bench 100 Club",
-            challengeDescription: "First to a 100kg bench single wins.",
-            creatorId: "demo-priya",
-            metric: .heaviestLift,
-            winCondition: .highest,
-            startDate: cal.date(byAdding: .day, value: -14, to: now) ?? now,
-            endDate: cal.date(byAdding: .day, value: 14, to: now) ?? now,
-            runsFor: "4weeks",
-            isGlobal: false,
-            customExercise: "Bench Press"
-        )
-        friend.id = "demo-friend-bench-100"
-        friend.participantIds = ["demo-priya", "demo-jay", "demo-marc", "demo-sanne", "you"]
-        friend.leaderboard = [
-            LeaderboardEntry(userId: "demo-priya", username: "priyastrength", score: 112, rank: 1, previousRank: 1),
-            LeaderboardEntry(userId: "you", username: "You", score: 105, rank: 2, previousRank: 3),
-            LeaderboardEntry(userId: "demo-jay", username: "jaypump", score: 100, rank: 3, previousRank: 2),
-            LeaderboardEntry(userId: "demo-marc", username: "marclifts", score: 92, rank: 4, previousRank: 4),
-            LeaderboardEntry(userId: "demo-sanne", username: "sanne.b", score: 80, rank: 5, previousRank: 5),
-        ]
-
-        // A second, already-ended friend challenge — matches 7b's exact spec figures
-        // (Priya winner 112kg, you 2nd 105kg, gained +5kg) for testing ChallengeEndedView.
-        var ended = FirestoreChallenge(
-            name: "Bench 100 Club",
-            challengeDescription: "First to a 100kg bench single wins.",
-            creatorId: "demo-priya",
-            metric: .heaviestLift,
-            winCondition: .highest,
-            startDate: cal.date(byAdding: .day, value: -42, to: now) ?? now,
-            endDate: cal.date(byAdding: .day, value: -10, to: now) ?? now,
-            runsFor: "4weeks",
-            isGlobal: false,
-            customExercise: "Bench Press"
-        )
-        ended.id = "demo-friend-bench-100-ended"
-        ended.isActive = false
-        ended.participantIds = ["demo-priya", "demo-jay", "demo-marc", "demo-sanne", "you"]
-        ended.leaderboard = [
-            LeaderboardEntry(userId: "demo-priya", username: "priyastrength", score: 112, rank: 1, previousRank: 2),
-            LeaderboardEntry(userId: "you", username: "You", score: 105, rank: 2, previousRank: 1),
-            LeaderboardEntry(userId: "demo-jay", username: "jaypump", score: 97, rank: 3, previousRank: 3),
-            LeaderboardEntry(userId: "demo-marc", username: "marclifts", score: 90, rank: 4, previousRank: 4),
-            LeaderboardEntry(userId: "demo-sanne", username: "sanne.b", score: 78, rank: 5, previousRank: 5),
-        ]
-
-        return [global, friend, ended]
-    }()
-
-    /// `demoChallenges` uses a placeholder `userId: "you"` on the current-user leaderboard
-    /// entries (fixed at compile time, no access to `currentUid`). Substitutes the real
-    /// signed-in uid at load time so "your" row actually matches and isn't blank.
-    private func demoChallengesForCurrentUser() -> [FirestoreChallenge] {
-        let uid = currentUid ?? "demo-you"
-        return Self.demoChallenges.map { challenge in
-            var c = challenge
-            c.leaderboard = c.leaderboard.map { entry in
-                guard entry.userId == "you" else { return entry }
-                var e = entry
-                e.userId = uid
-                return e
-            }
-            c.participantIds = c.participantIds.map { $0 == "you" ? uid : $0 }
-            return c
-        }
+    /// - Parameters:
+    ///   - displayName: the name for a new profile; defaults to the local `User` name, then Firebase's.
+    ///   - onFeedLoaded: called with a freshly loaded page; defaults to refreshing the widget's friends.
+    init(remote: SocialRemote, me: CurrentUser, privacy: PrivacyService, defaults: UserDefaults = .standard,
+         displayName: (() -> String)? = nil,
+         now: @escaping () -> Date = { Date() },
+         onFeedLoaded: (([WorkoutFeedItem], String) -> Void)? = nil) {
+        self.remote = remote
+        self.me = me
+        self.privacyService = privacy
+        self.defaults = defaults
+        self.displayName = displayName ?? { SocialServices.localName ?? SocialServices.currentUser.displayName ?? "Pump user" }
+        self.now = now
+        self.onFeedLoaded = onFeedLoaded ?? { items, uid in WidgetDataService.writeFriends(from: items, myUid: uid) }
     }
 
-    // MARK: - Feed
+    /// Shared instance used by the tab views.
+    static var shared: SocialViewModel { SocialServices.viewModel }
 
-    func loadFeed(forceRefresh: Bool = false) async {
-        guard let uid = currentUid else {
-            if feedItems.isEmpty { feedItems = Self.fixtureFeed }
-            return
-        }
+    var currentUid: String? { me.uid }
 
-        // If cache is fresh and we have items, skip the network call
-        if !forceRefresh,
-           let last = lastFeedFetch,
-           Date().timeIntervalSince(last) < Self.cacheTTL,
-           !feedItems.isEmpty {
-            return
-        }
+    // MARK: Identity
 
-        // Only show the spinner when there's nothing to display yet
-        if feedItems.isEmpty { isLoadingFeed = true }
-
-        do {
-            let friendUids = try await firestoreService.fetchFriendUids(for: uid)
-            var fetched: [WorkoutFeedItem]
-            if friendUids.isEmpty {
-                fetched = try await firestoreService.fetchOwnFeed()
-            } else {
-                let allUids = friendUids + [uid]
-                fetched = try await firestoreService.fetchFeed(friendUids: allUids)
+    /// Drops all cached state when the signed-in account changed (sign-out, account switch, deletion).
+    /// Returns false when nobody is signed in.
+    @discardableResult
+    private func syncIdentity() -> Bool {
+        if stateUid != me.uid {
+            reset()
+            stateUid = me.uid
+            if let uid = me.uid {
+                hiddenPostIds = Set(defaults.stringArray(forKey: Self.hiddenKey(uid)) ?? [])
             }
-            feedItems = fetched.isEmpty ? Self.fixtureFeed : fetched
-            lastFeedFetch = Date()
-            if !fetched.isEmpty { WidgetDataService.writeFriends(from: fetched, myUid: uid) }
+        }
+        return me.uid != nil
+    }
+
+    func reset() {
+        myProfile = nil
+        graph = FriendGraph()
+        graphLoaded = false
+        profileCache = [:]
+        goneUids = []
+        blockedUsers = []
+        searchResults = []
+        feedItems = []
+        hasMoreFeed = false
+        feedError = nil
+        lastFeedFetch = nil
+        comments = [:]
+        myChallenges = []
+        globalChallenges = []
+        pendingChallengeInvites = []
+        boards = [:]
+        hiddenPostIds = []
+        pendingPost = nil
+        likeInFlight = []
+    }
+
+    var myName: String {
+        if let name = myProfile?.displayName, !name.isEmpty { return name }
+        return displayName()
+    }
+    var myHandle: String { myProfile?.username ?? "" }
+
+    func loadMyProfile() async {
+        guard syncIdentity() else { return }
+        do {
+            myProfile = try await remote.ensureOwnProfile(displayName: displayName(), handleHint: SocialServices.localHandle, privacy: privacyService.settings)
         } catch {
-            if feedItems.isEmpty { feedItems = Self.fixtureFeed }
-        }
-        isLoadingFeed = false
-    }
-
-    func toggleLike(postId: String) async {
-        guard let uid = currentUid else { return }
-        if let index = feedItems.firstIndex(where: { $0.id == postId }) {
-            if feedItems[index].likes.contains(uid) {
-                feedItems[index].likes.removeAll { $0 == uid }
-                try? await firestoreService.unlikePost(postId: postId)
-            } else {
-                feedItems[index].likes.append(uid)
-                try? await firestoreService.likePost(postId: postId)
-            }
+            // Offline: keep whatever we had.
         }
     }
 
-    // MARK: - Friends
-
-    func loadFriends() async {
-        guard let uid = currentUid else {
-            if friends.isEmpty { friends = Self.fixtureFriends }
-            return
-        }
+    /// Keeps `profiles/{me}` (name, streak, total workouts) in step with the local workouts. Only
+    /// changed values are written, so a returning user is never reset to zeros.
+    func syncOwnStats(streak: Int, totalWorkouts: Int) async {
+        guard syncIdentity() else { return }
+        if myProfile == nil { await loadMyProfile() }
+        guard let profile = myProfile else { return }
+        var update = ProfileUpdate()
+        if profile.currentStreak != streak { update.streak = streak }
+        if profile.totalWorkouts != totalWorkouts { update.totalWorkouts = totalWorkouts }
+        let name = displayName()
+        if !name.isEmpty, name != "Pump user", profile.displayName != name { update.displayName = name }
+        guard update != ProfileUpdate() else { return }
         do {
-            let friendships = try await firestoreService.fetchFriendships(for: uid)
-            var loadedFriends: [FirestoreUserProfile] = []
-            var loadedPending: [(String, FriendshipDoc, FirestoreUserProfile?)] = []
+            try await remote.updateOwnProfile(update)
+            if let v = update.streak { myProfile?.currentStreak = v }
+            if let v = update.totalWorkouts { myProfile?.totalWorkouts = v }
+            if let v = update.displayName { myProfile?.displayName = v }
+        } catch {
+            // Retried on the next sync.
+        }
+    }
 
-            for (docId, friendship) in friendships {
-                let otherUid = friendship.userId1 == uid ? friendship.userId2 : friendship.userId1
-                let profile = try? await firestoreService.fetchUserProfile(uid: otherUid)
+    // MARK: Privacy
 
-                if friendship.status == .accepted {
-                    if let profile { loadedFriends.append(profile) }
-                } else if friendship.requestedBy != uid {
-                    loadedPending.append((docId, friendship, profile))
+    var privacy: PrivacySettings { privacyService.settings }
+
+    func setPrivacy(_ row: PrivacyRow, _ level: PrivacyLevel) async {
+        await privacyService.set(row, to: level)
+        if row == .profile { myProfile?.profileVisibility = level.audience }
+        if row == .globalLeaderboards { myProfile?.globalLeaderboardVisible = privacy.globalLeaderboardVisible }
+    }
+
+    func restorePrivacy() async {
+        guard syncIdentity() else { return }
+        await privacyService.restore()
+    }
+
+    // MARK: Follow graph
+
+    func loadGraph() async {
+        guard syncIdentity() else { return }
+        do {
+            async let following = remote.fetchFollowing()
+            async let followers = remote.fetchFollowers()
+            async let blocked = remote.fetchBlocked()
+            let (a, b, c) = try await (following, followers, blocked)
+            blockedUsers = c
+            graph = FriendGraph(following: a, followers: b, blocked: Set(c.map(\.uid)), dismissedFans: loadDismissed())
+            graphLoaded = true
+            await loadProfiles(for: graph.friends.union(graph.fans).union(graph.pendingOutgoing))
+        } catch {
+            // Keep the previous graph; the views show their last known state.
+        }
+    }
+
+    /// Fills the profile cache for the given uids. A profile the viewer may not read becomes a
+    /// "private" placeholder; a missing one marks the account as gone (deleted).
+    func loadProfiles(for uids: Set<String>) async {
+        let missing = uids.filter { profileCache[$0] == nil && !goneUids.contains($0) }.sorted().prefix(80)
+        guard !missing.isEmpty else { return }
+        let results = await withTaskGroup(of: (String, Result<FirestoreUserProfile, SocialError>).self) { group -> [(String, Result<FirestoreUserProfile, SocialError>)] in
+            for uid in missing {
+                group.addTask { @MainActor in
+                    do { return (uid, .success(try await self.remote.fetchProfile(uid: uid))) }
+                    catch let e as SocialError { return (uid, .failure(e)) }
+                    catch { return (uid, .failure(.unavailable(error.localizedDescription))) }
                 }
             }
-
-            friends = loadedFriends.isEmpty ? Self.fixtureFriends : loadedFriends
-            pendingRequests = loadedPending
-        } catch {
-            friends = Self.fixtureFriends
-            pendingRequests = []
+            var all: [(String, Result<FirestoreUserProfile, SocialError>)] = []
+            for await r in group { all.append(r) }
+            return all
+        }
+        for (uid, result) in results {
+            switch result {
+            case .success(let profile): profileCache[uid] = profile
+            case .failure(.notFound): goneUids.insert(uid)
+            case .failure(.permissionDenied): profileCache[uid] = .restricted(uid: uid)
+            case .failure: break   // transient: try again next time
+            }
         }
     }
 
-    func searchUsers(query: String) async {
-        guard !query.isEmpty else { searchResults = []; return }
-        isSearching = true
+    private func visibleProfiles(_ uids: Set<String>) -> [FirestoreUserProfile] {
+        uids.subtracting(goneUids).compactMap { profileCache[$0] }
+            .sorted { $0.shownName.localizedCaseInsensitiveCompare($1.shownName) == .orderedAscending }
+    }
+
+    /// Mutual follows.
+    var friends: [FirestoreUserProfile] { visibleProfiles(graph.friends) }
+    /// People who follow me and I don't follow back (all of them, including ignored requests).
+    var fans: [FirestoreUserProfile] { visibleProfiles(graph.fans) }
+    /// The inbox: fans I haven't answered. ACCEPT = follow back, IGNORE = dismiss.
+    var fanRequests: [FirestoreUserProfile] { visibleProfiles(graph.fanRequests) }
+    /// People I follow who haven't followed back.
+    var followingOnly: [FirestoreUserProfile] { visibleProfiles(graph.pendingOutgoing) }
+
+    /// Counts for the More tab: the loaded graph once available, the function-maintained counters before.
+    var friendCount: Int { graphLoaded ? graph.friends.subtracting(goneUids).count : (myProfile?.friendCount ?? 0) }
+    var fanCount: Int { graphLoaded ? graph.fans.subtracting(goneUids).count : (myProfile?.fanCount ?? 0) }
+
+    /// Badge on the bell: requests + challenge invites.
+    var inboxCount: Int { graph.fanRequests.subtracting(goneUids).count + pendingChallengeInvites.count }
+
+    func relationship(with uid: String) -> Relationship { graph.relationship(with: uid, me: me.uid) }
+
+    private static func dismissedKey(_ uid: String) -> String { "social.dismissedFans.\(uid)" }
+    private static func hiddenKey(_ uid: String) -> String { "social.hiddenPosts.\(uid)" }
+
+    private func loadDismissed() -> Set<String> {
+        guard let uid = me.uid else { return [] }
+        return Set(defaults.stringArray(forKey: Self.dismissedKey(uid)) ?? [])
+    }
+
+    private func saveDismissed() {
+        guard let uid = me.uid else { return }
+        defaults.set(Array(graph.dismissedFans).sorted(), forKey: Self.dismissedKey(uid))
+    }
+
+    /// FOLLOW (stranger -> following) and ACCEPT / FOLLOW BACK (fan -> friend). Optimistic, rolled back on failure.
+    @discardableResult
+    func follow(_ uid: String) async -> Bool {
+        guard syncIdentity(), uid != me.uid else { return false }
+        let before = graph
+        guard graph.follow(uid) else {
+            lastError = "You can't follow someone you blocked."
+            return false
+        }
+        saveDismissed()
         do {
-            searchResults = try await firestoreService.searchUsers(query: query)
-            // Filter out self
-            if let uid = currentUid {
-                searchResults.removeAll { $0.uid == uid }
+            try await remote.follow(uid: uid)
+            lastFeedFetch = nil
+            await loadProfiles(for: [uid])
+            return true
+        } catch {
+            graph = before
+            saveDismissed()
+            lastError = "Couldn't follow. Try again."
+            return false
+        }
+    }
+
+    @discardableResult
+    func unfollow(_ uid: String) async -> Bool {
+        guard syncIdentity() else { return false }
+        let before = graph
+        graph.unfollow(uid)
+        do {
+            try await remote.unfollow(uid: uid)
+            lastFeedFetch = nil
+            feedItems.removeAll { $0.userId == uid && !isFriendOrMe($0.userId) }
+            return true
+        } catch {
+            graph = before
+            lastError = "Couldn't unfollow. Try again."
+            return false
+        }
+    }
+
+    private func isFriendOrMe(_ uid: String) -> Bool { uid == me.uid || graph.friends.contains(uid) }
+
+    /// ACCEPT on a request: follow back, which makes you friends.
+    @discardableResult
+    func accept(_ uid: String) async -> Bool { await follow(uid) }
+
+    /// IGNORE on a request: dismiss it. Nothing is written; the person stays a fan.
+    func ignore(_ uid: String) {
+        graph.ignoreFan(uid)
+        saveDismissed()
+    }
+
+    // MARK: Search
+
+    /// Exact-handle lookup (the rules allow reading `usernames/{handle}` but not listing). Results never
+    /// include me or people I blocked.
+    func searchUsers(query: String) async {
+        let handle = HandleRules.normalize(query)
+        guard HandleRules.isValid(handle) else {
+            searchResults = []
+            isSearching = false
+            return
+        }
+        let token = UUID()
+        searchToken = token
+        isSearching = true
+        defer { if searchToken == token { isSearching = false } }
+        do {
+            let found = try await remote.lookupUser(handle: handle)
+            guard searchToken == token else { return }   // a newer search superseded this one
+            if let found, found.uid != me.uid, !graph.blocked.contains(found.uid) {
+                if let profile = found.profile { profileCache[found.uid] = profile }
+                searchResults = [found]
+            } else {
+                searchResults = []
             }
         } catch {
-            searchResults = []
-        }
-        isSearching = false
-    }
-
-    func sendFriendRequest(to uid: String) async {
-        try? await firestoreService.sendFriendRequest(to: uid)
-    }
-
-    func acceptFriendRequest(docId: String) async {
-        try? await firestoreService.acceptFriendRequest(docId: docId)
-        await loadFriends()
-    }
-
-    func removeFriend(docId: String) async {
-        try? await firestoreService.removeFriend(docId: docId)
-        await loadFriends()
-    }
-
-    /// Removes the friendship with `uid` when only the other user's uid is known — e.g. a
-    /// feed post's "Unfollow" menu item, which doesn't have the friendship doc id handy the
-    /// way a friend-request row does.
-    func unfollow(uid: String) async {
-        guard let me = currentUid else { return }
-        if let match = try? await firestoreService.fetchFriendships(for: me)
-            .first(where: { $0.friendship.userId1 == uid || $0.friendship.userId2 == uid }) {
-            await removeFriend(docId: match.docId)
-        } else {
-            friends.removeAll { $0.uid == uid }
+            if searchToken == token { searchResults = [] }
         }
     }
 
-    func reportPost(postId: String) async {
-        try? await firestoreService.reportPost(postId: postId, reason: "user_reported")
+    // MARK: Blocks and reports
+
+    @discardableResult
+    func block(uid: String, name: String, handle: String) async -> Bool {
+        guard syncIdentity(), uid != me.uid else { return false }
+        let entry = BlockedUser(uid: uid, username: handle, displayName: name, createdAt: now())
+        do {
+            try await remote.block(entry)
+        } catch {
+            lastError = "Couldn't block. Try again."
+            return false
+        }
+        try? await remote.unfollow(uid: uid)   // a blocked user cannot be followed
+        graph.block(uid)
+        blockedUsers.removeAll { $0.uid == uid }
+        blockedUsers.append(entry)
+        feedItems.removeAll { $0.userId == uid }
+        searchResults.removeAll { $0.uid == uid }
+        lastFeedFetch = nil
+        return true
     }
 
-    // MARK: - Saved posts (local bookmark list, UserDefaults-backed — no server-side
-    // "saved" collection exists yet)
+    @discardableResult
+    func unblock(uid: String) async -> Bool {
+        do {
+            try await remote.unblock(uid: uid)
+            graph.unblock(uid)
+            blockedUsers.removeAll { $0.uid == uid }
+            lastFeedFetch = nil
+            await loadGraph()
+            return true
+        } catch {
+            lastError = "Couldn't unblock. Try again."
+            return false
+        }
+    }
+
+    func loadBlocked() async {
+        guard syncIdentity() else { return }
+        if let list = try? await remote.fetchBlocked() {
+            blockedUsers = list
+            graph.blocked = Set(list.map(\.uid))
+        }
+    }
+
+    /// Reports a post and hides it for me. Returns false (and keeps the post) when the report failed.
+    @discardableResult
+    func reportPost(_ postId: String, reason: String = "Inappropriate content") async -> Bool {
+        guard syncIdentity() else { return false }
+        do {
+            try await remote.report(target: .post, targetId: postId, reason: reason, details: nil)
+        } catch {
+            lastError = "Couldn't send the report. Try again."
+            return false
+        }
+        hidePost(postId)
+        return true
+    }
+
+    @discardableResult
+    func reportUser(_ uid: String, reason: String = "Inappropriate profile or behaviour") async -> Bool {
+        do {
+            try await remote.report(target: .user, targetId: uid, reason: reason, details: nil)
+            return true
+        } catch {
+            lastError = "Couldn't send the report. Try again."
+            return false
+        }
+    }
+
+    @discardableResult
+    func reportComment(postId: String, commentId: String, reason: String = "Inappropriate comment") async -> Bool {
+        do {
+            try await remote.report(target: .comment, targetId: "\(postId)/\(commentId)", reason: reason, details: nil)
+            return true
+        } catch {
+            lastError = "Couldn't send the report. Try again."
+            return false
+        }
+    }
+
+    @discardableResult
+    func reportChallenge(_ id: String, reason: String = "Inappropriate challenge") async -> Bool {
+        do {
+            try await remote.report(target: .challenge, targetId: id, reason: reason, details: nil)
+            return true
+        } catch {
+            lastError = "Couldn't send the report. Try again."
+            return false
+        }
+    }
+
+    private func hidePost(_ id: String) {
+        hiddenPostIds.insert(id)
+        feedItems.removeAll { $0.id == id }
+        if let uid = me.uid { defaults.set(Array(hiddenPostIds).sorted(), forKey: Self.hiddenKey(uid)) }
+    }
+
+    // MARK: Feed
+
+    /// The feed: [friends + me], newest first, a page at a time.
+    func loadFeed(forceRefresh: Bool = false) async {
+        guard syncIdentity(), let uid = me.uid else { return }
+        if !forceRefresh, let last = lastFeedFetch, now().timeIntervalSince(last) < Self.cacheTTL { return }
+        if feedItems.isEmpty { isLoadingFeed = true }
+        defer { isLoadingFeed = false }
+        if !graphLoaded || forceRefresh { await loadGraph() }
+        do {
+            let page = try await fetchFeedPage(uid: uid, before: nil)
+            feedItems = page.items
+            hasMoreFeed = page.hasMore
+            feedError = nil
+            lastFeedFetch = now()
+            if !page.items.isEmpty { onFeedLoaded(page.items, uid) }
+        } catch {
+            feedError = "Couldn't load your feed."
+        }
+    }
+
+    func loadMoreFeed() async {
+        guard hasMoreFeed, !isLoadingMoreFeed, let uid = me.uid, let cursor = feedItems.last?.createdAt else { return }
+        isLoadingMoreFeed = true
+        defer { isLoadingMoreFeed = false }
+        if let page = try? await fetchFeedPage(uid: uid, before: cursor) {
+            let known = Set(feedItems.map(\.id))
+            feedItems.append(contentsOf: page.items.filter { !known.contains($0.id) })
+            hasMoreFeed = page.hasMore
+        }
+    }
+
+    private func fetchFeedPage(uid: String, before: Date?) async throws -> (items: [WorkoutFeedItem], hasMore: Bool) {
+        let limit = FeedQueryPlanner.pageSize
+        var queries = FeedQueryPlanner.feedQueries(me: uid, friends: graph.friends, blocked: graph.blocked, before: before, limit: limit)
+        if singleAuthorQueries { queries = queries.flatMap(FeedQueryPlanner.perAuthor) }
+
+        var pages: [[WorkoutFeedItem]] = []
+        var hasMore = false
+        for query in queries {
+            do {
+                let page = try await remote.fetchPosts(query)
+                pages.append(page)
+                hasMore = hasMore || page.count >= limit
+            } catch SocialError.permissionDenied where query.authorUids.count > 1 {
+                // The rules refused a multi-author query (or one author in the chunk is unreadable,
+                // e.g. they blocked me). Retry author by author and skip the ones that fail.
+                singleAuthorQueries = true
+                for single in FeedQueryPlanner.perAuthor(query) {
+                    if let page = try? await remote.fetchPosts(single) {
+                        pages.append(page)
+                        hasMore = hasMore || page.count >= limit
+                    }
+                }
+            } catch SocialError.permissionDenied {
+                continue   // an unreadable single author: skip them, keep the rest of the feed
+            }
+        }
+        let merged = FeedQueryPlanner.merge(pages, blocked: graph.blocked, hidden: hiddenPostIds, limit: limit)
+        return (await hydrate(merged), hasMore)
+    }
+
+    /// Adds the per-viewer parts a post query can't return: my like, and the body map extras.
+    private func hydrate(_ items: [WorkoutFeedItem], bodyMapsSince: Date? = nil) async -> [WorkoutFeedItem] {
+        guard !items.isEmpty else { return items }
+        let liked = (try? await remote.likedPostIds(among: items.map(\.id))) ?? []
+        let wantMaps = items.filter { $0.bodyMapAudience != PostAudience.onlyMe.rawValue && ($0.date >= (bodyMapsSince ?? .distantPast)) }
+        let maps = await withTaskGroup(of: (String, [String: Int]?).self) { group -> [String: [String: Int]] in
+            for item in wantMaps {
+                group.addTask { @MainActor in (item.id, try? await self.remote.fetchBodyMap(postId: item.id)) }
+            }
+            var result: [String: [String: Int]] = [:]
+            for await (id, map) in group { if let map { result[id] = map } }
+            return result
+        }
+        return items.map { item in
+            var copy = item
+            copy.likedByMe = liked.contains(item.id)
+            copy.muscleSets = maps[item.id] ?? [:]
+            return copy
+        }
+    }
+
+    /// The freshest copy of a post (feed or a loaded profile), so sheets reflect optimistic updates.
+    func post(id: String, fallback: WorkoutFeedItem) -> WorkoutFeedItem {
+        feedItems.first { $0.id == id } ?? profilePosts[id] ?? fallback
+    }
+
+    /// Posts seen on profile pages, kept so likes and comments there update the visible copy too.
+    @ObservationIgnored private var profilePosts: [String: WorkoutFeedItem] = [:]
+
+    private func mutatePost(_ id: String, _ change: (inout WorkoutFeedItem) -> Void) {
+        if let i = feedItems.firstIndex(where: { $0.id == id }) { change(&feedItems[i]) }
+        if var p = profilePosts[id] { change(&p); profilePosts[id] = p }
+    }
+
+    // MARK: Likes and comments
+
+    /// Optimistic like toggle: the heart and count change at once, the like document is written, and
+    /// both are rolled back if the write fails. The counter itself belongs to a Cloud Function.
+    func toggleLike(postId: String) async {
+        guard syncIdentity(), !likeInFlight.contains(postId) else { return }
+        guard let current = feedItems.first(where: { $0.id == postId }) ?? profilePosts[postId] else { return }
+        likeInFlight.insert(postId)
+        defer { likeInFlight.remove(postId) }
+        let wasLiked = current.likedByMe
+        let oldCount = current.likeCount
+        let liked = !wasLiked
+        mutatePost(postId) {
+            $0.likedByMe = liked
+            $0.likeCount = max(0, oldCount + (liked ? 1 : -1))
+        }
+        do {
+            try await remote.setLike(postId: postId, liked: liked)
+        } catch {
+            mutatePost(postId) {
+                $0.likedByMe = wasLiked
+                $0.likeCount = oldCount
+            }
+            lastError = "Couldn't update your like. Try again."
+        }
+    }
+
+    func loadComments(postId: String) async {
+        do { comments[postId] = try await remote.fetchComments(postId: postId, limit: 100) }
+        catch { if comments[postId] == nil { comments[postId] = [] } }
+    }
+
+    /// Posts a comment. The shown count goes up at once and is rolled back if the write fails; the
+    /// text is only cleared by the caller on success.
+    @discardableResult
+    func postComment(postId: String, text: String) async -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard syncIdentity(), !trimmed.isEmpty, trimmed.count <= 500 else { return false }
+        let oldCount = (feedItems.first { $0.id == postId } ?? profilePosts[postId])?.commentCount
+        mutatePost(postId) { $0.commentCount += 1 }
+        do {
+            let comment = try await remote.addComment(postId: postId, text: trimmed, authorName: myName, authorUsername: myHandle)
+            comments[postId, default: []].append(comment)
+            return true
+        } catch {
+            if let oldCount { mutatePost(postId) { $0.commentCount = oldCount } }
+            lastError = "Couldn't post your comment. Try again."
+            return false
+        }
+    }
+
+    @discardableResult
+    func deleteComment(postId: String, commentId: String) async -> Bool {
+        let before = comments[postId]
+        let oldCount = (feedItems.first { $0.id == postId } ?? profilePosts[postId])?.commentCount
+        comments[postId]?.removeAll { $0.id == commentId }
+        mutatePost(postId) { $0.commentCount = max(0, $0.commentCount - 1) }
+        do {
+            try await remote.deleteComment(postId: postId, commentId: commentId)
+            return true
+        } catch {
+            comments[postId] = before
+            if let oldCount { mutatePost(postId) { $0.commentCount = oldCount } }
+            lastError = "Couldn't delete the comment. Try again."
+            return false
+        }
+    }
+
+    // MARK: Publishing a session
+
+    /// Builds the post for a finished workout and publishes it, once. Returns the payload that was
+    /// published; nil when nothing was posted (workout posts are "Only me", signed out, already
+    /// posted, or the write failed — a failed post is kept in `pendingPost` for a retry).
+    @discardableResult
+    func publishWorkoutPost(data: WorkoutCompletionData, caption: String, taggedUids: [String], includeBodyMap: Bool) async -> PostPayload? {
+        guard syncIdentity(), let uid = me.uid else { return nil }
+        if myProfile == nil { await loadMyProfile() }
+        let author = FeedPostBuilder.Author(uid: uid, name: myName, handle: myHandle)
+        guard let payload = FeedPostBuilder.makePayload(data: data, author: author, caption: caption, taggedUids: taggedUids,
+                                                       includeBodyMap: includeBodyMap, privacy: privacyService.settings, date: now()),
+              !publishedPostIds.contains(payload.postId) else { return nil }
+        return await publish(payload)
+    }
+
+    @discardableResult
+    private func publish(_ payload: PostPayload) async -> PostPayload? {
+        do {
+            try await remote.createPost(payload)
+            publishedPostIds.insert(payload.postId)
+            pendingPost = nil
+            lastFeedFetch = nil
+            return payload
+        } catch {
+            pendingPost = payload
+            lastError = "Your session didn't post. Try again from the Social tab."
+            return nil
+        }
+    }
+
+    func retryPendingPost() async {
+        guard let payload = pendingPost, !publishedPostIds.contains(payload.postId) else { return }
+        await publish(payload)
+        if pendingPost == nil { await loadFeed(forceRefresh: true) }
+    }
+
+    func deletePost(_ id: String) async {
+        do {
+            try await remote.deletePost(id: id)
+            feedItems.removeAll { $0.id == id }
+            profilePosts[id] = nil
+        } catch {
+            lastError = "Couldn't delete the post. Try again."
+        }
+    }
+
+    // MARK: Saved posts (local bookmarks; there is no server-side "saved" collection)
 
     private static let savedPostsKey = "savedFeedPostIds"
 
-    var savedPostIds: Set<String> {
-        Set(UserDefaults.standard.stringArray(forKey: Self.savedPostsKey) ?? [])
-    }
+    var savedPostIds: Set<String> { Set(defaults.stringArray(forKey: Self.savedPostsKey) ?? []) }
 
     func toggleSavedPost(postId: String) {
         var saved = savedPostIds
         if saved.contains(postId) { saved.remove(postId) } else { saved.insert(postId) }
-        UserDefaults.standard.set(Array(saved), forKey: Self.savedPostsKey)
+        defaults.set(Array(saved), forKey: Self.savedPostsKey)
     }
 
-    func findFriendsFromContacts(emails: [String]) async {
-        // Search for each email — in a real app this would be a batch query
-        var matches: [FirestoreUserProfile] = []
-        for email in emails.prefix(50) {
-            if let results = try? await firestoreService.searchUsers(query: email), !results.isEmpty {
-                matches.append(contentsOf: results)
+    // MARK: Profiles
+
+    /// A profile page for `uid` as the viewer may see it: the profile, then (only when it is visible)
+    /// their posts for the audiences the viewer may read.
+    func loadProfilePage(uid: String) async -> ProfilePage {
+        guard syncIdentity() else { return ProfilePage(uid: uid, relationship: .stranger, access: .unavailable, profile: nil, posts: []) }
+        let relation = relationship(with: uid)
+        if relation == .blocked {
+            return ProfilePage(uid: uid, relationship: .blocked, access: .restricted, profile: nil, posts: [])
+        }
+        let result: Result<FirestoreUserProfile, SocialError>
+        do { result = .success(try await remote.fetchProfile(uid: uid)) }
+        catch let e as SocialError { result = .failure(e) }
+        catch { result = .failure(.unavailable(error.localizedDescription)) }
+
+        let access = ProfileAccessRules.access(for: result)
+        var profile: FirestoreUserProfile?
+        if case .success(let p) = result {
+            profile = p
+            if uid == me.uid { myProfile = p } else { profileCache[uid] = p }
+        } else if access == .unavailable {
+            goneUids.insert(uid)
+        } else {
+            profileCache[uid] = .restricted(uid: uid)
+        }
+
+        var posts: [WorkoutFeedItem] = []
+        if access == .visible {
+            let query = FeedQueryPlanner.profileQuery(author: uid, relationship: relation)
+            if let fetched = try? await remote.fetchPosts(query) {
+                let thirtyDays = Calendar.current.date(byAdding: .day, value: -30, to: now())
+                posts = await hydrate(FeedQueryPlanner.merge([fetched], blocked: graph.blocked, hidden: hiddenPostIds, limit: query.limit), bodyMapsSince: thirtyDays)
+                for p in posts { profilePosts[p.id] = p }
             }
         }
-        // Filter out self and existing friends
-        let friendUids = Set(friends.map(\.uid))
-        contactMatches = matches.filter { profile in
-            profile.uid != currentUid && !friendUids.contains(profile.uid)
-        }
+        return ProfilePage(uid: uid, relationship: relation, access: access, profile: profile, posts: posts)
     }
 
-    // MARK: - Comments
-
-    func fetchComments(postId: String) async -> [FeedComment] {
-        (try? await firestoreService.fetchComments(postId: postId)) ?? []
+    /// A person's logged sessions of one lift, from their real posts. Nil when the posts couldn't be fetched.
+    func loadLiftHistory(ownerUid: String, exerciseName: String) async -> [LiftSession]? {
+        guard syncIdentity() else { return nil }
+        let query = FeedQueryPlanner.profileQuery(author: ownerUid, relationship: relationship(with: ownerUid), limit: 100)
+        guard let posts = try? await remote.fetchPosts(query) else { return nil }
+        return LiftHistory.sessions(from: posts, exerciseName: exerciseName)
     }
 
-    func postComment(postId: String, text: String) async {
-        guard let uid = currentUid, !text.isEmpty else { return }
-        let username = Auth.auth().currentUser?.displayName ?? "User"
-        let comment = FeedComment(userId: uid, username: username, text: text)
-        try? await firestoreService.addComment(postId: postId, comment: comment)
-        // Update local comment count
-        if let index = feedItems.firstIndex(where: { $0.id == postId }) {
-            feedItems[index].commentCount += 1
-        }
+    // MARK: Challenges
+
+    var globalChallenge: SocialChallenge? {
+        (globalChallenges + myChallenges.filter(\.isGlobal)).first { $0.isActive(now: now()) }
+    }
+    var activeFriendChallenges: [SocialChallenge] {
+        myChallenges.filter { !$0.isGlobal && $0.isActive(now: now()) }
+    }
+    var endedChallenges: [SocialChallenge] {
+        myChallenges.filter { $0.isEnded(now: now()) }
     }
 
-    // MARK: - Challenges
+    func isJoined(_ challenge: SocialChallenge) -> Bool {
+        myChallenges.contains { $0.id == challenge.id }
+    }
 
     func loadChallenges() async {
+        guard syncIdentity() else { return }
         isLoadingChallenges = true
-        let demo = DevFlags.socialFixtures ? demoChallengesForCurrentUser() : []
-        let demoGlobal = demo.first { $0.isGlobal }
-        let demoFriend = demo.filter { !$0.isGlobal }
-
-        var active: [FirestoreChallenge] = []
-        var mine: [FirestoreChallenge] = []
-        do {
-            active = try await firestoreService.fetchActiveChallenges()
-            mine = try await firestoreService.fetchUserChallenges()
-        } catch {
-            active = []
-            mine = []
-        }
-
-        // The global card falls back to the demo challenge independently of the friend
-        // challenges — there's no admin backend writing a real "Pulse admin" global
-        // challenge to Firestore yet, so without this a single real friend challenge would
-        // silently drop the global card entirely (all real data replaced the whole demo
-        // set, global included).
-        let realFriendActive = active.filter { !$0.isGlobal }
-        let hasRealFriendData = !realFriendActive.isEmpty || !mine.isEmpty
-        let global = active.first { $0.isGlobal } ?? demoGlobal
-
-        activeChallenges = [global].compactMap { $0 } + (hasRealFriendData ? realFriendActive : demoFriend)
-        myChallenges = mine.isEmpty ? (hasRealFriendData ? [] : demoFriend) : mine
-        isLoadingChallenges = false
+        defer { isLoadingChallenges = false }
+        challengesError = nil
+        // Independent calls: one failure must not blank the others.
+        do { myChallenges = try await remote.fetchMyChallenges() } catch { challengesError = "Couldn't load your challenges." }
+        do { globalChallenges = try await remote.fetchGlobalChallenges() } catch { if challengesError == nil { challengesError = "Couldn't load the global challenge." } }
+        await loadInvites()
+        if let global = globalChallenge { await loadBoard(global) }
     }
 
-    /// Creates a challenge and joins the creator to it (`LeaderboardEntry.joinedAt = now`).
-    /// Returns the new challenge id so 5b can invite friends into it in the same flow —
-    /// per spec the challenge already exists by step 2, so there is no separate "create"
-    /// action there.
+    func loadInvites() async {
+        guard syncIdentity() else { return }
+        if let invites = try? await remote.fetchPendingInvites() {
+            pendingChallengeInvites = invites.filter { !graph.blocked.contains($0.fromUid) }
+        }
+    }
+
+    /// Creates a challenge (non-global) and joins its creator, so the creator is on the board. Returns the new id.
     @discardableResult
-    func createChallenge(
-        name: String, description: String = "", metric: ChallengeMetric,
-        winCondition: ChallengeWinCondition = .highest, startDate: Date, endDate: Date,
-        runsFor: String = "4weeks", isGlobal: Bool = false,
-        customExercise: String? = nil, customCountBy: String? = nil, customUnit: String? = nil
-    ) async -> String? {
-        guard let uid = currentUid else { return nil }
-        let challenge = FirestoreChallenge(
-            name: name,
-            challengeDescription: description,
-            creatorId: uid,
-            metric: metric,
-            winCondition: winCondition,
-            startDate: startDate,
-            endDate: endDate,
-            runsFor: runsFor,
-            isGlobal: isGlobal,
-            customExercise: customExercise,
-            customCountBy: customCountBy,
-            customUnit: customUnit
-        )
-        let id = try? await firestoreService.createChallenge(challenge)
-        if let id {
-            let username = Auth.auth().currentUser?.displayName ?? "You"
-            try? await firestoreService.joinChallenge(id: id, entry: LeaderboardEntry(userId: uid, username: username))
+    func createChallenge(_ draft: ChallengeDraft) async -> String? {
+        guard syncIdentity() else { return nil }
+        do {
+            let id = try await remote.createChallenge(draft)
+            try await remote.joinChallenge(id: id, username: myHandle.isEmpty ? myName : myHandle)
+            await loadChallenges()
+            return id
+        } catch {
+            lastError = "Couldn't create the challenge. Try again."
+            return nil
         }
-        await loadChallenges()
-        return id
     }
 
-    func joinChallenge(id: String, username: String) async {
-        guard let uid = currentUid else { return }
-        let entry = LeaderboardEntry(userId: uid, username: username)
-        try? await firestoreService.joinChallenge(id: id, entry: entry)
-        await loadChallenges()
+    /// JOIN on a global challenge, or on one I was invited to.
+    @discardableResult
+    func join(_ challenge: SocialChallenge) async -> Bool {
+        guard syncIdentity() else { return false }
+        do {
+            try await remote.joinChallenge(id: challenge.id, username: myHandle.isEmpty ? myName : myHandle)
+            if !myChallenges.contains(where: { $0.id == challenge.id }) { myChallenges.insert(challenge, at: 0) }
+            await loadBoard(challenge)
+            return true
+        } catch {
+            lastError = challenge.isEnded(now: now()) ? "This challenge has ended." : "Couldn't join. Try again."
+            return false
+        }
     }
 
-    // MARK: - Challenge invites (5b)
-
-    func sendChallengeInvite(challengeId: String, challengeName: String, toUid: String) async {
-        guard let uid = currentUid else { return }
-        let username = Auth.auth().currentUser?.displayName ?? "A friend"
-        let invite = ChallengeInvite(challengeId: challengeId, challengeName: challengeName, fromUid: uid, fromUsername: username, toUid: toUid)
-        try? await firestoreService.sendChallengeInvite(invite)
+    @discardableResult
+    func leave(_ challenge: SocialChallenge) async -> Bool {
+        do {
+            try await remote.leaveChallenge(id: challenge.id)
+            myChallenges.removeAll { $0.id == challenge.id }
+            boards[challenge.id] = nil
+            return true
+        } catch {
+            lastError = "Couldn't leave the challenge. Try again."
+            return false
+        }
     }
 
-    func loadChallengeInvites() async {
-        guard let uid = currentUid else { pendingChallengeInvites = []; return }
-        pendingChallengeInvites = (try? await firestoreService.fetchPendingChallengeInvites(for: uid)) ?? []
+    /// Loads a board from the entries the functions wrote (scores and ranks are never computed here).
+    func loadBoard(_ challenge: SocialChallenge) async {
+        let limit = challenge.isGlobal ? 50 : 200
+        guard let fetched = try? await remote.fetchLeaderboard(challengeId: challenge.id, isGlobal: challenge.isGlobal, limit: limit) else { return }
+        var entries = fetched
+        let myEntry = try? await remote.fetchMyEntry(challengeId: challenge.id)
+        if let mine = myEntry {
+            if !entries.contains(where: { $0.uid == mine.uid }) {
+                entries.append(mine)
+                // Outside the top 50 of a global board: show the neighbourhood around me too.
+                if challenge.isGlobal, mine.rank > limit, mine.rank > 0,
+                   let around = try? await remote.fetchEntries(challengeId: challenge.id, ranks: max(1, mine.rank - 2)...(mine.rank + 2)) {
+                    for e in around where !entries.contains(where: { $0.uid == e.uid }) { entries.append(e) }
+                }
+            }
+        }
+        let rows = Leaderboard.rows(from: entries, me: me.uid)
+        let isMember = (try? await remote.isMember(challengeId: challenge.id)) ?? myChallenges.contains { $0.id == challenge.id }
+        boards[challenge.id] = ChallengeBoard(rows: rows, mine: rows.first { $0.isMe }, isMember: isMember)
     }
 
-    func respondToChallengeInvite(docId: String, accept: Bool) async {
-        try? await firestoreService.respondToChallengeInvite(docId: docId, accept: accept)
-        pendingChallengeInvites.removeAll { $0.docId == docId }
-        if accept { await loadChallenges() }
+    // MARK: Invites
+
+    @discardableResult
+    func sendChallengeInvite(challenge: SocialChallenge, toUid: String) async -> Bool {
+        guard syncIdentity() else { return false }
+        do {
+            try await remote.sendInvite(challengeId: challenge.id, challengeName: challenge.name,
+                                        fromUsername: myHandle.isEmpty ? myName : myHandle, toUid: toUid)
+            return true
+        } catch {
+            lastError = "Couldn't send the invite. Try again."
+            return false
+        }
+    }
+
+    /// ACCEPT joins the challenge first (the join needs the invite), then marks the invite accepted;
+    /// IGNORE declines it. A failed join leaves the invite pending.
+    @discardableResult
+    func respond(to invite: ChallengeInvite, accept: Bool) async -> Bool {
+        guard syncIdentity() else { return false }
+        do {
+            if accept {
+                try await remote.joinChallenge(id: invite.challengeId, username: myHandle.isEmpty ? myName : myHandle)
+            }
+            try await remote.respondToInvite(invite, accept: accept)
+            pendingChallengeInvites.removeAll { $0.id == invite.id }
+            if accept { await loadChallenges() }
+            return true
+        } catch {
+            lastError = accept ? "Couldn't join. The challenge may have ended." : "Couldn't update the invite. Try again."
+            return false
+        }
     }
 }

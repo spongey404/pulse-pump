@@ -1,158 +1,149 @@
 import SwiftUI
-import Contacts
 
-/// 6a — Add friends: search, incoming requests, suggested (from contacts), invite link.
+/// 6a — Add friends: find by handle, friend requests (fans waiting for a follow back), invite.
+///
+/// Friends are people who follow each other. A person who follows you but whom you don't follow is a
+/// fan, and shows up here as a request: ACCEPT follows them back (you become friends), IGNORE
+/// dismisses the request (they stay a fan).
 struct FriendsListView: View {
     @Bindable var viewModel: SocialViewModel
     @State private var searchText = ""
-    @State private var showContactsPicker = false
-    @State private var contactsLoaded = false
+    @State private var searchTask: Task<Void, Never>?
+    @Environment(\.dismiss) private var dismiss
 
-    /// SUGGESTED shows live search results while typing, contact matches otherwise.
-    private var suggested: [FirestoreUserProfile] { searchText.isEmpty ? viewModel.contactMatches : viewModel.searchResults }
+    private var typedHandle: String { HandleRules.normalize(searchText) }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 10) {
                     Image(systemName: "magnifyingglass").font(.system(size: 16)).foregroundStyle(Color.inkMuted)
-                    TextField("Search by name or handle", text: $searchText)
+                    TextField("Find someone by their @handle", text: $searchText)
                         .font(.archivo(15))
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .submitLabel(.search)
                 }
                 .padding(.bottom, 8)
                 .overlay(alignment: .bottom) { Rectangle().fill(Color.ruleStrong).frame(height: 1) }
                 .padding(.top, 14)
 
-                if !viewModel.pendingRequests.isEmpty {
-                    SectionLabel(title: "Requests", meta: "\(viewModel.pendingRequests.count) Waiting").padding(.top, 22).padding(.bottom, 6)
-                    ForEach(viewModel.pendingRequests, id: \.docId) { request in
-                        requestRow(request)
+                if !searchText.isEmpty {
+                    SectionLabel(title: "Results").padding(.top, 22).padding(.bottom, 6)
+                    if !HandleRules.isValid(typedHandle) {
+                        hint("TYPE THE FULL HANDLE · 3 TO 20 LETTERS, NUMBERS, . OR _")
+                    } else if viewModel.isSearching && viewModel.searchResults.isEmpty {
+                        SkeletonRows(count: 1, rowHeight: 60)
+                    } else if viewModel.searchResults.isEmpty {
+                        hint("NO ONE WITH THE HANDLE @\(typedHandle.uppercased())")
+                    } else {
+                        ForEach(viewModel.searchResults, id: \.uid) { found in
+                            resultRow(found)
+                        }
                     }
                 }
 
-                SectionLabel(title: "Suggested").padding(.top, 22).padding(.bottom, 6)
-                if suggested.isEmpty && !contactsLoaded {
-                    Button { showContactsPicker = true } label: {
-                        Text("FIND FROM CONTACTS").font(Font.spaceMono(9, weight: .bold)).tracking(1.2).foregroundStyle(Color.accentInk)
-                            .frame(minHeight: 44)
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    ForEach(suggested) { user in
-                        suggestedRow(user)
+                if !viewModel.fanRequests.isEmpty {
+                    SectionLabel(title: "Friend Requests", meta: "\(viewModel.fanRequests.count) Waiting").padding(.top, 22).padding(.bottom, 6)
+                    ForEach(viewModel.fanRequests) { fan in
+                        requestRow(fan)
                     }
                 }
 
-                SectionLabel(title: "Not On Pump").padding(.top, 22).padding(.bottom, 8)
-                if let url = URL(string: "https://pulsepump.app/invite?ref=\(viewModel.currentUid ?? "")") {
-                    ShareLink(item: url) {
-                        DashedAdd(title: "Share Invite Link", action: {})
+                if !viewModel.followingOnly.isEmpty {
+                    SectionLabel(title: "Waiting For Follow Back", meta: "\(viewModel.followingOnly.count)").padding(.top, 22).padding(.bottom, 6)
+                    ForEach(viewModel.followingOnly) { person in
+                        personRow(person) {
+                            SocialPill(title: "UNFOLLOW", style: .outlined) { Task { await viewModel.unfollow(person.uid) } }
+                        }
+                    }
+                }
+
+                SectionLabel(title: "Invite").padding(.top, 22).padding(.bottom, 8)
+                if !viewModel.myHandle.isEmpty {
+                    ShareLink(item: "Train with me on Pump. Find me by my handle: @\(viewModel.myHandle)") {
+                        DashedAdd(title: "Share Your Handle", action: {})
                             .allowsHitTesting(false)
                     }
+                    Text("FRIENDS FIND YOU BY TYPING YOUR EXACT HANDLE · @\(viewModel.myHandle.uppercased())")
+                        .font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted)
+                        .padding(.top, 10)
                 }
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
         }
         .background(Color.canvasBg)
+        .navigationTitle("Find Friends")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
+        }
         .onChange(of: searchText) { _, newValue in
-            Task { await viewModel.searchUsers(query: newValue) }
+            // Debounce, and let the view model drop out-of-order answers.
+            searchTask?.cancel()
+            searchTask = Task {
+                try? await Task.sleep(for: .milliseconds(350))
+                guard !Task.isCancelled else { return }
+                await viewModel.searchUsers(query: newValue)
+            }
         }
-        .task { await viewModel.loadFriends() }
-        .sheet(isPresented: $showContactsPicker) {
-            ContactsPermissionView { loadContacts() }
+        .task {
+            await viewModel.loadMyProfile()
+            await viewModel.loadGraph()
         }
     }
 
-    private func requestRow(_ request: (docId: String, friendship: FriendshipDoc, profile: FirestoreUserProfile?)) -> some View {
-        HStack(spacing: 12) {
-            Avatar(initial: request.profile?.displayName ?? "?", size: 36)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(request.profile?.displayName ?? "Unknown").font(.archivo(16, weight: .semibold)).foregroundStyle(Color.inkPrimary)
-                Text("@\(request.profile?.username ?? "")").font(Font.spaceMono(9)).foregroundStyle(Color.inkMuted)
-            }
-            Spacer()
-            Button { Task { await viewModel.acceptFriendRequest(docId: request.docId) } } label: {
-                Text("ACCEPT").font(Font.spaceMono(9, weight: .bold)).tracking(1.2).foregroundStyle(.white)
-                    .padding(.horizontal, 14).padding(.vertical, 9)
-                    .background(Color.pumpAccent).clipShape(RoundedRectangle(cornerRadius: 8))
-            }
-            .buttonStyle(.plain)
-            Button { Task { await viewModel.removeFriend(docId: request.docId) } } label: {
-                Text("IGNORE").font(Font.spaceMono(9, weight: .bold)).tracking(1.2).foregroundStyle(Color.inkMuted)
-                    .padding(.horizontal, 14).padding(.vertical, 9)
-                    .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.ruleStrong, lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-        }
-        .frame(minHeight: 64)
-        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+    private func hint(_ text: String) -> some View {
+        Text(text).font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted).frame(minHeight: 44, alignment: .leading)
     }
 
-    private func suggestedRow(_ user: FirestoreUserProfile) -> some View {
+    private func personRow<Trailing: View>(_ person: FirestoreUserProfile, @ViewBuilder trailing: () -> Trailing) -> some View {
         HStack(spacing: 12) {
-            Avatar(initial: user.displayName, size: 36)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(user.displayName).font(.archivo(16, weight: .semibold)).foregroundStyle(Color.inkPrimary)
-                Text("@\(user.username)").font(Font.spaceMono(9)).foregroundStyle(Color.inkMuted)
-            }
-            Spacer()
-            Button { Task { await viewModel.sendFriendRequest(to: user.uid) } } label: {
-                Text("FOLLOW").font(Font.spaceMono(9, weight: .bold)).tracking(1.2).foregroundStyle(.white)
-                    .padding(.horizontal, 14).padding(.vertical, 9)
-                    .background(Color.pumpAccent).clipShape(RoundedRectangle(cornerRadius: 8))
+            NavigationLink {
+                FriendProfileView(uid: person.uid, handle: person.username, name: person.shownName, viewModel: viewModel)
+            } label: {
+                HStack(spacing: 12) {
+                    Avatar(initial: person.shownName, size: 36)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(person.shownName).font(.archivo(16, weight: .semibold)).foregroundStyle(Color.inkPrimary)
+                        if !person.username.isEmpty {
+                            Text("@\(person.username)").font(Font.spaceMono(9)).foregroundStyle(Color.inkMuted)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
             }
             .buttonStyle(.plain)
+            trailing()
         }
         .frame(minHeight: 60)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
     }
 
-    private func loadContacts() {
-        let store = CNContactStore()
-        store.requestAccess(for: .contacts) { granted, _ in
-            guard granted else { return }
-            let request = CNContactFetchRequest(keysToFetch: [CNContactEmailAddressesKey as CNKeyDescriptor])
-            var emails: [String] = []
-            try? store.enumerateContacts(with: request) { contact, _ in
-                for email in contact.emailAddresses { emails.append(email.value as String) }
-            }
-            Task { @MainActor in
-                contactsLoaded = true
-                await viewModel.findFriendsFromContacts(emails: emails)
+    private func requestRow(_ fan: FirestoreUserProfile) -> some View {
+        personRow(fan) {
+            HStack(spacing: 8) {
+                SocialPill(title: "ACCEPT", style: .filled) { Task { await viewModel.accept(fan.uid) } }
+                SocialPill(title: "IGNORE", style: .outlined) { viewModel.ignore(fan.uid) }
             }
         }
     }
-}
 
-struct ContactsPermissionView: View {
-    let onGrant: () -> Void
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "person.crop.rectangle.stack")
-                .font(.display(34))
-                .foregroundStyle(Color.accentInk)
-
-            Text("Find Friends from Contacts")
-                .font(.display(20))
-
-            Text("We'll check if any of your contacts are already on Pump. We only use email addresses and never store your contacts.")
-                .font(.archivo(15))
-                .foregroundStyle(Color.inkMuted)
-                .multilineTextAlignment(.center)
-
-            Button("Allow Access") {
-                onGrant()
-                dismiss()
+    private func resultRow(_ found: UserLookup) -> some View {
+        let person = found.profile ?? .restricted(uid: found.uid, handle: found.handle)
+        let relation = viewModel.relationship(with: found.uid)
+        return personRow(person) {
+            switch relation {
+            case .friends:
+                Text("FRIENDS").font(Font.spaceMono(9, weight: .bold)).tracking(1.2).foregroundStyle(Color.inkMuted)
+            case .following:
+                SocialPill(title: "FOLLOWING", style: .outlined) { Task { await viewModel.unfollow(found.uid) } }
+            case .fan:
+                SocialPill(title: "FOLLOW BACK", style: .filled) { Task { await viewModel.follow(found.uid) } }
+            default:
+                SocialPill(title: "FOLLOW", style: .filled) { Task { await viewModel.follow(found.uid) } }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.accentInk)
-
-            Button("Not Now") { dismiss() }
-                .foregroundStyle(Color.inkMuted)
         }
-        .padding(32)
     }
 }

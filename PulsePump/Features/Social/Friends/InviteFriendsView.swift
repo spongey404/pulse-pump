@@ -1,35 +1,31 @@
 import SwiftUI
 
-/// 5b — Invite friends, step 2. The challenge already exists by this point (created at the
-/// end of 5a) — there is no create action here, only invites.
+/// 5b — Invite friends, step 2. The challenge already exists by this point (created at the end of
+/// 5a) — there is no create action here, only invites. Invites are `invites/{challengeId}_{toUid}`
+/// documents; the invitee joins from their inbox.
 struct InviteFriendsView: View {
     @Bindable var viewModel: SocialViewModel
-    let challengeId: String
-    let challengeName: String
-    let metricLabel: String
-    let windowLabel: String
+    let challenge: SocialChallenge
 
     @Environment(\.dismiss) private var dismiss
     @State private var searchText = ""
     @State private var invitedUids: Set<String> = []
+    @State private var inFlight: Set<String> = []
 
     private var friends: [FirestoreUserProfile] {
         guard !searchText.isEmpty else { return viewModel.friends }
-        return viewModel.friends.filter { $0.displayName.localizedCaseInsensitiveContains(searchText) || $0.username.localizedCaseInsensitiveContains(searchText) }
+        return viewModel.friends.filter { $0.shownName.localizedCaseInsensitiveContains(searchText) || $0.username.localizedCaseInsensitiveContains(searchText) }
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text("INVITE FRIENDS").font(.archivo(22, weight: .black)).tracking(0.5).foregroundStyle(Color.inkPrimary)
-                Spacer()
+            SocialScreenHeader(title: "INVITE FRIENDS", onBack: nil) {
                 Button("SKIP") { dismiss() }
                     .font(Font.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkMuted)
+                    .frame(minWidth: 44, minHeight: 44)
             }
-            .padding(.horizontal, 16).padding(.vertical, 10)
-            .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 0.5) }
 
-            Text("\(challengeName.uppercased()) · \(metricLabel.uppercased()) · \(windowLabel)")
+            Text("\(challenge.name.uppercased()) · \(challenge.metric.displayName.uppercased()) · ENDS \(challenge.endAt.formatted(.dateTime.day().month(.abbreviated)).uppercased())")
                 .font(Font.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkMuted)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16).padding(.top, 12)
@@ -38,7 +34,7 @@ struct InviteFriendsView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(spacing: 10) {
                         Image(systemName: "magnifyingglass").font(.system(size: 16)).foregroundStyle(Color.inkMuted)
-                        TextField("Search by name or handle", text: $searchText)
+                        TextField("Search your friends", text: $searchText)
                             .font(.archivo(15))
                     }
                     .padding(.bottom, 8)
@@ -47,18 +43,20 @@ struct InviteFriendsView: View {
 
                     SectionLabel(title: "Your Friends", meta: "\(friends.count)").padding(.top, 22).padding(.bottom, 6)
 
+                    if viewModel.friends.isEmpty {
+                        Text("NO FRIENDS YET · FRIENDS ARE PEOPLE YOU FOLLOW WHO FOLLOW YOU BACK")
+                            .font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted).frame(minHeight: 44, alignment: .leading)
+                    }
                     ForEach(friends, id: \.uid) { friend in
                         friendRow(friend)
                     }
 
                     SectionLabel(title: "Not On Pump").padding(.top, 24).padding(.bottom, 8)
-                    if let url = URL(string: "https://pulsepump.app/invite?challenge=\(challengeId)&ref=\(viewModel.currentUid ?? "")") {
-                        ShareLink(item: url) {
-                            DashedAdd(title: "Share Invite Link", action: {})
-                                .allowsHitTesting(false)
-                        }
+                    ShareLink(item: "I started a challenge on Pump: \(challenge.name). Get the app and add me\(viewModel.myHandle.isEmpty ? "" : " (@\(viewModel.myHandle))") to join.") {
+                        DashedAdd(title: "Share Invite", action: {})
+                            .allowsHitTesting(false)
                     }
-                    Text("THE LINK STAYS OPEN FOR THE WHOLE CHALLENGE · LATE JOINERS ARE SCORED FROM THE DAY THEY JOIN")
+                    Text("PEOPLE YOU INVITE CAN JOIN UNTIL THE CHALLENGE ENDS · LATE JOINERS ARE SCORED FROM THE DAY THEY JOIN")
                         .font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted)
                         .padding(.top, 10)
                 }
@@ -71,38 +69,31 @@ struct InviteFriendsView: View {
         .safeAreaInset(edge: .bottom) {
             DockedCTA(trailingCount: "\(invitedUids.count) INVITED", primaryLabel: "DONE ›", style: .quiet) { dismiss() }
         }
-        .task { await viewModel.loadFriends() }
+        .task { await viewModel.loadGraph() }
     }
 
     private func friendRow(_ friend: FirestoreUserProfile) -> some View {
         let isInvited = invitedUids.contains(friend.uid)
         return HStack(spacing: 12) {
-            Avatar(initial: friend.displayName, size: 36)
+            Avatar(initial: friend.shownName, size: 36)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 8) {
-                    Text(friend.displayName).font(.archivo(16, weight: .semibold)).foregroundStyle(Color.inkPrimary)
-                    Text("@\(friend.username)").font(Font.spaceMono(9)).foregroundStyle(Color.inkMuted)
+                    Text(friend.shownName).font(.archivo(16, weight: .semibold)).foregroundStyle(Color.inkPrimary)
+                    if !friend.username.isEmpty { Text("@\(friend.username)").font(Font.spaceMono(9)).foregroundStyle(Color.inkMuted) }
                 }
                 Text("\(friend.currentStreak)D STREAK").font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
             }
             Spacer()
-            Button {
-                if isInvited {
-                    invitedUids.remove(friend.uid)
-                } else {
-                    invitedUids.insert(friend.uid)
-                    Task { await viewModel.sendChallengeInvite(challengeId: challengeId, challengeName: challengeName, toUid: friend.uid) }
+            SocialPill(title: isInvited ? "INVITED" : "INVITE", style: isInvited ? .outlined : .filled, isDisabled: isInvited || inFlight.contains(friend.uid)) {
+                // Invites can't be withdrawn from here, so INVITED is final once the write succeeds.
+                inFlight.insert(friend.uid)
+                Task {
+                    if await viewModel.sendChallengeInvite(challenge: challenge, toUid: friend.uid) {
+                        invitedUids.insert(friend.uid)
+                    }
+                    inFlight.remove(friend.uid)
                 }
-            } label: {
-                Text(isInvited ? "INVITED" : "INVITE")
-                    .font(Font.spaceMono(9, weight: .bold)).tracking(1.2)
-                    .foregroundStyle(isInvited ? Color.inkMuted : .white)
-                    .padding(.horizontal, 14).padding(.vertical, 9)
-                    .background(isInvited ? Color.clear : Color.pumpAccent)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(isInvited ? Color.ruleStrong : Color.clear, lineWidth: 1))
             }
-            .buttonStyle(.plain)
         }
         .frame(minHeight: 60)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }

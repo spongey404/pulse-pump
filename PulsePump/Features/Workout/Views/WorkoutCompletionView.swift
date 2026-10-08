@@ -480,8 +480,8 @@ struct WorkoutCompletionView: View {
             FlowLayout(spacing: 8) {
                 ForEach(taggedFriends, id: \.uid) { friend in
                     HStack(spacing: 7) {
-                        Avatar(initial: friend.displayName, size: 22, showBorder: false)
-                        Text(friend.displayName)
+                        Avatar(initial: friend.shownName, size: 22, showBorder: false)
+                        Text(friend.shownName)
                             .font(.archivo(13, weight: .semibold))
                             .foregroundStyle(Color.inkPrimary)
                     }
@@ -521,7 +521,7 @@ struct WorkoutCompletionView: View {
             composerMenuRow(title: "Don't post", note: "STAYS IN YOUR HISTORY, NOBODY SEES IT") {
                 dismissWithoutPosting()
             }
-            composerMenuRow(title: "Post without body map", note: "STATS AND PHOTO ONLY") {
+            composerMenuRow(title: "Post without body map", note: "STATS ONLY, NO BODY MAP") {
                 postAndDismiss(includeBodyMap: false)
             }
             Group {
@@ -569,23 +569,19 @@ struct WorkoutCompletionView: View {
         String((userName.isEmpty ? "U" : userName).prefix(1)).uppercased()
     }
 
-    /// - Parameter includeBodyMap: false for the overflow's "Post without body map" row —
-    ///   posts stats + photo only, `WorkoutFeedItem.includesBodyMap` gates the feed/session
-    ///   sheet's body-map slide.
+    /// Publishes this session once (the post id is the workout's id, and `hasPosted` guards double taps).
+    /// The post is built from the workout's working sets only, with `audience` / `bodyMapAudience` taken
+    /// from the privacy settings; with "Workout posts" set to "Only me" nothing is posted.
+    /// - Parameter includeBodyMap: false for the overflow's "Post without body map" row, which skips
+    ///   the `extras/bodymap` document entirely.
     private func postAndDismiss(includeBodyMap: Bool) {
-        // At most one post per workout, and never when the audience is "Only me".
         guard !hasPosted else { return }
         hasPosted = true
-        if FeedPostBuilder.audience() != .onlyMe {
-            let item = FeedPostBuilder.makeItem(
-                data: data,
-                userId: Auth.auth().currentUser?.uid ?? "",
-                username: Auth.auth().currentUser?.displayName ?? "User",
-                caption: caption,
-                taggedFriendUids: taggedFriends.map(\.uid),
-                includeBodyMap: includeBodyMap
-            )
-            Task { try? await FirestoreService().shareWorkoutToFeed(item) }
+        let tagged = taggedFriends.map(\.uid)
+        let text = caption
+        let completion = data
+        Task {
+            await SocialViewModel.shared.publishWorkoutPost(data: completion, caption: text, taggedUids: tagged, includeBodyMap: includeBodyMap)
         }
         onDismiss()
     }

@@ -13,7 +13,7 @@ struct ProfileView: View {
     private var workouts: [Workout]
     @State private var photoItem: PhotosPickerItem?
     @State private var navigateToEdit = false
-    @State private var social = SocialViewModel()
+    @State private var social = SocialViewModel.shared
     @State private var showFriends = false
 
     private var user: User? { users.first }
@@ -62,7 +62,7 @@ struct ProfileView: View {
         .sheet(isPresented: $showFriends) {
             NavigationStack { FriendsListView(viewModel: social) }
         }
-        .task { await social.loadFriends() }
+        .task { await social.loadGraph() }
         .onChange(of: photoItem) { _, newItem in
             guard let newItem else { return }
             Task {
@@ -140,8 +140,8 @@ struct ProfileView: View {
         let cells: [(String, String)] = [
             ("\(workouts.count)", "WORKOUTS"),
             ("\(streak)D", "STREAK"),
-            ("\(social.friends.count)", "FOLLOWERS"),
-            ("\(social.friends.count)", "FOLLOWING"),
+            ("\(social.friendCount)", "FRIENDS"),
+            ("\(social.fanCount)", "FANS"),
         ]
         return HStack(spacing: 0) {
             ForEach(Array(cells.enumerated()), id: \.offset) { i, c in
@@ -169,12 +169,12 @@ struct ProfileView: View {
     private var followingSection: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("FOLLOWING")
+                Text("FRIENDS")
                     .font(.spaceMono(9))
                     .tracking(1.5)
                     .foregroundStyle(Color.inkMuted)
                 Spacer()
-                Text("\(social.friends.count)")
+                Text("\(social.friendCount)")
                     .font(.spaceMono(9))
                     .tracking(1.5)
                     .foregroundStyle(Color.inkMuted)
@@ -203,7 +203,7 @@ struct ProfileView: View {
                             .foregroundStyle(Color.inkMuted)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    Text("FOLLOWING")
+                    Text("FRIEND")
                         .font(.spaceMono(8))
                         .tracking(1.2)
                         .foregroundStyle(Color.inkMuted)
@@ -218,7 +218,7 @@ struct ProfileView: View {
 
             Button { showFriends = true } label: {
                 HStack {
-                    Text(social.friends.isEmpty ? "FIND FRIENDS" : "SEE ALL \(social.friends.count) · FIND FRIENDS")
+                    Text(social.friends.isEmpty ? "FIND FRIENDS" : "SEE ALL \(social.friendCount) · FIND FRIENDS")
                         .font(.spaceMono(9, weight: .bold))
                         .tracking(1.2)
                         .foregroundStyle(Color.inkPrimary)

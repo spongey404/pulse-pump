@@ -7,99 +7,62 @@ struct FirestoreModelTests {
     // MARK: - FirestoreUserProfile
 
     @Test @MainActor func userProfileCodableRoundtrip() throws {
-        let profile = FirestoreUserProfile(
-            uid: "abc123",
-            username: "john",
-            displayName: "John Doe",
-            totalWorkouts: 42,
-            currentStreak: 5,
-            longestStreak: 10
-        )
-
-        let data = try JSONEncoder().encode(profile)
-        let decoded = try JSONDecoder().decode(FirestoreUserProfile.self, from: data)
-
-        #expect(decoded.uid == "abc123")
-        #expect(decoded.username == "john")
-        #expect(decoded.displayName == "John Doe")
-        #expect(decoded.totalWorkouts == 42)
-        #expect(decoded.currentStreak == 5)
-        #expect(decoded.longestStreak == 10)
+        let profile = FirestoreUserProfile(uid: "abc123", username: "john", displayName: "John Doe",
+                                           totalWorkouts: 42, currentStreak: 5, friendCount: 3, fanCount: 7,
+                                           profileVisibility: .friends, globalLeaderboardVisible: false)
+        let decoded = try JSONDecoder().decode(FirestoreUserProfile.self, from: try JSONEncoder().encode(profile))
+        #expect(decoded == profile)
         #expect(decoded.id == "abc123")
+    }
+
+    @Test @MainActor func restrictedProfileHasNoPersonalData() {
+        let p = FirestoreUserProfile.restricted(uid: "u1", handle: "h")
+        #expect(p.isRestricted && p.totalWorkouts == 0 && p.currentStreak == 0)
+        #expect(p.shownName == "Private profile")
     }
 
     // MARK: - WorkoutFeedItem
 
     @Test @MainActor func feedItemCodableRoundtrip() throws {
-        let item = WorkoutFeedItem(
-            userId: "user1",
-            username: "jane",
-            templateName: "PPL Day 1",
-            exerciseCount: 6,
-            durationSeconds: 3600,
-            caloriesBurned: 350,
-            musclesWorked: ["chest", "triceps", "shoulders"],
-            date: Date(timeIntervalSince1970: 1700000000)
-        )
+        let item = WorkoutFeedItem(userId: "user1", username: "jane", handle: "jane_k", templateName: "PPL Day 1",
+                                   exerciseCount: 6, durationSeconds: 3600, caloriesBurned: 350,
+                                   musclesWorked: ["chest"], date: Date(timeIntervalSince1970: 1_700_000_000),
+                                   likeCount: 4, commentCount: 2, likedByMe: true, muscleSets: ["Chest": 9])
+        let decoded = try JSONDecoder().decode(WorkoutFeedItem.self, from: try JSONEncoder().encode(item))
+        #expect(decoded == item)
+        #expect(decoded.includesBodyMap)
+    }
 
-        let data = try JSONEncoder().encode(item)
-        let decoded = try JSONDecoder().decode(WorkoutFeedItem.self, from: data)
-
-        #expect(decoded.userId == "user1")
-        #expect(decoded.username == "jane")
-        #expect(decoded.templateName == "PPL Day 1")
-        #expect(decoded.exerciseCount == 6)
-        #expect(decoded.durationSeconds == 3600)
-        #expect(decoded.caloriesBurned == 350)
-        #expect(decoded.musclesWorked.count == 3)
-        #expect(decoded.likes.isEmpty)
-        #expect(decoded.commentCount == 0)
+    @Test @MainActor func feedItemWithoutMuscleSetsHasNoBodyMap() {
+        let item = WorkoutFeedItem(userId: "u", username: "n", exerciseCount: 1, durationSeconds: 60, date: Date())
+        #expect(!item.includesBodyMap)
     }
 
     @Test @MainActor func feedItemIdentifiable() {
-        let item = WorkoutFeedItem(
-            id: "custom-id",
-            userId: "u1",
-            username: "test",
-            exerciseCount: 1,
-            durationSeconds: 60,
-            caloriesBurned: 10,
-            musclesWorked: [],
-            date: Date()
-        )
+        let item = WorkoutFeedItem(id: "custom-id", userId: "u1", username: "test", exerciseCount: 1, durationSeconds: 60, date: Date())
         #expect(item.id == "custom-id")
+    }
+
+    @Test @MainActor func feedItemDerivesTotalsFromWorkingSetsOnly() {
+        func s(_ w: Double, _ r: Int, _ t: String) -> FeedSetLog { FeedSetLog(weight: w, reps: r, duration: 0, distance: 0, setType: t, side: nil) }
+        let ex = FeedExercise(id: "1", name: "Bench", sets: [s(40, 10, "warmup"), s(100, 5, "standard"), s(100, 3, "dropset")])
+        let item = WorkoutFeedItem(userId: "u", username: "n", exerciseCount: 1, durationSeconds: 60, date: Date(), exercises: [ex])
+        #expect(item.workingSetCount == 2)
+        #expect(item.volumeKg == 800)
+    }
+
+    @Test @MainActor func exerciseForPostDropsMuscleTags() {
+        let ex = FeedExercise(id: "1", name: "Bench", sets: [], primaryMuscles: ["Chest"], secondaryMuscles: ["Triceps"])
+        #expect(ex.forPost.primaryMuscles.isEmpty && ex.forPost.secondaryMuscles.isEmpty)
+        #expect(ex.forPost.name == "Bench")
     }
 
     // MARK: - FeedComment
 
     @Test @MainActor func feedCommentCodableRoundtrip() throws {
-        let comment = FeedComment(userId: "u1", username: "alice", text: "Great workout!")
-
-        let data = try JSONEncoder().encode(comment)
-        let decoded = try JSONDecoder().decode(FeedComment.self, from: data)
-
-        #expect(decoded.userId == "u1")
-        #expect(decoded.username == "alice")
-        #expect(decoded.text == "Great workout!")
-    }
-
-    // MARK: - FriendshipDoc
-
-    @Test @MainActor func friendshipDocCodableRoundtrip() throws {
-        let doc = FriendshipDoc(userId1: "aaa", userId2: "bbb", requestedBy: "aaa")
-
-        let data = try JSONEncoder().encode(doc)
-        let decoded = try JSONDecoder().decode(FriendshipDoc.self, from: data)
-
-        #expect(decoded.userId1 == "aaa")
-        #expect(decoded.userId2 == "bbb")
-        #expect(decoded.requestedBy == "aaa")
-        #expect(decoded.status == .pending)
-    }
-
-    @Test @MainActor func friendshipDocDefaultsPending() {
-        let doc = FriendshipDoc(userId1: "a", userId2: "b", requestedBy: "a")
-        #expect(doc.status == .pending)
+        let comment = FeedComment(userId: "u1", username: "alice", handle: "alice_a", text: "Great workout!")
+        let decoded = try JSONDecoder().decode(FeedComment.self, from: try JSONEncoder().encode(comment))
+        #expect(decoded.userId == "u1" && decoded.username == "alice" && decoded.text == "Great workout!")
     }
 
     // MARK: - Export DTOs

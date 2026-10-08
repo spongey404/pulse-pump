@@ -19,36 +19,23 @@ struct LiftHistoryView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
-    @State private var sessions: [LiftHistorySession] = []
+    @State private var sessions: [LiftSession] = []
     @State private var isLoading = true
-
-    private var equipmentLabel: String {
-        let descriptor = FetchDescriptor<Exercise>()
-        let match = (try? modelContext.fetch(descriptor))?.first { $0.name.localizedCaseInsensitiveCompare(exerciseName) == .orderedSame }
-        return match?.equipmentType.displayName.uppercased() ?? "EXERCISE"
-    }
+    @State private var loadFailed = false
+    @State private var equipmentLabel = "EXERCISE"
 
     /// Last 6 sessions, oldest first — matches both the chart's left-to-right reading order
     /// and the history table's reverse-chronological one (reversed at the call site).
-    private var recentSessions: [LiftHistorySession] { Array(sessions.suffix(6)) }
+    private var recentSessions: [LiftSession] { Array(sessions.suffix(6)) }
 
-    private var bestEver: LiftHistorySession? { sessions.max { $0.bestWeight < $1.bestWeight } }
+    private var bestEver: LiftSession? { sessions.max { $0.bestWeight < $1.bestWeight } }
 
-    private var est1RM: Int {
-        guard let best = bestEver, let set = best.bestSet else { return 0 }
-        let epley = set.weight > 0 ? set.weight * (1 + Double(set.reps) / 30) : Double(set.reps)
-        return Int(unit.display(epley).rounded())
-    }
+    /// Best Epley estimate across every working set on record (a 1-rep set counts as the weight itself);
+    /// nil for bodyweight / timed lifts, which have no external load.
+    private var est1RM: Double? { LiftHistory.estimatedOneRepMax(sessions: sessions) }
 
-    /// Change vs. the session closest to 12 weeks ago — the oldest session on file if the
-    /// full history doesn't stretch back that far.
-    private var twelveWeekDelta: Double {
-        guard let mostRecent = sessions.last else { return 0 }
-        let cutoff = Calendar.current.date(byAdding: .weekOfYear, value: -12, to: Date()) ?? Date()
-        let baseline = sessions.first { $0.date >= cutoff } ?? sessions.first
-        guard let baseline else { return 0 }
-        return mostRecent.bestWeight - baseline.bestWeight
-    }
+    /// Best-weight change since the session closest to 12 weeks ago (nil with fewer than two sessions).
+    private var twelveWeekDelta: Double? { LiftHistory.weightChange(sessions: sessions) }
 
     /// Bar heights are baselined 2.5kg below the lightest session in range, not at zero —
     /// measured from zero, sessions inside a tight spread all render 79–100% tall and the
@@ -80,10 +67,13 @@ struct LiftHistoryView: View {
             .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
 
             if isLoading {
-                ProgressView().frame(maxWidth: .infinity).padding(.top, 60)
+                SkeletonRows(count: 4).padding(.horizontal, 16).padding(.top, 20)
+                Spacer()
+            } else if loadFailed {
+                RetryNotice(message: "Couldn't load their sessions.") { isLoading = true; Task { await loadHistory() } }
                 Spacer()
             } else if sessions.isEmpty {
-                Text("NO LOGGED SESSIONS FOR THIS LIFT YET")
+                Text("NO POSTED SESSIONS FOR THIS LIFT YET")
                     .font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted)
                     .frame(maxWidth: .infinity).padding(.top, 60)
                 Spacer()
@@ -102,7 +92,7 @@ struct LiftHistoryView: View {
                         chart
 
                         VStack(alignment: .leading, spacing: 0) {
-                            SectionLabel(title: "History", meta: "\(sessions.count) Sessions")
+                            SectionLabel(title: "History", meta: "Last \(recentSessions.count) Of \(sessions.count)")
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 22)
@@ -113,7 +103,7 @@ struct LiftHistoryView: View {
                             historyRow(session)
                         }
 
-                        Text("SHOWING THIS YEAR · \(sessions.count) SESSIONS")
+                        Text("FROM POSTED SESSIONS ONLY · \(sessions.count) \(sessions.count == 1 ? "SESSION" : "SESSIONS") ON RECORD")
                             .font(Font.spaceMono(9)).tracking(1.2).lineSpacing(4).foregroundStyle(Color.inkMuted)
                             .padding(16)
                     }
@@ -141,11 +131,11 @@ struct LiftHistoryView: View {
                 }
             }
             statCell(label: "EST 1RM") {
-                Text("\(est1RM)").font(.archivo(26, weight: .black)).lineSpacing(0).foregroundStyle(Color.inkPrimary)
+                Text(est1RM.map { unit.number($0) } ?? "—").font(.archivo(26, weight: .black)).lineSpacing(0).foregroundStyle(Color.inkPrimary)
             }
             statCell(label: "12 WK") {
-                Text("\(twelveWeekDelta >= 0 ? "+" : "")\(unit.number(twelveWeekDelta))")
-                    .font(.archivo(26, weight: .black)).lineSpacing(0).foregroundStyle(Color.signalUp)
+                Text(twelveWeekDelta.map { "\($0 >= 0 ? "+" : "")\(unit.number($0))" } ?? "—")
+                    .font(.archivo(26, weight: .black)).lineSpacing(0).foregroundStyle((twelveWeekDelta ?? 0) < 0 ? Color.signalDown : Color.signalUp)
             }
         }
         .padding(.horizontal, 16)
@@ -191,7 +181,7 @@ struct LiftHistoryView: View {
         }
     }
 
-    private func barHeight(for session: LiftHistorySession) -> CGFloat {
+    private func barHeight(for session: LiftSession) -> CGFloat {
         let baseline = chartBaseline
         let heaviest = recentSessions.map(\.bestWeight).max() ?? session.bestWeight
         guard heaviest > baseline else { return 4 }
@@ -214,7 +204,7 @@ struct LiftHistoryView: View {
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
     }
 
-    private func historyRow(_ session: LiftHistorySession) -> some View {
+    private func historyRow(_ session: LiftSession) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 HStack(spacing: 6) {
@@ -254,7 +244,7 @@ struct LiftHistoryView: View {
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
     }
 
-    private func volumeLabel(_ session: LiftHistorySession) -> String {
+    private func volumeLabel(_ session: LiftSession) -> String {
         let total = session.sets.reduce(0.0) { $0 + $1.weight * Double($1.reps) }
         return unit.compactVolume(total)   // feed weights are kg
     }
@@ -267,71 +257,18 @@ struct LiftHistoryView: View {
 
     // MARK: Data
 
+    /// The person's real posted sessions of this lift. Nothing is invented when there are none.
     private func loadHistory() async {
-        let items = (try? await viewModel.firestoreService.fetchFeed(friendUids: [ownerUid])) ?? []
-        let matches = items.compactMap { item -> (Date, FeedExercise)? in
-            guard let ex = item.exercises.first(where: { $0.name.localizedCaseInsensitiveCompare(exerciseName) == .orderedSame }) else { return nil }
-            return (item.date, ex)
+        let descriptor = FetchDescriptor<Exercise>()
+        if let match = (try? modelContext.fetch(descriptor))?.first(where: { $0.name.localizedCaseInsensitiveCompare(exerciseName) == .orderedSame }) {
+            equipmentLabel = match.equipmentType.displayName.uppercased()
         }
-        .sorted { $0.0 < $1.0 }
-
-        sessions = matches.isEmpty ? (DevFlags.socialFixtures ? demoSessions() : []) : buildSessions(from: matches)
+        if let found = await viewModel.loadLiftHistory(ownerUid: ownerUid, exerciseName: exerciseName) {
+            sessions = found
+            loadFailed = false
+        } else {
+            loadFailed = true
+        }
         isLoading = false
     }
-
-    private func buildSessions(from matches: [(Date, FeedExercise)]) -> [LiftHistorySession] {
-        var runningBest = 0.0
-        var built: [LiftHistorySession] = []
-        for (date, ex) in matches {
-            let bestWeight = ex.workingSets.map(\.weight).max() ?? 0
-            let isPR = bestWeight > runningBest
-            runningBest = max(runningBest, bestWeight)
-            built.append(LiftHistorySession(date: date, sets: ex.sets, isPR: isPR))
-        }
-        return built
-    }
-
-    /// No real Firestore session data matched this lift — shown for demo accounts and for
-    /// anyone genuinely new to a lift, same fallback convention as `demoFeedItems`/
-    /// `demoFriends`/`demoChallenges` elsewhere in Social.
-    private func demoSessions() -> [LiftHistorySession] {
-        let cal = Calendar.current
-        let now = Date()
-        func sets(_ pairs: [(Double, Int)]) -> [FeedSetLog] {
-            pairs.map { FeedSetLog(weight: $0.0, reps: $0.1, duration: 0, distance: 0, setType: "working", side: nil) }
-        }
-        let weeksAgo: [Int] = [10, 8, 6, 4, 2, 0]
-        let weights: [[(Double, Int)]] = [
-            [(90, 5), (85, 6), (80, 8)],
-            [(92.5, 5), (87.5, 6), (82.5, 8)],
-            [(95, 5), (90, 6), (85, 8)],
-            [(95, 5), (92.5, 6), (87.5, 8)],
-            [(100, 4), (95, 6), (90, 8)],
-            [(105, 3), (100, 5), (95, 6)],
-        ]
-        var runningBest = 0.0
-        return zip(weeksAgo, weights).map { weeks, pairs in
-            let date = cal.date(byAdding: .weekOfYear, value: -weeks, to: now) ?? now
-            let bestWeight = pairs.map(\.0).max() ?? 0
-            let isPR = bestWeight > runningBest
-            runningBest = max(runningBest, bestWeight)
-            return LiftHistorySession(date: date, sets: sets(pairs), isPR: isPR)
-        }
-    }
-}
-
-private struct LiftHistorySession: Identifiable {
-    let id = UUID()
-    let date: Date
-    let sets: [FeedSetLog]
-    let isPR: Bool
-
-    // Heaviest weight lifted, reps as tiebreak — a strength-progression screen's "best set"
-    // means the heaviest load, not the highest weight×reps volume (that's the definition
-    // the full session view's BEST column uses; this screen needs a different one, or
-    // "BEST EVER" would show a light high-rep set outweighing a heavier low-rep single).
-    var bestSet: FeedSetLog? {
-        sets.max { ($0.weight, $0.reps) < ($1.weight, $1.reps) }
-    }
-    var bestWeight: Double { bestSet?.weight ?? 0 }
 }

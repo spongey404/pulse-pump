@@ -1,34 +1,10 @@
 import SwiftUI
 import SwiftData
-import FirebaseAuth
 
 // MARK: - Helpers
 
-/// Real per-muscle set counts for the feed carousel's body-map overlay (4a) and session
-/// sheet — the top 3 muscles by weighted set count (primary sets full credit, secondary
-/// half, per `muscleSetCounts()`), not an even split. A Push Day where Bench Press (primary
-/// chest, secondary triceps) carries most of the volume now actually shows chest ahead of
-/// triceps, matching what the session really trained.
-private func feedMuscleSetCounts(item: WorkoutFeedItem) -> [(label: String, count: Int)] {
-    let counts = item.exercises.muscleSetCounts()
-    return counts.sorted { $0.value > $1.value }
-        .prefix(3)
-        .map { (abbreviateMuscle($0.key.displayName), Int($0.value.rounded())) }
-}
-
-private func abbreviateMuscle(_ name: String) -> String {
-    switch name.lowercased() {
-    case "shoulders": "SHLDR"
-    case "triceps": "TRI"
-    case "biceps": "BI"
-    case "forearms": "FA"
-    case "hamstrings": "HAM"
-    default: name.uppercased()
-    }
-}
-
 private func feedBodyHeatIntensities(item: WorkoutFeedItem) -> BodyHeat.Intensities {
-    BodyHeat.Intensities(exercises: item.exercises)
+    BodyHeat.Intensities(muscleSets: item.muscleSets)
 }
 
 /// Row tap affordance for the session view's exercise rows — no chevron (a chevron in a
@@ -66,30 +42,32 @@ struct ActivityFeedView: View {
                             .font(.system(size: 20, weight: .regular))
                             .foregroundStyle(Color.inkPrimary)
                             .frame(width: 32, height: 32)
-                        if !viewModel.pendingRequests.isEmpty || !viewModel.pendingChallengeInvites.isEmpty {
+                        if viewModel.inboxCount > 0 {
                             Circle().fill(Color.pumpAccent).frame(width: 8, height: 8)
                         }
                     }
+                    .frame(minWidth: 44, minHeight: 44)
                 }
                 .buttonStyle(.plain)
-                .padding(.trailing, 4)
+                .accessibilityLabel("Activity")
 
                 NavigationLink {
                     YourProfileView(viewModel: viewModel)
                 } label: {
-                    Avatar(initial: "Y", size: 32, showBorder: false)
+                    Avatar(initial: viewModel.myName, size: 32, showBorder: false)
                 }
+                .accessibilityLabel("Your profile")
             }
             .padding(.horizontal, 16)
             .padding(.top, 2)
-            .padding(.bottom, 10)
+            .padding(.bottom, 6)
 
             HStack(spacing: 0) {
                 ForEach(["FRIENDS", "CHALLENGES"].indices, id: \.self) { i in
                     let label = ["FRIENDS", "CHALLENGES"][i]
                     let isActive = selectedTab == i
                     Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { selectedTab = i }
+                        withAnimation(.easeInOut(duration: 0.25)) { selectedTab = i }
                     } label: {
                         Text(label)
                             .font(Font.spaceMono(10, weight: .bold))
@@ -122,23 +100,39 @@ struct ActivityFeedView: View {
     @ViewBuilder
     private var feedContent: some View {
         ScrollView {
-            if viewModel.isLoadingFeed {
-                ProgressView().frame(maxWidth: .infinity).padding(.top, 60)
+            if viewModel.pendingPost != nil {
+                HStack {
+                    Text("YOUR LAST SESSION DIDN'T POST")
+                        .font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkPrimary)
+                    Spacer()
+                    SocialPill(title: "RETRY", style: .filled) { Task { await viewModel.retryPendingPost() } }
+                }
+                .padding(.horizontal, 16).padding(.vertical, 8)
+                .background(Color.activeRowBg)
+            }
+
+            if viewModel.isLoadingFeed && viewModel.feedItems.isEmpty {
+                FeedSkeleton()
+            } else if viewModel.feedItems.isEmpty, viewModel.feedError != nil {
+                RetryNotice(message: viewModel.feedError ?? "") { Task { await viewModel.loadFeed(forceRefresh: true) } }
             } else if viewModel.feedItems.isEmpty {
-                NoFriendsEmptyState(onFindFriends: { showFindFriends = true })
+                if viewModel.graphLoaded && viewModel.friends.isEmpty {
+                    NoFriendsEmptyState(onFindFriends: { showFindFriends = true })
+                } else {
+                    NoPostsEmptyState()
+                }
             } else {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(viewModel.feedItems.enumerated()), id: \.element.id) { index, item in
-                        FeedPostCard(
-                            item: item,
-                            currentUid: viewModel.currentUid ?? "",
-                            onLike: { Task { await viewModel.toggleLike(postId: item.id) } },
-                            viewModel: viewModel
-                        )
+                        FeedPostCard(item: item, viewModel: viewModel)
+                            .onAppear {
+                                if index >= viewModel.feedItems.count - 3 { Task { await viewModel.loadMoreFeed() } }
+                            }
                         if index < viewModel.feedItems.count - 1 {
                             Rectangle().fill(Color.ruleStrong).frame(height: 1)
                         }
                     }
+                    if viewModel.isLoadingMoreFeed { SkeletonRows(count: 1, rowHeight: 60) }
                 }
             }
         }
@@ -153,52 +147,35 @@ struct ActivityFeedView: View {
 struct FeedPostCard: View {
     @Environment(\.weightUnit) private var unit
     let item: WorkoutFeedItem
-    let currentUid: String
-    let onLike: () -> Void
-    var viewModel: SocialViewModel?
+    var viewModel: SocialViewModel
 
     @Environment(\.modelContext) private var modelContext
     @State private var showDetail = false
     @State private var showComments = false
     @State private var menuOpen = false
-    @State private var carouselSlide = 0
     @State private var showProfile = false
+    @State private var confirmBlock = false
+    @State private var confirmDelete = false
     @State private var actionMessage: String?
 
-    private var isLiked: Bool { item.likes.contains(currentUid) }
-
-    // Slide order: photo (if attached) → body map (if the composer included one). At
-    // least one of the two is present in practice; if neither is, the carousel is skipped.
-    private enum Slide { case photo, map }
-    private var slides: [Slide] {
-        var s: [Slide] = []
-        if item.photoURL != nil { s.append(.photo) }
-        if item.includesBodyMap { s.append(.map) }
-        return s
-    }
+    private var isMine: Bool { item.userId == viewModel.currentUid }
+    private var displayName: String { item.username.isEmpty ? (item.handle.isEmpty ? "Pump user" : item.handle) : item.username }
 
     var body: some View {
         VStack(spacing: 0) {
             cardHeader
 
-            if !slides.isEmpty {
-                carouselArea
-                if slides.count > 1 {
-                    HStack(spacing: 5) {
-                        ForEach(slides.indices, id: \.self) { i in
-                            Capsule()
-                                .fill(i == carouselSlide ? Color.inkPrimary : Color.inkFaint)
-                                .frame(width: i == carouselSlide ? 16 : 5, height: 5)
-                        }
-                    }
-                    .padding(.top, 8)
-                    .padding(.bottom, 2)
-                }
+            if item.includesBodyMap {
+                mapSlide
+                    .frame(height: 330)
+                    .clipped()
             }
 
             statsStrip
 
             if !item.caption.isEmpty { captionSection }
+
+            if !item.includesBodyMap { fullSessionRow }
 
             reactRow
         }
@@ -206,20 +183,32 @@ struct FeedPostCard: View {
             FeedSessionSheet(item: item, viewModel: viewModel)
         }
         .fullScreenCover(isPresented: $showComments) {
-            CommentsView(item: item)
+            CommentsView(item: item, viewModel: viewModel)
         }
         .sheet(isPresented: $showProfile) {
-            if let viewModel {
-                NavigationStack {
-                    FriendProfileView(
-                        profile: FirestoreUserProfile(uid: item.userId, username: item.username, displayName: item.username),
-                        viewModel: viewModel
-                    )
-                }
+            NavigationStack {
+                FriendProfileView(uid: item.userId, handle: item.handle, name: displayName, viewModel: viewModel)
             }
         }
         .alert(actionMessage ?? "", isPresented: Binding(get: { actionMessage != nil }, set: { if !$0 { actionMessage = nil } })) {
             Button("OK") {}
+        }
+        .alert("Block @\(item.handle)?", isPresented: $confirmBlock) {
+            Button("Block", role: .destructive) {
+                Task {
+                    let ok = await viewModel.block(uid: item.userId, name: displayName, handle: item.handle)
+                    actionMessage = ok ? "Blocked. You won't see their posts." : nil
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("They disappear from your feed, search and lists, and can't follow you.")
+        }
+        .alert("Delete this post?", isPresented: $confirmDelete) {
+            Button("Delete", role: .destructive) { Task { await viewModel.deletePost(item.id) } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("It's removed for everyone. The session stays in your history.")
         }
     }
 
@@ -235,7 +224,7 @@ struct FeedPostCard: View {
             actionMessage = "Couldn't access your exercise library."
             return
         }
-        let byName = Dictionary(uniqueKeysWithValues: library.map { ($0.name.lowercased(), $0) })
+        let byName = Dictionary(library.map { ($0.name.lowercased(), $0) }, uniquingKeysWith: { a, _ in a })
 
         let templateExercises: [TemplateExercise] = item.exercises.enumerated().compactMap { index, ex in
             guard let match = byName[ex.name.lowercased()] else { return nil }
@@ -250,25 +239,29 @@ struct FeedPostCard: View {
             actionMessage = "None of these exercises matched your library."
             return
         }
-        let name = "\(item.username)'s \(item.templateName ?? "Workout")"
+        let name = "\(displayName)'s \(item.templateName ?? "Workout")"
         let template = WorkoutTemplate(name: name, templateExercises: templateExercises)
         modelContext.insert(template)
         actionMessage = "Saved \"\(name)\" to your programs."
     }
 
     private func reportPost() {
-        Task { await viewModel?.reportPost(postId: item.id) }
-        actionMessage = "Post reported."
+        Task {
+            let ok = await viewModel.reportPost(item.id)
+            if ok { actionMessage = "Reported. This post is hidden for you." }
+        }
     }
 
     private func unfollow() {
-        Task { await viewModel?.unfollow(uid: item.userId) }
-        actionMessage = "Unfollowed \(item.username)."
+        Task {
+            let ok = await viewModel.unfollow(item.userId)
+            if ok { actionMessage = "Unfollowed \(displayName)." }
+        }
     }
 
     private func toggleSaved() {
-        viewModel?.toggleSavedPost(postId: item.id)
-        let isSaved = viewModel?.savedPostIds.contains(item.id) ?? false
+        viewModel.toggleSavedPost(postId: item.id)
+        let isSaved = viewModel.savedPostIds.contains(item.id)
         actionMessage = isSaved ? "Workout saved." : "Removed from saved."
     }
 
@@ -276,20 +269,22 @@ struct FeedPostCard: View {
 
     private var cardHeader: some View {
         HStack(alignment: .center, spacing: 10) {
-            Button { showProfile = true } label: {
-                Avatar(initial: item.username, size: 38)
+            Button { if !isMine { showProfile = true } } label: {
+                Avatar(initial: displayName, size: 38)
             }
             .buttonStyle(.plain)
 
-            Button { showProfile = true } label: {
+            Button { if !isMine { showProfile = true } } label: {
                 VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: 0) {
-                        Text(item.username)
+                        Text(displayName)
                             .font(.archivo(14, weight: .semibold))
                             .foregroundStyle(Color.inkPrimary)
-                        Text("  @\(item.userId.prefix(8).lowercased())")
-                            .font(Font.spaceMono(9))
-                            .foregroundStyle(Color.inkMuted)
+                        if !item.handle.isEmpty {
+                            Text("  @\(item.handle)")
+                                .font(Font.spaceMono(9))
+                                .foregroundStyle(Color.inkMuted)
+                        }
                     }
                     Text("\((item.templateName ?? "WORKOUT").uppercased()) · \(durationLabel) · \(relativeLabel)")
                         .font(Font.spaceMono(9))
@@ -305,21 +300,26 @@ struct FeedPostCard: View {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 18))
                     .foregroundStyle(Color.inkMuted)
-                    .frame(width: 32, height: 32)
+                    .frame(width: 44, height: 44)
             }
             .buttonStyle(PressScaleButtonStyle())
+            .accessibilityLabel("Post options")
             .confirmationDialog("Post options", isPresented: $menuOpen) {
-                Button("Steal program") { stealProgram() }
-                Button(viewModel?.savedPostIds.contains(item.id) == true ? "Unsave workout" : "Save workout") { toggleSaved() }
-                if let url = URL(string: "https://pulsepump.app/post?id=\(item.id)") {
-                    ShareLink("Send to friend", item: url)
+                if isMine {
+                    Button("Delete post", role: .destructive) { confirmDelete = true }
+                } else {
+                    Button("Steal program") { stealProgram() }
+                    Button(viewModel.savedPostIds.contains(item.id) ? "Unsave workout" : "Save workout") { toggleSaved() }
+                    Button("Report post", role: .destructive) { reportPost() }
+                    Button("Block @\(item.handle)", role: .destructive) { confirmBlock = true }
+                    if viewModel.relationship(with: item.userId) != .stranger {
+                        Button("Unfollow", role: .destructive) { unfollow() }
+                    }
                 }
-                Button("Report post", role: .destructive) { reportPost() }
-                Button("Unfollow", role: .destructive) { unfollow() }
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.vertical, 8)
     }
 
     private var durationLabel: String { "\(item.durationSeconds / 60):\(String(format: "%02d", item.durationSeconds % 60))" }
@@ -328,46 +328,7 @@ struct FeedPostCard: View {
         return f.localizedString(for: item.date, relativeTo: Date()).uppercased()
     }
 
-    // MARK: Carousel
-
-    @ViewBuilder
-    private var carouselArea: some View {
-        ZStack(alignment: .topTrailing) {
-            switch slides[carouselSlide] {
-            case .photo: photoSlide
-            case .map: mapSlide
-            }
-
-            if slides.count > 1 {
-                Text("\(carouselSlide + 1)/\(slides.count)")
-                    .font(Font.spaceMono(8))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color(hex: "#1F1C19").opacity(0.55))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .padding(.top, 10)
-                    .padding(.trailing, 12)
-            }
-        }
-        .frame(height: 330)
-        .clipped()
-    }
-
-    private var photoSlide: some View {
-        Rectangle()
-            .fill(Color.surf3)
-            .frame(maxWidth: .infinity)
-            .overlay {
-                Image(systemName: "photo")
-                    .font(.system(size: 32))
-                    .foregroundStyle(.white.opacity(0.3))
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                if slides.count > 1 { withAnimation(.easeInOut(duration: 0.2)) { carouselSlide = 1 } }
-            }
-    }
+    // MARK: Body-map slide (the only media: photos are not uploaded)
 
     private var mapSlide: some View {
         ZStack(alignment: .topLeading) {
@@ -377,7 +338,7 @@ struct FeedPostCard: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             VStack(alignment: .leading, spacing: 10) {
-                ForEach(feedMuscleSetCounts(item: item), id: \.label) { m in
+                ForEach(MuscleSetsFormat.top(item.muscleSets), id: \.label) { m in
                     VStack(alignment: .leading, spacing: 3) {
                         Text(m.label).font(Font.spaceMono(7)).tracking(1.5).foregroundStyle(Color.inkMuted)
                         Text("\(m.count)").font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
@@ -400,14 +361,33 @@ struct FeedPostCard: View {
         }
         .contentShape(Rectangle())
         .onTapGesture { showDetail = true }
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel("Full session")
+    }
+
+    /// Posts without a body map (hidden by the author, or not visible to the viewer) still open the session.
+    private var fullSessionRow: some View {
+        Button { showDetail = true } label: {
+            HStack {
+                Text("\(item.exercises.count) EXERCISES")
+                    .font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted)
+                Spacer()
+                Text("FULL SESSION ›").font(Font.spaceMono(9, weight: .bold)).tracking(1.2).foregroundStyle(Color.accentInk)
+            }
+            .padding(.horizontal, 16)
+            .frame(minHeight: 44)
+            .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+            .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: Stats strip (4-up)
 
     private var statsStrip: some View {
         HStack(spacing: 6) {
-            KPIBlock(label: "SETS", value: "\(item.exercises.reduce(0) { $0 + $1.workingSets.count })", alignment: .center)
-            KPIBlock(label: "VOLUME", value: volumeLabel, alignment: .center)
+            KPIBlock(label: "SETS", value: "\(item.workingSetCount)", alignment: .center)
+            KPIBlock(label: "VOLUME", value: unit.compactVolume(item.volumeKg), alignment: .center)   // feed weights are kg
             KPIBlock(label: "IMPROVED", value: "\(item.improvedCount)", valueColor: .signalUp, delta: "/\(item.totalExercises)", alignment: .center)
             KPIBlock(label: "PRS", value: "\(item.prCount)", valueColor: .prGold, alignment: .center)
         }
@@ -415,41 +395,35 @@ struct FeedPostCard: View {
         .padding(.vertical, 10)
     }
 
-    private var volumeLabel: String {
-        let total = item.exercises.flatMap(\.workingSets).reduce(0.0) { $0 + $1.weight * Double($1.reps) }
-        return unit.compactVolume(total)   // feed weights are kg
-    }
-
     // MARK: Caption
 
     private var captionSection: some View {
-        (
-            Text(item.username + " ").font(.archivo(13, weight: .bold))
-            + Text(item.caption).font(.archivo(13))
-        )
+        Text("\(Text(displayName + " ").font(.archivo(13, weight: .bold)))\(Text(item.caption).font(.archivo(13)))")
         .foregroundStyle(Color.inkPrimary)
         .lineSpacing(4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
         .padding(.top, 2)
+        .padding(.bottom, 8)
     }
 
     // MARK: React row
 
     private var reactRow: some View {
         HStack(spacing: 22) {
-            Button(action: onLike) {
+            Button { Task { await viewModel.toggleLike(postId: item.id) } } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: isLiked ? "heart.fill" : "heart")
+                    Image(systemName: item.likedByMe ? "heart.fill" : "heart")
                         .font(.system(size: 24, weight: .regular))
-                        .foregroundStyle(isLiked ? Color.pumpAccent : Color.inkMuted)
-                    Text("\(item.likes.count)")
+                        .foregroundStyle(item.likedByMe ? Color.pumpAccent : Color.inkMuted)
+                    Text("\(item.likeCount)")
                         .font(Font.spaceMono(14, weight: .bold))
                         .foregroundStyle(Color.inkPrimary)
                 }
                 .frame(minHeight: 44)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(item.likedByMe ? "Unlike" : "Like")
 
             Button { showComments = true } label: {
                 HStack(spacing: 8) {
@@ -463,6 +437,7 @@ struct FeedPostCard: View {
                 .frame(minHeight: 44)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Comments")
 
             Spacer()
         }
@@ -472,14 +447,19 @@ struct FeedPostCard: View {
     }
 }
 
-// MARK: - Session sheet (opens from 4a's body-map slide)
+// MARK: - Session sheet (post detail; opens from 4a's body-map slide)
 
 struct FeedSessionSheet: View {
     @Environment(\.weightUnit) private var unit
     let item: WorkoutFeedItem
-    var viewModel: SocialViewModel?
+    var viewModel: SocialViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var selectedExerciseName: String?
+    @State private var showComments = false
+
+    /// The freshest copy (likes and comments update it while the sheet is open).
+    private var current: WorkoutFeedItem { viewModel.post(id: item.id, fallback: item) }
+    private var displayName: String { item.username.isEmpty ? item.handle : item.username }
 
     private var tickerItems: [TickerItem] {
         item.exercises.compactMap { ex in
@@ -490,8 +470,7 @@ struct FeedSessionSheet: View {
 
     /// Exercises sorted PR-first-then-improved, matching the composer's share-card
     /// ordering — the top `item.prCount` by improvement score are treated as PRs (the
-    /// model doesn't carry a per-exercise PR flag, so this is the same heuristic used in
-    /// `WorkoutCompletionView`'s share card).
+    /// post doesn't carry a per-exercise PR flag).
     private var sortedExercises: [(exercise: FeedExercise, isPR: Bool)] {
         let sorted = item.exercises.sorted { $0.improvementScore > $1.improvementScore }
         return sorted.enumerated().map { index, ex in (ex, index < item.prCount) }
@@ -503,10 +482,11 @@ struct FeedSessionSheet: View {
         NavigationStack {
             content
                 .navigationDestination(item: $selectedExerciseName) { name in
-                    if let viewModel {
-                        LiftHistoryView(exerciseName: name, ownerUid: item.userId, ownerUsername: item.username, viewModel: viewModel)
-                    }
+                    LiftHistoryView(exerciseName: name, ownerUid: item.userId, ownerUsername: displayName, viewModel: viewModel)
                 }
+        }
+        .fullScreenCover(isPresented: $showComments) {
+            CommentsView(item: current, viewModel: viewModel)
         }
     }
 
@@ -515,11 +495,12 @@ struct FeedSessionSheet: View {
             HStack(alignment: .center, spacing: 12) {
                 Button { dismiss() } label: {
                     Text("‹").font(Font.spaceMono(20)).foregroundStyle(Color.inkPrimary)
+                        .frame(minWidth: 28, minHeight: 44)
                 }
                 .buttonStyle(.plain)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(item.username.uppercased()) · \(item.date, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated)) · \(durationLabel)")
+                    Text("\(displayName.uppercased()) · \(item.date, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated)) · \(durationLabel)")
                         .font(Font.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
                     Text((item.templateName ?? "WORKOUT").uppercased())
                         .font(.display(24)).tracking(0.5).foregroundStyle(Color.inkPrimary)
@@ -537,22 +518,22 @@ struct FeedSessionSheet: View {
 
             ScrollView {
                 VStack(spacing: 0) {
-                    if item.includesBodyMap {
-                        HStack(spacing: 18) {
+                    HStack(spacing: 18) {
+                        if item.includesBodyMap {
                             BodyHeat(intensities: feedBodyHeatIntensities(item: item))
                                 .frame(width: 66, height: 106)
-                            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())], spacing: 18) {
-                                sessionStat(label: "SETS", value: "\(item.exercises.reduce(0) { $0 + $1.workingSets.count })")
-                                sessionStat(label: "VOLUME", value: volumeLabel)
-                                sessionStat(label: "IMPROVED", value: "\(item.improvedCount)", valueColor: Color.signalUp, delta: "/\(item.totalExercises)")
-                                sessionStat(label: "PRS", value: "\(item.prCount)", valueColor: Color.prGold, glow: true)
-                            }
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 14)
-                        .padding(.bottom, 18)
-                        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())], spacing: 18) {
+                            sessionStat(label: "SETS", value: "\(item.workingSetCount)")
+                            sessionStat(label: "VOLUME", value: unit.compactVolume(item.volumeKg))   // feed weights are kg
+                            sessionStat(label: "IMPROVED", value: "\(item.improvedCount)", valueColor: Color.signalUp, delta: "/\(item.totalExercises)")
+                            sessionStat(label: "PRS", value: "\(item.prCount)", valueColor: Color.prGold, glow: true)
+                        }
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 14)
+                    .padding(.bottom, 18)
+                    .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
 
                     exerciseTableHeader
 
@@ -566,22 +547,30 @@ struct FeedSessionSheet: View {
             }
         }
         .background(Color.canvasBg)
-        // Bolted to the bottom of the screen via safeAreaInset instead of sitting inside the
-        // ScrollView's content — previously it just trailed the last exercise row, so a short
-        // session left it floating mid-screen with empty space below instead of anchored low.
+        // Bolted to the bottom of the screen via safeAreaInset so a short session still anchors it low.
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 0) {
                 HStack(spacing: 22) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "heart").font(.system(size: 24)).foregroundStyle(Color.inkMuted)
-                        Text("\(item.likes.count)").font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                    Button { Task { await viewModel.toggleLike(postId: item.id) } } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: current.likedByMe ? "heart.fill" : "heart").font(.system(size: 24))
+                                .foregroundStyle(current.likedByMe ? Color.pumpAccent : Color.inkMuted)
+                            Text("\(current.likeCount)").font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                        }
+                        .frame(minHeight: 44)
                     }
-                    .frame(minHeight: 44)
-                    HStack(spacing: 8) {
-                        Image(systemName: "bubble.left").font(.system(size: 24)).foregroundStyle(Color.inkMuted)
-                        Text("\(item.commentCount)").font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(current.likedByMe ? "Unlike" : "Like")
+
+                    Button { showComments = true } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "bubble.left").font(.system(size: 24)).foregroundStyle(Color.inkMuted)
+                            Text("\(current.commentCount)").font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                        }
+                        .frame(minHeight: 44)
                     }
-                    .frame(minHeight: 44)
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Comments")
                     Spacer()
                 }
                 .padding(.horizontal, 16)
@@ -593,14 +582,7 @@ struct FeedSessionSheet: View {
         }
     }
 
-    private var volumeLabel: String {
-        let total = item.exercises.flatMap(\.workingSets).reduce(0.0) { $0 + $1.weight * Double($1.reps) }
-        return unit.compactVolume(total)   // feed weights are kg
-    }
-
-    /// Stats-row cell — Space Mono 7px/1.2 tracking label, Archivo 900 26px value. Built
-    /// bespoke rather than via the shared `KPIBlock` (22px value) since this screen's spec
-    /// calls for a larger value than that component renders elsewhere in the app.
+    /// Stats-row cell — Space Mono 7px/1.2 tracking label, Archivo 900 26px value.
     private func sessionStat(label: String, value: String, valueColor: Color = Color.inkPrimary, delta: String? = nil, glow: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
@@ -639,14 +621,9 @@ struct FeedSessionSheet: View {
     }
 
     private func exerciseRow(_ exercise: FeedExercise, isPR: Bool) -> some View {
-        // Driven by the same raw kg/rep delta shown in "VS LAST" — not `improvementScore`
-        // (a % 1RM figure) — so a row only reads as "improved" when there's an actual
-        // weight-or-reps gain to show for it.
+        // Driven by the same raw kg/rep delta shown in "VS LAST" — not `improvementScore`.
         let improved = exercise.weightDelta > 0 || exercise.repsDelta > 0
         let bestSetIndex = exercise.sets.indices.max(by: { exercise.sets[$0].weight * Double(exercise.sets[$0].reps) < exercise.sets[$1].weight * Double(exercise.sets[$1].reps) })
-        // Gold if PR, ink if improved (no PR), muted if neither. Bold is reserved for rows
-        // that actually moved (PR or improved) — a flat row (no change) stays regular weight
-        // and muted, matching the mockup where only "went up" rows read as emphasized.
         let emphasized = isPR || improved
         let nameColor: Color = isPR ? Color.prGold : (improved ? Color.inkPrimary : Color.inkMuted)
 
@@ -686,8 +663,6 @@ struct FeedSessionSheet: View {
                     .frame(width: 70, alignment: .trailing)
             }
 
-            // Row 2 — every set typed by what it was. Exactly one (the exercise's BEST) takes
-            // emphasis; the rest recede. Trailing separator after the last set is suppressed.
             FlowLayout(spacing: 0) {
                 ForEach(Array(exercise.sets.enumerated()), id: \.offset) { i, set in
                     HStack(spacing: 0) {
@@ -698,7 +673,7 @@ struct FeedSessionSheet: View {
                         if i != exercise.sets.count - 1 {
                             Text("·")
                                 .font(Font.spaceMono(12))
-                                .foregroundStyle(Color.inkPrimary.opacity(0.18))  // --text-ghost
+                                .foregroundStyle(Color.inkPrimary.opacity(0.18))
                                 .padding(.horizontal, 6)
                         }
                     }

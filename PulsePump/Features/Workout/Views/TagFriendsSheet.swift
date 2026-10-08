@@ -1,8 +1,7 @@
 import SwiftUI
-import FirebaseAuth
 
 /// Minimal friend picker backing the composer's (7a) TAG FRIENDS "ADD" chip. Not one of
-/// the 17 spec'd screens — just enough UI to populate `WorkoutFeedItem.taggedFriendUids`.
+/// the 17 spec'd screens — just enough UI to populate the post's `taggedUids`.
 struct TagFriendsSheet: View {
     let alreadyTagged: [FirestoreUserProfile]
     let onDone: ([FirestoreUserProfile]) -> Void
@@ -32,7 +31,7 @@ struct TagFriendsSheet: View {
                             }
                         } label: {
                             HStack {
-                                Text(friend.displayName)
+                                Text(friend.shownName)
                                     .font(.archivo(15, weight: .semibold))
                                     .foregroundStyle(Color.inkPrimary)
                                 Spacer()
@@ -65,17 +64,10 @@ struct TagFriendsSheet: View {
         }
         .task {
             selectedUids = Set(alreadyTagged.map(\.uid))
-            guard let uid = Auth.auth().currentUser?.uid else { isLoading = false; return }
-            let service = FirestoreService()
-            let friendships = (try? await service.fetchFriendships(for: uid)) ?? []
-            var loaded: [FirestoreUserProfile] = []
-            for (_, friendship) in friendships where friendship.status == .accepted {
-                let otherUid = friendship.userId1 == uid ? friendship.userId2 : friendship.userId1
-                if let profile = try? await service.fetchUserProfile(uid: otherUid) {
-                    loaded.append(profile)
-                }
-            }
-            friends = loaded
+            // Only friends (mutual follows) can be tagged.
+            let social = SocialViewModel.shared
+            await social.loadGraph()
+            friends = social.friends
             isLoading = false
         }
     }

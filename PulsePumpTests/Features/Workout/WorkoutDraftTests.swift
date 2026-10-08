@@ -287,14 +287,22 @@ struct WorkoutDraftTests {
         let data = try #require(f.vm.completionData)
         #expect(data.workoutId == f.vm.workout?.id)
 
+        var privacy = PrivacySettings()
+        privacy.workoutPosts = .friendsOnly
+        privacy.bodyMap = .onlyMe
+        let author = FeedPostBuilder.Author(uid: "u", name: "n", handle: "n_n")
+        let payload = try #require(FeedPostBuilder.makePayload(data: data, author: author, caption: "hi",
+                                                               taggedUids: [], includeBodyMap: true, privacy: privacy))
+        #expect(payload.postId == data.workoutId?.uuidString.lowercased())   // same workout -> same doc: posts at most once
+        #expect(payload.audience == .friends)
+        #expect(payload.bodyMapAudience == .onlyMe)
+        #expect(payload.muscleSets == nil)                                    // body-map row is "only me": no extras document
+
+        privacy.workoutPosts = .onlyMe
+        #expect(FeedPostBuilder.makePayload(data: data, author: author, caption: "", taggedUids: [], includeBodyMap: true, privacy: privacy) == nil)
+
         let suite = UserDefaults(suiteName: "feed-\(UUID().uuidString)")!
         suite.set(PrivacyLevel.onlyMe.rawValue, forKey: PrivacyRow.workoutPosts.storageKey)
-        suite.set(PrivacyLevel.onlyMe.rawValue, forKey: PrivacyRow.bodyMap.storageKey)
-        let item = FeedPostBuilder.makeItem(data: data, userId: "u", username: "n", caption: "hi",
-                                            taggedFriendUids: [], includeBodyMap: true, defaults: suite)
-        #expect(item.id == data.workoutId?.uuidString)                 // same workout -> same doc: posts at most once
-        #expect(item.audience == "onlyMe")
-        #expect(item.includesBodyMap == false)                         // body-map row is "only me"
         #expect(FeedPostBuilder.audience(defaults: suite) == .onlyMe)
     }
 }

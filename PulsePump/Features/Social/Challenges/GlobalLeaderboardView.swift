@@ -1,59 +1,35 @@
 import SwiftUI
 
-/// 3d — global monthly leaderboard, GLOBAL/FRIENDS filter, your row pinned above the tab bar.
+/// 3d — global leaderboard, GLOBAL/FRIENDS filter, your row pinned above the tab bar. People who hid
+/// themselves from global boards (privacy) are not in the data at all; if you hid yourself you see a note.
 struct GlobalLeaderboardView: View {
-    let challenge: FirestoreChallenge
+    let challenge: SocialChallenge
     @Environment(\.weightUnit) private var weightUnit
-    private var metric: ChallengeMetric { ChallengeMetric(rawValue: challenge.metric) ?? .totalVolume }
     @Bindable var viewModel: SocialViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showFriendsOnly = false
 
-    private var friendUids: Set<String> { Set(viewModel.friends.map(\.uid) + [viewModel.currentUid].compactMap { $0 }) }
-    private var board: [LeaderboardEntry] {
-        let sorted = challenge.leaderboard.sorted { $0.rank < $1.rank }
-        return showFriendsOnly ? sorted.filter { friendUids.contains($0.userId) } : sorted
-    }
-    private var myEntry: LeaderboardEntry? { board.first { $0.userId == viewModel.currentUid } }
+    private var metric: ChallengeMetric { challenge.metric }
+    private var board: ChallengeBoard? { viewModel.boards[challenge.id] }
+    private var allRows: [LeaderboardRow] { board?.rows ?? [] }
+    private var mine: LeaderboardRow? { board?.mine }
 
-    /// Top 5, then the neighbourhood around the current user's rank — matches spec's
-    /// "top 5, then · · ·, then ranks around the user" pattern. `ellipsisBefore` marks
-    /// where a rank gap should render as `· · ·`.
-    private var visibleRows: [(entry: LeaderboardEntry, ellipsisBefore: Bool)] {
-        let rows: [LeaderboardEntry]
-        if board.count > 8, let mine = myEntry {
-            let top5 = Array(board.prefix(5))
-            // Excludes the current user's own entry — it's already shown in the pinned row
-            // below, so including it here would render "You" twice, stacked on top of
-            // each other at the bottom of the list.
-            let neighborhood = board.filter { entry in
-                let isNearby = abs(entry.rank - mine.rank) <= 2
-                let isBelowTop5 = entry.rank > 5
-                let isSomeoneElse = entry.userId != mine.userId
-                return isNearby && isBelowTop5 && isSomeoneElse
-            }
-            rows = top5 + neighborhood
-        } else {
-            rows = board
-        }
-        var lastRank = 0
-        return rows.map { entry in
-            let gap = lastRank != 0 && entry.rank - lastRank > 1
-            lastRank = entry.rank
-            return (entry, gap)
-        }
+    /// The FRIENDS filter keeps global ranks, it just hides everyone who isn't a friend.
+    private var rows: [LeaderboardRow] {
+        guard showFriendsOnly else { return allRows }
+        let friends = viewModel.graph.friends
+        return allRows.filter { $0.isMe || friends.contains($0.entry.uid) }
+    }
+
+    private var visibleRows: [(row: LeaderboardRow, gapBefore: Bool)] {
+        // The pinned row already shows me, so the list leaves me out.
+        let others = rows.filter { !$0.isMe }
+        return showFriendsOnly ? others.map { ($0, false) } : Leaderboard.condensed(rows: others, mine: mine)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Button { dismiss() } label: { Text("‹").font(Font.spaceMono(20)).foregroundStyle(Color.inkPrimary) }
-                    .buttonStyle(.plain)
-                Text(challenge.name.uppercased()).font(.archivo(22, weight: .black)).tracking(0.5).foregroundStyle(Color.inkPrimary)
-                Spacer()
-            }
-            .padding(.horizontal, 16).padding(.vertical, 10)
-            .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 0.5) }
+            SocialScreenHeader(title: challenge.name.uppercased(), onBack: { dismiss() })
 
             HStack(spacing: 8) {
                 FilterChip(title: "Global", isSelected: !showFriendsOnly) { showFriendsOnly = false }
@@ -64,23 +40,43 @@ struct GlobalLeaderboardView: View {
             ScrollView {
                 VStack(spacing: 0) {
                     boardHeader
-                    ForEach(visibleRows, id: \.entry.id) { row in
-                        if row.ellipsisBefore {
+                    if board == nil {
+                        SkeletonRows(count: 5)
+                    } else if rows.isEmpty {
+                        Text(showFriendsOnly ? "NONE OF YOUR FRIENDS ARE ON THIS BOARD YET" : "NO ONE IS ON THE BOARD YET")
+                            .font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted)
+                            .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 16)
+                    }
+                    ForEach(visibleRows, id: \.row.id) { item in
+                        if item.gapBefore {
                             Text("· · ·").font(Font.spaceMono(12)).foregroundStyle(Color.inkMuted)
                                 .frame(maxWidth: .infinity).padding(.vertical, 8)
                         }
-                        boardRow(row.entry)
+                        boardRow(item.row)
+                    }
+                    if !viewModel.privacy.globalLeaderboardVisible, mine != nil {
+                        Text("YOU'RE HIDDEN FROM OTHERS ON THIS BOARD · CHANGE IT IN ACTIVITY › PRIVACY")
+                            .font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted).padding(.top, 14)
                     }
                 }
                 .padding(.horizontal, 16)
                 Color.clear.frame(height: 24)
             }
+            .refreshable { await viewModel.loadBoard(challenge) }
         }
         .background(Color.canvasBg)
         .navigationBarBackButtonHidden(true)
+        .task {
+            await viewModel.loadGraph()
+            await viewModel.loadBoard(challenge)
+        }
         .safeAreaInset(edge: .bottom) {
-            if let mine = myEntry {
+            if let mine {
                 pinnedRow(mine)
+            } else if board != nil, !(board?.isMember ?? false) {
+                DockedCTA(leadingText: "YOU'RE NOT ON THIS BOARD", primaryLabel: "JOIN ›", style: .quiet) {
+                    Task { await viewModel.join(challenge) }
+                }
             }
         }
     }
@@ -98,60 +94,48 @@ struct GlobalLeaderboardView: View {
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
     }
 
-    private func boardRow(_ entry: LeaderboardEntry) -> some View {
-        let (fg, glow) = medalColor(for: entry.rank)
+    private func boardRow(_ row: LeaderboardRow) -> some View {
+        let (fg, glow) = medalColor(for: row.rank)
+        let name = row.entry.username.isEmpty ? "Pump user" : row.entry.username
         return HStack(spacing: 10) {
-            Text("\(entry.rank)").font(Font.spaceMono(15, weight: .bold)).foregroundStyle(fg).shadow(color: glow, radius: 4)
+            Text("\(row.rank)").font(Font.spaceMono(15, weight: .bold)).foregroundStyle(fg).shadow(color: glow, radius: 4)
                 .frame(width: 22, alignment: .leading)
-            Avatar(initial: entry.username, size: 32)
-            Text(entry.username).font(.archivo(16, weight: entry.rank <= 3 ? .bold : .regular)).foregroundStyle(fg).shadow(color: glow, radius: 4)
+            Avatar(initial: name, size: 32)
+            Text(name).font(.archivo(16, weight: row.rank <= 3 ? .bold : .regular)).foregroundStyle(fg).shadow(color: glow, radius: 4)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text(metric.formatScore(entry.score, weightUnit)).font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
+            Text(metric.formatScore(row.entry.score, weightUnit)).font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
                 .frame(width: 76, alignment: .trailing)
             Color.clear.frame(width: 40)
         }
         .frame(minHeight: 56)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+        .accessibilityElement(children: .combine)
     }
 
-    private func pinnedRow(_ entry: LeaderboardEntry) -> some View {
-        let above = board.last { $0.rank < entry.rank }
-        return VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 10) {
-                Text("\(entry.rank)").font(Font.spaceMono(15, weight: .bold)).foregroundStyle(Color.inkPrimary)
-                    .frame(width: 22, alignment: .leading)
-                Avatar(initial: entry.username, size: 32, showBorder: false)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(entry.username).font(.archivo(16, weight: .bold)).foregroundStyle(Color.accentInk)
-                    if let above {
-                        Text("\(metric.formatScore(above.score - entry.score, weightUnit)) TO \(above.rank)\(ordinalSuffix(above.rank))")
-                            .font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
-                    }
+    private func pinnedRow(_ row: LeaderboardRow) -> some View {
+        let above = allRows.last { $0.rank < row.rank }
+        return HStack(spacing: 10) {
+            Text("\(row.rank)").font(Font.spaceMono(15, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                .frame(width: 22, alignment: .leading)
+            Avatar(initial: row.entry.username.isEmpty ? "You" : row.entry.username, size: 32, showBorder: false)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("You").font(.archivo(16, weight: .bold)).foregroundStyle(Color.accentInk)
+                if let above {
+                    Text("\(metric.formatScore(max(0, above.entry.score - row.entry.score), weightUnit)) TO \(Leaderboard.ordinal(above.rank))")
+                        .font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
                 }
-                Spacer()
-                Text(metric.formatScore(entry.score, weightUnit)).font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
             }
+            Spacer()
+            Text(metric.formatScore(row.entry.score, weightUnit)).font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
         }
         .padding(.horizontal, 16)
         .frame(minHeight: 60)
-        // `activeRowBg` is a translucent tint (8–14% alpha) meant to sit over an opaque
-        // surface. This row lives in a `.safeAreaInset`, which lays out outside the screen's
-        // own `.background(Color.canvasBg)` — without an opaque layer of its own here first,
-        // the tint alone let whatever's behind the app bleed through.
+        // `activeRowBg` is a translucent tint meant to sit over an opaque surface; this row lives in a
+        // safeAreaInset outside the screen background, so it brings its own opaque layer first.
         .background(Color.canvasBg)
         .background(Color.activeRowBg)
         .overlay(alignment: .leading) { Rectangle().fill(Color.pumpAccent).frame(width: 2) }
         .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
-    }
-
-    private func ordinalSuffix(_ n: Int) -> String {
-        switch (n % 100, n % 10) {
-        case (11, _), (12, _), (13, _): "TH"
-        case (_, 1): "ST"
-        case (_, 2): "ND"
-        case (_, 3): "RD"
-        default: "TH"
-        }
     }
 
     private func medalColor(for rank: Int) -> (Color, Color) {

@@ -51,7 +51,8 @@ struct SettingsView: View {
     @AppStorage("restDayAlerts") private var restDayAlerts = false
     @AppStorage("socialNotifications") private var socialNotifications = true
     @AppStorage("challengeNotifications") private var challengeNotifications = true
-    @AppStorage(PrivacyRow.profile.storageKey) private var profilePrivacyRaw = PrivacyLevel.friendsOnly.rawValue
+    /// Privacy lives in `PrivacyService`: saved locally, at users/{uid}.privacy and on the public profile.
+    @State private var privacyService = SocialServices.privacy
 
     private var user: User? { users.first }
     private var hasPulsePlus: Bool { pulsePlusService.isSubscribed || pulsePlusService.isInFreeTrial }
@@ -143,7 +144,7 @@ struct SettingsView: View {
         // PRIVACY
         MoreSectionLabel(title: "PRIVACY")
         MoreMenuRow(icon: "eye", label: "Profile Visibility", selection: profilePrivacyBinding,
-                    options: Array(PrivacyLevel.allCases), title: { $0.displayName })
+                    options: PrivacyRow.profile.options, title: { $0.displayName })
         MoreRow(icon: "square.and.arrow.up", label: "Auto-Share to Feed", toggle: $autoShare)
 
         // APPEARANCE
@@ -208,8 +209,8 @@ struct SettingsView: View {
     }
 
     private var profilePrivacyBinding: Binding<PrivacyLevel> {
-        Binding(get: { PrivacyLevel(rawValue: profilePrivacyRaw) ?? .friendsOnly },
-                set: { profilePrivacyRaw = $0.rawValue })
+        Binding(get: { privacyService.settings.profile },
+                set: { level in Task { await SocialServices.viewModel.setPrivacy(.profile, level) } })
     }
 
     private func workoutRemindersBinding(user: User) -> Binding<Bool> {
