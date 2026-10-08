@@ -89,6 +89,11 @@
 			path = PulsePumpUITests;
 			sourceTree = "<group>";
 		};
+		38PS00012F80C00000DEC87C /* PumpShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PumpShared;
+			sourceTree = "<group>";
+		};
 		38WG00062F80C00000DEC87C /* PulsePumpWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = PulsePumpWidget;
@@ -138,6 +143,7 @@
 			children = (
 				3884EC1A2F800A5900DEC87C /* PulsePump */,
 				38WG00062F80C00000DEC87C /* PulsePumpWidget */,
+				38PS00012F80C00000DEC87C /* PumpShared */,
 				3884EC2C2F800A5A00DEC87C /* PulsePumpTests */,
 				3884EC362F800A5A00DEC87C /* PulsePumpUITests */,
 				3884EC192F800A5900DEC87C /* Products */,
@@ -174,6 +180,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				3884EC1A2F800A5900DEC87C /* PulsePump */,
+				38PS00012F80C00000DEC87C /* PumpShared */,
 			);
 			name = PulsePump;
 			packageProductDependencies = (
@@ -247,6 +254,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				38WG00062F80C00000DEC87C /* PulsePumpWidget */,
+				38PS00012F80C00000DEC87C /* PumpShared */,
 			);
 			name = PulsePumpWidgetExtension;
 			productName = PulsePumpWidgetExtension;
