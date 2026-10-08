@@ -5,6 +5,7 @@ import FirebaseAuth
 /// 7c — your profile: like 6b, but yours — EDIT, SHARE, and FOLLOWING with UNFOLLOW (the
 /// only surface a friend can be removed from).
 struct YourProfileView: View {
+    @Environment(\.weightUnit) private var unit
     @Bindable var viewModel: SocialViewModel
     @Environment(\.dismiss) private var dismiss
     @Query private var users: [User]
@@ -115,7 +116,7 @@ struct YourProfileView: View {
 
     private var volumeLabel: String {
         let total = recentPosts.flatMap(\.exercises).flatMap(\.sets).reduce(0.0) { $0 + $1.weight * Double($1.reps) }
-        return total >= 1000 ? String(format: "%.1fK", total / 1000) : "\(Int(total))"
+        return unit.compactVolume(total)   // feed weights are kg
     }
 
     /// Same weighted derivation as `FriendProfileView` — primary muscles full credit,

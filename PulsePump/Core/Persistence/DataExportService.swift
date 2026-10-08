@@ -2,9 +2,13 @@ import Foundation
 import SwiftData
 import UniformTypeIdentifiers
 
+/// Exports are ALWAYS in kg, whatever the user's display unit (the stored unit; see docs/sync-architecture.md).
+/// `weightUnit` in the JSON and the `Unit` CSV column make that explicit for whoever reads the file.
 struct WorkoutExportData: Codable {
     let exportDate: Date
     let version: String
+    /// Unit of every `weight` in this file. Always "kg".
+    var weightUnit: String = DataExportService.exportUnit
     let workouts: [ExportedWorkout]
 }
 
@@ -32,6 +36,8 @@ struct ExportedSet: Codable {
 }
 
 struct DataExportService {
+    /// Unit of all exported weights.
+    static let exportUnit = "kg"
 
     static func exportWorkouts(from context: ModelContext) throws -> Data {
         let descriptor = FetchDescriptor<Workout>(sortBy: [SortDescriptor(\.date, order: .reverse)])
@@ -39,7 +45,7 @@ struct DataExportService {
 
         let exported = WorkoutExportData(
             exportDate: Date(),
-            version: "1.0",
+            version: "1.1",
             workouts: workouts.map { workout in
                 ExportedWorkout(
                     date: workout.date,
@@ -76,7 +82,7 @@ struct DataExportService {
         let descriptor = FetchDescriptor<Workout>(sortBy: [SortDescriptor(\.date, order: .reverse)])
         let workouts = try context.fetch(descriptor)
 
-        var csv = "Date,Exercise,Set,Weight,Reps,RIR,Type,Duration(min),Calories\n"
+        var csv = "Date,Exercise,Set,Weight,Unit,Reps,RIR,Type,Duration(min),Calories\n"   // Weight is always kg
 
         for workout in workouts {
             let dateStr = ISO8601DateFormatter().string(from: workout.date)
@@ -86,7 +92,7 @@ struct DataExportService {
                 let exerciseName = log.exercise?.name ?? "Unknown"
                 for set in log.sets.sorted(by: { $0.order < $1.order }) {
                     let rirStr = set.rir.map { "\($0)" } ?? ""
-                    csv += "\(dateStr),\"\(exerciseName)\",\(set.order + 1),\(set.weight),\(set.reps),\(rirStr),\(set.setType.rawValue),\(durationMin),\(Int(workout.calorieBurnEstimate))\n"
+                    csv += "\(dateStr),\"\(exerciseName)\",\(set.order + 1),\(set.weight),\(exportUnit),\(set.reps),\(rirStr),\(set.setType.rawValue),\(durationMin),\(Int(workout.calorieBurnEstimate))\n"
                 }
             }
         }

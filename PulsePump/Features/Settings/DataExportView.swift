@@ -16,8 +16,11 @@ struct DataExportView: View {
     @State private var selectedImportSource: DataImportService.ImportSource = .strong
     @State private var showImportSuccess = false
     @State private var importedCount = 0
+    /// Unit of the CSV being imported when its header doesn't say (Strong's bare "Weight" column). Converted to kg on import.
+    @State private var importUnit: UnitPreference = .kg
 
     private var user: User? { users.first }
+    private var onAppearUnit: UnitPreference { user?.unitPreference ?? .kg }
 
     var onBack: (() -> Void)? = nil
 
@@ -45,13 +48,21 @@ struct DataExportView: View {
                             showImportPicker = true
                         }
                     }
-                    Text("Export a CSV from Strong or Hevy and select it here.")
+                    MoreMenuRow(icon: "scalemass", label: "File Weight Unit",
+                                selection: $importUnit,
+                                options: Array(UnitPreference.allCases), title: { $0.displayName })
+                    Text("Export a CSV from Strong or Hevy and select it here. Weights are converted to kg for storage; pick the unit the file uses.")
                         .font(.spaceMono(11))
                         .foregroundStyle(Color.inkMuted)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 16).padding(.top, 8)
 
                     MoreSectionLabel(title: "EXPORT FORMATS")
+                    Text("Exports always use kg (the unit weights are stored in); a Unit column / weightUnit field says so.")
+                        .font(.spaceMono(11))
+                        .foregroundStyle(Color.inkMuted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16).padding(.top, 8)
                     MoreRow(icon: "doc.text", label: "Export as JSON",
                             value: "\(workoutCount) WORKOUTS") { exportJSON() }
                     MoreRow(icon: "doc.text", label: "Export as CSV",
@@ -68,6 +79,7 @@ struct DataExportView: View {
                 ShareSheet(items: [url])
             }
         }
+        .onAppear { importUnit = onAppearUnit }
         .fileImporter(isPresented: $showImportPicker, allowedContentTypes: [.commaSeparatedText, .plainText]) { result in
             handleImport(result)
         }
@@ -95,9 +107,9 @@ struct DataExportView: View {
 
                 switch selectedImportSource {
                 case .strong:
-                    importedCount = try DataImportService.importStrongCSV(csvString, modelContext: modelContext, user: user)
+                    importedCount = try DataImportService.importStrongCSV(csvString, modelContext: modelContext, user: user, sourceUnit: importUnit)
                 case .hevy:
-                    importedCount = try DataImportService.importHevyCSV(csvString, modelContext: modelContext, user: user)
+                    importedCount = try DataImportService.importHevyCSV(csvString, modelContext: modelContext, user: user, sourceUnit: importUnit)
                 }
                 showImportSuccess = true
             } catch {

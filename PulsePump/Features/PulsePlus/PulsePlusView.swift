@@ -120,7 +120,8 @@ struct PulsePlusView: View {
         let confidence: Int
     }
 
-    private var unitLabel: String { (users.first?.unitPreference == .lbs) ? "LBS" : "KG" }
+    private var unit: UnitPreference { users.first?.unitPreference ?? .kg }
+    private var unitLabel: String { unit.label }
 
     private var predictionRows: [PredictionRow] {
         guard let name = predictedName?.lowercased(),
@@ -137,7 +138,7 @@ struct PulsePlusView: View {
             var target = top.weight
             if history.count >= 2, history[0] > history[1] { target = history[0] + (history[0] - history[1]) }
             let diff = target - top.weight
-            let fmt: (Double) -> String = { String(format: "%g", $0) }
+            let fmt: (Double) -> String = { unit.number($0) }   // set weights are kg
             let delta = diff > 0 ? "▲ +\(fmt(diff)) \(unitLabel) VS LAST" : "HOLD AT LAST"
             return PredictionRow(name: ex.name, delta: delta,
                                  target: "\(fmt(target))×\(top.reps)",

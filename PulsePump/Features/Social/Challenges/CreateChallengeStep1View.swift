@@ -8,6 +8,7 @@ struct CreateChallengeStep1View: View {
 
     @State private var name = ""
     @State private var metric: ChallengeMetric = .totalVolume
+    @Environment(\.weightUnit) private var weightUnit
     @State private var runsFor = "4weeks"
     @State private var customExercise = ""
     @State private var customCountBy = ""
@@ -62,7 +63,7 @@ struct CreateChallengeStep1View: View {
                             }
                             .buttonStyle(.plain)
                             customField(label: "COUNT BY", value: $customCountBy, placeholder: "Heaviest lift")
-                            customField(label: "UNIT", value: $customUnit, placeholder: "KG")
+                            customField(label: "UNIT", value: $customUnit, placeholder: weightUnit.label)
                         }
                         .padding(.top, 14)
                     }
@@ -140,7 +141,7 @@ struct CreateChallengeStep1View: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(m.displayName).font(.archivo(16, weight: selected ? .bold : .regular)).foregroundStyle(Color.inkPrimary)
-                    Text("\(m.unit) · \(m.rule)").font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
+                    Text("\(m.unitLabel(weightUnit)) · \(m.rule)").font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
                 }
                 Spacer()
                 if selected {

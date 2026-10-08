@@ -11,6 +11,7 @@ import SwiftData
 /// change what the whole tab feels like. Comparison lives in challenges/leaderboards, which
 /// people opt into. The viewer's own history is this same screen from their own session.
 struct LiftHistoryView: View {
+    @Environment(\.weightUnit) private var unit
     let exerciseName: String
     let ownerUid: String
     let ownerUsername: String
@@ -36,7 +37,7 @@ struct LiftHistoryView: View {
     private var est1RM: Int {
         guard let best = bestEver, let set = best.bestSet else { return 0 }
         let epley = set.weight > 0 ? set.weight * (1 + Double(set.reps) / 30) : Double(set.reps)
-        return Int(epley)
+        return Int(unit.display(epley).rounded())
     }
 
     /// Change vs. the session closest to 12 weeks ago — the oldest session on file if the
@@ -92,7 +93,7 @@ struct LiftHistoryView: View {
                         threeUpStats
 
                         VStack(alignment: .leading, spacing: 0) {
-                            SectionLabel(title: "Progression", meta: "Best Set · From \(Int(max(0, chartBaseline + 2.5)))KG")
+                            SectionLabel(title: "Progression", meta: "Best Set · From \(unit.formatTight(max(0, chartBaseline + 2.5)))")
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 16)
@@ -130,7 +131,7 @@ struct LiftHistoryView: View {
         HStack(spacing: 10) {
             statCell(label: "BEST EVER") {
                 HStack(alignment: .lastTextBaseline, spacing: 0) {
-                    Text(bestEver.map { String(format: "%g", $0.bestWeight) } ?? "—")
+                    Text(bestEver.map { unit.number($0.bestWeight) } ?? "—")
                         .font(.archivo(26, weight: .black)).lineSpacing(0)
                         .foregroundStyle(Color.prGold)
                         .shadow(color: Color.prGold.opacity(0.45), radius: 5)
@@ -143,7 +144,7 @@ struct LiftHistoryView: View {
                 Text("\(est1RM)").font(.archivo(26, weight: .black)).lineSpacing(0).foregroundStyle(Color.inkPrimary)
             }
             statCell(label: "12 WK") {
-                Text("\(twelveWeekDelta >= 0 ? "+" : "")\(String(format: "%g", twelveWeekDelta))")
+                Text("\(twelveWeekDelta >= 0 ? "+" : "")\(unit.number(twelveWeekDelta))")
                     .font(.archivo(26, weight: .black)).lineSpacing(0).foregroundStyle(Color.signalUp)
             }
         }
@@ -255,13 +256,13 @@ struct LiftHistoryView: View {
 
     private func volumeLabel(_ session: LiftHistorySession) -> String {
         let total = session.sets.reduce(0.0) { $0 + $1.weight * Double($1.reps) }
-        return total >= 1000 ? String(format: "%.1fK", total / 1000) : "\(Int(total))"
+        return unit.compactVolume(total)   // feed weights are kg
     }
 
     private func setValueLabel(_ set: FeedSetLog) -> String {
         if set.duration > 0 { return "\(set.duration)s" }
         if set.distance > 0 { return String(format: "%.0fm", set.distance) }
-        return set.weight > 0 ? "\(String(format: "%g", set.weight))×\(set.reps)" : "\(set.reps)r"
+        return set.weight > 0 ? "\(unit.number(set.weight))×\(set.reps)" : "\(set.reps)r"
     }
 
     // MARK: Data

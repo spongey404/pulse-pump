@@ -3,6 +3,7 @@ import SwiftUI
 /// 3c — friend challenge leaderboard.
 struct ChallengeLeaderboardView: View {
     let challenge: FirestoreChallenge
+    @Environment(\.weightUnit) private var weightUnit
     @Bindable var viewModel: SocialViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showInvite = false
@@ -34,7 +35,7 @@ struct ChallengeLeaderboardView: View {
             .padding(.horizontal, 16).padding(.top, 12)
 
             HStack(spacing: 0) {
-                KPIBlock(label: "Your Count", value: myEntry.map { String(format: "%.0f", $0.score) } ?? "—", alignment: .center).frame(maxWidth: .infinity)
+                KPIBlock(label: "Your Count", value: myEntry.map { metric.formatScore($0.score, weightUnit) } ?? "—", alignment: .center).frame(maxWidth: .infinity)
                 KPIBlock(label: "Position", value: myEntry.map { "\($0.rank)" } ?? "—", alignment: .center).frame(maxWidth: .infinity)
                 KPIBlock(label: "Ends", value: challenge.endDate.formatted(.dateTime.day().month(.abbreviated)), alignment: .center).frame(maxWidth: .infinity)
             }
@@ -91,7 +92,7 @@ struct ChallengeLeaderboardView: View {
             Avatar(initial: entry.username, size: 32)
             Text(entry.username).font(.archivo(16, weight: entry.rank <= 3 || isMe ? .bold : .regular)).foregroundStyle(fg).shadow(color: glow, radius: 4)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text(String(format: "%.0f", entry.score)).font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
+            Text(metric.formatScore(entry.score, weightUnit)).font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
                 .frame(width: 54, alignment: .trailing)
             moveLabel(move).frame(width: 44, alignment: .trailing)
         }

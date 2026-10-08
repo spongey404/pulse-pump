@@ -7,6 +7,7 @@ enum RecapTrend { case up, down }
 
 struct WeeklyRecapView: View {
     let onBack: () -> Void
+    @Environment(\.weightUnit) private var unit
 
     @Query(filter: #Predicate<Workout> { !$0.isDraft }, sort: \Workout.date, order: .reverse)
     private var workouts: [Workout]
@@ -37,8 +38,9 @@ struct WeeklyRecapView: View {
     private func working(_ w: Workout) -> [(log: ExerciseLog, set: SetLog)] {
         w.exerciseLogs.flatMap { log in log.sets.filter { $0.setType != .warmup }.map { (log, $0) } }
     }
+    /// Total working volume in thousands of the display unit (tonnes for kg, K lb for lbs). SetLog.weight is kg.
     private func volumeTonnes(_ ws: [Workout]) -> Double {
-        ws.flatMap(working).reduce(0) { $0 + $1.set.weight * Double($1.set.reps) } / 1000
+        unit.display(ws.flatMap(working).reduce(0) { $0 + $1.set.weight * Double($1.set.reps) }) / 1000
     }
     private func setCount(_ ws: [Workout]) -> Int { ws.flatMap(working).count }
     private func minutes(_ ws: [Workout]) -> Int { Int(ws.reduce(0) { $0 + $1.duration } / 60) }
@@ -103,7 +105,7 @@ struct WeeklyRecapView: View {
                 let f = DateFormatter(); f.dateFormat = "EEE d MMM"
                 out.append(PR(name: n,
                               meta: "\(f.string(from: w.date).uppercased()) · \(w.template?.name.uppercased() ?? "WORKOUT")",
-                              value: "\(fmt(s.weight))×\(s.reps)"))
+                              value: "\(unit.number(s.weight))×\(s.reps)"))
             }
         }
         return out
@@ -195,7 +197,7 @@ struct WeeklyRecapView: View {
         let s = setCount(week), ps = setCount(prev)
         let t = minutes(week), pt = minutes(prev)
         return HStack(alignment: .top, spacing: 12) {
-            kpi("VOLUME T", String(format: "%.1f", v), delta(v, pv, pct: true))
+            kpi(unit == .kg ? "VOLUME T" : "VOLUME K LB", String(format: "%.1f", v), delta(v, pv, pct: true))
             kpi("SETS", "\(s)", delta(Double(s), Double(ps), pct: false))
             kpi("TIME", "\(t / 60):\(String(format: "%02d", t % 60))",
                 pt > 0 ? ((t - pt >= 0 ? "+" : "-") + "\(abs(t - pt) / 60):\(String(format: "%02d", abs(t - pt) % 60))",
@@ -269,7 +271,7 @@ struct WeeklyRecapView: View {
                     VStack(alignment: .trailing, spacing: 2) {
                         HStack(alignment: .firstTextBaseline, spacing: 3) {
                             Text(p.value).font(.spaceMono(15, weight: .bold))
-                            Text("KG").font(.spaceMono(8)).tracking(1).foregroundStyle(Color.inkMuted)
+                            Text(unit.label).font(.spaceMono(8)).tracking(1).foregroundStyle(Color.inkMuted)
                         }
                         .foregroundStyle(Color.inkPrimary)
                         Rectangle().fill(Color.inkPrimary).frame(height: 1.5)

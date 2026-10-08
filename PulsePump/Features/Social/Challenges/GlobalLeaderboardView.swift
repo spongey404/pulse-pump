@@ -3,6 +3,8 @@ import SwiftUI
 /// 3d — global monthly leaderboard, GLOBAL/FRIENDS filter, your row pinned above the tab bar.
 struct GlobalLeaderboardView: View {
     let challenge: FirestoreChallenge
+    @Environment(\.weightUnit) private var weightUnit
+    private var metric: ChallengeMetric { ChallengeMetric(rawValue: challenge.metric) ?? .totalVolume }
     @Bindable var viewModel: SocialViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showFriendsOnly = false
@@ -104,7 +106,7 @@ struct GlobalLeaderboardView: View {
             Avatar(initial: entry.username, size: 32)
             Text(entry.username).font(.archivo(16, weight: entry.rank <= 3 ? .bold : .regular)).foregroundStyle(fg).shadow(color: glow, radius: 4)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text(String(format: "%.0f", entry.score)).font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
+            Text(metric.formatScore(entry.score, weightUnit)).font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
                 .frame(width: 76, alignment: .trailing)
             Color.clear.frame(width: 40)
         }
@@ -122,12 +124,12 @@ struct GlobalLeaderboardView: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(entry.username).font(.archivo(16, weight: .bold)).foregroundStyle(Color.accentInk)
                     if let above {
-                        Text("\(String(format: "%.0f", above.score - entry.score)) TO \(above.rank)\(ordinalSuffix(above.rank))")
+                        Text("\(metric.formatScore(above.score - entry.score, weightUnit)) TO \(above.rank)\(ordinalSuffix(above.rank))")
                             .font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
                     }
                 }
                 Spacer()
-                Text(String(format: "%.0f", entry.score)).font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                Text(metric.formatScore(entry.score, weightUnit)).font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
             }
         }
         .padding(.horizontal, 16)

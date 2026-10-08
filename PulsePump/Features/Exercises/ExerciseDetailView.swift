@@ -70,6 +70,7 @@ struct ExerciseDetailView: View {
 // MARK: - Stats
 
 struct ExerciseStatsSection: View {
+    @Environment(\.weightUnit) private var unit
     let exercise: Exercise
 
     private var allSets: [SetLog] {
@@ -105,13 +106,13 @@ struct ExerciseStatsSection: View {
     var body: some View {
         VStack(spacing: 8) {
             HStack(spacing: 16) {
-                StatCard(title: "Weight PR", value: String(format: "%.1f", weightPR))
+                StatCard(title: "Weight PR (\(unit.lowercaseLabel))", value: unit.number(weightPR))
                 StatCard(title: "Rep PR", value: "\(repsPR)")
-                StatCard(title: "Est. 1RM", value: String(format: "%.1f", estimated1RM))
+                StatCard(title: "Est. 1RM (\(unit.lowercaseLabel))", value: unit.number(estimated1RM))
             }
             if volumePR > 0 {
                 HStack(spacing: 16) {
-                    StatCard(title: "Volume PR", value: String(format: "%.0f", volumePR))
+                    StatCard(title: "Volume PR (\(unit.lowercaseLabel))", value: unit.volume(volumePR))
                 }
             }
         }
@@ -123,6 +124,7 @@ struct ExerciseStatsSection: View {
 // MARK: - Trend Chart
 
 struct ExerciseTrendChart: View {
+    @Environment(\.weightUnit) private var unit
     let exercise: Exercise
 
     private var dataPoints: [(date: Date, maxWeight: Double)] {
@@ -139,7 +141,7 @@ struct ExerciseTrendChart: View {
     var body: some View {
         if dataPoints.count >= 2 {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Weight Over Time")
+                Text("Weight Over Time (\(unit.lowercaseLabel))")
                     .font(.mono(11))
                     .foregroundStyle(.secondary)
 
@@ -147,12 +149,12 @@ struct ExerciseTrendChart: View {
                     ForEach(Array(dataPoints.enumerated()), id: \.offset) { _, point in
                         LineMark(
                             x: .value("Date", point.date),
-                            y: .value("Weight", point.maxWeight)
+                            y: .value("Weight", unit.display(point.maxWeight))
                         )
                         .foregroundStyle(Color.accentInk)
                         PointMark(
                             x: .value("Date", point.date),
-                            y: .value("Weight", point.maxWeight)
+                            y: .value("Weight", unit.display(point.maxWeight))
                         )
                         .foregroundStyle(Color.accentInk)
                     }
@@ -186,6 +188,7 @@ struct StatCard: View {
 // MARK: - Recent Sessions
 
 struct ExerciseRecentSessionsSection: View {
+    @Environment(\.weightUnit) private var unit
     let exercise: Exercise
 
     private var recentLogs: [ExerciseLog] {
@@ -207,7 +210,7 @@ struct ExerciseRecentSessionsSection: View {
                             .font(.mono(11))
                             .foregroundStyle(.secondary)
                     }
-                    Text(log.sets.map { "\($0.weight)×\($0.reps)" }.joined(separator: "  "))
+                    Text(log.sets.map { "\(unit.number($0.weight))×\($0.reps)" }.joined(separator: "  "))
                         .font(.callout.monospaced())
                 }
             }

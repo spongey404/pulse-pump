@@ -3,6 +3,8 @@ import SwiftUI
 /// 7b — challenge ended, final leaderboard + winner band.
 struct ChallengeEndedView: View {
     let challenge: FirestoreChallenge
+    @Environment(\.weightUnit) private var weightUnit
+    private var metric: ChallengeMetric { ChallengeMetric(rawValue: challenge.metric) ?? .totalVolume }
     @Bindable var viewModel: SocialViewModel
     @Environment(\.dismiss) private var dismiss
 
@@ -46,7 +48,7 @@ struct ChallengeEndedView: View {
                             Spacer()
                             VStack(alignment: .trailing, spacing: 3) {
                                 Text("BEST").font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
-                                Text(String(format: "%.0f", winner.score)).font(Font.spaceMono(18, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                                Text(metric.formatScore(winner.score, weightUnit)).font(Font.spaceMono(18, weight: .bold)).foregroundStyle(Color.inkPrimary)
                             }
                         }
                         .padding(.vertical, 14)
@@ -57,7 +59,7 @@ struct ChallengeEndedView: View {
 
                     HStack(spacing: 0) {
                         KPIBlock(label: "You Finished", value: myEntry.map { ordinal($0.rank) } ?? "—", alignment: .center).frame(maxWidth: .infinity)
-                        KPIBlock(label: "Your Best", value: myEntry.map { String(format: "%.0f", $0.score) } ?? "—", alignment: .center).frame(maxWidth: .infinity)
+                        KPIBlock(label: "Your Best", value: myEntry.map { metric.formatScore($0.score, weightUnit) } ?? "—", alignment: .center).frame(maxWidth: .infinity)
                         KPIBlock(label: "Gained", value: gainedLabel, valueColor: .signalUp, alignment: .center).frame(maxWidth: .infinity)
                     }
                     .padding(.vertical, 16)
@@ -92,7 +94,7 @@ struct ChallengeEndedView: View {
     private var gainedLabel: String {
         guard let mine = myEntry else { return "—" }
         let delta = mine.score - (board.last?.score ?? mine.score)
-        return String(format: "%.0f", max(0, delta))
+        return metric.formatScore(max(0, delta), weightUnit)
     }
 
     private func ordinal(_ n: Int) -> String {
@@ -114,9 +116,9 @@ struct ChallengeEndedView: View {
             Avatar(initial: entry.username, size: 32, showBorder: false)
             Text(entry.username).font(.archivo(16, weight: entry.rank <= 3 ? .bold : .regular)).foregroundStyle(fg).shadow(color: glow, radius: 4)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text(String(format: "%.0f", entry.score)).font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
+            Text(metric.formatScore(entry.score, weightUnit)).font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
                 .frame(width: 68, alignment: .trailing)
-            Text(String(format: "%.0f", max(0, gained))).font(Font.spaceMono(10, weight: .bold)).foregroundStyle(Color.signalUp)
+            Text(metric.formatScore(max(0, gained), weightUnit)).font(Font.spaceMono(10, weight: .bold)).foregroundStyle(Color.signalUp)
                 .frame(width: 50, alignment: .trailing)
         }
         .frame(minHeight: 56)

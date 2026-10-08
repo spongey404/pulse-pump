@@ -151,6 +151,7 @@ struct ActivityFeedView: View {
 // MARK: - Feed Post Card (screen 4a)
 
 struct FeedPostCard: View {
+    @Environment(\.weightUnit) private var unit
     let item: WorkoutFeedItem
     let currentUid: String
     let onLike: () -> Void
@@ -416,7 +417,7 @@ struct FeedPostCard: View {
 
     private var volumeLabel: String {
         let total = item.exercises.flatMap(\.sets).reduce(0.0) { $0 + $1.weight * Double($1.reps) }
-        return total >= 1000 ? String(format: "%.1fK", total / 1000) : "\(Int(total))"
+        return unit.compactVolume(total)   // feed weights are kg
     }
 
     // MARK: Caption
@@ -474,6 +475,7 @@ struct FeedPostCard: View {
 // MARK: - Session sheet (opens from 4a's body-map slide)
 
 struct FeedSessionSheet: View {
+    @Environment(\.weightUnit) private var unit
     let item: WorkoutFeedItem
     var viewModel: SocialViewModel?
     @Environment(\.dismiss) private var dismiss
@@ -593,7 +595,7 @@ struct FeedSessionSheet: View {
 
     private var volumeLabel: String {
         let total = item.exercises.flatMap(\.sets).reduce(0.0) { $0 + $1.weight * Double($1.reps) }
-        return total >= 1000 ? String(format: "%.1fK", total / 1000) : "\(Int(total))"
+        return unit.compactVolume(total)   // feed weights are kg
     }
 
     /// Stats-row cell — Space Mono 7px/1.2 tracking label, Archivo 900 26px value. Built
@@ -718,14 +720,14 @@ struct FeedSessionSheet: View {
     private func setValueLabel(_ set: FeedSetLog) -> String {
         if set.duration > 0 { return "\(set.duration)s" }
         if set.distance > 0 { return String(format: "%.0fm", set.distance) }
-        return set.weight > 0 ? "\(String(format: "%g", set.weight))×\(set.reps)" : "\(set.reps)r"
+        return set.weight > 0 ? "\(unit.number(set.weight))×\(set.reps)" : "\(set.reps)r"
     }
 
     /// "VS LAST" is a raw weight/rep gain, not a %. `weightDelta` beating last time takes
     /// priority; a rep-only gain at the same weight shows as "+N REPS" instead.
     private func vsLastLabel(for exercise: FeedExercise) -> String {
         if exercise.weightDelta > 0 {
-            return "▲ +\(String(format: "%g", exercise.weightDelta))KG"
+            return "▲ +\(unit.formatTight(exercise.weightDelta))"
         } else if exercise.repsDelta > 0 {
             return "▲ +\(exercise.repsDelta) REP\(exercise.repsDelta == 1 ? "" : "S")"
         }

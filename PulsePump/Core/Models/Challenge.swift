@@ -81,6 +81,34 @@ enum ChallengeMetric: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    /// Scores for these metrics are stored/synced in kg (volume = sum of kg x reps, heaviest = kg).
+    var isWeightBased: Bool { self == .totalVolume || self == .heaviestLift }
+
+    /// `unit` text in the user's weight unit ("LB LIFTED"). Non-weight metrics are unchanged.
+    func unitLabel(_ weightUnit: UnitPreference) -> String {
+        self == .totalVolume ? "\(weightUnit.label) LIFTED" : unit
+    }
+
+    func globalSubheading(_ weightUnit: UnitPreference) -> String {
+        self == .totalVolume ? "EVERY \(weightUnit.label) LIFTED · ALL SESSIONS COUNT" : globalSubheading
+    }
+
+    /// A stored score (kg for weight metrics) converted for display in the user's unit.
+    func displayScore(_ score: Double, _ weightUnit: UnitPreference) -> Double {
+        isWeightBased ? weightUnit.display(score) : score
+    }
+
+    /// Whole-number score ("12,340"), converted to the user's unit for weight metrics.
+    func formatScore(_ score: Double, _ weightUnit: UnitPreference) -> String {
+        String(format: "%.0f", displayScore(score, weightUnit))
+    }
+
+    /// Compact score ("13.4K") for tight tiles.
+    func formatScoreCompact(_ score: Double, _ weightUnit: UnitPreference) -> String {
+        let v = displayScore(score, weightUnit)
+        return v >= 1000 ? String(format: "%.1fK", v / 1000) : "\(Int(v.rounded()))"
+    }
+
     /// 5a's rule column, e.g. "Every working set, summed".
     var rule: String {
         switch self {
