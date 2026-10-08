@@ -68,3 +68,18 @@ the future Android app, the Firestore security rules and the Cloud Functions.
 See `firebase/firestore.rules`, `firebase/firestore.indexes.json`, `firebase/functions/`. Rules are tested with the emulator
 (`firebase/rules-tests`). Functions: `onWorkoutWritten` (scoring), `onFollowWritten` (friend/fan counters), `onLikeWritten` /
 `onCommentWritten` (counters), `deleteAccount` (callable).
+
+## Deviations (made while implementing `firebase/`)
+The rules and functions need these additions to the tables above; the iOS and Android clients must follow them.
+- `invites/{id}`: the document id **must be `{challengeId}_{toUid}`** so rules can authorise the invitee to read the challenge by path. Also allowed: `createdAt`, `challengeName`, `fromUsername`, `schemaVersion`. Status values: `pending`, `accepted`, `declined`; only `status` may be updated, by the recipient.
+- `challenges/{id}/members/{uid}` additionally carries **`uid`** (needed for the `members` collection-group query "my challenges"). Join is allowed for global challenges, the creator, or an invitee, while `status == "active"` and `endAt` is in the future. `memberCount` is maintained by the `onMemberWritten` function.
+- `posts/{id}/likes/{uid}` additionally carries **`uid`** (needed to delete a deleted account's likes via a collection-group query).
+- `challenges/{id}/entries/{uid}` additionally carries `uid`, `scoreAt` (when the score last changed; earlier wins ties) and `hidden` (global boards only, set when the user's `globalLeaderboardVisible` is false; `username` is then omitted and rules hide the entry from everyone but the owner).
+- Ranks use competition ranking (equal scores share a rank: 1, 1, 3), displayed in order of earliest `scoreAt`.
+- `usernames/{handle}`: create-only plus **delete by the owner** (so a rename can release the old handle). Handle is `[a-z0-9._]{3,20}`.
+- `profiles/{uid}` is never deletable by clients (removed by `deleteAccount`); `friendCount`/`fanCount` are function-only.
+- Clients can create only non-global challenges (`isGlobal` false, `status` "active", `visibility` one of `friends`, `invite`, `public`); global challenges are created with the Admin SDK. `status` and `memberCount` are function-only.
+- Comments may also carry `authorName`, `authorUsername`, `schemaVersion`; reports may carry `details`.
+- Private `users/{uid}/**` documents are size-capped by key and list limits but unknown extra fields are allowed (forward compatibility).
+- Queries on `posts` must pin `authorUid` (and an `audience` the caller may see) because visibility depends on other documents.
+- Functions: `onMemberWritten` (new), `closeEndedChallenges` (callable, `admin` claim) and `closeEndedChallengesDaily` (scheduled). Callable `deleteAccount` is in region `australia-southeast1`.

@@ -1,9 +1,421 @@
 rules_version = '2';
 
-// Placeholder: deny everything until the data model and rules are designed and tested
-// against the emulator (see firebase/README.md). Deploy with `firebase deploy --only firestore`.
+// Pump data contract: docs/sync-architecture.md. Tested by firebase/rules-tests.
+//
+// Query note for clients: rules that depend on another document (friends, blocks, parent post)
+// can only authorise a *query* when the query pins the relevant value, e.g. posts must be
+// listed per author (`whereField("authorUid", isEqualTo: x)`) and with an `audience` filter
+// the caller is allowed to see. Single-document reads always work.
+//
+// Per request budget: at most 10 get()/exists() calls. Worst case here is 5 (post read in a
+// subcollection = 1 get(post) + 2 exists(friends) + 2 exists(blocks)).
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ------------------------------------------------------------------ helpers
+    function signedIn() { return request.auth != null; }
+    function isUser(uid) { return signedIn() && request.auth.uid == uid; }
+    function db() { return /databases/$(database)/documents; }
+
+    function isTs(v) { return v is timestamp; }
+    function isStr(v, lo, hi) { return v is string && v.size() >= lo && v.size() <= hi; }
+    function optStr(d, k, hi) { return !(k in d) || isStr(d[k], 0, hi); }
+    function optTs(d, k) { return !(k in d) || isTs(d[k]); }
+    function optNum(d, k) { return !(k in d) || d[k] is number; }
+    function optList(d, k, max) { return !(k in d) || (d[k] is list && d[k].size() <= max); }
+    function optMap(d, k) { return !(k in d) || d[k] is map; }
+    function schemaOk(d) { return d.schemaVersion is int && d.schemaVersion >= 1 && d.schemaVersion <= 1000; }
+    function audienceOk(v) { return v in ['everyone', 'friends', 'onlyMe']; }
+    function unchanged(k) {
+      return (k in request.resource.data) == (k in resource.data)
+        && (!(k in resource.data) || request.resource.data[k] == resource.data[k]);
+    }
+    // a server-owned counter may only be absent/0 on create and never differ on update
+    function zeroOrAbsent(d, k) { return !(k in d) || d[k] == 0; }
+
+    // ------------------------------------------------------------ relationships
+    // friends(a,b) <=> follows/a_b and follows/b_a both exist
+    function followsDoc(a, b) { return exists(/databases/$(database)/documents/follows/$(a + '_' + b)); }
+    function areFriends(a, b) { return followsDoc(a, b) && followsDoc(b, a); }
+    // block in either direction hides content both ways
+    function blockedBetween(a, b) {
+      return exists(/databases/$(database)/documents/users/$(a)/blocked/$(b))
+        || exists(/databases/$(database)/documents/users/$(b)/blocked/$(a));
+    }
+    function hasBlocked(owner, other) {
+      return exists(/databases/$(database)/documents/users/$(owner)/blocked/$(other));
+    }
+
+    // Audience check for content owned by `owner`, viewed by the signed-in caller.
+    function audienceAllows(aud, owner) {
+      return isUser(owner)
+        || (signedIn() && !blockedBetween(owner, request.auth.uid)
+            && (aud == 'everyone' || (aud == 'friends' && areFriends(request.auth.uid, owner))));
+    }
+
+    function postData(postId) {
+      return get(/databases/$(database)/documents/posts/$(postId)).data;
+    }
+    function canReadPostData(p) { return audienceAllows(p.audience, p.authorUid); }
+
+    // ------------------------------------------------- users/{uid}/** (owner only)
+    match /users/{uid} {
+      allow read: if isUser(uid);
+      allow delete: if isUser(uid);
+      allow create, update: if isUser(uid)
+        && request.resource.data.keys().size() <= 40
+        && isStr(request.resource.data.get('name', ''), 0, 100)
+        && isStr(request.resource.data.get('username', ''), 0, 40)
+        && optStr(request.resource.data, 'unit', 10)
+        && optStr(request.resource.data, 'experienceLevel', 30)
+        && optStr(request.resource.data, 'gender', 30)
+        && optNum(request.resource.data, 'age')
+        && optNum(request.resource.data, 'heightCm')
+        && optNum(request.resource.data, 'weightKg')
+        && optMap(request.resource.data, 'settings')
+        && optMap(request.resource.data, 'privacy')
+        && (!('privacy' in request.resource.data) || request.resource.data.privacy.keys().size() <= 10)
+        && schemaOk(request.resource.data);
+
+      match /workouts/{id} {
+        allow read, delete: if isUser(uid);
+        allow create, update: if isUser(uid)
+          && request.resource.data.keys().size() <= 30
+          && isTs(request.resource.data.date)
+          && request.resource.data.updatedAt is number
+          && request.resource.data.exercises is list && request.resource.data.exercises.size() <= 100
+          && optNum(request.resource.data, 'durationSec')
+          && optNum(request.resource.data, 'calories')
+          && optStr(request.resource.data, 'notes', 5000)
+          && optStr(request.resource.data, 'templateId', 100)
+          && optStr(request.resource.data, 'templateName', 200)
+          && schemaOk(request.resource.data);
+      }
+
+      match /templates/{id} {
+        allow read, delete: if isUser(uid);
+        allow create, update: if isUser(uid)
+          && request.resource.data.keys().size() <= 30
+          && isStr(request.resource.data.name, 0, 200)
+          && request.resource.data.updatedAt is number
+          && request.resource.data.exercises is list && request.resource.data.exercises.size() <= 100
+          && optList(request.resource.data, 'splitDays', 14)
+          && optStr(request.resource.data, 'notes', 5000)
+          && schemaOk(request.resource.data);
+      }
+
+      match /splits/{id} {
+        allow read, delete: if isUser(uid);
+        allow create, update: if isUser(uid)
+          && request.resource.data.keys().size() <= 20
+          && isStr(request.resource.data.name, 0, 200)
+          && request.resource.data.updatedAt is number
+          && request.resource.data.days is list && request.resource.data.days.size() <= 14
+          && schemaOk(request.resource.data);
+      }
+
+      match /equipmentProfiles/{id} {
+        allow read, delete: if isUser(uid);
+        allow create, update: if isUser(uid)
+          && request.resource.data.keys().size() <= 20
+          && isStr(request.resource.data.name, 0, 200)
+          && request.resource.data.updatedAt is number
+          && optList(request.resource.data, 'equipment', 200)
+          && optList(request.resource.data, 'platesKg', 50)
+          && optList(request.resource.data, 'bars', 20)
+          && schemaOk(request.resource.data);
+      }
+
+      match /customExercises/{id} {
+        allow read, delete: if isUser(uid);
+        allow create, update: if isUser(uid)
+          && request.resource.data.keys().size() <= 30
+          && isStr(request.resource.data.name, 1, 200)
+          && request.resource.data.updatedAt is number
+          && optList(request.resource.data, 'primaryMuscles', 50)
+          && optList(request.resource.data, 'secondaryMuscles', 50)
+          && schemaOk(request.resource.data);
+      }
+
+      match /bodyweight/{day} {
+        allow read, delete: if isUser(uid);
+        allow create, update: if isUser(uid)
+          && request.resource.data.keys().size() <= 5
+          && day.matches('^[0-9]{8}$')
+          && request.resource.data.kg is number
+          && request.resource.data.kg > 0 && request.resource.data.kg < 1000
+          && request.resource.data.updatedAt is number;
+      }
+
+      match /blocked/{other} {
+        allow read, delete: if isUser(uid);
+        allow create: if isUser(uid) && other != uid
+          && request.resource.data.keys().size() <= 3
+          && isTs(request.resource.data.createdAt);
+        allow update: if false;
+      }
+    }
+
+    // ------------------------------------------------------------------ profiles
+    function profileVisible(p, uid) {
+      return isUser(uid)
+        || (signedIn() && !blockedBetween(uid, request.auth.uid)
+            && (p.get('profileVisibility', 'everyone') == 'everyone'
+                || (p.get('profileVisibility', 'everyone') == 'friends' && areFriends(request.auth.uid, uid))));
+    }
+    function profileShapeOk(d) {
+      return d.keys().hasOnly(['displayName', 'username', 'streak', 'totalWorkouts', 'friendCount', 'fanCount',
+                               'profileVisibility', 'globalLeaderboardVisible', 'updatedAt', 'createdAt',
+                               'avatarColor', 'schemaVersion'])
+        && isStr(d.displayName, 0, 100)
+        && isStr(d.username, 3, 20)
+        && d.username.matches('^[a-z0-9._]+$')
+        && d.profileVisibility in ['everyone', 'friends', 'onlyMe']
+        && d.globalLeaderboardVisible is bool
+        && (!('streak' in d) || (d.streak is int && d.streak >= 0 && d.streak < 100000))
+        && (!('totalWorkouts' in d) || (d.totalWorkouts is int && d.totalWorkouts >= 0 && d.totalWorkouts < 10000000))
+        && optStr(d, 'avatarColor', 20)
+        && (!('schemaVersion' in d) || d.schemaVersion is int);
+    }
+
+    match /profiles/{uid} {
+      allow get: if profileVisible(resource.data, uid);
+      allow list: if profileVisible(resource.data, uid);
+      allow create: if isUser(uid)
+        && profileShapeOk(request.resource.data)
+        && zeroOrAbsent(request.resource.data, 'friendCount')
+        && zeroOrAbsent(request.resource.data, 'fanCount');
+      allow update: if isUser(uid)
+        && profileShapeOk(request.resource.data)
+        && unchanged('friendCount') && unchanged('fanCount');
+      allow delete: if false; // removed by deleteAccount
+    }
+
+    // ----------------------------------------------------------------- usernames
+    match /usernames/{handle} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if isUser(request.resource.data.uid)
+        && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+        && request.resource.data.uid is string
+        && handle.matches('^[a-z0-9._]{3,20}$');
+      allow update: if false;
+      allow delete: if isUser(resource.data.uid); // lets the owner release a handle when renaming
+    }
+
+    // ------------------------------------------------------------------- follows
+    match /follows/{edge} {
+      allow get, list: if signedIn()
+        && (resource.data.followerUid == request.auth.uid || resource.data.followeeUid == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['followerUid', 'followeeUid', 'createdAt'])
+        && request.resource.data.followerUid == request.auth.uid
+        && request.resource.data.followeeUid is string
+        && request.resource.data.followeeUid != request.auth.uid
+        && edge == request.auth.uid + '_' + request.resource.data.followeeUid
+        && isTs(request.resource.data.createdAt)
+        && !hasBlocked(request.resource.data.followeeUid, request.auth.uid);
+      allow update: if false;
+      allow delete: if signedIn() && resource.data.followerUid == request.auth.uid;
+    }
+
+    // --------------------------------------------------------------------- posts
+    function postShapeOk(d) {
+      return d.keys().hasOnly(['authorUid', 'authorName', 'authorUsername', 'date', 'workoutName', 'audience',
+                               'bodyMapAudience', 'stats', 'exercises', 'likeCount', 'commentCount', 'createdAt',
+                               'caption', 'workoutId', 'taggedUids', 'schemaVersion', 'updatedAt'])
+        && isStr(d.authorName, 0, 100)
+        && isStr(d.authorUsername, 0, 40)
+        && isTs(d.date)
+        && isStr(d.workoutName, 0, 200)
+        && audienceOk(d.audience)
+        && audienceOk(d.bodyMapAudience)
+        && d.stats is map && d.stats.keys().hasOnly(['sets', 'volumeKg', 'durationSec', 'prCount'])
+        && d.exercises is list && d.exercises.size() <= 60
+        && isTs(d.createdAt)
+        && optStr(d, 'caption', 500)
+        && optStr(d, 'workoutId', 100)
+        && optList(d, 'taggedUids', 20)
+        && schemaOk(d);
+    }
+
+    match /posts/{postId} {
+      allow get, list: if canReadPostData(resource.data);
+      allow create: if isUser(request.resource.data.authorUid)
+        && postShapeOk(request.resource.data)
+        && zeroOrAbsent(request.resource.data, 'likeCount')
+        && zeroOrAbsent(request.resource.data, 'commentCount');
+      allow update: if isUser(resource.data.authorUid)
+        && postShapeOk(request.resource.data)
+        && request.resource.data.authorUid == resource.data.authorUid
+        && unchanged('likeCount') && unchanged('commentCount');
+      allow delete: if isUser(resource.data.authorUid);
+
+      match /extras/{doc} {
+        allow get: if doc == 'bodymap' && (
+          isUser(postData(postId).authorUid)
+          || (canReadPostData(postData(postId))
+              && audienceAllows(postData(postId).bodyMapAudience, postData(postId).authorUid)));
+        allow create, update: if doc == 'bodymap'
+          && isUser(postData(postId).authorUid)
+          && request.resource.data.keys().hasOnly(['muscleSets', 'schemaVersion', 'updatedAt'])
+          && request.resource.data.muscleSets is map
+          && request.resource.data.muscleSets.keys().size() <= 80
+          && schemaOk(request.resource.data);
+        allow delete: if doc == 'bodymap' && isUser(postData(postId).authorUid);
+      }
+
+      match /comments/{commentId} {
+        allow get, list: if canReadPostData(postData(postId));
+        allow create: if signedIn()
+          && request.resource.data.keys().hasOnly(['authorUid', 'authorName', 'authorUsername', 'text', 'createdAt', 'schemaVersion'])
+          && request.resource.data.authorUid == request.auth.uid
+          && isStr(request.resource.data.text, 1, 500)
+          && isTs(request.resource.data.createdAt)
+          && optStr(request.resource.data, 'authorName', 100)
+          && optStr(request.resource.data, 'authorUsername', 40)
+          && (!('schemaVersion' in request.resource.data) || request.resource.data.schemaVersion is int)
+          && canReadPostData(postData(postId));
+        allow update: if false;
+        allow delete: if signedIn()
+          && (resource.data.authorUid == request.auth.uid || isUser(postData(postId).authorUid));
+      }
+
+      match /likes/{likerUid} {
+        allow get, list: if canReadPostData(postData(postId));
+        allow create: if isUser(likerUid)
+          && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+          && request.resource.data.uid == likerUid
+          && (!('createdAt' in request.resource.data) || isTs(request.resource.data.createdAt))
+          && canReadPostData(postData(postId));
+        allow update: if false;
+        allow delete: if isUser(likerUid);
+      }
+    }
+
+    // ---------------------------------------------------------------- challenges
+    function challengeData(cid) { return get(/databases/$(database)/documents/challenges/$(cid)).data; }
+    function isMember(cid, uid) { return exists(/databases/$(database)/documents/challenges/$(cid)/members/$(uid)); }
+    function hasInvite(cid, uid) { return exists(/databases/$(database)/documents/invites/$(cid + '_' + uid)); }
+    function canReadChallenge(cid, c) {
+      return signedIn() && (
+        c.get('isGlobal', false) == true
+        || c.creatorUid == request.auth.uid
+        || isMember(cid, request.auth.uid)
+        || hasInvite(cid, request.auth.uid));
+    }
+    function challengeShapeOk(d) {
+      return d.keys().hasOnly(['creatorUid', 'name', 'metric', 'exerciseName', 'startAt', 'endAt', 'isGlobal',
+                               'visibility', 'status', 'memberCount', 'winCondition', 'unit', 'customLabel',
+                               'schemaVersion', 'createdAt', 'updatedAt'])
+        && isStr(d.name, 1, 100)
+        && d.metric in ['totalVolume', 'heaviestLift', 'mostReps', 'longestHold', 'sessionsLogged', 'custom']
+        && optStr(d, 'exerciseName', 100)
+        && isTs(d.startAt) && isTs(d.endAt) && d.endAt > d.startAt
+        && d.visibility in ['friends', 'invite', 'public']
+        && optStr(d, 'winCondition', 20)
+        && optStr(d, 'unit', 30)
+        && optStr(d, 'customLabel', 60)
+        && schemaOk(d);
+    }
+
+    match /challenges/{cid} {
+      allow get, list: if signedIn() && (
+        resource.data.get('isGlobal', false) == true
+        || resource.data.creatorUid == request.auth.uid
+        || isMember(cid, request.auth.uid)
+        || hasInvite(cid, request.auth.uid));
+      // Global challenges are created by admins (Admin SDK) only; clients create private ones.
+      allow create: if isUser(request.resource.data.creatorUid)
+        && challengeShapeOk(request.resource.data)
+        && request.resource.data.get('isGlobal', false) == false
+        && request.resource.data.status == 'active'
+        && zeroOrAbsent(request.resource.data, 'memberCount');
+      // Creator may rename / change visibility; status, memberCount, metric window are fixed after create.
+      allow update: if isUser(resource.data.creatorUid)
+        && challengeShapeOk(request.resource.data)
+        && unchanged('status') && unchanged('memberCount') && unchanged('isGlobal')
+        && unchanged('creatorUid') && unchanged('metric') && unchanged('exerciseName')
+        && unchanged('startAt') && unchanged('endAt');
+      allow delete: if isUser(resource.data.creatorUid);
+
+      match /members/{memberUid} {
+        allow get: if isUser(memberUid)
+          || (signedIn() && (isMember(cid, request.auth.uid) || isUser(challengeData(cid).creatorUid)));
+        allow list: if signedIn()
+          && (isMember(cid, request.auth.uid) || isUser(challengeData(cid).creatorUid));
+        // Join: self only, challenge still open, and the caller was invited / challenge is global / caller is creator.
+        allow create: if isUser(memberUid)
+          && request.resource.data.keys().hasOnly(['uid', 'username', 'joinedAt', 'schemaVersion'])
+          && request.resource.data.uid == memberUid
+          && isStr(request.resource.data.username, 0, 40)
+          && isTs(request.resource.data.joinedAt)
+          && (!('schemaVersion' in request.resource.data) || request.resource.data.schemaVersion is int)
+          && challengeData(cid).status == 'active'
+          && challengeData(cid).endAt > request.time
+          && (challengeData(cid).get('isGlobal', false) == true
+              || challengeData(cid).creatorUid == memberUid
+              || hasInvite(cid, memberUid));
+        allow update: if false;
+        allow delete: if isUser(memberUid) || isUser(challengeData(cid).creatorUid);
+      }
+
+      // Entries are written exclusively by Cloud Functions.
+      match /entries/{entryUid} {
+        allow get, list: if signedIn() && (
+          isUser(entryUid)
+          || isMember(cid, request.auth.uid)
+          || isUser(challengeData(cid).creatorUid)
+          || (challengeData(cid).get('isGlobal', false) == true && resource.data.get('hidden', false) != true));
+        allow write: if false;
+      }
+    }
+
+    // `members` collection-group query (find my challenges): only my own membership docs.
+    match /{path=**}/members/{memberUid} {
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // ------------------------------------------------------------------- invites
+    // Document id MUST be `${challengeId}_${toUid}` so rules can look an invite up by path.
+    match /invites/{inviteId} {
+      allow get, list: if signedIn()
+        && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+      allow create: if isUser(request.resource.data.fromUid)
+        && request.resource.data.keys().hasOnly(['challengeId', 'fromUid', 'toUid', 'status', 'createdAt',
+                                                  'challengeName', 'fromUsername', 'schemaVersion'])
+        && request.resource.data.challengeId is string
+        && request.resource.data.toUid is string
+        && request.resource.data.toUid != request.auth.uid
+        && inviteId == request.resource.data.challengeId + '_' + request.resource.data.toUid
+        && request.resource.data.status == 'pending'
+        && isTs(request.resource.data.createdAt)
+        && optStr(request.resource.data, 'challengeName', 100)
+        && optStr(request.resource.data, 'fromUsername', 40)
+        && !hasBlocked(request.resource.data.toUid, request.auth.uid)
+        && (isUser(challengeData(request.resource.data.challengeId).creatorUid)
+            || isMember(request.resource.data.challengeId, request.auth.uid));
+      allow update: if signedIn() && resource.data.toUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['accepted', 'declined'];
+      allow delete: if signedIn()
+        && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+    }
+
+    // ------------------------------------------------------------------- reports
+    match /reports/{id} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['reporterUid', 'targetType', 'targetId', 'reason', 'createdAt', 'details'])
+        && request.resource.data.reporterUid == request.auth.uid
+        && request.resource.data.targetType in ['post', 'comment', 'user', 'challenge']
+        && isStr(request.resource.data.targetId, 1, 200)
+        && isStr(request.resource.data.reason, 1, 500)
+        && optStr(request.resource.data, 'details', 1000)
+        && isTs(request.resource.data.createdAt);
+      allow read, update, delete: if false;
+    }
+
+    // ----------------------------------------------------------------- fallback
     match /{document=**} {
       allow read, write: if false;
     }
