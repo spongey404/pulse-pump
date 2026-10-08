@@ -7,7 +7,7 @@ struct WeightStepView: View {
     private var unitLabel: String { viewModel.unitPreference.label }
     var body: some View {
         OnboardingStepLayout(
-            label: "02 / BODY",
+            label: "03 / BODY",
             title: viewModel.name.isEmpty
                 ? "How much do\nyou weigh?"
                 : "How much do\nyou weigh, \(viewModel.name)?",

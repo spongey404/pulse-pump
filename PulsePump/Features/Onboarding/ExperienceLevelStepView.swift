@@ -5,7 +5,7 @@ struct ExperienceLevelStepView: View {
 
     var body: some View {
         OnboardingStepLayout(
-            label: "06 / EXPERIENCE",
+            label: "07 / EXPERIENCE",
             title: "How long have you\nbeen lifting?",
             subtitle: "This shapes how we set up your first program.",
             canContinue: viewModel.canContinue,

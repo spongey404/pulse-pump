@@ -27,7 +27,7 @@ struct TutorialPromptStepView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("08 / ALMOST DONE")
+                    Text("09 / ALMOST DONE")
                         .font(.spaceMono(9))
                         .tracking(1.5)
                         .foregroundStyle(Color.inkMuted)

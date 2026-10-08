@@ -16,6 +16,13 @@ struct DestructiveModalModifier: ViewModifier {
     let cancelLabel: String
     let confirmLabel: String
     let onConfirm: () -> Void
+    /// Optional content under the body text (e.g. a typed-confirmation field).
+    var extra: AnyView? = nil
+    var confirmEnabled = true
+    /// Shows a spinner on the confirm button and locks both buttons.
+    var isWorking = false
+    /// false keeps the modal open after confirm so the caller can show progress / errors.
+    var dismissOnConfirm = true
 
     func body(content: Content) -> some View {
         ZStack {
@@ -66,6 +73,10 @@ struct DestructiveModalModifier: ViewModifier {
                     .foregroundStyle(Color.inkMuted)
                     .lineSpacing(4)
                     .padding(.bottom, 14)
+
+                if let extra {
+                    extra.padding(.bottom, 14)
+                }
 
                 if !consequences.isEmpty {
                     VStack(spacing: 0) {
@@ -134,12 +145,15 @@ struct DestructiveModalModifier: ViewModifier {
                         )
                 }
                 .buttonStyle(.plain)
+                .disabled(isWorking)
 
                 Button {
-                    withAnimation(.easeInOut(duration: 0.18)) { isPresented = false }
+                    if dismissOnConfirm { withAnimation(.easeInOut(duration: 0.18)) { isPresented = false } }
                     onConfirm()
                 } label: {
-                    Text(confirmLabel)
+                    Group {
+                        if isWorking { ProgressView().tint(.white) } else { Text(confirmLabel) }
+                    }
                         .font(.archivo(13, weight: .black))
                         .tracking(1)
                         .foregroundStyle(.white)
@@ -150,6 +164,8 @@ struct DestructiveModalModifier: ViewModifier {
                         .shadow(color: Color.signalDown.opacity(0.33), radius: 8, y: 4)
                 }
                 .buttonStyle(.plain)
+                .disabled(!confirmEnabled || isWorking)
+                .opacity(confirmEnabled ? 1 : 0.4)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
@@ -176,6 +192,10 @@ extension View {
         consequences: [DestructiveConsequence] = [],
         cancelLabel: String = "KEEP",
         confirmLabel: String = "DELETE",
+        extra: AnyView? = nil,
+        confirmEnabled: Bool = true,
+        isWorking: Bool = false,
+        dismissOnConfirm: Bool = true,
         onConfirm: @escaping () -> Void
     ) -> some View {
         modifier(DestructiveModalModifier(
@@ -186,7 +206,11 @@ extension View {
             consequences: consequences,
             cancelLabel: cancelLabel,
             confirmLabel: confirmLabel,
-            onConfirm: onConfirm
+            onConfirm: onConfirm,
+            extra: extra,
+            confirmEnabled: confirmEnabled,
+            isWorking: isWorking,
+            dismissOnConfirm: dismissOnConfirm
         ))
     }
 }

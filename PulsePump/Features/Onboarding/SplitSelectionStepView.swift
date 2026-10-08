@@ -14,7 +14,7 @@ struct SplitSelectionStepView: View {
 
     var body: some View {
         OnboardingStepLayout(
-            label: "07 / PROGRAM",
+            label: "08 / PROGRAM",
             title: "How do you structure\nyour training?",
             subtitle: "This sets up your first program template. Change it anytime.",
             canContinue: viewModel.canContinue,
