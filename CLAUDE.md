@@ -197,6 +197,14 @@ Key design tokens implemented in Swift:
 - `WidgetDataService` computes the snapshot (app side) after workouts / on launch; the extension never touches SwiftData or Firebase.
 - Plus widgets (04-07) show `LockedWidgetPreview` (`PWPlusGate`) when `snap.fixed.isPlus` is false; its button opens `pulsepump://pulse-plus`.
 
+## Units (kg stored, display converts)
+
+**Everything stored or synced is kg** (`User.weight`, `SetLog.weight`, `BarConfig.weightKg`, `EquipmentProfile.availablePlates`, bodyweight log, widget snapshot numbers, Live Activity values, feed payloads, challenge scores); height is cm. `UnitPreference` (`PumpShared/WeightUnit.swift`, alias `WeightUnit`) only changes display and typed input, so changing it must never mutate stored data.
+- Views read `@Environment(\.weightUnit)` (injected once in `RootView` from the User). Use `unit.format(kg)` / `number(kg)` / `label` for output and `unit.parseKg(text)` / `kg(fromDisplay:)` for input. Never hard-code "KG"/"LB" or `String(format: "%g", weight)`.
+- Logger text fields hold kg strings (`SetEntry.weight`) but edit in the display unit via `KgTextField`. Plate maths goes through `PlateMath` (loads real lb plates in lbs mode).
+- Widgets: `PumpWidgetSnapshot.weightUnit`; widget views convert/label via `snap.unit`. Services without a view use `UnitPreference.current` (UserDefaults mirror written by `RootView`).
+- Exports are always kg (JSON `weightUnit`, CSV `Unit` column). Imports convert from the file's unit (header, else the unit the user picks).
+
 ## Dev data (fake data for testing)
 
 DEBUG-only seeder in `PulsePump/DevData/` (compiled out of Release) — the iOS counterpart of `manage.py createdevdata`.
