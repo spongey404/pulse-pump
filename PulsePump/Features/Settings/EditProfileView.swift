@@ -62,9 +62,9 @@ struct EditProfileView: View {
 
     private func save() {
         user.name = name.trimmingCharacters(in: .whitespaces)
-        if let w = Double(weight) { user.weight = w; BodyweightLog.record(kg: w) }
-        if let h = Double(height) { user.height = h }
-        if let a = Int(age) { user.age = a }
+        if let w = parseDecimal(weight) { user.weight = w; BodyweightLog.record(kg: w) }
+        if let h = parseDecimal(height) { user.height = h }
+        if let a = parseWholeNumber(age) { user.age = a }
         user.updatedAt = Date()
     }
 }

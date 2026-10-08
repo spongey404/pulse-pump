@@ -14,7 +14,7 @@ struct InlinePlateView: View {
     }
 
     private var currentWeight: Double? {
-        let weights = entry.sets.compactMap { Double($0.weight) }.filter { $0 > 0 }
+        let weights = entry.sets.compactMap { parseDecimal($0.weight) }.filter { $0 > 0 }
         return weights.last
     }
 

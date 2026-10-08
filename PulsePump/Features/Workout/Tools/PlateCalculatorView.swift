@@ -15,7 +15,7 @@ struct PlateCalculatorView: View {
     @State private var newPlateWeight = ""
 
     private var platesPerSide: [Double] {
-        guard let target = Double(targetWeight), target > barWeight else { return [] }
+        guard let target = parseDecimal(targetWeight), target > barWeight else { return [] }
         let perSide = (target - barWeight) / 2.0
         return calculatePlates(target: perSide, available: availablePlates.sorted(by: >))
     }
@@ -84,7 +84,7 @@ struct PlateCalculatorView: View {
                     TextField("Add plate", text: $newPlateWeight)
                         .keyboardType(.decimalPad)
                     Button("Add") {
-                        if let weight = Double(newPlateWeight), weight > 0, !availablePlates.contains(weight) {
+                        if let weight = parseDecimal(newPlateWeight), weight > 0, !availablePlates.contains(weight) {
                             availablePlates.append(weight)
                             savePlates()
                             newPlateWeight = ""
