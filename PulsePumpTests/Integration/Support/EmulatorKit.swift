@@ -65,8 +65,14 @@ enum Emulator {
     static func rest(_ method: String, port: Int, _ path: String) async throws {
         var request = URLRequest(url: URL(string: "http://\(host):\(port)\(path)")!)
         request.httpMethod = method
-        let (_, response) = try await URLSession.shared.data(for: request)
-        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        // 409 = the emulator is still settling a write (a trigger or a stream from the previous test); try again.
+        var status = 0
+        for attempt in 0..<6 {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if status != 409 { break }
+            try await Task.sleep(for: .milliseconds(250 * (attempt + 1)))
+        }
         guard (200..<300).contains(status) else { throw EmulatorError.http(status, path) }
     }
 
