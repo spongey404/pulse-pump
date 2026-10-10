@@ -27,7 +27,7 @@ the future Android app, the Firestore security rules and the Cloud Functions.
 ### Private to the owner (`users/{uid}/…`) — readable and writable only by `uid`
 | Path | Fields |
 |---|---|
-| `users/{uid}` | `name, username, unit ("kg"/"lbs"), experienceLevel, gender, age, heightCm, weightKg, selectedSplitId?, settings{…}, privacy{workoutPosts, bodyMap, globalLeaderboards, profile}, schemaVersion, createdAt, updatedAt` |
+| `users/{uid}` | `name, username, unit ("kg"/"lbs"), experienceLevel, gender, age, heightCm, weightKg, selectedSplitId?, progression?{thresholds[{name(normalised exercise name), reps}], incrementKg (0 = default)}, settings{…}, privacy{workoutPosts, bodyMap, globalLeaderboards, profile}, schemaVersion, createdAt, updatedAt` |
 | `users/{uid}/workouts/{id}` | `date, durationSec, notes, calories, isDeload, templateId?, templateName?, exercises[{exerciseId, exerciseName, order, notes, sets[{order, weightKg, reps, rir?, durationSec?, distanceM?, setType, side}]}], schemaVersion, updatedAt, deletedAt?` |
 | `users/{uid}/templates/{id}` | `name, exercises[{exerciseId, exerciseName, order, targetSets, targetReps?, targetRIR?, restSeconds?, notes?}], splitDays[], notes, schemaVersion, updatedAt, deletedAt?` |
 | `users/{uid}/splits/{id}` | `type, name, days[{dayOfWeek(1=Sun…7=Sat), label, workoutType}], schemaVersion, updatedAt, deletedAt?` |
@@ -91,3 +91,5 @@ The rules and functions need these additions to the tables above; the iOS and An
 - **Push** runs after pull in a cycle: dirty records in batches of at most 400; a permanently rejected document is retried alone so it cannot block the rest. `syncedAt` is set to the `updatedAt` that was sent.
 - **Exercise references:** catalogue exercises have per-install ids, so workout / template exercise references resolve by id first (custom exercises sync with their id) and then by normalised name; an unknown name becomes a local-only placeholder custom exercise so history is never dropped.
 - **Local-only bookkeeping:** `syncDigest` (FNV-1a of the mapped payload at last sync) lets the change tracker tell real edits from SwiftData relationship noise. Drafts (`isDraft`) and the widget library / snapshot are never synced. Bodyweight entries live in the App Group log with `updatedAt` / `syncedAt` added (legacy entries still decode).
+
+- `users/{uid}.progression` (smart weight suggestions): thresholds are a LIST of `{name, reps}` rather than a map because `setData(merge: true)` deep-merges maps and a cleared threshold would otherwise survive remotely. Weights are kg. Rules cap the list at 200 and require `incrementKg` to be a number. Whole-document LWW via `updatedAt`; a newer profile without `progression` clears it locally.

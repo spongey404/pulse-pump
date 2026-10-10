@@ -21,6 +21,10 @@ class WorkoutViewModel {
     // Rest timer
     let restTimer: RestTimerService
 
+    /// Pulse+ entitlement check and the settings store; injectable so tests can cover free vs Plus.
+    var hasPlusAccess: () -> Bool = { PulsePlusService.hasAccess }
+    var settings: UserDefaults = .standard
+
     init(restTimer: RestTimerService? = nil) {
         self.restTimer = restTimer ?? RestTimerService()
     }
@@ -216,6 +220,13 @@ class WorkoutViewModel {
 
     /// Previous finished session's value for the same set position (draft sessions excluded).
     func ghostText(for exerciseId: UUID, setIndex: Int, modelContext: ModelContext) -> (weight: String, reps: String)? {
+        let previous = previousSessionGhost(for: exerciseId, setIndex: setIndex, modelContext: modelContext)
+        // Pulse+ double progression: the next set to log shows the suggested heavier weight.
+        guard let kg = progressionSuggestionKg(exerciseId: exerciseId, setIndex: setIndex) else { return previous }
+        return (weight: Self.kgText(kg), reps: previous?.reps ?? "")
+    }
+
+    private func previousSessionGhost(for exerciseId: UUID, setIndex: Int, modelContext: ModelContext) -> (weight: String, reps: String)? {
         guard let previousLog = modelContext.finalLogs(forExercise: exerciseId, limit: 1).first else { return nil }
         let sorted = previousLog.sets.sorted(by: { $0.order < $1.order })
         guard setIndex < sorted.count else { return nil }
@@ -425,31 +436,47 @@ class WorkoutViewModel {
 
     // MARK: - Smart Weight Suggestion (Pulse+)
 
-    func smartWeightSuggestion(for exerciseId: UUID, setIndex: Int, modelContext: ModelContext) -> String? {
-        // Look at last 3 sessions, if weight increased consistently, suggest next increment
-        let recentLogs = modelContext.finalLogs(forExercise: exerciseId)
-        guard recentLogs.count >= 2 else { return nil }
+    /// Master switch for the feature (Settings); on unless the user turned it off.
+    var smartSuggestionsEnabled: Bool {
+        settings.object(forKey: "smartWeightSuggestions") as? Bool ?? true
+    }
 
-        let lastWeights = recentLogs.prefix(3).compactMap { log -> Double? in
-            let sorted = log.sets.sorted { $0.order < $1.order }
-            guard setIndex < sorted.count else { return nil }
-            return sorted[setIndex].weight
-        }
+    static func kgText(_ kg: Double) -> String {
+        var t = String(format: "%.4f", kg)
+        while t.hasSuffix("0") { t.removeLast() }
+        if t.hasSuffix(".") { t.removeLast() }
+        return t
+    }
 
-        guard let lastWeight = lastWeights.first, lastWeight > 0 else { return nil }
+    func progressionThreshold(exerciseIndex: Int) -> Int? {
+        guard exerciseEntries.indices.contains(exerciseIndex) else { return nil }
+        return workout?.user?.progressionThreshold(forExercise: exerciseEntries[exerciseIndex].exerciseName)
+    }
 
-        // If user has been increasing weight, suggest next increment
-        if lastWeights.count >= 2 {
-            let prevWeight = lastWeights[1]
-            if lastWeight > prevWeight {
-                let increment = lastWeight - prevWeight
-                let suggested = lastWeight + increment
-                return String(format: "%g", suggested)
-            }
-        }
+    /// Sets (or clears, with nil) the rep threshold for this lift. Ignored for free users.
+    func setProgressionThreshold(_ reps: Int?, exerciseIndex: Int, modelContext: ModelContext? = nil) {
+        guard hasPlusAccess(), exerciseEntries.indices.contains(exerciseIndex),
+              let user = workout?.user else { return }
+        user.setProgressionThreshold(reps, forExercise: exerciseEntries[exerciseIndex].exerciseName)
+        try? (modelContext ?? liveModelContext)?.save()
+    }
 
-        // Otherwise suggest same weight
-        return String(format: "%g", lastWeight)
+    /// Suggested weight (kg) for the NEXT set to log of this exercise, from the sets logged so far this session
+    /// (`ProgressionRule`). nil when the feature is off, the user is on the free plan, no threshold is set,
+    /// the threshold was not reached, or `setIndex` is not the next row to log.
+    func progressionSuggestionKg(exerciseId: UUID, setIndex: Int) -> Double? {
+        guard smartSuggestionsEnabled, hasPlusAccess(),
+              let user = workout?.user,
+              let entry = exerciseEntries.first(where: { $0.exerciseId == exerciseId }),
+              entry.exerciseType != .timeBased, entry.exerciseType != .distanceBased,
+              entry.sets.indices.contains(setIndex),
+              entry.sets.firstIndex(where: { !$0.isCompleted }) == setIndex,
+              entry.sets[setIndex].setType != .warmup,
+              entry.sets[setIndex].weight.trimmingCharacters(in: .whitespaces).isEmpty,
+              let threshold = user.progressionThreshold(forExercise: entry.exerciseName) else { return nil }
+        return ProgressionRule.suggestedWeightKg(
+            sets: entry.sets.map(ProgressionSet.init), threshold: threshold,
+            incrementKg: user.effectiveProgressionIncrementKg, unit: user.unitPreference)
     }
 
     // MARK: - PR Detection (live, during workout)

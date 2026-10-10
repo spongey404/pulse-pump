@@ -74,6 +74,10 @@ service cloud.firestore {
         && optNum(request.resource.data, 'weightKg')
         && optMap(request.resource.data, 'settings')
         && optMap(request.resource.data, 'privacy')
+        && optMap(request.resource.data, 'progression')
+        && (!('progression' in request.resource.data)
+            || (optList(request.resource.data.progression, 'thresholds', 200)
+                && optNum(request.resource.data.progression, 'incrementKg')))
         && (!('privacy' in request.resource.data) || request.resource.data.privacy.keys().size() <= 10)
         && schemaOk(request.resource.data);
 

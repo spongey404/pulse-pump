@@ -44,6 +44,8 @@ struct SettingsView: View {
     @AppStorage("restTimerMode") private var restTimerModeRaw = ""
     @AppStorage("restTimerAlertType") private var alertTypeRaw = ""
     @AppStorage("appTheme") private var themeRaw = ""
+    @AppStorage("smartWeightSuggestions") private var smartSuggestions = true
+    @State private var showPaywall = false
     @AppStorage("autoShareToFeed") private var autoShare = true
     @AppStorage("workoutReminders") private var workoutReminders = false
     @AppStorage("restDayAlerts") private var restDayAlerts = false
@@ -83,6 +85,7 @@ struct SettingsView: View {
             if let user { ChangeUsernameSheet(user: user) }
         }
         .deleteAccountFlow(isPresented: $showDeleteAccount)
+        .sheet(isPresented: $showPaywall) { PulsePlusView(onBack: { showPaywall = false }) }
     }
 
     private var mainContent: some View {
@@ -135,9 +138,9 @@ struct SettingsView: View {
             .tutorialTarget("rest-movement-defaults")
         MoreMenuRow(icon: "bell", label: "Timer Alert", selection: alertTypeBinding,
                     options: Array(AlertType.allCases), title: { $0.displayName })
+        smartSuggestionRows(user: user)
         // Rows labelled COMING SOON have nothing behind them yet (no feature / no push pipeline), so they
         // are not switches: a toggle that does nothing is worse than an honest label.
-        MoreRow(icon: "brain", label: "Smart Weight Suggestions", value: "COMING SOON", chevron: false) { }
 
         // PRIVACY
         MoreSectionLabel(title: "PRIVACY")
@@ -182,6 +185,31 @@ struct SettingsView: View {
         MoreRow(icon: "rectangle.portrait.and.arrow.right", label: "Sign Out",
                 destructive: true, chevron: false) { showSignOutAlert = true }
         MoreRow(icon: "trash", label: "Delete Account", destructive: true, chevron: false) { showDeleteAccount = true }
+    }
+
+    // MARK: - Smart weight suggestions (Pulse+)
+
+    /// Master switch + increment. Free users see a PULSE+ row that opens the paywall.
+    @ViewBuilder
+    private func smartSuggestionRows(user: User) -> some View {
+        if hasPulsePlus {
+            MoreRow(icon: "brain", label: "Smart Weight Suggestions", toggle: $smartSuggestions)
+                .accessibilityIdentifier("settings.smartWeightSuggestions")
+            if smartSuggestions {
+                let unit = user.unitPreference
+                let current = unit.display(user.effectiveProgressionIncrementKg)
+                MoreMenuRow(icon: "plus.forwardslash.minus", label: "Progression Increment",
+                            selection: Binding(
+                                get: { ProgressionRule.incrementChoices(unit).min { abs($0 - current) < abs($1 - current) } ?? current },
+                                set: { user.setProgressionIncrementKg(unit.kg(fromDisplay: $0)) }),
+                            options: ProgressionRule.incrementChoices(unit),
+                            title: { "+\(UnitPreference.trim($0)) \(unit.label)" })
+                    .accessibilityIdentifier("settings.progressionIncrement")
+            }
+        } else {
+            MoreRow(icon: "brain", label: "Smart Weight Suggestions", value: "PULSE+") { showPaywall = true }
+                .accessibilityIdentifier("settings.smartWeightSuggestions")
+        }
     }
 
     // MARK: - Bindings

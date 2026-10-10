@@ -24,7 +24,7 @@ enum PulsePlusFeature: String, CaseIterable, Identifiable {
         case .prioritySupport: "Priority Support"
         case .exportData: "Data Export"
         case .unlimitedEquipmentProfiles: "Unlimited Equipment Profiles"
-        case .smartWeightSuggestions: "Smart Weight Suggestions"
+        case .smartWeightSuggestions: "Smart weight suggestions"
         case .advancedSubstitutions: "Smart Exercise Substitutions"
         case .advancedBodyCustomization: "Advanced Body Customization"
         case .additionalWidgets: "Additional Home Widgets"
@@ -57,6 +57,14 @@ class PulsePlusService {
 
     static let monthlyProductId = "com.pulse.PulsePump.monthly"
     static let yearlyProductId = "com.pulse.PulsePump.yearly"
+
+    /// Mirror of `isSubscribed` for code with no view-owned service (e.g. `WorkoutViewModel`).
+    static let subscribedMirrorKey = "pulsePlusSubscribedMirror"
+
+    /// Pulse+ access as the rest of the app defines it: subscribed or inside the free trial.
+    static var hasAccess: Bool {
+        UserDefaults.standard.bool(forKey: subscribedMirrorKey) || DevFlags.plusOverride || PulsePlusService().isInFreeTrial
+    }
 
     private var updateListenerTask: Task<Void, Never>?
 
@@ -123,6 +131,7 @@ class PulsePlusService {
             }
         }
         isSubscribed = foundActive || DevFlags.plusOverride   // plusOverride is DEBUG-only
+        UserDefaults.standard.set(isSubscribed, forKey: Self.subscribedMirrorKey)
         WidgetDataService.setSubscribed(foundActive)
     }
 

@@ -221,6 +221,10 @@ Three tiers, all run in CI (`.github/workflows/ci.yml`):
 
 The Integration suites are skipped (not failed) unless `PUMP_EMULATOR=1`, so `bin/test.sh` stays emulator-free. `bin/test-integration.sh` builds the functions, starts the emulators with `firebase emulators:exec` and forwards the flag to the test host (`TEST_RUNNER_PUMP_EMULATOR=1`); it builds with ad-hoc signing because Firebase Auth needs a keychain entitlement. Shared helpers are in `Integration/Support/`: `EmulatorKit` (one named FirebaseApp per simulated user, so several accounts are signed in at once and the host's default app is never touched; Auth and Firestore are wiped between tests), `TestAccount`, and `IntegrationData` factories that reuse `SyncDevice` and `DevDataService` for realistic workouts. One test file per feature. Clients are asserted to be on `demo-pump`, never the real project. DEBUG demo fixtures (`DevFlags.socialFixtures`, `FakeSocialRemote` data) are never used by integration tests. CI uploads the xcresult and emulator logs on failure.
 
+## Progression suggestions (Pulse+)
+
+`ProgressionRule` (Features/Workout/Services) is the pure double-progression rule; `WorkoutViewModel.ghostText` applies it to the next row. Thresholds live on `User.progressionThresholds` (keyed by `Exercise.normalisedName`), increment in `User.progressionIncrementKg` (kg), master toggle is the `smartWeightSuggestions` UserDefaults key (default on). Warm-up/drop/rest-pause/failure sets are ignored. Synced as `users/{uid}.progression`.
+
 ## Dev data (fake data for testing)
 
 DEBUG-only seeder in `PulsePump/DevData/` (compiled out of Release) — the iOS counterpart of `manage.py createdevdata`.

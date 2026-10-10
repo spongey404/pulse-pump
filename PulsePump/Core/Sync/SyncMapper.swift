@@ -17,7 +17,7 @@ enum SyncMapper {
     static func optionalKeys(_ c: SyncCollection) -> [String] {
         switch c {
         case .workouts: ["templateId", "templateName", "deletedAt"]
-        case .profile: ["selectedSplitId"]
+        case .profile: ["selectedSplitId", "progression"]
         case .templates, .splits, .equipmentProfiles, .customExercises: ["deletedAt"]
         case .bodyweight: []
         }
@@ -159,8 +159,23 @@ enum SyncMapper {
             "createdAt": u.createdAt,
         ]
         if let s = u.selectedSplit, s.deletedAt == nil { f["selectedSplitId"] = idString(s.id) }
+        if let p = progression(u) { f["progression"] = p }
         header(u, into: &f)
         return f
+    }
+
+    /// `progression` {thresholds:[{name, reps}], incrementKg} (smart weight suggestions); omitted when unused.
+    /// Thresholds are a LIST, not a map: `setData(merge: true)` deep-merges maps, so a cleared threshold would
+    /// survive remotely, whereas an array is replaced wholesale. `incrementKg` is always written (0 = default).
+    static func progression(_ u: User) -> [String: Any]? {
+        var rows: [[String: Any]] = []
+        for (name, reps) in u.progressionThresholds.sorted(by: { $0.key < $1.key }).prefix(User.maxProgressionThresholds) {
+            let key = String(name.prefix(100))
+            if !key.isEmpty, ProgressionRule.thresholdRange.contains(reps) { rows.append(["name": key, "reps": reps]) }
+        }
+        let inc = u.progressionIncrementKg.flatMap { $0 > 0 && $0 <= 50 ? $0 : nil }
+        guard !rows.isEmpty || inc != nil else { return nil }
+        return ["thresholds": rows, "incrementKg": inc ?? 0]
     }
 
     // MARK: Bodyweight (users/{uid}/bodyweight/{yyyyMMdd})

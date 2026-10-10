@@ -20,6 +20,11 @@ final class User: SyncRecord {
     var syncedAt: Date?
     var syncDigest: String?
     var schemaVersion: Int = 1
+    /// Pulse+ smart weight suggestions: rep threshold per exercise, keyed by `Exercise.normalisedName`
+    /// (catalogue ids differ per install). Synced as `progression.thresholds`. Defaulted so the store migrates lightly.
+    var progressionThresholds: [String: Int] = [:]
+    /// Weight added when a threshold is reached, in KG (the display unit only affects the picker). nil = unit default.
+    var progressionIncrementKg: Double?
 
     @Relationship(deleteRule: .nullify) var selectedSplit: Split?
     @Relationship(deleteRule: .cascade, inverse: \Workout.user) var workouts: [Workout]
