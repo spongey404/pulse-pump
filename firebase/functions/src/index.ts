@@ -86,7 +86,9 @@ async function recomputeCustomPlaceholder(challengeId: string, uid: string, user
 }
 
 /** Callable: deletes all of the caller's data, then the Auth user. Idempotent; call again if it failed midway. */
-export const deleteAccount = onCall(async (request) => {
+// `invoker: 'public'`: clients call this with a Firebase ID token, which Cloud Run IAM does not recognise; the handler
+// itself rejects unauthenticated callers.
+export const deleteAccount = onCall({ invoker: 'public' }, async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Sign in to delete your account.');
   const report = await deleteUserData(db(), uid);
@@ -99,7 +101,7 @@ export const deleteAccount = onCall(async (request) => {
 });
 
 /** Callable for operators (requires the `admin` custom claim). Safe to call any time. */
-export const closeEndedChallenges = onCall(async (request) => {
+export const closeEndedChallenges = onCall({ invoker: 'public' }, async (request) => {
   if (request.auth?.token?.admin !== true) throw new HttpsError('permission-denied', 'Admins only.');
   return { closed: await closeEndedChallengesNow(db(), Date.now()) };
 });
