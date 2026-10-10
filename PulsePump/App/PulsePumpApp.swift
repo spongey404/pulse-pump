@@ -104,9 +104,9 @@ struct PulsePumpApp: App {
             NotificationCenter.default.post(name: .openPulsePlus, object: nil)
         case "template":
             if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-               let dataParam = components.queryItems?.first(where: { $0.name == "data" })?.value,
-               let decoded = Data(base64Encoded: dataParam) {
-                NotificationCenter.default.post(name: .importTemplate, object: decoded)
+               let dataParam = components.queryItems?.first(where: { $0.name == "data" })?.value {
+                // Handled by ContentView (needs the model context and an alert).
+                NotificationCenter.default.post(name: .importTemplate, object: dataParam)
             }
         default:
             break

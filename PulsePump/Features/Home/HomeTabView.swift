@@ -26,7 +26,7 @@ struct HomeTabView: View {
     }
 
     private var weekWorkouts: [Workout] {
-        let start = Calendar.current.date(from: Calendar.current.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date())) ?? Date()
+        let start = WeekMath.mondayWeekStart(of: Date())
         return workouts.filter { $0.date >= start }
     }
 
@@ -35,7 +35,7 @@ struct HomeTabView: View {
     }
 
     private var weekPRs: Int {
-        let weekStart = Calendar.current.date(from: Calendar.current.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date())) ?? Date()
+        let weekStart = WeekMath.mondayWeekStart(of: Date())
         var weekMaxByExercise: [UUID: Double] = [:]
         var prevMaxByExercise: [UUID: Double] = [:]
         for workout in workouts {
@@ -56,7 +56,7 @@ struct HomeTabView: View {
     }
 
     private var weekImproved: Int {
-        let weekStart = Calendar.current.date(from: Calendar.current.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date())) ?? Date()
+        let weekStart = WeekMath.mondayWeekStart(of: Date())
         let prevWeekStart = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: weekStart) ?? Date()
         var thisWeekBest: [UUID: Double] = [:]
         var prevWeekBest: [UUID: Double] = [:]

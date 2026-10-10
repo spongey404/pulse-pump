@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var selectedTab = 2
     #endif
     @Environment(\.modelContext) private var modelContext
+    @State private var sharedTemplateMessage: String?
     @Query private var users: [User]
     @Query(filter: #Predicate<WorkoutTemplate> { $0.deletedAt == nil }) private var templates: [WorkoutTemplate]
 
@@ -65,6 +66,22 @@ struct ContentView: View {
                 } else {
                     startBlankWorkout()
                 }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .importTemplate)) { note in
+                if let raw = note.object as? String, let payload = TemplateShareService.decode(base64: raw) {
+                    let t = TemplateShareService.importTemplate(payload, modelContext: modelContext)
+                    sharedTemplateMessage = "Added \"\(t.name)\" (\(t.templateExercises.count) exercises) to your programs."
+                } else {
+                    sharedTemplateMessage = "That template link couldn't be read."
+                }
+            }
+            .alert("Shared template", isPresented: Binding(
+                get: { sharedTemplateMessage != nil },
+                set: { if !$0 { sharedTemplateMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(sharedTemplateMessage ?? "")
             }
             .onReceive(NotificationCenter.default.publisher(for: .openPulsePlus)) { _ in
                 MoreRouter.shared.pendingPulsePlus = true
