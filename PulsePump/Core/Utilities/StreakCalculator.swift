@@ -8,9 +8,8 @@ enum StreakCalculator {
     /// - Each gap between consecutive workouts adds that many days to the streak
     ///   (e.g. workout on day 1, next on day 3 → streak = 3).
     /// - Multiple workouts on the same day count as one.
-    static func currentStreak(from dates: [Date]) -> Int {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
+    static func currentStreak(from dates: [Date], now: Date = Date(), calendar: Calendar = .current) -> Int {
+        let today = calendar.startOfDay(for: now)
 
         let uniqueDays = Array(Set(dates.map { calendar.startOfDay(for: $0) }))
             .sorted(by: >)

@@ -16,41 +16,23 @@ struct WeeklyRecapView: View {
     /// 0 = this week, 1 = last week, …
     @State private var weeksBack = 0
 
-    private var calendar: Calendar {
-        var c = Calendar(identifier: .iso8601)
-        c.firstWeekday = 2
-        return c
+    private var stats: WeeklyRecapStats {
+        WeeklyRecapStats(workouts: workouts, weeksBack: weeksBack, unit: unit,
+                         splitDayCount: users.first?.selectedSplit?.days.count ?? 0)
     }
+    private var calendar: Calendar { stats.calendar }
 
-    private var weekStart: Date {
-        let thisWeek = calendar.dateInterval(of: .weekOfYear, for: Date())!.start
-        return calendar.date(byAdding: .weekOfYear, value: -weeksBack, to: thisWeek)!
-    }
-    private var weekEnd: Date { calendar.date(byAdding: .day, value: 7, to: weekStart)! }
-    private var prevStart: Date { calendar.date(byAdding: .day, value: -7, to: weekStart)! }
+    private var weekStart: Date { stats.weekStart }
+    private var week: [Workout] { stats.week }
+    private var prev: [Workout] { stats.prev }
 
-    private func inRange(_ from: Date, _ to: Date) -> [Workout] {
-        workouts.filter { $0.date >= from && $0.date < to }
-    }
-    private var week: [Workout] { inRange(weekStart, weekEnd) }
-    private var prev: [Workout] { inRange(prevStart, weekStart) }
+    private func volumeTonnes(_ ws: [Workout]) -> Double { stats.volumeTonnes(ws) }
+    private func setCount(_ ws: [Workout]) -> Int { stats.setCount(ws) }
+    private func minutes(_ ws: [Workout]) -> Int { stats.minutes(ws) }
 
-    private func working(_ w: Workout) -> [(log: ExerciseLog, set: SetLog)] {
-        w.exerciseLogs.flatMap { log in log.sets.filter { $0.setType != .warmup }.map { (log, $0) } }
-    }
-    /// Total working volume in thousands of the display unit (tonnes for kg, K lb for lbs). SetLog.weight is kg.
-    private func volumeTonnes(_ ws: [Workout]) -> Double {
-        unit.display(ws.flatMap(working).reduce(0) { $0 + $1.set.weight * Double($1.set.reps) }) / 1000
-    }
-    private func setCount(_ ws: [Workout]) -> Int { ws.flatMap(working).count }
-    private func minutes(_ ws: [Workout]) -> Int { Int(ws.reduce(0) { $0 + $1.duration } / 60) }
+    private var target: Int { stats.target }
 
-    private var target: Int {
-        let n = users.first?.selectedSplit?.days.count ?? 0
-        return n > 0 ? n : max(week.count, 5)
-    }
-
-    private var weekNumber: Int { calendar.component(.weekOfYear, from: weekStart) }
+    private var weekNumber: Int { stats.weekNumber }
     private var rangeLabel: String {
         let f = DateFormatter(); f.dateFormat = "MMM d"
         let last = calendar.date(byAdding: .day, value: 6, to: weekStart)!
@@ -59,57 +41,12 @@ struct WeeklyRecapView: View {
         return "WK \(weekNumber) · \(l)–\(r.string(from: last).uppercased())"
     }
 
-    private var bars: [(value: Double, done: Bool)] {
-        (0..<7).map { i in
-            let day = calendar.date(byAdding: .day, value: i, to: weekStart)!
-            let ws = week.filter { calendar.isDate($0.date, inSameDayAs: day) }
-            return (Double(setCount(ws)), !ws.isEmpty)
-        }
-    }
+    private var bars: [(value: Double, done: Bool)] { stats.bars }
 
-    // Muscle buckets from the design: Back / Chest / Legs / Shoulders / Arms
-    private func bucket(_ m: MuscleGroup) -> String? {
-        switch m {
-        case .back, .lats, .traps: "Back"
-        case .chest: "Chest"
-        case .quads, .hamstrings, .glutes, .calves: "Legs"
-        case .shoulders: "Shoulders"
-        case .biceps, .triceps, .forearms: "Arms"
-        default: nil
-        }
-    }
-    private func muscleSets(_ ws: [Workout]) -> [String: Int] {
-        var out: [String: Int] = [:]
-        for (log, _) in ws.flatMap(working) {
-            guard let m = log.exercise?.primaryMuscleGroups.first, let b = bucket(m) else { continue }
-            out[b, default: 0] += 1
-        }
-        return out
-    }
+    private func muscleSets(_ ws: [Workout]) -> [String: Int] { stats.muscleSets(ws) }
 
     private struct PR: Identifiable { let id = UUID(); let name: String; let meta: String; let value: String }
-    private var records: [PR] {
-        // Heaviest working set per exercise this week that beats everything logged before the week.
-        let before = workouts.filter { $0.date < weekStart }.flatMap(working)
-        var bestBefore: [String: Double] = [:]
-        for (log, s) in before { if let n = log.exercise?.name { bestBefore[n] = max(bestBefore[n] ?? 0, s.weight) } }
-        var out: [PR] = []
-        for w in week.sorted(by: { $0.date < $1.date }) {
-            var top: [String: SetLog] = [:]
-            for (log, s) in working(w) {
-                guard let n = log.exercise?.name else { continue }
-                if s.weight > (top[n]?.weight ?? 0) { top[n] = s }
-            }
-            for (n, s) in top where s.weight > (bestBefore[n] ?? 0) && bestBefore[n] != nil {
-                bestBefore[n] = s.weight
-                let f = DateFormatter(); f.dateFormat = "EEE d MMM"
-                out.append(PR(name: n,
-                              meta: "\(f.string(from: w.date).uppercased()) · \(w.template?.name.uppercased() ?? "WORKOUT")",
-                              value: "\(unit.number(s.weight))×\(s.reps)"))
-            }
-        }
-        return out
-    }
+    private var records: [PR] { stats.records.map { PR(name: $0.name, meta: $0.meta, value: $0.value) } }
     private func fmt(_ v: Double) -> String { v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v) }
 
     private func delta(_ a: Double, _ b: Double, pct: Bool) -> (String, RecapTrend)? {

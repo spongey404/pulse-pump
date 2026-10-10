@@ -19,20 +19,13 @@ struct WorkoutHistoryView: View {
 
     // MARK: - Helpers
 
-    private let dayFormatter: DateFormatter = {
-        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f
-    }()
+    private var stats: HistoryStats { HistoryStats(workouts: workouts) }
 
-    private var workoutDateSet: Set<String> {
-        Set(workouts.map { dayFormatter.string(from: $0.date) })
-    }
+    private var workoutDateSet: Set<String> { stats.workoutDateSet }
 
-    private func dateKey(_ date: Date) -> String { dayFormatter.string(from: date) }
+    private func dateKey(_ date: Date) -> String { stats.dateKey(date) }
 
-    private func workoutsOn(_ date: Date) -> [Workout] {
-        let key = dateKey(date)
-        return workouts.filter { dateKey($0.date) == key }
-    }
+    private func workoutsOn(_ date: Date) -> [Workout] { stats.workoutsOn(date) }
 
     // MARK: - Body
 
@@ -313,13 +306,8 @@ struct WorkoutHistoryView: View {
     }
 
     private var statsRow: some View {
-        let cal = Calendar.current
-        let month = cal.component(.month, from: Date())
-        let year  = cal.component(.year,  from: Date())
-        let thisMonth = workouts.filter {
-            cal.component(.month, from: $0.date) == month && cal.component(.year, from: $0.date) == year
-        }.count
-        let streak = StreakCalculator.currentStreak(from: workouts.map(\.date))
+        let thisMonth = stats.thisMonthCount
+        let streak = stats.streak
         return HStack(spacing: 0) {
             statCell(value: "\(workouts.count)", label: "WORKOUTS")
             Rectangle().fill(Color.dsHairLine).frame(width: 1)
@@ -406,30 +394,9 @@ struct WorkoutHistoryView: View {
 
     // MARK: - Calendar helpers
 
-    private struct CalDay {
-        let date: Date?
-        let day: Int?
-    }
+    private typealias CalDay = MonthGridDay
 
-    private func calendarDays() -> [CalDay] {
-        let cal = Calendar.current
-        guard let startOfMonth = cal.date(from: cal.dateComponents([.year, .month], from: calendarMonth)),
-              let range = cal.range(of: .day, in: .month, for: startOfMonth) else { return [] }
-
-        // Monday-based offset (Mon=0 … Sun=6)
-        let weekday = cal.component(.weekday, from: startOfMonth)
-        let offset = (weekday + 5) % 7
-
-        var days: [CalDay] = Array(repeating: CalDay(date: nil, day: nil), count: offset)
-        for d in range {
-            if let date = cal.date(byAdding: .day, value: d - 1, to: startOfMonth) {
-                days.append(CalDay(date: date, day: d))
-            }
-        }
-        // Always pad to 42 (6 rows) for fixed height
-        while days.count < 42 { days.append(CalDay(date: nil, day: nil)) }
-        return days
-    }
+    private func calendarDays() -> [CalDay] { MonthGrid.days(for: calendarMonth) }
 
     private func shiftMonth(_ delta: Int) {
         let cal = Calendar.current

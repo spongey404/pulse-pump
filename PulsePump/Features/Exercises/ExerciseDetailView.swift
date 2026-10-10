@@ -73,35 +73,11 @@ struct ExerciseStatsSection: View {
     @Environment(\.weightUnit) private var unit
     let exercise: Exercise
 
-    private var allSets: [SetLog] {
-        exercise.finalLogs.flatMap(\.workingSets)
-    }
-
-    private var weightPR: Double {
-        allSets.map(\.weight).max() ?? 0
-    }
-
-    private var repsPR: Int {
-        allSets.map(\.reps).max() ?? 0
-    }
-
-    private var estimated1RM: Double {
-        guard let bestSet = allSets.max(by: {
-            epley(weight: $0.weight, reps: $0.reps) < epley(weight: $1.weight, reps: $1.reps)
-        }) else { return 0 }
-        return epley(weight: bestSet.weight, reps: bestSet.reps)
-    }
-
-    private func epley(weight: Double, reps: Int) -> Double {
-        guard reps > 1 else { return weight }
-        return weight * (1.0 + Double(reps) / 30.0)
-    }
-
-    private var volumePR: Double {
-        exercise.finalLogs.map { log in
-            log.workingSets.reduce(0.0) { $0 + $1.weight * Double($1.reps) }
-        }.max() ?? 0
-    }
+    private var progress: ExerciseProgress { ExerciseProgress(exercise: exercise) }
+    private var weightPR: Double { progress.weightPR }
+    private var repsPR: Int { progress.repsPR }
+    private var estimated1RM: Double { progress.estimated1RM }
+    private var volumePR: Double { progress.volumePR }
 
     var body: some View {
         VStack(spacing: 8) {
@@ -127,16 +103,7 @@ struct ExerciseTrendChart: View {
     @Environment(\.weightUnit) private var unit
     let exercise: Exercise
 
-    private var dataPoints: [(date: Date, maxWeight: Double)] {
-        exercise.finalLogs
-            .compactMap { log -> (Date, Double)? in
-                guard let date = log.workout?.date else { return nil }
-                let maxW = log.workingSets.map(\.weight).max() ?? 0
-                guard maxW > 0 else { return nil }
-                return (date, maxW)
-            }
-            .sorted { $0.0 < $1.0 }
-    }
+    private var dataPoints: [(date: Date, maxWeight: Double)] { ExerciseProgress(exercise: exercise).trendPoints }
 
     var body: some View {
         if dataPoints.count >= 2 {
@@ -191,12 +158,7 @@ struct ExerciseRecentSessionsSection: View {
     @Environment(\.weightUnit) private var unit
     let exercise: Exercise
 
-    private var recentLogs: [ExerciseLog] {
-        exercise.finalLogs
-            .sorted { ($0.workout?.date ?? .distantPast) > ($1.workout?.date ?? .distantPast) }
-            .prefix(5)
-            .map { $0 }
-    }
+    private var recentLogs: [ExerciseLog] { ExerciseProgress(exercise: exercise).recentLogs }
 
     var body: some View {
         if recentLogs.isEmpty {
