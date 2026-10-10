@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { changedEntries, rankEntries, rankMovement, sortBoard } from '../../src/ranking';
-import { followDelta } from '../../src/follows';
 import { existence } from '../../src/counters';
 
 const e = (uid: string, score: number, scoreAtMs = 0, rank?: number, previousRank?: number) => ({
@@ -65,32 +64,6 @@ describe('changedEntries', () => {
   it('includes brand-new entries', () => {
     const after = rankEntries([e('a', 1)]);
     expect(changedEntries([], after)).toHaveLength(1);
-  });
-});
-
-describe('followDelta (friend/fan rules)', () => {
-  it('first follow makes the followee gain a fan', () => {
-    expect(followDelta('a', 'b', 'created', false)).toEqual({ b: { fanCount: 1 } });
-  });
-  it('follow back makes friends and consumes the fan', () => {
-    expect(followDelta('b', 'a', 'created', true)).toEqual({ b: { friendCount: 1, fanCount: -1 }, a: { friendCount: 1 } });
-  });
-  it('unfollowing a friend leaves them as a fan of you', () => {
-    expect(followDelta('a', 'b', 'deleted', true)).toEqual({ a: { friendCount: -1, fanCount: 1 }, b: { friendCount: -1 } });
-  });
-  it('unfollowing a non-friend drops one fan', () => {
-    expect(followDelta('a', 'b', 'deleted', false)).toEqual({ b: { fanCount: -1 } });
-  });
-  it('net counts after a full lifecycle are zero', () => {
-    const tot: Record<string, { f: number; n: number }> = { a: { f: 0, n: 0 }, b: { f: 0, n: 0 } };
-    const apply = (d: ReturnType<typeof followDelta>) => {
-      for (const [u, v] of Object.entries(d)) { tot[u].f += v.friendCount ?? 0; tot[u].n += v.fanCount ?? 0; }
-    };
-    apply(followDelta('a', 'b', 'created', false));
-    apply(followDelta('b', 'a', 'created', true));
-    apply(followDelta('a', 'b', 'deleted', true));
-    apply(followDelta('b', 'a', 'deleted', false));
-    expect(tot).toEqual({ a: { f: 0, n: 0 }, b: { f: 0, n: 0 } });
   });
 });
 

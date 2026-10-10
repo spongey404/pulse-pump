@@ -39,7 +39,7 @@ export const onFollowWritten = onDocumentWritten('follows/{edgeId}', async (even
   const follower = src?.get('followerUid') as string | undefined;
   const followee = src?.get('followeeUid') as string | undefined;
   if (!follower || !followee) return;
-  await handleFollowWrite(db(), event.id, change, follower, followee, after?.createTime?.toMillis() ?? null, Date.now());
+  await handleFollowWrite(db(), event.id, change, follower, followee, Date.now());
 });
 
 export const onLikeWritten = onDocumentWritten('posts/{postId}/likes/{likerUid}', async (event) => {

@@ -61,17 +61,12 @@ struct AccountDeletionEmulatorTests {
             // The friend's own data is untouched and their counters are repaired.
             #expect(await Emulator.adminDocumentExists("posts/\(p.friendPostId)"))
             #expect(await Emulator.adminDocumentExists("profiles/\(p.friend.uid)"))
-            // KNOWN SERVER BUG (firebase/functions/src/accountDeletion.ts): deleteAccount removes both follow edges
-            // back to back, so onFollowWritten usually sees the reverse edge already gone, treats the first deletion as a
-            // plain fan removal, and the friend keeps friendCount 1. Remove the wrapper once the function repairs counters.
-            await withKnownIssue("friend's friendCount is not repaired when the leaver deletes the account", isIntermittent: true) {
-                let repaired = await Emulator.eventually(timeout: 8) {
-                    let friends = await p.friend.profileCount("friendCount")
-                    let fans = await p.friend.profileCount("fanCount")
-                    return friends == 0 && fans == 0
-                }
-                #expect(repaired)
-            }
+            // onFollowWritten recounts from the edges that remain, so deleting both directions at once is safe.
+            #expect(await Emulator.eventually(timeout: 8) {
+                let friends = await p.friend.profileCount("friendCount")
+                let fans = await p.friend.profileCount("fanCount")
+                return friends == 0 && fans == 0
+            }, "the friend's friend and fan counts are repaired when the leaver deletes the account")
             #expect(await Emulator.eventually {
                 let doc = try await p.friend.document("posts/\(p.friendPostId)")
                 return doc?["likeCount"] as? Int == 0 && doc?["commentCount"] as? Int == 0

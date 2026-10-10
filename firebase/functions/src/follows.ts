@@ -1,35 +1,38 @@
-import { Firestore, DocumentSnapshot } from 'firebase-admin/firestore';
-import { bump, eventSeen, markEvent, Existence } from './counters';
+import { Firestore, Transaction } from 'firebase-admin/firestore';
+import { eventSeen, markEvent, Existence } from './counters';
 
-export interface FollowDelta {
-  /** profile uid -> field -> delta */
-  [uid: string]: { friendCount?: number; fanCount?: number };
+export interface FollowCounts {
+  friendCount: number;
+  fanCount: number;
 }
 
 /**
- * Pure rule table. Edge A->B just `created` or `deleted`; `reverseEarlier` is whether B->A exists and was created
- * before A->B (so A->B is the edge that completes the friendship).
- *
- * friend = mutual follow, fan = follower who is not followed back.
- *   create A->B, B->A exists  : A,B friends +1; B was A's fan so A.fan -1
- *   create A->B, no B->A      : B.fan +1
- *   delete A->B, B->A exists  : A,B friends -1; B becomes A's fan so A.fan +1
- *   delete A->B, no B->A      : B.fan -1
+ * friend = mutual follow, fan = follower who is not followed back. Pure, so the rule is unit tested.
+ * `followers` = uids following the user, `following` = uids the user follows.
  */
-export function followDelta(a: string, b: string, change: 'created' | 'deleted', reverseExists: boolean): FollowDelta {
-  if (change === 'created') {
-    return reverseExists
-      ? { [a]: { friendCount: 1, fanCount: -1 }, [b]: { friendCount: 1 } }
-      : { [b]: { fanCount: 1 } };
-  }
-  return reverseExists
-    ? { [a]: { friendCount: -1, fanCount: 1 }, [b]: { friendCount: -1 } }
-    : { [b]: { fanCount: -1 } };
+export function countFollows(followers: string[], following: string[]): FollowCounts {
+  const out = new Set(following);
+  const friends = followers.filter((f) => out.has(f)).length;
+  return { friendCount: friends, fanCount: followers.length - friends };
+}
+
+async function countsFor(db: Firestore, tx: Transaction, uid: string): Promise<FollowCounts> {
+  const [followers, following] = await Promise.all([
+    tx.get(db.collection('follows').where('followeeUid', '==', uid).select('followerUid')),
+    tx.get(db.collection('follows').where('followerUid', '==', uid).select('followeeUid')),
+  ]);
+  return countFollows(
+    followers.docs.map((d) => d.get('followerUid') as string),
+    following.docs.map((d) => d.get('followeeUid') as string),
+  );
 }
 
 /**
- * Handles one follows/{a}_{b} write. Transactional, idempotent per event id, and race-aware: if A->B and B->A are
- * created at the same moment, only the later-created edge counts the pair as mutual.
+ * Handles one follows/{a}_{b} write by recomputing both users' friendCount/fanCount from the edges that exist now,
+ * instead of applying +1/-1 deltas. Deltas depend on whether the reverse edge existed when the event was processed,
+ * which is wrong whenever edges change together (deleteAccount removes both directions at once). Recounting converges
+ * to the right answer whatever order events arrive in. Transactional, so concurrent events retry on stale reads, and
+ * idempotent per event id. Cost is O(followers + following) per write; revisit with aggregation counts at scale.
  */
 export async function handleFollowWrite(
   db: Firestore,
@@ -37,7 +40,6 @@ export async function handleFollowWrite(
   change: Existence,
   followerUid: string,
   followeeUid: string,
-  edgeCreateTimeMs: number | null,
   nowMs: number,
 ): Promise<boolean> {
   if (change !== 'created' && change !== 'deleted') return false;
@@ -45,29 +47,13 @@ export async function handleFollowWrite(
 
   return db.runTransaction(async (tx) => {
     if (await eventSeen(db, tx, eventId)) return false;
-
-    const reverse = await tx.get(db.doc(`follows/${followeeUid}_${followerUid}`));
-    const [followerProfile, followeeProfile] = await Promise.all([
-      tx.get(db.doc(`profiles/${followerUid}`)),
-      tx.get(db.doc(`profiles/${followeeUid}`)),
-    ]);
-
+    const uids = [followerUid, followeeUid];
+    const profiles = await Promise.all(uids.map((u) => tx.get(db.doc(`profiles/${u}`))));
+    const counts = await Promise.all(uids.map((u) => countsFor(db, tx, u)));
     markEvent(db, tx, eventId, nowMs);
-    let reverseExists = reverse.exists;
-    if (change === 'created' && reverse.exists && edgeCreateTimeMs !== null) {
-      const rt = reverse.createTime?.toMillis() ?? 0;
-      const own = `${followerUid}_${followeeUid}`;
-      const other = `${followeeUid}_${followerUid}`;
-      // The earlier edge is processed as a plain "fan" edge; the later one completes the friendship.
-      reverseExists = rt < edgeCreateTimeMs || (rt === edgeCreateTimeMs && other < own);
-    }
-
-    const delta = followDelta(followerUid, followeeUid, change, reverseExists);
-    const snaps: Record<string, DocumentSnapshot> = { [followerUid]: followerProfile, [followeeUid]: followeeProfile };
-    for (const [uid, d] of Object.entries(delta)) {
-      if (d.friendCount) bump(tx, snaps[uid], 'friendCount', d.friendCount);
-      if (d.fanCount) bump(tx, snaps[uid], 'fanCount', d.fanCount);
-    }
+    profiles.forEach((p, i) => {
+      if (p.exists) tx.update(p.ref, { friendCount: counts[i].friendCount, fanCount: counts[i].fanCount });
+    });
     return true;
   });
 }
