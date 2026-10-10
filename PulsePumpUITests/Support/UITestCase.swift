@@ -144,6 +144,12 @@ class UITestCase: XCTestCase {
         return false
     }
 
+    /// iOS offers to save a password after a password field was used ("Save Password?"); decline it if shown.
+    func declineSavePasswordPrompt(timeout: TimeInterval = 4) {
+        let notNow = app.buttons["Not Now"].firstMatch
+        if notNow.waitForExistence(timeout: timeout) { notNow.tap() }
+    }
+
     /// Waits for the element to exist and be hittable, then taps it.
     func tap(_ element: XCUIElement, _ what: String = "", timeout: TimeInterval = 15,
              file: StaticString = #filePath, line: UInt = #line) {

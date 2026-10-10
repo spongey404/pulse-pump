@@ -39,12 +39,13 @@ struct ProgramsPage {
 
     func row(_ name: String) -> XCUIElement { t.el(AX.programs.row(name)) }
 
-    func createProgram(name: String, days: Int, exerciseSearch: String) {
+    /// `exerciseSearch` adds an exercise from the New Program screen's own picker.
+    func createProgram(name: String, days: Int, exerciseSearch: String? = nil) {
         t.tapID(AX.programs.newProgram)
         t.type(name, into: AX.programs.createName)
         t.dismissKeyboard()
         t.tapID(AX.programs.createDays(days))
-        addExercise(buttonID: AX.programs.createAddExercise, search: exerciseSearch)
+        if let exerciseSearch { addExercise(buttonID: AX.programs.createAddExercise, search: exerciseSearch) }
         t.tapID(AX.programs.createSave)
         t.require(t.el(AX.programs.screen), "Programs list after saving")
     }
@@ -54,8 +55,7 @@ struct ProgramsPage {
         t.dismissKeyboard()
         t.tapID(buttonID)
         t.type(search, into: AX.picker.search)
-        let first = t.app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier BEGINSWITH 'picker.row.'")).firstMatch
+        let first = t.app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'picker.row.'")).firstMatch
         t.tap(first, "first picker result for '\(search)'")
     }
 
@@ -121,6 +121,6 @@ struct SocialPage {
     func open() { TabBar(t: t).social() }
 
     var anyPost: XCUIElement {
-        t.app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'feed.post.'")).firstMatch
+        t.app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'feed.post.'")).firstMatch
     }
 }

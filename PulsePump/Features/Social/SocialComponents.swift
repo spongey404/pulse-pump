@@ -41,8 +41,11 @@ struct SocialScreenHeader<Trailing: View>: View {
                 Button(action: onBack) { Text("‹").font(Font.spaceMono(20)).foregroundStyle(Color.inkPrimary) }
                     .buttonStyle(.plain)
                     .frame(minWidth: 28, minHeight: 44)
+                    .accessibilityLabel("Back")
+                    .accessibilityIdentifier(AX.nav.back)
             }
             Text(title).font(.archivo(22, weight: .black)).tracking(0.5).foregroundStyle(Color.inkPrimary).lineLimit(1)
+                .accessibilityIdentifier(AX.nav.title(title))
             Spacer()
             trailing()
         }

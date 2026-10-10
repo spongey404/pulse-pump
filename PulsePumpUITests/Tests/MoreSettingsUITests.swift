@@ -50,10 +50,8 @@ final class MoreSettingsUITests: UITestCase {
         scrollTo(visibility)
         let before = visibility.label
         visibility.tap()
-        // Pick any option that is not the current one.
-        let options = app.buttons.matching(NSPredicate(format: "label != %@ AND label != ''", before))
-        XCTAssertGreaterThan(options.count, 0)
-        let other = ["Friends", "Only Me", "Everyone"].first { !before.localizedCaseInsensitiveContains($0) } ?? "Friends"
+        // Pick an option that is not the current one.
+        let other = ["Friends only", "Only me", "Everyone"].first { !before.localizedCaseInsensitiveContains($0) } ?? "Only me"
         tap(app.buttons[other].firstMatch, "visibility option \(other)")
         XCTAssertTrue(labelChanges(visibility, from: before, within: 10), "visibility row should show the new choice")
         require(el(AX.row("Auto-Share to Feed")), "auto-share privacy row")
@@ -86,6 +84,9 @@ final class MoreSettingsUITests: UITestCase {
     func testDeleteAccountNeedsTheTypedPhraseAndThenRemovesTheAccount() {
         let email = LaunchConfig.uniqueEmail("d")
         launch(LaunchConfig(email: email, scenario: .newUser, weeks: 2))
+        // Without the auto sign-in arguments, so the app stays on the sign-in screen once the account is gone.
+        relaunch(with: LaunchConfig(email: nil))
+        require(el(AX.tab.home), "Home after relaunch")
         let settings = SettingsPage(t: self)
         settings.open()
         let row = el(AX.row("Delete Account"))
@@ -100,11 +101,11 @@ final class MoreSettingsUITests: UITestCase {
         dismissKeyboard()
         XCTAssertTrue(confirm.isEnabled)
         confirm.tap()
+        declineSavePasswordPrompt()
 
         require(el(AX.auth.useEmail), "sign-in screen after the account is deleted", timeout: 60)
         Self.signedInEmail = nil
-        // The credentials no longer work (relaunch without auto sign-in so the sheet is driven by hand).
-        relaunch(with: LaunchConfig(email: nil))
+        // The credentials no longer work.
         SignInPage(t: self).signIn(email: email, password: LaunchConfig.defaultPassword)
         require(el(AX.auth.emailError), "sign-in error for a deleted account", timeout: 30)
     }
