@@ -48,7 +48,11 @@ protocol ProfileRemote: AnyObject {
 
 @MainActor
 final class FirestoreProfileRemote: ProfileRemote {
-    private var db: Firestore { Firestore.firestore() }
+    private let injectedDb: Firestore?
+    private var db: Firestore { injectedDb ?? Firestore.firestore() }
+
+    /// Production uses the default app; integration tests inject the Firestore of an emulator app.
+    init(db: Firestore? = nil) { injectedDb = db }
 
     func cloudProfileExists(uid: String) async throws -> Bool {
         do {

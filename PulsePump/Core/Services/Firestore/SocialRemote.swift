@@ -10,8 +10,11 @@ protocol CurrentUser {
 }
 
 struct FirebaseCurrentUser: CurrentUser {
-    var uid: String? { Auth.auth().currentUser?.uid }
-    var displayName: String? { Auth.auth().currentUser?.displayName }
+    var auth: Auth?
+    init(auth: Auth? = nil) { self.auth = auth }
+    private var current: FirebaseAuth.User? { (auth ?? Auth.auth()).currentUser }
+    var uid: String? { current?.uid }
+    var displayName: String? { current?.displayName }
 }
 
 // MARK: - Errors
