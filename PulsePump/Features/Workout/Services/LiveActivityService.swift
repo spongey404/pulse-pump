@@ -36,7 +36,7 @@ class LiveActivityService {
     /// and raises an alert (island auto-expands) the first time a state flips to rest-over.
     func updateLiveActivity(_ state: WorkoutActivityAttributes.ContentState) async {
         guard let activity = currentActivity else { return }
-        guard state != lastState else { return }
+        guard !Self.isVisiblyUnchanged(state, from: lastState) else { return }
         lastState = state
 
         let content = ActivityContent(state: state, staleDate: state.restEndDate)
@@ -48,6 +48,21 @@ class LiveActivityService {
             await activity.update(content)
         }
         lastRestOver = nowOver
+    }
+
+    /// `elapsedSeconds` and `restSecondsRemaining` change every second but nothing renders them (the
+    /// island and lock screen run their own clocks from the start/end dates), so they are ignored when
+    /// deciding whether a push is needed; otherwise the dedupe never matched and ActivityKit was hit every second.
+    static func isVisiblyUnchanged(_ new: WorkoutActivityAttributes.ContentState,
+                                   from old: WorkoutActivityAttributes.ContentState?) -> Bool {
+        guard let old else { return false }
+        func normalised(_ s: WorkoutActivityAttributes.ContentState) -> WorkoutActivityAttributes.ContentState {
+            var c = s
+            c.elapsedSeconds = 0
+            c.restSecondsRemaining = 0
+            return c
+        }
+        return normalised(new) == normalised(old)
     }
 
     func endLiveActivity() async {
