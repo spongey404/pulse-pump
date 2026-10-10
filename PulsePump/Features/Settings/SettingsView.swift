@@ -43,14 +43,10 @@ struct SettingsView: View {
     @AppStorage("calorieFormula") private var calorieFormulaRaw = ""
     @AppStorage("restTimerMode") private var restTimerModeRaw = ""
     @AppStorage("restTimerAlertType") private var alertTypeRaw = ""
-    @AppStorage("smartWeightSuggestions") private var smartSuggestions = true
     @AppStorage("appTheme") private var themeRaw = ""
     @AppStorage("autoShareToFeed") private var autoShare = true
-    @AppStorage("simpleBodyMap") private var simpleBodyMap = false
     @AppStorage("workoutReminders") private var workoutReminders = false
     @AppStorage("restDayAlerts") private var restDayAlerts = false
-    @AppStorage("socialNotifications") private var socialNotifications = true
-    @AppStorage("challengeNotifications") private var challengeNotifications = true
     /// Privacy lives in `PrivacyService`: saved locally, at users/{uid}.privacy and on the public profile.
     @State private var privacyService = SocialServices.privacy
 
@@ -139,7 +135,9 @@ struct SettingsView: View {
             .tutorialTarget("rest-movement-defaults")
         MoreMenuRow(icon: "bell", label: "Timer Alert", selection: alertTypeBinding,
                     options: Array(AlertType.allCases), title: { $0.displayName })
-        MoreRow(icon: "brain", label: "Smart Weight Suggestions", toggle: $smartSuggestions)
+        // Rows labelled COMING SOON have nothing behind them yet (no feature / no push pipeline), so they
+        // are not switches: a toggle that does nothing is worse than an honest label.
+        MoreRow(icon: "brain", label: "Smart Weight Suggestions", value: "COMING SOON", chevron: false) { }
 
         // PRIVACY
         MoreSectionLabel(title: "PRIVACY")
@@ -151,7 +149,7 @@ struct SettingsView: View {
         MoreSectionLabel(title: "APPEARANCE")
         MoreMenuRow(icon: "moon", label: "Theme", selection: themeBinding,
                     options: Array(AppTheme.allCases), title: { $0.displayName })
-        MoreRow(icon: "figure.stand", label: "Simple Body Map", toggle: $simpleBodyMap)
+        MoreRow(icon: "figure.stand", label: "Simple Body Map", value: "COMING SOON", chevron: false) { }
 
         // TRAINING
         MoreSectionLabel(title: "TRAINING")
@@ -162,8 +160,8 @@ struct SettingsView: View {
         MoreSectionLabel(title: "NOTIFICATIONS")
         MoreRow(icon: "bell.badge", label: "Workout Reminders", toggle: workoutRemindersBinding(user: user))
         MoreRow(icon: "moon", label: "Rest Day Alerts", toggle: restDayAlertsBinding(user: user))
-        MoreRow(icon: "person.2", label: "Social Activity", toggle: $socialNotifications)
-        MoreRow(icon: "trophy", label: "Challenge Updates", toggle: $challengeNotifications)
+        MoreRow(icon: "person.2", label: "Social Activity", value: "COMING SOON", chevron: false) { }
+        MoreRow(icon: "trophy", label: "Challenge Updates", value: "COMING SOON", chevron: false) { }
 
         // DATA
         MoreSectionLabel(title: "DATA")
