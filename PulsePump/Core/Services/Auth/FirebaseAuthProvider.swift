@@ -11,7 +11,16 @@ import GoogleSignIn
 final class FirebaseAuthProvider: AuthProviding {
     private var appleFlow: AppleSignInFlow?
 
-    private var auth: Auth { Auth.auth() }
+    private let injectedAuth: Auth?
+    private let injectedFunctions: Functions?
+
+    /// Production uses the default app; integration tests inject the Auth / Functions of an emulator app.
+    init(auth: Auth? = nil, functions: Functions? = nil) {
+        injectedAuth = auth
+        injectedFunctions = functions
+    }
+
+    private var auth: Auth { injectedAuth ?? Auth.auth() }
 
     var currentUser: AuthUser? { auth.currentUser.map { Self.map($0) } }
 
@@ -93,7 +102,7 @@ final class FirebaseAuthProvider: AuthProviding {
     func callDeleteAccount() async throws {
         guard auth.currentUser != nil else { throw AuthFailure.notSignedIn }
         do {
-            _ = try await FirebaseBootstrap.functions.httpsCallable("deleteAccount").call()
+            _ = try await (injectedFunctions ?? FirebaseBootstrap.functions).httpsCallable("deleteAccount").call()
         } catch {
             throw Self.map(error)
         }

@@ -169,9 +169,28 @@ final class FirestoreSocialRemote: SocialRemote {
     func follow(uid target: String) async throws {
         let me = try requireUid()
         guard target != me else { throw SocialError.invalid("Can't follow yourself") }
+        do {
+            try await run {
+                try await set(db.collection("follows").document(SocialWire.followId(follower: me, followee: target)),
+                              SocialWire.followDocument(follower: me, followee: target, now: Date()))
+            }
+        } catch SocialError.permissionDenied {
+            // The rules forbid updating an edge, so following someone you already follow (a retry after a lost
+            // response, a double tap) is "denied". That is success, not an error; a real denial (a block) stays one.
+            if try await edgeExists(follower: me, followee: target) { return }
+            throw SocialError.permissionDenied
+        }
+    }
+
+    /// A query (not a get): reading a missing edge document by id is refused by the rules, the query is allowed.
+    private func edgeExists(follower: String, followee: String) async throws -> Bool {
         try await run {
-            try await set(db.collection("follows").document(SocialWire.followId(follower: me, followee: target)),
-                          SocialWire.followDocument(follower: me, followee: target, now: Date()))
+            let snap = try await db.collection("follows")
+                .whereField("followerUid", isEqualTo: follower)
+                .whereField("followeeUid", isEqualTo: followee)
+                .limit(to: 1)
+                .getDocuments()
+            return !snap.documents.isEmpty
         }
     }
 

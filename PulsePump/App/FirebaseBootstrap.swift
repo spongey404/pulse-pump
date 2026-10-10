@@ -51,18 +51,44 @@ enum FirebaseBootstrap {
     static var functions: Functions { Functions.functions(region: functionsRegion) }
 
     #if DEBUG
-    private static func apply(_ config: FirebaseEmulatorConfig) {
-        Auth.auth().useEmulator(withHost: config.host, port: config.authPort)
+    /// Project id the local emulators run under (`firebase emulators:start --project demo-pump`).
+    static let emulatorProjectId = "demo-pump"
 
-        let firestore = Firestore.firestore()
+    private static func apply(_ config: FirebaseEmulatorConfig) {
+        apply(config, to: FirebaseApp.app()!)
+    }
+
+    /// Points one app's Auth / Firestore / Functions at the emulators. Must run before that app is used.
+    static func apply(_ config: FirebaseEmulatorConfig, to app: FirebaseApp) {
+        Auth.auth(app: app).useEmulator(withHost: config.host, port: config.authPort)
+
+        let firestore = Firestore.firestore(app: app)
         let settings = firestore.settings
         settings.host = "\(config.host):\(config.firestorePort)"
         settings.isSSLEnabled = false
         settings.cacheSettings = MemoryCacheSettings()   // no persistent cache across emulator resets
         firestore.settings = settings
 
-        functions.useEmulator(withHost: config.host, port: config.functionsPort)
-        print("[Firebase] emulators at \(config.host): auth \(config.authPort), firestore \(config.firestorePort), functions \(config.functionsPort)")
+        Functions.functions(app: app, region: functionsRegion).useEmulator(withHost: config.host, port: config.functionsPort)
+        print("[Firebase] \(app.name) -> emulators at \(config.host): auth \(config.authPort), firestore \(config.firestorePort), functions \(config.functionsPort)")
+    }
+
+    /// A named secondary app under the emulator project id, already pointed at the emulators. Integration tests
+    /// use one per simulated user so several accounts can be signed in at once without touching the default app.
+    static func emulatorApp(named name: String, config: FirebaseEmulatorConfig) -> FirebaseApp {
+        configure()
+        if let existing = FirebaseApp.app(name: name) { return existing }
+        // Options of a configured app are locked (and so are their copies): build a fresh object.
+        let base = FirebaseApp.app()!.options
+        let options = FirebaseOptions(googleAppID: base.googleAppID, gcmSenderID: base.gcmSenderID)
+        options.apiKey = base.apiKey
+        options.bundleID = base.bundleID
+        options.projectID = emulatorProjectId
+        FirebaseApp.configure(name: name, options: options)
+        let app = FirebaseApp.app(name: name)!
+        precondition(app.options.projectID == emulatorProjectId, "emulator apps must never use the real project")
+        apply(config, to: app)
+        return app
     }
     #endif
 }

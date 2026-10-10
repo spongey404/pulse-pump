@@ -11,6 +11,10 @@ iOS workout logging app. Part of the Pulse ecosystem.
 ```bash
 bin/test.sh               # unit tests exactly as CI runs them (first available iPhone simulator)
 bin/test.sh --release     # + Release build, and fails if DEBUG-only DevData code ships
+bin/test-integration.sh   # iOS integration tests vs the local Firebase emulators (needs firebase-tools, Java 21, Node 24)
+bin/test-integration.sh --only SyncRoundTripEmulatorTests   # a single integration suite
+(cd firebase/functions && npm test)     # functions unit tests (npm run test:integration for trigger tests)
+(cd firebase/rules-tests && npm test)   # Firestore security rules tests
 bin/createdevdata.sh      # build, clean-install and seed fake data (see "Dev data")
 
 # Raw xcodebuild (pick any installed simulator, e.g. iPhone 17 Pro)
@@ -204,6 +208,18 @@ Key design tokens implemented in Swift:
 - Logger text fields hold kg strings (`SetEntry.weight`) but edit in the display unit via `KgTextField`. Plate maths goes through `PlateMath` (loads real lb plates in lbs mode).
 - Widgets: `PumpWidgetSnapshot.weightUnit`; widget views convert/label via `snap.unit`. Services without a view use `UnitPreference.current` (UserDefaults mirror written by `RootView`).
 - Exports are always kg (JSON `weightUnit`, CSV `Unit` column). Imports convert from the file's unit (header, else the unit the user picks).
+
+## Testing
+
+Three tiers, all run in CI (`.github/workflows/ci.yml`):
+
+| Tier | Where | Run |
+|---|---|---|
+| Unit | `PulsePumpTests/` (Core, Features, DevData) with in-memory fakes (`InMemoryRemoteStore`, `FakeSocialRemote`) | `bin/test.sh` (CI job `test`) |
+| Firebase rules + functions | `firebase/rules-tests`, `firebase/functions/test` (vitest, emulators) | `npm test` in each folder (CI job `firebase`) |
+| iOS emulator integration | `PulsePumpTests/Integration/`: real Swift auth/sync/social code vs the Auth, Firestore and Functions emulators (project `demo-pump`) | `bin/test-integration.sh` (CI job `ios-integration`) |
+
+The Integration suites are skipped (not failed) unless `PUMP_EMULATOR=1`, so `bin/test.sh` stays emulator-free. `bin/test-integration.sh` builds the functions, starts the emulators with `firebase emulators:exec` and forwards the flag to the test host (`TEST_RUNNER_PUMP_EMULATOR=1`); it builds with ad-hoc signing because Firebase Auth needs a keychain entitlement. Shared helpers are in `Integration/Support/`: `EmulatorKit` (one named FirebaseApp per simulated user, so several accounts are signed in at once and the host's default app is never touched; Auth and Firestore are wiped between tests), `TestAccount`, and `IntegrationData` factories that reuse `SyncDevice` and `DevDataService` for realistic workouts. One test file per feature. Clients are asserted to be on `demo-pump`, never the real project. DEBUG demo fixtures (`DevFlags.socialFixtures`, `FakeSocialRemote` data) are never used by integration tests. CI uploads the xcresult and emulator logs on failure.
 
 ## Dev data (fake data for testing)
 

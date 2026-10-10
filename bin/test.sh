@@ -9,6 +9,7 @@
 # skipped until it is rewritten.
 set -o pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
+source bin/_common.sh
 
 device=""; release=false; result="build/TestResults.xcresult"
 while [ $# -gt 0 ]; do
@@ -24,7 +25,7 @@ done
 
 if [ -z "$device" ]; then
 	# First available iPhone (newest runtime first) so the script survives simulator renames.
-	device=$(xcrun simctl list devices available | grep -E "^ +iPhone" | head -1 | sed -E 's/^ +(.*) \([0-9A-F-]{36}\).*/\1/')
+	device=$(pick_device)
 	[ -n "$device" ] || { echo "No iPhone simulator available" >&2; exit 1; }
 fi
 echo "==> Xcode: $(xcodebuild -version | head -1) — simulator: $device"
@@ -43,9 +44,8 @@ xcodebuild test \
 	CODE_SIGNING_ALLOWED=NO \
 	| (command -v xcpretty >/dev/null && xcpretty || cat) | grep -E "error:|Test case .* failed|\*\* TEST" || true
 # The pipeline above only filters output; ask the result bundle for the verdict.
-if ! xcrun xcresulttool get test-results summary --path "$result" 2>/dev/null | grep -q '"result" : "Passed"'; then
+if ! xcresult_passed "$result"; then
 	echo "Unit tests FAILED — open $result in Xcode for details" >&2
-	xcrun xcresulttool get test-results summary --path "$result" 2>/dev/null | grep -E '"(failedTests|passedTests|totalTestCount)"' >&2 || true
 	exit 1
 fi
 echo "Unit tests passed"
