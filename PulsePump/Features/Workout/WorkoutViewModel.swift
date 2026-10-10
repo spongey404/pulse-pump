@@ -21,6 +21,12 @@ class WorkoutViewModel {
     // Rest timer
     let restTimer: RestTimerService
 
+    /// Injectable clock + calendar (default: the real ones). Journey tests move time with these.
+    @ObservationIgnored var now: () -> Date = { Date() }
+    @ObservationIgnored var calendar: Calendar = .current
+    /// Refreshes the widget snapshot when a workout finishes (replaceable so tests do not touch the shared App Group).
+    @ObservationIgnored var widgetUpdater: (ModelContext, Date) -> Void = { WidgetDataService.updateWidgetData(modelContext: $0, now: $1) }
+
     init(restTimer: RestTimerService? = nil) {
         self.restTimer = restTimer ?? RestTimerService()
     }
@@ -52,7 +58,7 @@ class WorkoutViewModel {
         elapsedSeconds = 0
         lastTimeCache = [:]
 
-        let newWorkout = Workout(isDraft: true)
+        let newWorkout = Workout(date: now(), isDraft: true)
         newWorkout.user = user
         newWorkout.template = template
         modelContext.insert(newWorkout)
@@ -80,7 +86,7 @@ class WorkoutViewModel {
         }
 
         isActive = true
-        startTime = Date()
+        startTime = now()
         startDurationTimer()
         liveActivity.startLiveActivity(workoutName: workout?.template?.name ?? "Workout")
         persistDraft(modelContext: modelContext)
@@ -353,7 +359,7 @@ class WorkoutViewModel {
         let allWorkoutDates = (try? modelContext.fetch(FetchDescriptor<Workout>(
             predicate: #Predicate<Workout> { !$0.isDraft && $0.deletedAt == nil }
         )).map(\.date)) ?? []
-        let streakCount = max(1, StreakCalculator.currentStreak(from: allWorkoutDates))
+        let streakCount = max(1, StreakCalculator.currentStreak(from: allWorkoutDates, now: now(), calendar: calendar))
 
         completionData = WorkoutCompletionData(
             duration: workout.duration,
@@ -375,7 +381,7 @@ class WorkoutViewModel {
         // (Post / Don't post / auto-share), so a workout is posted at most once.
 
         // Update widget data
-        WidgetDataService.updateWidgetData(modelContext: modelContext)
+        widgetUpdater(modelContext, now())
 
         isActive = false
         showCompletionSummary = true
@@ -502,7 +508,7 @@ class WorkoutViewModel {
             history: Array(history),
             templateNames: templateNames,
             split: user.selectedSplit,
-            todayWeekday: Calendar.current.component(.weekday, from: Date())
+            todayWeekday: calendar.component(.weekday, from: now())
         )
     }
 

@@ -5,7 +5,7 @@ import WidgetKit
 struct WidgetDataService {
     private static let appGroupId = "group.com.pulse.PulsePump"
 
-    static func updateWidgetData(modelContext: ModelContext) {
+    static func updateWidgetData(modelContext: ModelContext, now: Date = Date()) {
         guard let defaults = UserDefaults(suiteName: appGroupId) else { return }
 
         let descriptor = FetchDescriptor<Workout>(
@@ -15,7 +15,7 @@ struct WidgetDataService {
         guard let workouts = try? modelContext.fetch(descriptor) else { return }
 
         // Streak
-        let streak = StreakCalculator.currentStreak(from: workouts.map(\.date))
+        let streak = StreakCalculator.currentStreak(from: workouts.map(\.date), now: now)
         defaults.set(streak, forKey: "widget_streak")
 
         // Last workout
@@ -35,7 +35,7 @@ struct WidgetDataService {
         }
 
         // Snapshot for custom widgets (PumpShared / Widget Builder)
-        PumpWidgetStore.saveSnapshot(buildSnapshot(workouts: workouts, modelContext: modelContext))
+        PumpWidgetStore.saveSnapshot(buildSnapshot(workouts: workouts, modelContext: modelContext, now: now))
 
         WidgetCenter.shared.reloadAllTimelines()
     }
@@ -70,14 +70,15 @@ struct WidgetDataService {
         return (improved, total, gain, gainName)
     }
 
-    static func buildSnapshot(workouts: [Workout], modelContext: ModelContext) -> PumpWidgetSnapshot {
+    static func buildSnapshot(workouts: [Workout], modelContext: ModelContext, now: Date = Date(),
+                              fixedDefaults: UserDefaults? = UserDefaults(suiteName: appGroupId),
+                              calendar: Calendar = Calendar(identifier: .iso8601)) -> PumpWidgetSnapshot {
         var snap = PumpWidgetSnapshot()
         snap.hasData = !workouts.isEmpty
-        snap.updated = Date()
-        let cal = Calendar(identifier: .iso8601)
-        let now = Date()
+        snap.updated = now
+        let cal = calendar
 
-        snap.streak = StreakCalculator.currentStreak(from: workouts.map(\.date))
+        snap.streak = StreakCalculator.currentStreak(from: workouts.map(\.date), now: now)
         let weekStart = cal.dateInterval(of: .weekOfYear, for: now)?.start ?? now
         let weekWorkouts = workouts.filter { $0.date >= weekStart }
         snap.sessionsThisWeek = weekWorkouts.count
@@ -162,9 +163,11 @@ struct WidgetDataService {
         // Next workout (prediction) + quick-start templates
         let templates = (try? modelContext.fetch(FetchDescriptor<WorkoutTemplate>(predicate: #Predicate { $0.deletedAt == nil }))) ?? []
         snap.templates = templates.map { .init(name: $0.name, exercises: $0.templateExercises.count) }
-        if let user, let name = WorkoutViewModel().predictNextWorkout(user: user, modelContext: modelContext) {
+        let predictor = WorkoutViewModel()
+        predictor.now = { now }
+        if let user, let name = predictor.predictNextWorkout(user: user, modelContext: modelContext) {
             snap.nextName = name
-            let df = DateFormatter(); df.dateFormat = "EEE"
+            let df = DateFormatter(); df.dateFormat = "EEE"; df.timeZone = cal.timeZone
             snap.nextDay = df.string(from: now).uppercased()
             if let t = templates.first(where: { $0.name == name }) {
                 snap.nextExercises = t.templateExercises.count
@@ -176,7 +179,7 @@ struct WidgetDataService {
                 }
             }
         }
-        snap.fixed = buildFixed(workouts: workouts, modelContext: modelContext, user: user, snap: snap)
+        snap.fixed = buildFixed(workouts: workouts, modelContext: modelContext, user: user, snap: snap, now: now, defaults: fixedDefaults, calendar: cal)
         return snap
     }
 }

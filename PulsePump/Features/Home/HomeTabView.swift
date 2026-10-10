@@ -20,75 +20,16 @@ struct HomeTabView: View {
 
     private var user: User? { users.first }
 
-    // MARK: Computed KPIs
-    private var currentStreak: Int {
-        StreakCalculator.currentStreak(from: workouts.map(\.date))
-    }
-
-    private var weekWorkouts: [Workout] {
-        let start = WeekMath.mondayWeekStart(of: Date())
-        return workouts.filter { $0.date >= start }
-    }
-
-    private var weekSets: Int {
-        weekWorkouts.reduce(0) { $0 + $1.workingSetCount }
-    }
-
-    private var weekPRs: Int {
-        let weekStart = WeekMath.mondayWeekStart(of: Date())
-        var weekMaxByExercise: [UUID: Double] = [:]
-        var prevMaxByExercise: [UUID: Double] = [:]
-        for workout in workouts {
-            let isThisWeek = workout.date >= weekStart
-            for log in workout.exerciseLogs {
-                guard let exercise = log.exercise else { continue }
-                let maxWeight = log.workingSets.map(\.weight).max() ?? 0
-                if isThisWeek {
-                    weekMaxByExercise[exercise.id] = max(weekMaxByExercise[exercise.id] ?? 0, maxWeight)
-                } else {
-                    prevMaxByExercise[exercise.id] = max(prevMaxByExercise[exercise.id] ?? 0, maxWeight)
-                }
-            }
-        }
-        return weekMaxByExercise.filter { id, weekMax in
-            weekMax > (prevMaxByExercise[id] ?? 0) && weekMax > 0
-        }.count
-    }
-
-    private var weekImproved: Int {
-        let weekStart = WeekMath.mondayWeekStart(of: Date())
-        let prevWeekStart = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: weekStart) ?? Date()
-        var thisWeekBest: [UUID: Double] = [:]
-        var prevWeekBest: [UUID: Double] = [:]
-        for workout in workouts {
-            let isThisWeek = workout.date >= weekStart
-            let isPrevWeek = workout.date >= prevWeekStart && workout.date < weekStart
-            for log in workout.exerciseLogs {
-                guard let exercise = log.exercise else { continue }
-                let bestVol = log.workingSets.map { $0.weight * Double($0.reps) }.max() ?? 0
-                if isThisWeek { thisWeekBest[exercise.id] = max(thisWeekBest[exercise.id] ?? 0, bestVol) }
-                else if isPrevWeek { prevWeekBest[exercise.id] = max(prevWeekBest[exercise.id] ?? 0, bestVol) }
-            }
-        }
-        return thisWeekBest.filter { id, vol in vol > (prevWeekBest[id] ?? 0) && vol > 0 }.count
-    }
-
+    // MARK: Computed KPIs (the maths lives in HomeStats so tests can drive it)
+    private var stats: HomeStats { HomeStats(workouts: workouts) }
+    private var currentStreak: Int { stats.currentStreak }
+    private var weekWorkouts: [Workout] { stats.weekWorkouts }
+    private var weekSets: Int { stats.weekSets }
+    private var weekPRs: Int { stats.weekPRs }
+    private var weekImproved: Int { stats.weekImproved }
     /// Sets per day for the current week (Mon=0 … Sun=6)
-    private var weekDayBars: [Int] {
-        var bars = [Int](repeating: 0, count: 7)
-        let cal = Calendar.current
-        for workout in weekWorkouts {
-            let weekday = cal.component(.weekday, from: workout.date) // 1=Sun…7=Sat
-            let idx = (weekday + 5) % 7  // Mon=0…Sun=6
-            bars[idx] += workout.workingSetCount
-        }
-        return bars
-    }
-
-    private var todayDayIndex: Int {
-        let weekday = Calendar.current.component(.weekday, from: Date())
-        return (weekday + 5) % 7
-    }
+    private var weekDayBars: [Int] { stats.weekDayBars }
+    private var todayDayIndex: Int { stats.todayDayIndex }
 
     private var basePredictedName: String? {
         guard let user else { return nil }
@@ -157,11 +98,7 @@ struct HomeTabView: View {
     private var recentWorkouts: [Workout] { Array(workouts.prefix(3)) }
 
     // MARK: - Week number helper (relative to user's join date, so week 1 = first week)
-    private var currentWeekNumber: Int {
-        let origin = user?.createdAt ?? workouts.last?.date ?? Date()
-        let weeks = Calendar.current.dateComponents([.weekOfYear], from: origin, to: Date()).weekOfYear ?? 0
-        return max(1, weeks + 1)
-    }
+    private var currentWeekNumber: Int { stats.currentWeekNumber(userCreatedAt: user?.createdAt) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -643,70 +580,14 @@ struct HomeTabView: View {
         return formatter.localizedString(for: date, relativeTo: Date()).uppercased()
     }
 
-    private func volumeDelta(for workout: Workout) -> String {
-        let curVol = workout.workingVolume
-        guard curVol > 0, let templateName = workout.template?.name else { return "—" }
-        let prev = workouts.first { $0.id != workout.id && $0.template?.name.lowercased() == templateName.lowercased() && $0.date < workout.date }
-        guard let prevWorkout = prev else { return "—" }
-        let prevVol = prevWorkout.workingVolume
-        guard prevVol > 0 else { return "—" }
-        let pct = Int(((curVol - prevVol) / prevVol) * 100)
-        // Arrow alone carries direction — no redundant +/- sign, and a real space (not
-        // glued to the number) matching the ticker's own arrow-to-value gap.
-        if pct > 0 { return "▲ \(pct)%" }
-        if pct < 0 { return "▼ \(abs(pct))%" }
-        return "▲ 0%"
-    }
+    private func volumeDelta(for workout: Workout) -> String { stats.volumeDelta(for: workout) }
 
-    private func improvedExercises(in workout: Workout) -> Int {
-        workout.exerciseLogs.filter { log in
-            guard let exercise = log.exercise else { return false }
-            let thisVol = log.workingSets.map { $0.weight * Double($0.reps) }.max() ?? 0
-            let prevBest = workouts
-                .filter { $0.date < workout.date }
-                .flatMap(\.exerciseLogs)
-                .filter { $0.exercise?.id == exercise.id }
-                .flatMap(\.workingSets)
-                .map { $0.weight * Double($0.reps) }
-                .max() ?? 0
-            return thisVol > prevBest && thisVol > 0
-        }.count
-    }
+    private func improvedExercises(in workout: Workout) -> Int { stats.improvedExercises(in: workout) }
 
     // MARK: - Ticker Data
 
     private func buildTickerItems() -> [TickerItem] {
-        var muscleVolume: [MuscleGroup: Int] = [:]
-        let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-        let prevWeekStart = Calendar.current.date(byAdding: .day, value: -14, to: Date()) ?? Date()
-
-        var prevVolume: [MuscleGroup: Int] = [:]
-        for workout in workouts {
-            let isThisWeek = workout.date >= weekAgo
-            let isPrevWeek = workout.date >= prevWeekStart && workout.date < weekAgo
-            for log in workout.exerciseLogs {
-                guard let exercise = log.exercise else { continue }
-                for muscle in exercise.primaryMuscleGroups {
-                    if isThisWeek { muscleVolume[muscle, default: 0] += log.workingSets.count }
-                    if isPrevWeek { prevVolume[muscle, default: 0] += log.workingSets.count }
-                }
-            }
-        }
-
-        let all = MuscleGroup.allCases
-        return all.compactMap { muscle -> TickerItem? in
-            let cur = muscleVolume[muscle] ?? 0
-            let prev = prevVolume[muscle] ?? 0
-            guard cur > 0 || prev > 0 else { return nil }
-            let label = String(muscle.displayName.uppercased().prefix(6))
-            if prev == 0 {
-                return TickerItem(label: label, value: "\(cur)", direction: .up)
-            } else {
-                let pct = Int(((Double(cur) - Double(prev)) / Double(prev)) * 100)
-                let dir: TickerItem.Direction = pct >= 0 ? .up : .down
-                return TickerItem(label: label, value: "\(abs(pct))%", direction: dir)
-            }
-        }
+        stats.tickerRows.map { TickerItem(label: $0.label, value: $0.value, direction: $0.up ? .up : .down) }
     }
 }
 

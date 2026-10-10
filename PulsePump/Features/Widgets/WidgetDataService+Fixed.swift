@@ -56,15 +56,16 @@ extension WidgetDataService {
     // MARK: Entry point
 
     static func buildFixed(workouts: [Workout], modelContext: ModelContext, user: User?, snap: PumpWidgetSnapshot,
-                           now: Date = Date(), defaults: UserDefaults? = UserDefaults(suiteName: "group.com.pulse.PulsePump")) -> PWFixedData {
+                           now: Date = Date(), defaults: UserDefaults? = UserDefaults(suiteName: "group.com.pulse.PulsePump"),
+                           calendar: Calendar = Calendar(identifier: .iso8601)) -> PWFixedData {
         var f = PWFixedData()
-        let cal = Calendar(identifier: .iso8601)
+        let cal = calendar
         let today = cal.startOfDay(for: now)
         let weekStart = cal.dateInterval(of: .weekOfYear, for: now)?.start ?? today
         let todayIdx = max(0, min(6, cal.dateComponents([.day], from: weekStart, to: today).day ?? 0))
         func daysBetween(_ a: Date, _ b: Date) -> Int { cal.dateComponents([.day], from: cal.startOfDay(for: a), to: cal.startOfDay(for: b)).day ?? 0 }
         func text(_ pattern: String, _ d: Date) -> String {
-            let df = DateFormatter(); df.locale = Locale(identifier: "en_US_POSIX"); df.calendar = cal; df.dateFormat = pattern
+            let df = DateFormatter(); df.locale = Locale(identifier: "en_US_POSIX"); df.calendar = cal; df.timeZone = cal.timeZone; df.dateFormat = pattern
             return df.string(from: d).uppercased()
         }
         func name(of w: Workout) -> String { w.template?.name ?? "Workout" }
@@ -325,8 +326,8 @@ extension WidgetDataService {
         f.nextLastSameName = nextName.split(separator: " ").first.map { $0.uppercased() } ?? ""
 
         // --- 12 Bodyweight
-        if let kg = user?.weight, kg > 0 { BodyweightLog.record(kg: kg, on: now, calendar: .current, defaults: defaults) }
-        let bw = BodyweightLog.summary(now: now, calendar: .current, defaults: defaults)
+        if let kg = user?.weight, kg > 0 { BodyweightLog.record(kg: kg, on: now, calendar: cal, defaults: defaults) }
+        let bw = BodyweightLog.summary(now: now, calendar: cal, defaults: defaults)
         f.bodyweightSeries = bw.series
         f.bodyweightDelta7d = bw.delta7d
         f.bodyweightStart = bw.start

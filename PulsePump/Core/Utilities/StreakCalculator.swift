@@ -8,13 +8,8 @@ enum StreakCalculator {
     /// - Each gap between consecutive workouts adds that many days to the streak
     ///   (e.g. workout on day 1, next on day 3 → streak = 3).
     /// - Multiple workouts on the same day count as one.
-    ///
-    /// This is the intended spec semantics (docs/pulse-pump-spec.md "Streak calculation"): the streak is
-    /// the number of calendar days spanned by a run of workouts none more than 3 days apart, not a count
-    /// of consecutive training days. 16 weeks of ~5 sessions/week therefore reads ~111 days.
-    static func currentStreak(from dates: [Date]) -> Int {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
+    static func currentStreak(from dates: [Date], now: Date = Date(), calendar: Calendar = .current) -> Int {
+        let today = calendar.startOfDay(for: now)
 
         let uniqueDays = Array(Set(dates.map { calendar.startOfDay(for: $0) }))
             .sorted(by: >)
