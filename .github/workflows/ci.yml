@@ -12,6 +12,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  firebase:
+    name: Firebase rules + functions
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            firebase/functions/package-lock.json
+            firebase/rules-tests/package-lock.json
+
+      - uses: actions/setup-java@v4          # the Firestore emulator needs a JVM
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install
+        run: |
+          npm install -g firebase-tools
+          npm --prefix firebase/functions ci
+          npm --prefix firebase/rules-tests ci
+
+      - name: Functions typecheck + build
+        run: |
+          npm --prefix firebase/functions run typecheck
+          npm --prefix firebase/functions run build
+
+      - name: Functions unit tests
+        run: npm --prefix firebase/functions test
+
+      - name: Security rules tests (Firestore emulator)
+        run: npm --prefix firebase/rules-tests test
+
+      - name: Functions integration tests (Functions + Firestore + Auth emulators)
+        run: npm --prefix firebase/functions run test:integration
+
   test:
     name: Build + unit tests
     runs-on: macos-26
