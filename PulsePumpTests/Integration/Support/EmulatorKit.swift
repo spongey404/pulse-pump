@@ -65,12 +65,13 @@ enum Emulator {
     static func rest(_ method: String, port: Int, _ path: String) async throws {
         var request = URLRequest(url: URL(string: "http://\(host):\(port)\(path)")!)
         request.httpMethod = method
-        // 409 = the emulator is still settling a write (a trigger or a stream from the previous test); try again.
+        // 409 / 499 / 5xx = the emulator is still settling a write or trigger transaction from the previous test (slower
+        // on CI runners); wait and try again.
         var status = 0
-        for attempt in 0..<6 {
+        for attempt in 0..<8 {
             let (_, response) = try await URLSession.shared.data(for: request)
             status = (response as? HTTPURLResponse)?.statusCode ?? 0
-            if status != 409 { break }
+            if !(status == 409 || status == 499 || status >= 500) { break }
             try await Task.sleep(for: .milliseconds(250 * (attempt + 1)))
         }
         guard (200..<300).contains(status) else { throw EmulatorError.http(status, path) }
