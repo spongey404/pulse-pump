@@ -235,6 +235,15 @@ It works through launch arguments (`-createDevData 1 -devDataReset 1 -devDataSce
 
 **Auto sign-in (DEBUG):** `-debugEmail <e> -debugPassword <p> -debugAutoOnboard 1` signs in (or signs up) and completes onboarding with no taps (`DevData/DevDataAutoAccount.swift`); combine with `-createDevData 1 -devDataReset 1` to push a seeded history through sync. Add `-useFirebaseEmulator 1` to stay off the real project. Build with ad-hoc signing (`CODE_SIGN_IDENTITY=-`) or Firebase Auth fails with a keychain error.
 
+## Journey tests (real-user scenarios at the logic level)
+
+`PulsePumpTests/Journeys/` drives the same code the screens use (WorkoutViewModel, SwiftData, the pure stats types `HomeStats` / `BodyMapStats` / `WeeklyRecapStats` / `HistoryStats` / `ExerciseProgress`, `WidgetDataService.buildSnapshot`, `WorkoutPredictor`, `FeedPostBuilder`, `SyncDevice`) with an in-memory store and a clock the test moves. Screen maths lives in those stats types (the views just call them), so keep new view maths there, not inline.
+
+- To add a scenario: `let sim = try UserSim(...)` (`JourneyKit.swift`: unit, Monday/Sunday week start, time zone, split), then `sim.startSession(template:)` / `log` / `warmup` / `finish` / `skipToDay(n)` / `restDays(n)`, and read what the user sees via `sim.home()`, `body(weekOffset:day:)`, `recap(weeksBack:)`, `history()`, `progress(of:)`, `widget()`, `prediction()`, `postPayload(of:)`. `sim.ledger` records every set typed, independently of SwiftData: compute expected numbers from it (or hand-derive literals), never by calling the function under test again. The clock only goes forward for sessions; moving it back shows the world as it was (screens only see workouts started by `now`).
+- `MarcusJourney.shared` is a 16-week lifter built once and read by the OverTime suite; `MarcusJourney(sim:weeks:)` reuses the plan on any sim (the sync suite).
+- Known app bugs are written as the CORRECT behaviour inside `withKnownIssue("<what is wrong / audit ref>", isIntermittent: true)`; remove the wrapper when the bug is fixed. Keep the injectable parameters (`now:`, `calendar:`, `widgetUpdater`) defaulted so app behaviour is unchanged.
+- Run only these: `xcodebuild test ... -only-testing:PulsePumpTests/OverTimeJourneyTests` (suites: DayOne, DraftAndCrash, OverTime, EditingHistory, PatternDetection, Units, StreakAndCalendar, SettingsAndOnboarding, SyncJourney, SocialPosting).
+
 ## Known Gaps (from spec)
 
 See `docs/pulse-pump-spec.md` §"Known Gaps & Backlog" for the full list. High-priority items:
