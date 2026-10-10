@@ -233,6 +233,8 @@ bin/createdevdata.sh --weeks 24 --seed 7 --units lb --plus --draft --help
 
 It works through launch arguments (`-createDevData 1 -devDataReset 1 -devDataScenario … -devDataWeeks … -devDataSeed … -devDataUnits … -devDataPlus 1 -devDataDraft 1 -devDataSocialFixtures 1`), so the same flags can be added in the Xcode scheme, `simctl launch`, or XCUITest. Same seed → identical data. Dataset: user "Dev Lifter", PPL split with days populated, Home/Commercial equipment profiles, Push/Pull/Leg templates with real exercise ids, ~5 sessions/week with progressive overload, warm-ups, a deload week, fresh PRs, a 60-day bodyweight log, and (for Firestore-backed screens that can't be seeded locally) the built-in demo friends/feed/challenges via `DevFlags.socialFixtures`. Add new models to `DevDataFactory` / `DevDataService.reset` when you add them to the schema. Demo/fixture data is never reachable in Release.
 
+**Auto sign-in (DEBUG):** `-debugEmail <e> -debugPassword <p> -debugAutoOnboard 1` signs in (or signs up) and completes onboarding with no taps (`DevData/DevDataAutoAccount.swift`); combine with `-createDevData 1 -devDataReset 1` to push a seeded history through sync. Add `-useFirebaseEmulator 1` to stay off the real project. Build with ad-hoc signing (`CODE_SIGN_IDENTITY=-`) or Firebase Auth fails with a keychain error.
+
 ## Known Gaps (from spec)
 
 See `docs/pulse-pump-spec.md` §"Known Gaps & Backlog" for the full list. High-priority items:

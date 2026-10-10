@@ -62,6 +62,13 @@ struct RootView: View {
         .environment(session)
         .environment(\.weightUnit, weightUnit)
         .onAppear { UnitPreference.current = weightUnit }
+        #if DEBUG
+        .task(id: session.state) { await DevDataAutoAccount.signIn(session: session) }
+        .task(id: route == .onboarding) {
+            guard route == .onboarding else { return }
+            await DevDataAutoAccount.onboard(session: session, gate: gate, modelContext: modelContext)
+        }
+        #endif
         .task(id: reconcileKey) { await gate.reconcile(hasLocalUser: hasLocalUser) }
         .task(id: "\(session.user?.uid ?? "-")|\(route == .main || route == .restoring)") {
             // Sync runs whenever a signed-in user owns the local store; the pull creates the User on a new device.
