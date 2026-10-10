@@ -320,6 +320,15 @@ final class SyncApplier {
         if let v = SyncValue.date(f["createdAt"]) { u.createdAt = v }
         u.selectedSplit = SyncValue.string(f["selectedSplitId"]).flatMap { UUID(uuidString: $0) }.flatMap { splits[$0] }
         if u.selectedSplit?.deletedAt != nil { u.selectedSplit = nil }
+        // Whole-document LWW: a newer document without `progression` means it was cleared on the other device.
+        let prog = f["progression"] as? [String: Any]
+        var thresholds: [String: Int] = [:]
+        for row in (prog?["thresholds"] as? [[String: Any]]) ?? [] {
+            if let k = SyncValue.string(row["name"]), !k.isEmpty, let n = SyncValue.int(row["reps"]),
+               ProgressionRule.thresholdRange.contains(n), thresholds.count < User.maxProgressionThresholds { thresholds[k] = n }
+        }
+        u.progressionThresholds = thresholds
+        u.progressionIncrementKg = SyncValue.double(prog?["incrementKg"]).flatMap { $0 > 0 && $0 <= 50 ? $0 : nil }
         u.updatedAt = Date(syncMs: doc.updatedAtMs)
         u.schemaVersion = max(SyncValue.int(f["schemaVersion"]) ?? 1, 1)
         u.markSynced(digest: SyncMapper.digest(SyncMapper.fields(u)))

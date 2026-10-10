@@ -132,6 +132,14 @@ describe('private users/{uid} subtree', () => {
   it('user doc: schemaVersion must be int', async () => {
     await no(setDoc(doc(db('alice'), 'users/alice'), { name: 'A', schemaVersion: '1' }));
   });
+  it('user doc: progression map is capped and typed', async () => {
+    const rows = (n) => Array.from({ length: n }, (_, i) => ({ name: `lift ${i}`, reps: 8 }));
+    const base = { name: 'A', username: 'alice', schemaVersion: 1 };
+    await ok(setDoc(doc(db('alice'), 'users/alice'), { ...base, progression: { thresholds: rows(200), incrementKg: 2.5 } }));
+    await no(setDoc(doc(db('alice'), 'users/alice'), { ...base, progression: { thresholds: rows(201), incrementKg: 2.5 } }));
+    await no(setDoc(doc(db('alice'), 'users/alice'), { ...base, progression: { thresholds: rows(1), incrementKg: '2.5' } }));
+    await no(setDoc(doc(db('alice'), 'users/alice'), { ...base, progression: 'x' }));
+  });
   it('workout: oversized exercises list rejected', async () => {
     await no(setDoc(doc(db('alice'), 'users/alice/workouts/big'),
       { date: ts(), updatedAt: 1, schemaVersion: 1, exercises: new Array(101).fill({}) }));

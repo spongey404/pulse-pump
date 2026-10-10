@@ -262,7 +262,7 @@ Lives inside the More tab.
 
 **Warmup set generator (free):** Auto-generates warmup ramp (e.g., bar → 60 → 80 → 90 → working set 100kg). Users can customize their warmup pattern.
 
-**Smart weight suggestions (Pulse+ only):** Subtle inline suggestion near the weight input (ghost text style) based on history and RIR trends. E.g., "Suggested: 82.5kg." Non-intrusive, easy to ignore. Users can toggle off in Settings.
+**Smart weight suggestions (Pulse+ only, double progression):** Per exercise the user can set an optional rep threshold (chip on the exercise card; off by default). It applies to the highest working weight logged so far in the session: when the latest completed set at that weight reaches the threshold, the next set row shows a ghost (grey, not auto-filled) weight of that weight plus the user's increment (Settings; stored in kg; kg steps 1/1.25/2.5/5, lb steps 2.5/5/10; default 2.5 kg / 5 lb), so only reps need typing. If the threshold is missed, the usual previous-session ghost remains. Warm-up, drop, rest-pause and failure sets are ignored entirely; unilateral sets need both sides at the threshold. Thresholds are keyed by normalised exercise name, stored on the User and synced (`progression`). Master toggle in Settings.
 
 **Equipment profiles:** Users configure available equipment. App remembers and uses it for substitution suggestions. Supports multiple profiles (e.g., "Home Gym" vs "Commercial Gym").
 

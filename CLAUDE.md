@@ -230,6 +230,10 @@ Each test launches the app with DEBUG launch arguments only (`LaunchConfig` buil
 `bin/test-ui.sh` builds the functions, starts auth+firestore+functions with `firebase emulators:exec`, seeds, uninstalls the app and resets the simulator keychain, then runs the UI target with ad-hoc signing; failures keep a screenshot and the UI hierarchy in `build/UITestResults.xcresult`. The target cannot import app code, so it compiles `Core/DesignSystem/AccessibilityIDs.swift` (enum `AX`, strings only) directly via a file reference in the project; add an identifier there, attach it with `.accessibilityIdentifier(AX…)` (or `.axID`) and use the same constant from a page object in `PulsePumpUITests/Pages/`. `MoreRow`, `MoreMenuRow`, `MoreScreenHeader` and `SocialPill` derive their identifiers from their labels (`AX.row("Settings")`).
 Rules for new tests: wait with `waitForExistence`/predicate expectations (`UITestCase.require`, `waitForLabel`), never sleep; one account per test; quarantine a flaky test with `XCTSkip("reason")` and a note here rather than loosening assertions.
 
+## Progression suggestions (Pulse+)
+
+`ProgressionRule` (Features/Workout/Services) is the pure double-progression rule; `WorkoutViewModel.ghostText` applies it to the next row. Thresholds live on `User.progressionThresholds` (keyed by `Exercise.normalisedName`), increment in `User.progressionIncrementKg` (kg), master toggle is the `smartWeightSuggestions` UserDefaults key (default on). Warm-up/drop/rest-pause/failure sets are ignored. Synced as `users/{uid}.progression`.
+
 ## Dev data (fake data for testing)
 
 DEBUG-only seeder in `PulsePump/DevData/` (compiled out of Release) — the iOS counterpart of `manage.py createdevdata`.

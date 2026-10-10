@@ -24,6 +24,7 @@ struct ExerciseCardView: View {
     @State private var plateBarWeight: Double = 20
     @State private var analytics: ExerciseAnalytics? = nil
     @State private var menuButtonFrame: CGRect = .zero
+    @State private var showProgressionPaywall = false
 
     private var completedSets: Int { entry.sets.filter(\.isCompleted).count }
     private var showRIR: Bool { entry.sets.contains { !$0.rir.isEmpty } || entry.sets.contains { $0.targetRIR != nil } }
@@ -166,6 +167,8 @@ struct ExerciseCardView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
 
+                progressionChipRow
+
                 // Exercise notes row
                 Rectangle().fill(Color.dsHairLine).frame(height: 1)
                 ExerciseNotesRow(notes: $entry.notes, lastSessionNote: analytics?.lastNote ?? "")
@@ -180,6 +183,7 @@ struct ExerciseCardView: View {
                 .strokeBorder(Color.dsHairLine, lineWidth: 1)
         )
         .task(id: entry.exerciseId) { loadAnalytics() }
+        .sheet(isPresented: $showProgressionPaywall) { PulsePlusView(onBack: { showProgressionPaywall = false }) }
         .onAppear { if PlateMath.sameBar(plateBarWeight, 20) { plateBarWeight = unit.olympicBarKg } }
         .onChange(of: unit) { _, u in plateBarWeight = u.olympicBarKg }
     }
@@ -213,6 +217,52 @@ struct ExerciseCardView: View {
             deltaKg: deltaKg,
             lastNote: lastNote
         )
+    }
+
+    // MARK: Progression threshold (Pulse+ smart weight suggestions)
+
+    private static let thresholdChoices = Array(ProgressionRule.thresholdRange)
+
+    @ViewBuilder
+    private var progressionChipRow: some View {
+        if entry.exerciseType != .timeBased, entry.exerciseType != .distanceBased {
+            let threshold = viewModel.progressionThreshold(exerciseIndex: exerciseIndex)
+            let hasPlus = viewModel.hasPlusAccess()
+            HStack {
+                if hasPlus {
+                    Menu {
+                        Button("Off") { viewModel.setProgressionThreshold(nil, exerciseIndex: exerciseIndex, modelContext: modelContext) }
+                        ForEach(Self.thresholdChoices, id: \.self) { reps in
+                            Button("\(reps) reps") {
+                                viewModel.setProgressionThreshold(reps, exerciseIndex: exerciseIndex, modelContext: modelContext)
+                            }
+                        }
+                    } label: { progressionChipLabel(threshold: threshold, locked: false) }
+                } else {
+                    Button { showProgressionPaywall = true } label: { progressionChipLabel(threshold: nil, locked: true) }
+                        .buttonStyle(.plain)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 8)
+            .accessibilityIdentifier("progression.threshold.\(Exercise.normalisedName(entry.exerciseName).replacingOccurrences(of: " ", with: "-"))")
+        }
+    }
+
+    private func progressionChipLabel(threshold: Int?, locked: Bool) -> some View {
+        HStack(spacing: 4) {
+            if locked { Image(systemName: "lock.fill").font(.system(size: 8)) }
+            Text(locked ? "PROGRESS · PULSE+" : (threshold.map { "PROGRESS AT \($0) REPS" } ?? "PROGRESS · OFF"))
+                .font(.spaceMono(9))
+                .tracking(0.5)
+        }
+        .foregroundStyle(threshold != nil ? Color.accentInk : Color.inkMuted)
+        .padding(.horizontal, 8)
+        .frame(height: 24)
+        .background(Color.surf2)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.dsHairLine, lineWidth: 1))
     }
 
     // MARK: Card Header

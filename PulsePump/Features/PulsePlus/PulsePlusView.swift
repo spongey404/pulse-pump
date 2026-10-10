@@ -20,6 +20,7 @@ struct PulsePlusView: View {
     private var features: [(icon: String, title: String, sub: String)] {
         [
             ("chart.line.uptrend.xyaxis", "Smart Predictions", "AI-powered workout suggestions"),
+            ("brain", "Smart weight suggestions", "Set a rep target per lift; when you hit it, your next set suggests the next weight"),
             ("icloud.and.arrow.up", "Cloud Sync", "Sync across all your devices"),
             ("chart.bar.xaxis", "Advanced Analytics", "MET-based calorie tracking + trends"),
             ("waveform.path.ecg.rectangle", "Weekly Recaps", "Automated Monday summaries"),
