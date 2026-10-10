@@ -752,17 +752,6 @@ struct TemplateDetailView: View {
     }
 
     private func shareData(for t: WorkoutTemplate) -> String {
-        let exercises = t.templateExercises.sorted(by: { $0.order < $1.order })
-        let exerciseJSON = exercises.map { ex -> [String: Any] in
-            var dict: [String: Any] = ["name": ex.exerciseName, "sets": ex.targetSets, "reps": ex.targetReps as Any]
-            if let rir = ex.targetRIR { dict["rir"] = rir }
-            return dict
-        }
-        let payload: [String: Any] = ["name": t.name, "exercises": exerciseJSON]
-        guard let data = try? JSONSerialization.data(withJSONObject: payload),
-              let encoded = data.base64EncodedString().addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
-            return "pulsepump://template"
-        }
-        return "pulsepump://template?data=\(encoded)"
+        TemplateShareService.shareURLString(for: t)
     }
 }
