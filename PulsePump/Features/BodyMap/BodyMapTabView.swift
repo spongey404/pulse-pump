@@ -53,13 +53,9 @@ struct BodyMapTabView: View {
     private let weeklyTarget = BodyMapTabView.targets.values.reduce(0, +)
     private let dailyTarget = 26
 
-    /// Generic groups on older exercises fold into the 17 tracked ones.
-    private func tracked(_ m: MuscleGroup) -> MuscleGroup? {
-        switch m {
-        case .back: .upperBack
-        case .shoulders: .sideDelts
-        default: Self.targets[m] != nil ? m : nil
-        }
+    /// Tracked groups an exercise hits, each once (a generic group next to a specific child is dropped).
+    private func trackedSet(_ groups: [MuscleGroup]) -> Set<MuscleGroup> {
+        MuscleGroup.trackedGroups(groups, tracked: Set(Self.tracked))
     }
 
     var body: some View {
@@ -422,7 +418,7 @@ struct BodyMapTabView: View {
                 var latest: Date? = nil
                 for log in exerciseLogs {
                     guard let ex = log.exercise, let w = log.workout, !w.isDraft else { continue }
-                    let hit = (ex.primaryMuscleGroups + ex.secondaryMuscleGroups).contains { tracked($0) == muscle }
+                    let hit = trackedSet(ex.primaryMuscleGroups + ex.secondaryMuscleGroups).contains(muscle)
                     if hit, latest == nil || w.date > latest! { latest = w.date }
                 }
                 let days = latest.map { calendar.dateComponents([.day], from: calendar.startOfDay(for: $0), to: calendar.startOfDay(for: Date())).day ?? 0 } ?? 99
@@ -436,8 +432,9 @@ struct BodyMapTabView: View {
         var setsByMuscle: [MuscleGroup: Int] = [:]
         for log in exerciseLogs {
             guard let ex = log.exercise, let w = log.workout, !w.isDraft, w.date >= weekAgo else { continue }
-            for m in ex.primaryMuscleGroups { if let t = tracked(m) { setsByMuscle[t, default: 0] += log.workingSets.count } }
-            for m in ex.secondaryMuscleGroups { if let t = tracked(m) { setsByMuscle[t, default: 0] += log.workingSets.count / 2 } }
+            let primary = trackedSet(ex.primaryMuscleGroups)
+            for t in primary { setsByMuscle[t, default: 0] += log.workingSets.count }
+            for t in trackedSet(ex.secondaryMuscleGroups).subtracting(primary) { setsByMuscle[t, default: 0] += log.workingSets.count / 2 }
         }
         return Self.tracked.map { muscle in
             let sets = setsByMuscle[muscle] ?? 0
@@ -608,21 +605,26 @@ struct BodyMapTabView: View {
                 Text("\(sets) SETS · \(mins):\(String(format: "%02d", secs))").font(.spaceMono(9)).foregroundStyle(Color.inkMuted)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Button {
-                let cal = Calendar.current
-                let selWD = cal.component(.weekday, from: date)
-                let selMon = cal.date(byAdding: .day, value: -(selWD == 1 ? 6 : selWD - 2), to: cal.startOfDay(for: date))!
-                let weekDiff = cal.dateComponents([.weekOfYear], from: selMon, to: mondayOfThisWeek).weekOfYear ?? 0
-                weekOffset = max(-(numWeeks - 1), -weekDiff)
-                selectedDayIndex = selWD == 1 ? 6 : selWD - 2
-                showCalendar = false
-            } label: {
-                Text("VIEW ›").font(.archivo(13, weight: .black)).tracking(1.5).foregroundStyle(.white)
-                    .padding(.horizontal, 18).frame(height: 44)
-                    .background(Color.pumpAccent)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            // The week scrubber only covers the last `numWeeks` weeks: for an older day clamping the
+            // offset would land on a different week than the one tapped, so the jump is not offered.
+            let weeksBack = WeekMath.weeksAgo(date)
+            if weeksBack < numWeeks {
+                Button {
+                    let selWD = Calendar.current.component(.weekday, from: date)
+                    weekOffset = -weeksBack
+                    selectedDayIndex = selWD == 1 ? 6 : selWD - 2
+                    showCalendar = false
+                } label: {
+                    Text("VIEW ›").font(.archivo(13, weight: .black)).tracking(1.5).foregroundStyle(.white)
+                        .padding(.horizontal, 18).frame(height: 44)
+                        .background(Color.pumpAccent)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+            } else {
+                Text("OLDER THAN\n\(numWeeks) WEEKS").font(.spaceMono(8)).tracking(1.2)
+                    .multilineTextAlignment(.trailing).foregroundStyle(Color.inkMuted)
             }
-            .buttonStyle(.plain)
         }
         .padding(14)
         .background(Color.surf)
@@ -672,7 +674,7 @@ struct BodyMapTabView: View {
         var muscles = Set<MuscleGroup>()
         for log in filteredLogs {
             guard let exercise = log.exercise else { continue }
-            for m in exercise.primaryMuscleGroups { if let t = tracked(m) { muscles.insert(t) } }
+            muscles.formUnion(trackedSet(exercise.primaryMuscleGroups))
         }
         return muscles.count
     }
@@ -689,7 +691,7 @@ struct BodyMapTabView: View {
         var out: [MuscleGroup: Int] = [:]
         for log in filteredLogs {
             guard let exercise = log.exercise else { continue }
-            for m in exercise.primaryMuscleGroups { if let t = tracked(m) { out[t, default: 0] += log.workingSets.count } }
+            for t in trackedSet(exercise.primaryMuscleGroups) { out[t, default: 0] += log.workingSets.count }
         }
         return out
     }
@@ -717,7 +719,7 @@ struct BodyMapTabView: View {
                 var last: Date?
                 for log in exerciseLogs {
                     guard let ex = log.exercise, let w = log.workout, !w.isDraft, w.date <= now else { continue }
-                    if ex.primaryMuscleGroups.contains(where: { tracked($0) == m }), last == nil || w.date > last! { last = w.date }
+                    if trackedSet(ex.primaryMuscleGroups).contains(m), last == nil || w.date > last! { last = w.date }
                 }
                 if let last { levels[m] = max(0, 1 - now.timeIntervalSince(last) / (48 * 3600)) }
             }
