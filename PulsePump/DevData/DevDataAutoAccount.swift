@@ -1,6 +1,7 @@
 #if DEBUG
 import Foundation
 import SwiftData
+import FirebaseAuth
 
 /// DEBUG-only: signs in (or signs up) with an email account and completes onboarding from launch arguments, so a
 /// live or emulator smoke test needs no taps. Compiled out of Release.
@@ -18,6 +19,25 @@ enum DevDataAutoAccount {
     static var autoOnboard: Bool { UserDefaults.standard.bool(forKey: "debugAutoOnboard") }
 
     static func log(_ message: String) { print("[DevDataAutoAccount] \(message)") }
+
+    /// `-debugFreshSession 1`: drop the login (simulator keychain) and the SwiftData store an earlier launch left
+    /// behind, before any view exists, so UI tests always start from a known account. A relaunch without the flag
+    /// keeps both. Runs synchronously from `PulsePumpApp.init`.
+    static func resetStaleSession() {
+        guard UserDefaults.standard.bool(forKey: "debugFreshSession") else { return }
+        try? Auth.auth().signOut()
+        let fm = FileManager.default
+        // SwiftData's default store lives in the App Group container (shared with the widget extension).
+        var roots = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+        if let group = fm.containerURL(forSecurityApplicationGroupIdentifier: "group.com.pulse.PulsePump") {
+            roots.append(group.appendingPathComponent("Library/Application Support"))
+        }
+        for root in roots {
+            for url in (try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)) ?? []
+            where url.lastPathComponent.hasPrefix("default.store") { try? fm.removeItem(at: url) }
+        }
+        log("fresh session: signed out and cleared the local store")
+    }
 
     /// Sign in; when the account does not exist yet, create it.
     static func signIn(session: AuthSession) async {

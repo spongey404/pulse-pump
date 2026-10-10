@@ -7,6 +7,11 @@ struct RootView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @Query private var users: [User]
+    #if DEBUG
+    /// `-createDevData` rebuilds the store once the app is on the main route. Until that has finished the main
+    /// shell stays on the splash, so no view holds a User/Split that the reset is about to delete.
+    @State private var devDataReady = DevDataConfig.fromLaunchArguments() == nil
+    #endif
 
     let session: AuthSession
     let gate: AccountGate
@@ -56,7 +61,11 @@ struct RootView: View {
                     secondary: ("SIGN OUT", { Task { await session.signOut() } })
                 )
             case .main:
+                #if DEBUG
+                if devDataReady { ContentView() } else { SplashView() }
+                #else
                 ContentView()
+                #endif
             }
         }
         .environment(session)
@@ -88,6 +97,7 @@ struct RootView: View {
             guard route == .main else { return }
             #if DEBUG
             DevDataService.runIfRequested(modelContext: modelContext)   // -createDevData 1
+            devDataReady = true
             #endif
             // One-time repair: a split picked before schedules existed gets its default days.
             SplitSchedule.repairMissingDays(modelContext: modelContext)
