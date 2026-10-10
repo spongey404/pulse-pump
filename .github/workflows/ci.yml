@@ -84,3 +84,53 @@ jobs:
           path: build/TestResults.xcresult
           if-no-files-found: ignore
           retention-days: 14
+
+  ios-integration:
+    name: iOS integration tests (Firebase emulators)
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          xcode=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$xcode" ] && sudo xcode-select -s "$xcode"
+          xcodebuild -version
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: firebase/functions/package-lock.json
+
+      - uses: actions/setup-java@v4          # the Firestore emulator needs a JVM
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install Firebase CLI and function dependencies
+        run: |
+          npm install -g firebase-tools
+          npm --prefix firebase/functions ci
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: build/SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('PulsePump.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Integration tests (app code vs Auth + Firestore + Functions emulators)
+        run: bin/test-integration.sh
+
+      - name: Upload integration results and emulator logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-results
+          path: |
+            build/IntegrationResults.xcresult
+            build/emulator-logs
+          if-no-files-found: ignore
+          retention-days: 14
