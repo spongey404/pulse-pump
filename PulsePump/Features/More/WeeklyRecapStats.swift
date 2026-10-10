@@ -99,7 +99,7 @@ struct WeeklyRecapStats {
             }
             for (n, s) in top where s.weight > (bestBefore[n] ?? 0) && bestBefore[n] != nil {
                 bestBefore[n] = s.weight
-                let f = DateFormatter(); f.dateFormat = "EEE d MMM"
+                let f = DateFormatter(); f.dateFormat = "EEE d MMM"; f.timeZone = calendar.timeZone
                 out.append(Record(name: n,
                                   meta: "\(f.string(from: w.date).uppercased()) · \(w.template?.name.uppercased() ?? "WORKOUT")",
                                   value: "\(unit.number(s.weight))×\(s.reps)", weightKg: s.weight, reps: s.reps))

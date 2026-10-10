@@ -71,11 +71,12 @@ struct WidgetDataService {
     }
 
     static func buildSnapshot(workouts: [Workout], modelContext: ModelContext, now: Date = Date(),
-                              fixedDefaults: UserDefaults? = UserDefaults(suiteName: appGroupId)) -> PumpWidgetSnapshot {
+                              fixedDefaults: UserDefaults? = UserDefaults(suiteName: appGroupId),
+                              calendar: Calendar = Calendar(identifier: .iso8601)) -> PumpWidgetSnapshot {
         var snap = PumpWidgetSnapshot()
         snap.hasData = !workouts.isEmpty
         snap.updated = now
-        let cal = Calendar(identifier: .iso8601)
+        let cal = calendar
 
         snap.streak = StreakCalculator.currentStreak(from: workouts.map(\.date), now: now)
         let weekStart = cal.dateInterval(of: .weekOfYear, for: now)?.start ?? now
@@ -166,7 +167,7 @@ struct WidgetDataService {
         predictor.now = { now }
         if let user, let name = predictor.predictNextWorkout(user: user, modelContext: modelContext) {
             snap.nextName = name
-            let df = DateFormatter(); df.dateFormat = "EEE"
+            let df = DateFormatter(); df.dateFormat = "EEE"; df.timeZone = cal.timeZone
             snap.nextDay = df.string(from: now).uppercased()
             if let t = templates.first(where: { $0.name == name }) {
                 snap.nextExercises = t.templateExercises.count
@@ -178,7 +179,7 @@ struct WidgetDataService {
                 }
             }
         }
-        snap.fixed = buildFixed(workouts: workouts, modelContext: modelContext, user: user, snap: snap, now: now, defaults: fixedDefaults)
+        snap.fixed = buildFixed(workouts: workouts, modelContext: modelContext, user: user, snap: snap, now: now, defaults: fixedDefaults, calendar: cal)
         return snap
     }
 }
