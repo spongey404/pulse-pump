@@ -33,6 +33,8 @@ struct SwipeToDeleteRow<Content: View>: View {
                                 .foregroundStyle(.white)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Delete")
+                        .accessibilityIdentifier(AX.swipeDelete)
                     )
             }
 

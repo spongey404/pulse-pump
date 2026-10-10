@@ -81,6 +81,7 @@ struct MoreTabView: View {
                     .font(.archivo(28, weight: .black))
                     .tracking(0.5)
                     .foregroundStyle(Color.inkPrimary)
+                    .accessibilityIdentifier(AX.more.screen)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)

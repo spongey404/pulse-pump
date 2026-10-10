@@ -53,6 +53,7 @@ struct StartWorkoutDock: View {
             .tracking(1)
             .foregroundStyle(Color.inkMuted)
             .padding(.top, 10)
+            .accessibilityIdentifier(AX.home.startNew)
 
             // Continue bar
             Button {
@@ -100,6 +101,7 @@ struct StartWorkoutDock: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.97))
+            .accessibilityIdentifier(AX.home.continueDraft)
             .padding(.horizontal, 16)
             .padding(.top, 6)
             .padding(.bottom, 28)
@@ -160,6 +162,7 @@ struct StartWorkoutDock: View {
             .frame(height: 54)
         }
         .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.97))
+        .accessibilityIdentifier(AX.home.startWorkout)
         .padding(.horizontal, 16)
         .padding(.top, 12)
         .padding(.bottom, 28)

@@ -56,7 +56,7 @@ struct HandleField: View {
                     .textContentType(.username)
                     .focused(isFocused)
                     .submitLabel(.continue)
-                    .accessibilityIdentifier("handleField")
+                    .accessibilityIdentifier(AX.onboarding.handleField)
                     .onChange(of: input.text) { _, _ in input.textChanged() }
                 if input.status == .checking {
                     ProgressView().controlSize(.small)
@@ -75,7 +75,7 @@ struct HandleField: View {
                     .font(.spaceMono(9, weight: .bold))
                     .tracking(0.8)
                     .foregroundStyle(statusColor)
-                    .accessibilityIdentifier("handleStatus")
+                    .accessibilityIdentifier(AX.onboarding.handleStatus)
                 if case .failed = input.status {
                     Button("RETRY") { Task { await input.checkNow() } }
                         .font(.spaceMono(9, weight: .bold))

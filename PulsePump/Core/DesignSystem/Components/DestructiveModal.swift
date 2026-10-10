@@ -146,10 +146,13 @@ struct DestructiveModalModifier: ViewModifier {
                 }
                 .buttonStyle(.plain)
                 .disabled(isWorking)
+                .accessibilityIdentifier(AX.modal.cancel)
 
                 Button {
-                    if dismissOnConfirm { withAnimation(.easeInOut(duration: 0.18)) { isPresented = false } }
+                    // Run the action first: dismissing clears the caller's "item to delete" state (e.g. Programs'
+                    // groupToDelete), which the action reads. Dismissing first made swipe-to-delete a silent no-op.
                     onConfirm()
+                    if dismissOnConfirm { withAnimation(.easeInOut(duration: 0.18)) { isPresented = false } }
                 } label: {
                     Group {
                         if isWorking { ProgressView().tint(.white) } else { Text(confirmLabel) }
@@ -166,6 +169,7 @@ struct DestructiveModalModifier: ViewModifier {
                 .buttonStyle(.plain)
                 .disabled(!confirmEnabled || isWorking)
                 .opacity(confirmEnabled ? 1 : 0.4)
+                .accessibilityIdentifier(AX.modal.confirm)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)

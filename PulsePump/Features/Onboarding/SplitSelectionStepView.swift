@@ -72,6 +72,7 @@ struct SplitSelectionStepView: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(AX.onboarding.split(item.label))
         .animation(.easeInOut(duration: 0.08), value: selected)
     }
 }

@@ -28,6 +28,9 @@ struct PulsePumpApp: App {
     init() {
         // Firebase must be configured (and pointed at the emulator, if requested) before any Auth/Firestore access.
         FirebaseBootstrap.configure()
+        #if DEBUG
+        DevDataAutoAccount.resetStaleSession()   // -debugFreshSession: UI tests start from a clean login + store
+        #endif
         let container = Self.makeModelContainer()
         sharedModelContainer = container
 

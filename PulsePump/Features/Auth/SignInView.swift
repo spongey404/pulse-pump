@@ -65,17 +65,17 @@ struct SignInView: View {
 
                 // ── Auth buttons ───────────────────────────────────
                 VStack(spacing: 10) {
-                    providerButton(label: "Continue with Apple", id: "signInApple") {
+                    providerButton(label: "Continue with Apple", id: AX.auth.apple) {
                         Image(systemName: "apple.logo")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundStyle(Color.inkPrimary)
                     } action: { Task { await session.signInWithApple() } }
 
-                    providerButton(label: "Continue with Google", id: "signInGoogle") {
+                    providerButton(label: "Continue with Google", id: AX.auth.google) {
                         GoogleColorIcon(size: 20)
                     } action: { Task { await session.signInWithGoogle() } }
 
-                    providerButton(label: "Use email instead", id: "signInEmail") {
+                    providerButton(label: "Use email instead", id: AX.auth.useEmail) {
                         Image(systemName: "envelope")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundStyle(Color.inkPrimary)
@@ -98,7 +98,7 @@ struct SignInView: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 32)
                         .padding(.top, 14)
-                        .accessibilityIdentifier("signInError")
+                        .accessibilityIdentifier(AX.auth.error)
                 }
 
                 // ── Disclaimer ─────────────────────────────────────
@@ -333,7 +333,7 @@ struct EmailAuthSheet: View {
                             .font(.archivo(13))
                             .foregroundStyle(Color.signalDown)
                             .padding(.top, 14)
-                            .accessibilityIdentifier("emailAuthError")
+                            .accessibilityIdentifier(AX.auth.emailError)
                     }
                     if let sent = session.resetEmailSentTo {
                         Text("Check \(sent) for a reset link.")
@@ -386,7 +386,7 @@ struct EmailAuthSheet: View {
                     }
                     .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.97))
                     .disabled(!canSubmit || session.isBusy)
-                    .accessibilityIdentifier("emailAuthSubmit")
+                    .accessibilityIdentifier(AX.auth.submit)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 16)
                     .overlay { if session.isBusy { ProgressView().tint(Color.accentInk) } }
@@ -435,6 +435,7 @@ struct EmailAuthSheet: View {
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier(target == .signIn ? AX.auth.modeSignIn : AX.auth.modeSignUp)
             }
         }
         .padding(3)
@@ -464,7 +465,7 @@ struct EmailAuthSheet: View {
                     .padding(.horizontal, 14)
                     .background(Color.surf)
                     .clipShape(RoundedRectangle(cornerRadius: 11))
-                    .accessibilityIdentifier("emailField")
+                    .accessibilityIdentifier(AX.auth.emailField)
                     .overlay(alignment: .leading) {
                         if email.isEmpty {
                             Text("you@example.com")
@@ -523,7 +524,7 @@ struct EmailAuthSheet: View {
                 .autocorrectionDisabled()
                 .textContentType(isSignUp ? .newPassword : .password)
                 .focused($focusedField, equals: .password)
-                .accessibilityIdentifier("passwordField")
+                .accessibilityIdentifier(AX.auth.passwordField)
                 .frame(height: 50)
                 .padding(.leading, 14)
                 .padding(.trailing, 46)
@@ -543,6 +544,8 @@ struct EmailAuthSheet: View {
                         .frame(width: 36, height: 36)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(passwordVisible ? "Hide password" : "Show password")
+                .accessibilityIdentifier(AX.auth.togglePassword)
                 .padding(.trailing, 6)
             }
 

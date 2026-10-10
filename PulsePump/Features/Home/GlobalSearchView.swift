@@ -132,6 +132,7 @@ struct GlobalSearchView: View {
                 .autocapitalization(.none)
                 .submitLabel(.search)
                 .focused($searchFocused)
+                .accessibilityIdentifier(AX.exercise.search)
 
             if !searchText.isEmpty {
                 Button { searchText = "" } label: {
@@ -257,6 +258,7 @@ struct GlobalSearchView: View {
                             exerciseRow(exercise)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier(AX.exercise.searchRow(exercise.name))
                         if idx < matchingExercises.count - 1 {
                             Rectangle().fill(Color.dsHairLine).frame(height: 1).padding(.leading, 70)
                         }

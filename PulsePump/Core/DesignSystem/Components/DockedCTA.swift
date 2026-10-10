@@ -12,6 +12,9 @@ struct DockedCTA: View {
     let primaryLabel: String
     var style: Style = .filled
     var secondaryIcon: String? = nil
+    /// Accessibility identifiers for the UI tests (primary button / secondary icon button).
+    var primaryID: String? = nil
+    var secondaryID: String? = nil
     var secondaryAction: (() -> Void)? = nil
     let action: () -> Void
 
@@ -32,6 +35,7 @@ struct DockedCTA: View {
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                     .buttonStyle(.plain)
+                    .axID(primaryID)
 
                     if let secondaryIcon {
                         Button {
@@ -47,6 +51,7 @@ struct DockedCTA: View {
                                 )
                         }
                         .buttonStyle(.plain)
+                        .axID(secondaryID)
                     }
 
                 case .quiet:
@@ -74,6 +79,7 @@ struct DockedCTA: View {
                         .frame(minHeight: 52)
                     }
                     .buttonStyle(.plain)
+                    .axID(primaryID)
                 }
             }
             .padding(.horizontal, 16)

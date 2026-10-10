@@ -38,7 +38,19 @@ enum FirebaseBootstrap {
     static func configure() {
         guard !didConfigure else { return }
         didConfigure = true
-        if FirebaseApp.app() == nil { FirebaseApp.configure() }
+        if FirebaseApp.app() == nil {
+            #if DEBUG
+            // Emulator launches (-useFirebaseEmulator 1) must run under the emulator project id: the Firestore and
+            // Functions emulators namespace everything by project, so the real project id from
+            // GoogleService-Info.plist would never see data seeded under "demo-pump" (and callable functions 404).
+            if FirebaseEmulatorConfig.from(defaults: .standard) != nil, let options = FirebaseOptions.defaultOptions() {
+                options.projectID = emulatorProjectId
+                FirebaseApp.configure(options: options)
+            } else { FirebaseApp.configure() }
+            #else
+            FirebaseApp.configure()
+            #endif
+        }
 
         #if DEBUG
         if let emulator = FirebaseEmulatorConfig.from(defaults: .standard) {

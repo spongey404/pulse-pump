@@ -13,6 +13,8 @@ bin/test.sh               # unit tests exactly as CI runs them (first available 
 bin/test.sh --release     # + Release build, and fails if DEBUG-only DevData code ships
 bin/test-integration.sh   # iOS integration tests vs the local Firebase emulators (needs firebase-tools, Java 21, Node 24)
 bin/test-integration.sh --only SyncRoundTripEmulatorTests   # a single integration suite
+bin/test-ui.sh            # end-to-end XCUITests: taps through the app vs the Firebase emulators (see "Testing")
+bin/test-ui.sh --only WorkoutUITests            # one class (or Class/testName); --device "iPhone 17e" picks the simulator
 (cd firebase/functions && npm test)     # functions unit tests (npm run test:integration for trigger tests)
 (cd firebase/rules-tests && npm test)   # Firestore security rules tests
 bin/createdevdata.sh      # build, clean-install and seed fake data (see "Dev data")
@@ -23,7 +25,7 @@ xcodebuild -scheme PulsePump -destination 'platform=iOS Simulator,name=iPhone 17
 xcodebuild -scheme PulsePumpWidgetExtension -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
 ```
 
-Xcode version: 26.4. Target: iOS 17+. CI: `.github/workflows/ci.yml` runs `bin/test.sh --release` on every PR and on pushes to `main`/`develop`. UI tests (`PulsePumpUITests`) are stale and not run in CI until rewritten.
+Xcode version: 26.4. Target: iOS 17+. CI: `.github/workflows/ci.yml` runs `bin/test.sh --release` on every PR and on pushes to `main`/`develop`. UI tests (`PulsePumpUITests`) run through `bin/test-ui.sh` (CI job `ios-ui`, non-blocking until stable); `bin/test.sh` skips them.
 
 ## Tech Stack
 
@@ -211,15 +213,22 @@ Key design tokens implemented in Swift:
 
 ## Testing
 
-Three tiers, all run in CI (`.github/workflows/ci.yml`):
+Four tiers, all run in CI (`.github/workflows/ci.yml`):
 
 | Tier | Where | Run |
 |---|---|---|
 | Unit | `PulsePumpTests/` (Core, Features, DevData) with in-memory fakes (`InMemoryRemoteStore`, `FakeSocialRemote`) | `bin/test.sh` (CI job `test`) |
 | Firebase rules + functions | `firebase/rules-tests`, `firebase/functions/test` (vitest, emulators) | `npm test` in each folder (CI job `firebase`) |
+| iOS UI (XCUITest) | `PulsePumpUITests/`: tap-through flows (sign-up/onboarding, logging, history, programs, body, settings, account lifecycle, social) vs the emulators | `bin/test-ui.sh` (CI job `ios-ui`, `continue-on-error` until stable) |
 | iOS emulator integration | `PulsePumpTests/Integration/`: real Swift auth/sync/social code vs the Auth, Firestore and Functions emulators (project `demo-pump`) | `bin/test-integration.sh` (CI job `ios-integration`) |
 
 The Integration suites are skipped (not failed) unless `PUMP_EMULATOR=1`, so `bin/test.sh` stays emulator-free. `bin/test-integration.sh` builds the functions, starts the emulators with `firebase emulators:exec` and forwards the flag to the test host (`TEST_RUNNER_PUMP_EMULATOR=1`); it builds with ad-hoc signing because Firebase Auth needs a keychain entitlement. Shared helpers are in `Integration/Support/`: `EmulatorKit` (one named FirebaseApp per simulated user, so several accounts are signed in at once and the host's default app is never touched; Auth and Firestore are wiped between tests), `TestAccount`, and `IntegrationData` factories that reuse `SyncDevice` and `DevDataService` for realistic workouts. One test file per feature. Clients are asserted to be on `demo-pump`, never the real project. DEBUG demo fixtures (`DevFlags.socialFixtures`, `FakeSocialRemote` data) are never used by integration tests. CI uploads the xcresult and emulator logs on failure.
+
+### UI tests (`PulsePumpUITests`)
+
+Each test launches the app with DEBUG launch arguments only (`LaunchConfig` builds them): `-useFirebaseEmulator 1`, `-debugEmail/-debugPassword` (a fresh emulator account per test, signed in or created by `DevDataAutoAccount`), `-debugAutoOnboard 1`, `-createDevData 1 -devDataReset 1 -devDataScenario busy|lapsed|new-user -devDataUnits kg|lb -devDataPlus/-devDataDraft`, `-debugStartTab`, `-wantsTutorial`, and `-debugFreshSession 1` (signs out the previous login and clears the SwiftData store before any view exists, so tests are independent). Social tests sign in as the seeded `friend1@example.com` / `password` (`firebase/seed`, run by the script). Under `-useFirebaseEmulator` the default Firebase app is re-targeted to project `demo-pump` (the emulators namespace data by project).
+`bin/test-ui.sh` builds the functions, starts auth+firestore+functions with `firebase emulators:exec`, seeds, uninstalls the app and resets the simulator keychain, then runs the UI target with ad-hoc signing; failures keep a screenshot and the UI hierarchy in `build/UITestResults.xcresult`. The target cannot import app code, so it compiles `Core/DesignSystem/AccessibilityIDs.swift` (enum `AX`, strings only) directly via a file reference in the project; add an identifier there, attach it with `.accessibilityIdentifier(AX…)` (or `.axID`) and use the same constant from a page object in `PulsePumpUITests/Pages/`. `MoreRow`, `MoreMenuRow`, `MoreScreenHeader` and `SocialPill` derive their identifiers from their labels (`AX.row("Settings")`).
+Rules for new tests: wait with `waitForExistence`/predicate expectations (`UITestCase.require`, `waitForLabel`), never sleep; one account per test; quarantine a flaky test with `XCTSkip("reason")` and a note here rather than loosening assertions.
 
 ## Dev data (fake data for testing)
 

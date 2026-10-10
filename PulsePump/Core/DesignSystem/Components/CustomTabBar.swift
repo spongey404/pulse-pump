@@ -13,6 +13,8 @@ struct CustomTabBar: View {
         let activeIcon: String
     }
 
+    private static let ids = [AX.tab.programs, AX.tab.social, AX.tab.home, AX.tab.body, AX.tab.more]
+
     private let tabs: [Tab] = [
         Tab(tag: 0, label: "Programs", icon: "list.bullet.clipboard",       activeIcon: "list.bullet.clipboard.fill"),
         Tab(tag: 1, label: "Social",   icon: "person.2",                    activeIcon: "person.2.fill"),
@@ -65,6 +67,8 @@ struct CustomTabBar: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(Self.ids[tab.tag])
+        .accessibilityLabel(tab.label)
     }
 
     // MARK: - Regular tab
@@ -90,5 +94,7 @@ struct CustomTabBar: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(Self.ids[tab.tag])
+        .accessibilityLabel(tab.label)
     }
 }

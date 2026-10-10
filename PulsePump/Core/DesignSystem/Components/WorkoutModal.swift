@@ -63,6 +63,7 @@ struct WorkoutModalModifier: ViewModifier {
                         )
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier(AX.modal.secondary)
 
                 Button {
                     withAnimation(.easeInOut(duration: 0.18)) { isPresented = false }
@@ -82,6 +83,7 @@ struct WorkoutModalModifier: ViewModifier {
                         )
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier(AX.modal.primary)
             }
         }
         .padding(14)

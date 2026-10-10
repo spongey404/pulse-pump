@@ -138,6 +138,8 @@ struct WorkoutCompletionView: View {
                     // posting becomes an explicit choice in the overflow menu.
                     primaryLabel: autoShare ? "POST" : "DONE",
                     secondaryIcon: "ellipsis",
+                    primaryID: AX.completion.cta,
+                    secondaryID: AX.completion.menu,
                     secondaryAction: {
                         withAnimation(.spring(response: 0.22, dampingFraction: 0.82)) { showComposerMenu.toggle() }
                     },
@@ -200,8 +202,11 @@ struct WorkoutCompletionView: View {
                         .frame(width: 28, height: 32)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Close summary")
+                .accessibilityIdentifier(AX.completion.back)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("WORKOUT COMPLETE")
+                        .accessibilityIdentifier(AX.completion.title)
                         .font(Font.spaceMono(8))
                         .foregroundStyle(Color.inkMuted)
                         .tracking(1.5)
@@ -456,6 +461,7 @@ struct WorkoutCompletionView: View {
                     TextField("", text: $caption, axis: .vertical)
                         .font(.archivo(15))
                         .foregroundStyle(Color.inkPrimary)
+                        .accessibilityIdentifier(AX.completion.caption)
                 }
                 .frame(minHeight: 44)
                 .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
@@ -518,20 +524,20 @@ struct WorkoutCompletionView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 8)
 
-            composerMenuRow(title: "Don't post", note: "STAYS IN YOUR HISTORY, NOBODY SEES IT") {
+            composerMenuRow(id: AX.completion.dontPost, title: "Don't post", note: "STAYS IN YOUR HISTORY, NOBODY SEES IT") {
                 dismissWithoutPosting()
             }
-            composerMenuRow(title: "Post without body map", note: "STATS ONLY, NO BODY MAP") {
+            composerMenuRow(id: AX.completion.postNoBodyMap, title: "Post without body map", note: "STATS ONLY, NO BODY MAP") {
                 postAndDismiss(includeBodyMap: false)
             }
             Group {
                 if autoShare {
-                    composerMenuRow(title: "Never post automatically", note: "POSTING BECOMES OPT-IN") {
+                    composerMenuRow(id: nil, title: "Never post automatically", note: "POSTING BECOMES OPT-IN") {
                         autoShare = false
                         dismissWithoutPosting()
                     }
                 } else {
-                    composerMenuRow(title: "Post to feed", note: "SHARE THIS SESSION ONCE") {
+                    composerMenuRow(id: AX.completion.postToFeed, title: "Post to feed", note: "SHARE THIS SESSION ONCE") {
                         postAndDismiss(includeBodyMap: true)
                     }
                 }
@@ -543,7 +549,7 @@ struct WorkoutCompletionView: View {
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 8, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 8, style: .continuous))
     }
 
-    private func composerMenuRow(title: String, note: String, action: @escaping () -> Void) -> some View {
+    private func composerMenuRow(id: String?, title: String, note: String, action: @escaping () -> Void) -> some View {
         Button {
             withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) { showComposerMenu = false }
             action()
@@ -560,6 +566,7 @@ struct WorkoutCompletionView: View {
             .frame(minHeight: 56)
         }
         .buttonStyle(.plain)
+        .axID(id)
         .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
     }
 

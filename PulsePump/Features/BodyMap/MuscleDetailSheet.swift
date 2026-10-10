@@ -93,6 +93,7 @@ struct MuscleDetailSheet: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
+                        .accessibilityIdentifier(AX.body.muscleSheet)
                 }
             }
             .task {

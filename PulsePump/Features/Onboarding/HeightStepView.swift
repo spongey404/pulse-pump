@@ -52,6 +52,7 @@ struct HeightStepView: View {
                                 .tint(Color.accentInk)
                                 .keyboardType(.decimalPad)
                                 .focused($focusedField, equals: .cm)
+                                .accessibilityIdentifier(AX.onboarding.heightField)
                                 .frame(width: 160)
 
                             Text("CM")
@@ -80,6 +81,7 @@ struct HeightStepView: View {
                     .tint(Color.accentInk)
                     .keyboardType(.numberPad)
                     .focused($focusedField, equals: focus)
+                    .accessibilityIdentifier(AX.onboarding.heightImperial(unit))
                     .frame(width: 100)
 
                 Text(unit)

@@ -21,6 +21,7 @@ struct AgeStepView: View {
                         .tint(Color.accentInk)
                         .keyboardType(.numberPad)
                         .focused($isFocused)
+                        .accessibilityIdentifier(AX.onboarding.ageField)
                         .frame(width: 160)
 
                     Text("YRS")

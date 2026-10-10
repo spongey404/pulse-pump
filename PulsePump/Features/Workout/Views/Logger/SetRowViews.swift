@@ -4,6 +4,7 @@ import SwiftData
 struct NewSetRowView: View {
     @Binding var setEntry: SetEntry
     let setIndex: Int
+    var exerciseIndex: Int = 0
     let exerciseType: ExerciseType
     let showRIR: Bool
     let ghostText: (weight: String, reps: String)?
@@ -83,6 +84,7 @@ struct NewSetRowView: View {
                         )
                     }
                 }
+                .accessibilityIdentifier(AX.workout.setWeight(ex: exerciseIndex, setIndex + 1))
                 .frame(maxWidth: .infinity)
 
                 // REPS field (not shown for time/distance-only)
@@ -92,6 +94,7 @@ struct NewSetRowView: View {
                         ghost: ghostText?.reps,
                         keyboard: .numberPad
                     )
+                    .accessibilityIdentifier(AX.workout.setReps(ex: exerciseIndex, setIndex + 1))
                     .frame(maxWidth: .infinity)
                 }
 
@@ -116,6 +119,8 @@ struct NewSetRowView: View {
                     checkmarkView
                 }
                 .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.8))
+                .accessibilityLabel(setEntry.isCompleted ? "Set \(setIndex + 1) done" : "Log set \(setIndex + 1)")
+                .accessibilityIdentifier(AX.workout.setCheck(ex: exerciseIndex, setIndex + 1))
                 .frame(width: 30, alignment: .trailing)
             }
             .padding(.horizontal, 12)

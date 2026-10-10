@@ -85,6 +85,8 @@ struct OnboardingContainerView: View {
                         .frame(width: 36, height: 36)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Back")
+                .accessibilityIdentifier(AX.onboarding.back)
             } else {
                 Spacer().frame(width: 36, height: 36)
             }
@@ -111,6 +113,7 @@ struct OnboardingContainerView: View {
                         .font(.spaceMono(8))
                         .tracking(1)
                         .foregroundStyle(Color.inkMuted)
+                        .accessibilityIdentifier(AX.onboarding.stepCounter)
                     Spacer()
                     Text("\(Int(viewModel.progress * 100))%")
                         .font(.spaceMono(8))

@@ -120,6 +120,7 @@ struct CoachMarkOverlay: View {
                 Button("SKIP") { viewModel.skip() }
                     .font(.spaceMono(9)).tracking(0.8).foregroundStyle(Color.inkMuted)
                     .padding(.leading, 10)
+                    .accessibilityIdentifier(AX.tutorial.skip)
             }
             .padding(.bottom, 7)
 
@@ -127,6 +128,7 @@ struct CoachMarkOverlay: View {
                 .font(.archivo(19, weight: .black))
                 .foregroundStyle(Color.inkPrimary)
                 .padding(.bottom, 4)
+                .accessibilityIdentifier(AX.tutorial.card)
             Text(step.description)
                 .font(.archivo(13))
                 .foregroundStyle(Color.inkPrimary.opacity(0.7))
@@ -145,6 +147,7 @@ struct CoachMarkOverlay: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier(AX.tutorial.next)
         }
         .padding(.top, 14).padding(.horizontal, 14).padding(.bottom, 12)
         .background(Color.canvasBg)

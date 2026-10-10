@@ -225,6 +225,7 @@ struct HomeTabView: View {
                         .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.inkPrimary.opacity(0.13), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier(AX.home.profileCancel)
 
                 Button {
                     showProfileMenu = false
@@ -241,6 +242,7 @@ struct HomeTabView: View {
                         .shadow(color: Color.signalDown.opacity(0.33), radius: 8, y: 4)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier(AX.home.signOut)
             }
         }
         .padding(14)
@@ -277,6 +279,8 @@ struct HomeTabView: View {
                             .font(.system(size: 17, weight: .medium))
                             .foregroundStyle(Color.inkPrimary)
                     }
+                    .accessibilityLabel("Search")
+                    .accessibilityIdentifier(AX.home.searchButton)
                     Button { showProfileMenu = true } label: {
                         RoundedRectangle(cornerRadius: 8)
                             .fill(Color.surf2)
@@ -288,6 +292,8 @@ struct HomeTabView: View {
                             )
                     }
                     .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.92))
+                    .accessibilityLabel("Profile")
+                    .accessibilityIdentifier(AX.home.profileButton)
                 }
             }
             .padding(.horizontal, 16)
@@ -312,6 +318,7 @@ struct HomeTabView: View {
                             .font(.archivo(28, weight: .black))
                             .foregroundStyle(Color.inkPrimary)
                             .lineLimit(1)
+                            .accessibilityIdentifier(AX.home.predictedName)
                         HStack(spacing: 8) {
                             if !lastDoneLabel.isEmpty {
                                 Text(lastDoneLabel)
@@ -361,6 +368,7 @@ struct HomeTabView: View {
                                 .padding(.vertical, 4)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier(AX.home.notToday)
                     }
                     .padding(.top, 2)
                 }
@@ -382,28 +390,32 @@ struct HomeTabView: View {
                     label: "STREAK",
                     value: "\(currentStreak)",
                     sub: "DAYS",
-                    valueColor: Color.accentInk
+                    valueColor: Color.accentInk,
+                    id: AX.home.kpiStreak
                 )
                 Rectangle().fill(Color.dsHairLine).frame(width: 1)
                 kpiCell(
                     label: "IMPROVED",
                     value: "\(weekImproved)",
                     sub: "THIS WK",
-                    valueColor: Color.inkPrimary
+                    valueColor: Color.inkPrimary,
+                    id: AX.home.kpiImproved
                 )
                 Rectangle().fill(Color.dsHairLine).frame(width: 1)
                 kpiCell(
                     label: "PRs",
                     value: "\(weekPRs)",
                     sub: "THIS WK",
-                    valueColor: Color.inkPrimary
+                    valueColor: Color.inkPrimary,
+                    id: AX.home.kpiPRs
                 )
                 Rectangle().fill(Color.dsHairLine).frame(width: 1)
                 kpiCell(
                     label: "SETS",
                     value: "\(weekSets)",
                     sub: "THIS WK",
-                    valueColor: Color.inkPrimary
+                    valueColor: Color.inkPrimary,
+                    id: AX.home.kpiSets
                 )
             }
             .frame(maxWidth: .infinity)
@@ -412,7 +424,7 @@ struct HomeTabView: View {
         }
     }
 
-    private func kpiCell(label: String, value: String, sub: String, valueColor: Color) -> some View {
+    private func kpiCell(label: String, value: String, sub: String, valueColor: Color, id: String) -> some View {
         VStack(spacing: 2) {
             Text(label)
                 .font(.spaceMono(8))
@@ -423,6 +435,7 @@ struct HomeTabView: View {
                 .font(.spaceMono(24, weight: .bold))
                 .foregroundStyle(valueColor)
                 .contentTransition(.numericText())
+                .accessibilityIdentifier(id)
             Text(sub)
                 .font(.spaceMono(7))
                 .tracking(1.5)
@@ -505,6 +518,7 @@ struct HomeTabView: View {
                     .tracking(1.5)
                     .foregroundStyle(Color.accentInk)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier(AX.home.recent)
                 Text("SETS")
                     .font(.spaceMono(8))
                     .tracking(1.5)
@@ -563,6 +577,8 @@ struct HomeTabView: View {
                             .foregroundStyle(volDelta.hasPrefix("▲") ? Color.signalUp : (volDelta == "—" ? Color.inkMuted : Color.signalDown))
                             .frame(width: 56, alignment: .trailing)
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier(AX.home.recentRow(idx))
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
 

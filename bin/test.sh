@@ -5,8 +5,8 @@
 #   bin/test.sh --release       also do a Release build and check DEBUG-only code is compiled out
 #   bin/test.sh --device "iPhone 17 Pro" --result build/tests.xcresult
 #
-# UI tests (PulsePumpUITests) are not run: the suite is stale (see audit/widgets-tests.md) and is
-# skipped until it is rewritten.
+# UI tests (PulsePumpUITests) are not run here: they need the Firebase emulators, see bin/test-ui.sh. They are
+# excluded by -only-testing:PulsePumpTests below.
 set -o pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 source bin/_common.sh

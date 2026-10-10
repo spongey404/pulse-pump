@@ -71,6 +71,7 @@ struct ExperienceLevelStepView: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(AX.onboarding.experience(level.displayName))
         .animation(.easeInOut(duration: 0.08), value: selected)
     }
 }

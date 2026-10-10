@@ -27,6 +27,7 @@ struct WeightStepView: View {
                             .tint(Color.accentInk)
                             .keyboardType(.decimalPad)
                             .focused($isFocused)
+                            .accessibilityIdentifier(AX.onboarding.weightField)
                             .frame(width: 160)
 
                         Text(unitLabel)
@@ -60,6 +61,7 @@ struct WeightStepView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier(unit == .kg ? AX.onboarding.unitKg : AX.onboarding.unitLbs)
                 .animation(.easeInOut(duration: 0.15), value: selected)
             }
         }

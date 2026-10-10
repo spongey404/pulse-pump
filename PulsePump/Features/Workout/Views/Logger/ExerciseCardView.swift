@@ -134,6 +134,7 @@ struct ExerciseCardView: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier(AX.workout.addSet(exerciseIndex))
 
                     Button {
                         if showRIR {
@@ -248,6 +249,7 @@ struct ExerciseCardView: View {
                         .tracking(0.3)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier(AX.workout.exerciseName(exerciseIndex))
                 }
                 HStack(spacing: 5) {
                     Text(entry.equipmentType.rawValue.uppercased())
@@ -328,6 +330,7 @@ struct ExerciseCardView: View {
                 set: { entry.sets[setIdx] = $0 }
             ),
             setIndex: setIdx,
+            exerciseIndex: exerciseIndex,
             exerciseType: entry.exerciseType,
             showRIR: showRIR,
             ghostText: ghost,

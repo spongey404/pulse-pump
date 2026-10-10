@@ -88,6 +88,9 @@ struct ProgramsTabView: View {
                                 ProgramGroupRowView(group: group)
                                     .contentShape(Rectangle())
                                     .onTapGesture { selectedNavItem = TemplateNavItem(group: group) }
+                                    .accessibilityElement(children: .combine)
+                                    .accessibilityAddTraits(.isButton)
+                                    .accessibilityIdentifier(AX.programs.row(group.name))
                             }
                         }
                     }
@@ -170,6 +173,7 @@ struct ProgramsTabView: View {
                     .font(.archivo(26, weight: .black))
                     .tracking(0.5)
                     .foregroundStyle(Color.inkPrimary)
+                    .accessibilityIdentifier(AX.programs.screen)
 
                 Spacer()
 
@@ -186,6 +190,8 @@ struct ProgramsTabView: View {
                         )
                 }
                 .buttonStyle(PressScaleButtonStyle())
+                .accessibilityLabel("Add program")
+                .accessibilityIdentifier(AX.programs.add)
             }
             .padding(.horizontal, 16)
             .padding(.top, 2)
@@ -205,6 +211,7 @@ struct ProgramsTabView: View {
                 .font(.archivo(32, weight: .black))
                 .tracking(1)
                 .foregroundStyle(Color.inkFaint)
+                .accessibilityIdentifier(AX.programs.empty)
             Text("Tap + to add a preset or build your own.")
                 .font(.archivo(13))
                 .foregroundStyle(Color.inkMuted)
@@ -237,6 +244,7 @@ struct ProgramsTabView: View {
             .contentShape(RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.97))
+        .accessibilityIdentifier(AX.programs.newProgram)
         .padding(.horizontal, 16)
         .padding(.top, 16)
     }

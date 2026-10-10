@@ -106,6 +106,7 @@ struct ChallengesView: View {
                         .font(.archivo(26, weight: .black)).tracking(0.5).lineSpacing(0)
                         .foregroundStyle(Color.inkPrimary)
                         .padding(.bottom, 3)
+                        .accessibilityIdentifier(AX.social.challengeName)
                     Text(metric.globalSubheading(weightUnit))
                         .font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted)
                 }
@@ -125,6 +126,7 @@ struct ChallengesView: View {
                         actionRow("VIEW LEADERBOARD")
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier(AX.social.challengeView)
                 } else {
                     Button {
                         isJoiningGlobal = true
@@ -134,6 +136,7 @@ struct ChallengesView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(isJoiningGlobal)
+                    .accessibilityIdentifier(AX.social.challengeJoin)
                 }
             }
             .background(Color.surf)

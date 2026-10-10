@@ -48,6 +48,7 @@ struct GenderStepView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier(AX.onboarding.gender(gender.displayName))
                     .animation(.easeInOut(duration: 0.08), value: viewModel.gender == gender)
                 }
             }
