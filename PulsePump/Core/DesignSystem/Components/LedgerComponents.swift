@@ -29,6 +29,7 @@ struct MoreScreenHeader<Trailing: View>: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Back")
+                .accessibilityIdentifier(AX.nav.back)
 
                 VStack(alignment: .leading, spacing: 4) {
                     if let overline {
@@ -43,6 +44,7 @@ struct MoreScreenHeader<Trailing: View>: View {
                         .foregroundStyle(Color.inkPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
+                        .accessibilityIdentifier(AX.nav.title(title))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -141,6 +143,7 @@ struct MoreRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(AX.row(label))
     }
 }
 
@@ -202,5 +205,6 @@ struct MoreMenuRow<T: Hashable>: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(AX.menu(label))
     }
 }

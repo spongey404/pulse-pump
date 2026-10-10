@@ -25,6 +25,7 @@ struct SocialPill: View {
         }
         .buttonStyle(.plain)
         .disabled(isDisabled)
+        .accessibilityIdentifier(AX.social.pill(title))
     }
 }
 

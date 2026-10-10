@@ -63,11 +63,13 @@ struct ActiveWorkoutView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 10) {
-                        ForEach(Array(viewModel.exerciseEntries.enumerated()), id: \.element.id) { idx, _ in
+                        ForEach(Array(viewModel.exerciseEntries.enumerated()), id: \.element.id) { idx, shown in
                             ExerciseCardView(
+                                // Bounds-guarded: while the screen dismisses after Discard / Finish the entries are
+                                // already cleared and a stale card must not index past the end (was a crash).
                                 entry: Binding(
-                                    get: { viewModel.exerciseEntries[idx] },
-                                    set: { viewModel.exerciseEntries[idx] = $0 }
+                                    get: { viewModel.exerciseEntries.indices.contains(idx) ? viewModel.exerciseEntries[idx] : shown },
+                                    set: { if viewModel.exerciseEntries.indices.contains(idx) { viewModel.exerciseEntries[idx] = $0 } }
                                 ),
                                 exerciseIndex: idx,
                                 viewModel: viewModel,
@@ -126,6 +128,7 @@ struct ActiveWorkoutView: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier(AX.workout.addExercise)
                         .padding(.top, 4)
                         .id("addExerciseButton")
 
@@ -248,6 +251,8 @@ struct ActiveWorkoutView: View {
                     .frame(width: 28, height: 42)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Close workout")
+            .accessibilityIdentifier(AX.workout.cancel)
 
             // Session label + name·duration
             VStack(alignment: .leading, spacing: 0) {
@@ -260,6 +265,7 @@ struct ActiveWorkoutView: View {
                     .foregroundStyle(Color.inkPrimary)
                     .tracking(0.3)
                     .lineLimit(1)
+                    .accessibilityIdentifier(AX.workout.sessionTitle)
             }
 
             Spacer()
@@ -269,6 +275,7 @@ struct ActiveWorkoutView: View {
                 restPillView
             }
             .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.93))
+            .accessibilityIdentifier(AX.workout.restPill)
         }
         .padding(.horizontal, 14)
         .frame(height: 48)
@@ -303,6 +310,7 @@ struct ActiveWorkoutView: View {
                     .tracking(1)
                     .foregroundStyle(running ? runningFg : Color.inkMuted)
                     .monospacedDigit()
+                    .accessibilityIdentifier(AX.workout.restTime)
             }
 
             // Progress ring
@@ -405,6 +413,8 @@ struct ActiveWorkoutView: View {
                 .frame(height: 56)
             }
             .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.98))
+            .accessibilityLabel("Finish workout")
+            .accessibilityIdentifier(AX.workout.finish)
             .padding(.horizontal, 12)
             .padding(.top, 12)
             .padding(.bottom, 32)

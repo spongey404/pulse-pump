@@ -87,6 +87,8 @@ struct WorkoutDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Back")
+            .accessibilityIdentifier(AX.nav.back)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(shortDate(workout.date))
@@ -97,6 +99,7 @@ struct WorkoutDetailView: View {
                     .font(.archivo(18, weight: .black))
                     .foregroundStyle(Color.inkPrimary)
                     .lineLimit(1)
+                    .accessibilityIdentifier(AX.detail.title)
             }
 
             Spacer()
@@ -118,6 +121,7 @@ struct WorkoutDetailView: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier(AX.detail.done)
             } else {
                 Menu {
                     Button { isEditing = true } label: {
@@ -139,6 +143,8 @@ struct WorkoutDetailView: View {
                         .background(Color.surf2)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
+                .accessibilityLabel("Workout actions")
+                .accessibilityIdentifier(AX.detail.menu)
             }
         }
         .padding(.horizontal, 14)
@@ -303,6 +309,7 @@ struct EditableSetRow: View {
                         .font(.spaceMono(15, weight: .bold))
                         .foregroundStyle(Color.inkPrimary)
                         .frame(width: 64)
+                        .accessibilityIdentifier(AX.detail.setWeight(setLog.order + 1))
                         .onChange(of: weightText) { _, v in
                             // Field is in the display unit; SetLog.weight stays kg. Only write on a real edit.
                             if v != unit.inputText(setLog.weight), let kg = unit.parseKg(v) { setLog.weight = kg }
@@ -316,6 +323,7 @@ struct EditableSetRow: View {
                         .font(.spaceMono(15, weight: .bold))
                         .foregroundStyle(Color.inkPrimary)
                         .frame(width: 40)
+                        .accessibilityIdentifier(AX.detail.setReps(setLog.order + 1))
                         .onChange(of: repsText) { _, v in
                             setLog.reps = parseWholeNumber(v) ?? setLog.reps
                         }

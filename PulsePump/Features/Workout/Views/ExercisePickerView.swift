@@ -182,6 +182,7 @@ struct ExercisePickerView: View {
                 TextField("Search exercises…", text: $searchText)
                     .font(.archivo(14))
                     .foregroundStyle(Color.inkPrimary)
+                    .accessibilityIdentifier(AX.picker.search)
                 if !searchText.isEmpty {
                     Button { searchText = "" } label: {
                         Image(systemName: "xmark.circle.fill")
@@ -441,5 +442,6 @@ private struct ExerciseRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(AX.picker.row(item.displayName))
     }
 }

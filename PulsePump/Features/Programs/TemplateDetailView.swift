@@ -129,6 +129,8 @@ struct TemplateDetailView: View {
                     .frame(width: 28, height: 32)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Back")
+            .accessibilityIdentifier(AX.programs.detailBack)
 
             VStack(alignment: .leading, spacing: 2) {
                 if let gName = groupName {
@@ -146,6 +148,7 @@ struct TemplateDetailView: View {
                     .font(.archivo(20, weight: .black))
                     .foregroundStyle(Color.inkPrimary)
                     .lineLimit(1)
+                    .accessibilityIdentifier(AX.programs.detailTitle)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -162,6 +165,7 @@ struct TemplateDetailView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier(AX.programs.detailDone)
             } else {
                 HStack(spacing: 8) {
                     Button {
@@ -177,6 +181,7 @@ struct TemplateDetailView: View {
                             .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.dsHairLine, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier(AX.programs.detailEdit)
 
                     Button { onStartWorkout(activeTemplate) } label: {
                         Text("START")
@@ -188,6 +193,7 @@ struct TemplateDetailView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier(AX.programs.detailStart)
                 }
             }
         }
@@ -559,6 +565,7 @@ struct TemplateDetailView: View {
             .contentShape(RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(AX.programs.detailAddExercise)
         .padding(.horizontal, 16)
         .padding(.top, 12)
     }

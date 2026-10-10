@@ -59,16 +59,16 @@ struct TutorialPromptStepView: View {
 
             VStack(spacing: 10) {
                 if isExperienced {
-                    ctaButton("START TRAINING", primary: true) {
+                    ctaButton("START TRAINING", primary: true, id: AX.onboarding.tutorialStart) {
                         viewModel.wantsTutorial = false
                         onComplete()
                     }
                 } else {
-                    ctaButton("YES, SHOW ME AROUND", primary: true) {
+                    ctaButton("YES, SHOW ME AROUND", primary: true, id: AX.onboarding.tutorialYes) {
                         viewModel.wantsTutorial = true
                         onComplete()
                     }
-                    ctaButton("SKIP, I'LL EXPLORE MYSELF", primary: false) {
+                    ctaButton("SKIP, I'LL EXPLORE MYSELF", primary: false, id: AX.onboarding.tutorialSkip) {
                         viewModel.wantsTutorial = false
                         onComplete()
                     }
@@ -87,7 +87,7 @@ struct TutorialPromptStepView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func ctaButton(_ label: String, primary: Bool, action: @escaping () -> Void) -> some View {
+    private func ctaButton(_ label: String, primary: Bool, id: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(label)
                 .font(.archivo(primary ? 19 : 17, weight: .black))
@@ -108,5 +108,6 @@ struct TutorialPromptStepView: View {
                 .shadow(color: primary ? Color.pumpAccent.opacity(0.2) : .clear, radius: 10, y: 4)
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(id)
     }
 }

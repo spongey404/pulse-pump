@@ -77,6 +77,8 @@ struct WorkoutHistoryView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(mode == .list ? "List view" : "Calendar view")
+                    .accessibilityIdentifier(mode == .list ? AX.history.modeList : AX.history.modeCalendar)
                 }
             }
             .padding(3)
@@ -293,6 +295,7 @@ struct WorkoutHistoryView: View {
                         listRow(workout)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier(AX.history.row)
                     .listRowInsets(EdgeInsets())
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
@@ -395,6 +398,7 @@ struct WorkoutHistoryView: View {
                 .font(.archivo(28, weight: .black))
                 .tracking(1)
                 .foregroundStyle(Color.inkFaint)
+                .accessibilityIdentifier(AX.history.empty)
             Text("Complete your first workout to see it here.")
                 .font(.archivo(13))
                 .foregroundStyle(Color.inkMuted)

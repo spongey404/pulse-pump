@@ -17,7 +17,7 @@ struct SplashView: View {
                 ProgressView().tint(Color.accentInk)
             }
         }
-        .accessibilityIdentifier("splash")
+        .accessibilityIdentifier(AX.gate.splash)
     }
 }
 
@@ -35,7 +35,7 @@ struct RestoringView: View {
                     .font(.archivo(13)).foregroundStyle(Color.inkMuted)
             }
         }
-        .accessibilityIdentifier("restoring")
+        .accessibilityIdentifier(AX.gate.restoring)
     }
 }
 
@@ -73,6 +73,6 @@ struct GateMessageView: View {
             }
             .padding(.horizontal, 24)
         }
-        .accessibilityIdentifier("gateMessage")
+        .accessibilityIdentifier(AX.gate.message)
     }
 }

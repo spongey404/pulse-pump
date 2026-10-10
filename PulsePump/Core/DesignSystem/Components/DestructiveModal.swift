@@ -146,6 +146,7 @@ struct DestructiveModalModifier: ViewModifier {
                 }
                 .buttonStyle(.plain)
                 .disabled(isWorking)
+                .accessibilityIdentifier(AX.modal.cancel)
 
                 Button {
                     if dismissOnConfirm { withAnimation(.easeInOut(duration: 0.18)) { isPresented = false } }
@@ -166,6 +167,7 @@ struct DestructiveModalModifier: ViewModifier {
                 .buttonStyle(.plain)
                 .disabled(!confirmEnabled || isWorking)
                 .opacity(confirmEnabled ? 1 : 0.4)
+                .accessibilityIdentifier(AX.modal.confirm)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)

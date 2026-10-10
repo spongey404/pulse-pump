@@ -91,6 +91,7 @@ struct BodyMapTabView: View {
                 RoundedRectangle(cornerRadius: 3).fill(Color.pumpAccent).frame(width: 16, height: 16)
                 Text("PULSE/PUMP")
                     .font(.spaceMono(10, weight: .bold)).tracking(2).foregroundStyle(Color.inkPrimary)
+                    .accessibilityIdentifier(AX.body.screen)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Button {
@@ -110,6 +111,7 @@ struct BodyMapTabView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier(AX.body.calendar)
         }
         .padding(.horizontal, 16)
         .frame(height: 44)
@@ -194,6 +196,7 @@ struct BodyMapTabView: View {
                     Text("\(selectedTotalSets)")
                         .font(.spaceMono(56, weight: .bold)).tracking(-2).foregroundStyle(Color.inkPrimary)
                         .lineLimit(1).minimumScaleFactor(0.6)
+                        .accessibilityIdentifier(AX.body.totalSets)
                     Text("/ \(selectedDayIndex == -1 ? weeklyTarget : dailyTarget)")
                         .font(.spaceMono(11)).foregroundStyle(Color.inkMuted)
                 }
@@ -286,6 +289,8 @@ struct BodyMapTabView: View {
                     .foregroundStyle(atOldest ? Color.inkGhost : Color.inkPrimary)
                     .frame(width: 44, height: 44)
             }
+            .accessibilityLabel("Previous week")
+            .accessibilityIdentifier(AX.body.prevWeek)
             Button { selectedDayIndex = -1 } label: {
                 HStack(spacing: 8) {
                     Text("WK \(weekNumber)").font(.spaceMono(10, weight: .bold)).tracking(1.2)
@@ -300,11 +305,14 @@ struct BodyMapTabView: View {
                     .strokeBorder(active ? Color.clear : Color.dsHairLine, lineWidth: 1))
             }
             .frame(maxWidth: .infinity)
+            .accessibilityIdentifier(AX.body.allWeek)
             Button { if !atNewest { weekOffset += 1; selectedDayIndex = -1 } } label: {
                 Text("›").font(.spaceMono(18))
                     .foregroundStyle(atNewest ? Color.inkGhost : Color.inkPrimary)
                     .frame(width: 44, height: 44)
             }
+            .accessibilityLabel("Next week")
+            .accessibilityIdentifier(AX.body.nextWeek)
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 8).padding(.top, 4)
@@ -337,6 +345,7 @@ struct BodyMapTabView: View {
                         .strokeBorder(active ? Color.clear : Color.dsHairLine, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier(AX.body.day(i))
             }
         }
         .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 12)

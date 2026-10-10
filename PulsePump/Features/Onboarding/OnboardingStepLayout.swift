@@ -93,6 +93,7 @@ struct OnboardingStepLayout<Content: View>: View {
                     )
             }
             .disabled(!canContinue)
+            .accessibilityIdentifier(AX.onboarding.next)
             .buttonStyle(.plain)
             .padding(.horizontal, 20)
             .padding(.top, 10)

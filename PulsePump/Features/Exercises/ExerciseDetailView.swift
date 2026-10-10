@@ -41,6 +41,7 @@ struct ExerciseDetailView: View {
                     .listRowBackground(Color.clear)
                 } else {
                     ExerciseStatsSection(exercise: exercise)
+                        .accessibilityIdentifier(AX.exercise.detailProgress)
                     ExerciseTrendChart(exercise: exercise)
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                 }

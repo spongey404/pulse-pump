@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		38UI00012F90000000DEC87C /* AccessibilityIDs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38UI00022F90000000DEC87C /* AccessibilityIDs.swift */; };
 		38AB00052F80B00000DEC87C /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 38AB00012F80B00000DEC87C /* FirebaseAuth */; };
 		38AB00062F80B00000DEC87C /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 38AB00022F80B00000DEC87C /* FirebaseCore */; };
 		38AB00072F80B00000DEC87C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 38AB00032F80B00000DEC87C /* GoogleSignIn */; };
@@ -55,6 +56,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		38UI00022F90000000DEC87C /* AccessibilityIDs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AccessibilityIDs.swift; path = PulsePump/Core/DesignSystem/AccessibilityIDs.swift; sourceTree = SOURCE_ROOT; };
 		3884EC182F800A5900DEC87C /* PulsePump.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PulsePump.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3884EC292F800A5A00DEC87C /* PulsePumpTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PulsePumpTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3884EC332F800A5A00DEC87C /* PulsePumpUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PulsePumpUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -148,6 +150,7 @@
 				38PS00012F80C00000DEC87C /* PumpShared */,
 				3884EC2C2F800A5A00DEC87C /* PulsePumpTests */,
 				3884EC362F800A5A00DEC87C /* PulsePumpUITests */,
+				38UI00022F90000000DEC87C /* AccessibilityIDs.swift */,
 				3884EC192F800A5900DEC87C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -366,6 +369,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				38UI00012F90000000DEC87C /* AccessibilityIDs.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

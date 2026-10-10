@@ -33,6 +33,7 @@ struct ActivityFeedView: View {
                     .font(.display(28))
                     .tracking(0.5)
                     .foregroundStyle(Color.inkPrimary)
+                    .accessibilityIdentifier(AX.social.screen)
                 Spacer()
                 NavigationLink {
                     ActivityView(viewModel: viewModel)
@@ -50,6 +51,7 @@ struct ActivityFeedView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Activity")
+                .accessibilityIdentifier(AX.social.bell)
 
                 NavigationLink {
                     YourProfileView(viewModel: viewModel)
@@ -57,6 +59,7 @@ struct ActivityFeedView: View {
                     Avatar(initial: viewModel.myName, size: 32, showBorder: false)
                 }
                 .accessibilityLabel("Your profile")
+                .accessibilityIdentifier(AX.social.profile)
             }
             .padding(.horizontal, 16)
             .padding(.top, 2)
@@ -80,6 +83,7 @@ struct ActivityFeedView: View {
                             }
                     }
                     .buttonStyle(PressScaleButtonStyle())
+                    .accessibilityIdentifier(i == 0 ? AX.social.tabFriends : AX.social.tabChallenges)
                 }
                 Spacer()
             }
@@ -293,6 +297,7 @@ struct FeedPostCard: View {
                 }
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier(AX.social.postCard(item.handle))
 
             Spacer()
 

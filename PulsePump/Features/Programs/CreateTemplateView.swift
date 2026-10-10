@@ -58,6 +58,8 @@ struct CreateTemplateView: View {
                     .frame(width: 28, height: 32)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Back")
+            .accessibilityIdentifier(AX.programs.createBack)
 
             Text("NEW PROGRAM")
                 .font(.display(22))
@@ -82,6 +84,7 @@ struct CreateTemplateView: View {
             }
             .buttonStyle(.plain)
             .disabled(!canSave)
+            .accessibilityIdentifier(AX.programs.createSave)
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
@@ -93,6 +96,7 @@ struct CreateTemplateView: View {
             Text("PROGRAM NAME")
                 .font(Font.mono(9)).tracking(1.3).foregroundStyle(Color.inkMuted)
             TextField("E.G. MY PPL PROGRAM", text: $name)
+                .accessibilityIdentifier(AX.programs.createName)
                 .font(.display(20))
                 .foregroundStyle(Color.inkPrimary)
                 .frame(height: 46)
@@ -129,6 +133,7 @@ struct CreateTemplateView: View {
                             )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier(AX.programs.createDays(d))
                 }
                 Spacer()
             }
@@ -228,6 +233,7 @@ struct CreateTemplateView: View {
                 .shadow(color: Color.pumpAccent.opacity(0.4), radius: 8, y: 4)
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier(AX.programs.createAddExercise)
         }
         .padding(.vertical, 32)
         .padding(.horizontal, 20)
@@ -287,6 +293,7 @@ struct CreateTemplateView: View {
                 )
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier(AX.programs.createAddExercise)
             .padding(.horizontal, 16)
             .padding(.top, 10)
         }

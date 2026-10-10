@@ -30,6 +30,7 @@ struct NameStepView: View {
                         .focused($isFocused)
                         .padding(.horizontal, 16)
                         .submitLabel(.continue)
+                        .accessibilityIdentifier(AX.onboarding.nameField)
                         .onSubmit { if viewModel.canContinue { viewModel.advance() } }
                 }
                 .frame(height: 54)

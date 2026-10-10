@@ -146,6 +146,9 @@ struct BodyMap2DView: View {
                     }
                 }
                 .contentShape(Rectangle())
+                .accessibilityElement()
+                .accessibilityLabel("\(label) body map")
+                .accessibilityIdentifier(label == "FRONT" ? AX.body.figureFront : AX.body.figureBack)
                 .onTapGesture { location in
                     guard let onTap else { return }
                     for r in regions.reversed() where r.path.applying(t).contains(location) {

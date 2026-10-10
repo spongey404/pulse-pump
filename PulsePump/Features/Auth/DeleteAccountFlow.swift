@@ -91,7 +91,7 @@ private struct DeleteAccountFields: View {
                 TextField("", text: $model.typed)
                     .textInputAutocapitalization(.characters)
                     .autocorrectionDisabled()
-                    .accessibilityIdentifier("deleteConfirmField")
+                    .accessibilityIdentifier(AX.settings.deleteConfirmField)
             }
             if model.needsPassword {
                 Text("PASSWORD")
@@ -100,14 +100,14 @@ private struct DeleteAccountFields: View {
                 field {
                     SecureField("", text: $model.password)
                         .textContentType(.password)
-                        .accessibilityIdentifier("deletePasswordField")
+                        .accessibilityIdentifier(AX.settings.deletePasswordField)
                 }
             }
             if let error = model.errorMessage {
                 Text(error)
                     .font(.archivo(12))
                     .foregroundStyle(Color.signalDown)
-                    .accessibilityIdentifier("deleteError")
+                    .accessibilityIdentifier(AX.settings.deleteError)
             }
         }
         .disabled(model.isWorking)
