@@ -9,20 +9,23 @@ iOS workout logging app. Part of the Pulse ecosystem.
 ## Build Commands
 
 ```bash
-# Build (simulator)
-xcodebuild -scheme PulsePump -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build
+bin/test.sh               # unit tests exactly as CI runs them (first available iPhone simulator)
+bin/test.sh --release     # + Release build, and fails if DEBUG-only DevData code ships
+bin/test-integration.sh   # iOS integration tests vs the local Firebase emulators (needs firebase-tools, Java 21, Node 24)
+bin/test-integration.sh --only SyncRoundTripEmulatorTests   # a single integration suite
+bin/test-ui.sh            # end-to-end XCUITests: taps through the app vs the Firebase emulators (see "Testing")
+bin/test-ui.sh --only WorkoutUITests            # one class (or Class/testName); --device "iPhone 17e" picks the simulator
+(cd firebase/functions && npm test)     # functions unit tests (npm run test:integration for trigger tests)
+(cd firebase/rules-tests && npm test)   # Firestore security rules tests
+bin/createdevdata.sh      # build, clean-install and seed fake data (see "Dev data")
 
-# Run tests
-xcodebuild -scheme PulsePump -destination 'platform=iOS Simulator,name=iPhone 16 Pro' test
-
-# Run a single test class
-xcodebuild -scheme PulsePump -destination 'platform=iOS Simulator,name=iPhone 16 Pro' -only-testing:PulsePumpTests/StreakCalculatorTests test
-
-# Build widget extension
-xcodebuild -scheme PulsePumpWidget -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build
+# Raw xcodebuild (pick any installed simulator, e.g. iPhone 17 Pro)
+xcodebuild -scheme PulsePump -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
+xcodebuild -scheme PulsePump -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:PulsePumpTests/StreakCalculatorTests test
+xcodebuild -scheme PulsePumpWidgetExtension -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
 ```
 
-Xcode version: 26.4. Target: iOS 17+.
+Xcode version: 26.4. Target: iOS 17+. CI: `.github/workflows/ci.yml` runs `bin/test.sh --release` on every PR and on pushes to `main`/`develop`. UI tests (`PulsePumpUITests`) run through `bin/test-ui.sh` (CI job `ios-ui`, non-blocking until stable); `bin/test.sh` skips them.
 
 ## Tech Stack
 
@@ -36,30 +39,36 @@ Xcode version: 26.4. Target: iOS 17+.
 
 ## Project Structure
 
+Feature-first inside the app target; shared code in `Core/`. Targets use Xcode synchronized folders, so adding/moving a file needs no project edit.
+
 ```
-PulsePump/
-├── App/PulsePumpApp.swift   # Entry point; ModelContainer, deep-link handling
-├── Models/                  # SwiftData models + value-type structs
-│   └── Enums/               # All enum types (Codable + CaseIterable + Identifiable)
-├── Views/
-│   ├── BodyMap/             # Muscle heatmap tab
-│   ├── ExerciseLibrary/     # Browse + search + create exercises
-│   ├── Home/                # Widgets, global search, start-workout dock
-│   ├── More/                # History, profile, workout detail
-│   ├── Onboarding/          # Multi-step onboarding container + step views
-│   ├── Programs/            # Template list, detail, create, edit
-│   ├── Settings/            # Settings, profile edit, Pulse+, data export
-│   ├── Social/              # Feed, friends, comments, challenges
-│   ├── Tutorial/            # CoachMark overlay + hint system
-│   ├── Utilities/           # Plate calculator, warmup generator, equipment profiles
-│   └── Workout/             # Active workout, exercise picker, completion, share card
-├── ViewModels/              # WorkoutViewModel, SocialViewModel, OnboardingViewModel, TutorialViewModel
-├── Services/                # Business logic (see Service Layer below)
-├── Utilities/StreakCalculator.swift
-├── Extensions/Color+Theme.swift
-└── ContentView.swift        # Tab bar + HomeTabView + ProgramsTabView
-PulsePumpWidget/             # Widget + Live Activity extension
+PulsePump/                      app target
+├── App/                        entry point (PulsePumpApp), RootView (onboarding vs app), ContentView (tab shell), deep links
+├── Core/
+│   ├── DesignSystem/           Color+Theme, Font+Design, Components/ (Avatar, buttons, ticker, tab bar, modals, ledger rows, KPIBlock, FilterChip…)
+│   ├── Models/                 SwiftData models, Enums/, Firestore/ (Codable structs mirroring Firestore)
+│   ├── Persistence/            exercise/template seeding, Strong/Hevy import, JSON/CSV export
+│   ├── Services/               Auth/, Firestore/ (FirestoreService), Notifications/
+│   └── Utilities/              StreakCalculator, String+Search
+├── Features/                   one folder per feature: its Views + ViewModel + Services together
+│   ├── Home/  Workout/ (Views/, Views/Logger/, Tools/, WorkoutViewModel, Services/: rest timer, live activity, calories)
+│   ├── Programs/  BodyMap/  Exercises/  Equipment/  Social/ (Feed/, Friends/, Challenges/, SocialViewModel)
+│   ├── More/  Settings/  PulsePlus/ (paywall, StoreKit service, upsell banner)  Onboarding/  Tutorial/
+│   └── Widgets/                widget builder UI, gallery, WidgetDataService (snapshot for the extension), BodyweightLog
+├── DevData/                    DEBUG-only fake-data seeder (see "Dev data")
+├── Resources/Fonts/            Archivo + Space Mono
+└── Assets.xcassets, Info.plist, entitlements, GoogleService-Info.plist
+PumpShared/                     compiled into BOTH app and widget extension (widget layouts, catalog, snapshot, BodyHeat, Live Activity attributes/intents)
+PulsePumpWidget/                WidgetKit extension: providers, intents, bundle, Live Activity
+PulsePumpTests/                 mirrors the app: Core/, Features/…, DevData/
+PulsePumpUITests/               (stale)
+bin/                            test.sh, createdevdata.sh
+docs/                           spec, design reference, audit/
+design/                         Claude Design handoffs, HTML prototypes, font sources
+PumpApp/                        old Expo scaffold (unused)
 ```
+
+Where things go: a screen and everything only it uses → its `Features/<Name>/`; a view/modifier two or more features use → `Core/DesignSystem/Components/`; a model/enum → `Core/Models/`; cross-feature infrastructure → `Core/Services/`; anything the widget extension also needs → `PumpShared/` (must not import app-only code). One primary type per file; name the file after it.
 
 ## Naming
 
@@ -129,8 +138,8 @@ Lowercase prefixes, present tense:
 - `TemplateExercise.targetReps` is `Int?` — nil means no target; sets are always required
 - `WorkoutActivityAttributes` is defined in **both** the main app (`LiveActivityService.swift`) and the widget extension (`WorkoutLiveActivity.swift`) — must be kept in sync manually until a shared framework is added
 - Feed caching: `SocialViewModel` stores `lastFeedFetch` timestamp with a 5-min TTL; pull-to-refresh forces a network fetch
-- `StreakCalculator` (Utilities/) is the single source of truth for streak logic — gap-based, 3-day expiry window
-- `Color.pumpAccent` is the canonical accent token (`Extensions/Color+Theme.swift` + xcassets `PumpAccent.colorset`). Set to blue `#0A6FC0` (same light/dark — filled surfaces stay this flat value so white text keeps contrast). `Color.accentInk` (xcassets `AccentInk.colorset`) is the text/glyph/border variant, which lifts to `#4DB8FF` on the dark canvas; use it instead of `pumpAccent` for anything that isn't a filled surface. `Color.pumpPrimary` is a deprecated alias — do not use it. Full rationale in `design_handoff_pulse_color_system/README.md` (Claude Design project "App color system redesign").
+- `StreakCalculator` (Core/Utilities/) is the single source of truth for streak logic — gap-based, 3-day expiry window
+- `Color.pumpAccent` is the canonical accent token (`Core/DesignSystem/Color+Theme.swift` + xcassets `PumpAccent.colorset`). Set to blue `#1AA7FF` (Pump Design System e68c2807, same light/dark). `Color.accentInk` (xcassets `AccentInk.colorset`) is the same hex today but is the token for text/glyph/border use — use it instead of `pumpAccent` for anything that isn't a filled surface. `Color.pumpPrimary` is a deprecated alias — do not use it. Full rationale in `design_handoff_pulse_color_system/README.md` (Claude Design project "App color system redesign").
 
 ## UI Patterns
 
@@ -144,14 +153,14 @@ Lowercase prefixes, present tense:
 
 | File | Purpose |
 |------|---------|
-| `Utilities/StreakCalculator.swift` | Shared streak logic |
-| `Views/Social/FeedBodyMapView.swift` | Compact front/back silhouette for feed posts |
+| `Core/Utilities/StreakCalculator.swift` | Shared streak logic |
+| `Features/Social/Feed/FeedBodyMapView.swift` | Compact front/back silhouette for feed posts |
 | `PulsePumpWidget/WorkoutLiveActivity.swift` | Dynamic Island + lock screen Live Activity |
-| `Models/Enums/MuscleSubRegion.swift` | 35 anatomical sub-regions |
+| `Core/Models/Enums/MuscleSubRegion.swift` | 35 anatomical sub-regions |
 
-## Design Refresh (pump and fuel design html files/)
+## Design Refresh (design/pump and fuel design html files/)
 
-The `pump and fuel design html files/` directory (renamed from `pump-and-fuel/project/`)
+The `design/pump and fuel design html files/` directory (renamed from `pump-and-fuel/project/`)
 contains HTML prototype files from Claude Design that define the target UI. These are
 the reference screens for the ongoing UI/UX update:
 
@@ -164,23 +173,19 @@ the reference screens for the ongoing UI/UX update:
 | `Pump Social Feed.html` | Feed, post detail, friend profile |
 | `Pump Programs Exercise Library.html` | Programs list, template detail, exercise picker |
 
-Design system reference: `pump and fuel design html files/uploads/pulse-design-system.md`
+Design system reference: `design/pump and fuel design html files/uploads/pulse-design-system.md`
 (multi-app master doc). Pump-only reference with the confirmed token values:
-`PULSE_PUMP_DESIGN_REFERENCE.md`. Color token rationale and contrast numbers:
+`docs/PULSE_PUMP_DESIGN_REFERENCE.md`. Color token rationale and contrast numbers:
 `design_handoff_pulse_color_system/README.md` (Claude Design project "App color system
 redesign", also covers `Set Row States.dc.html`, the active-row/completed-row/PR states spec).
 
 Key design tokens implemented in Swift:
-- **Accent:** `#0A6FC0` blue, flat in both color schemes on filled surfaces (`pumpAccent`);
-  lifts to `#4DB8FF` on the dark canvas for text/glyphs/borders (`accentInk`)
-- **Canvas bg:** `#f9f8f4` light / `#1a1917` dark
-- **Ticker bg:** `#1a1816`, always-dark per spec — but the implemented `TickerStripView`
-  switches to a light cream (`#f0ebe0`) in light mode, a deliberate deviation. Its
-  up-arrow green follows suit: `#00e07a` in dark mode, `#2a7a4a` in light mode (the
-  bright green washes out on the light bg).
+- **Accent:** `#1AA7FF` blue, flat in both color schemes (`pumpAccent`, `accentInk`)
+- **Canvas bg:** `#F6F7F9` (Cool Paper) light / `#1A1917` dark; elevated `#ECEFF3`/`#252220`, sunken `#E0E5EB`/`#2E2A26`, deep `#D4DAE2`/`#363028`; ink `#151A21`/`#ECE5D6`
+- **Ticker bg:** `--ticker-bg` per scheme: `#E0E5EB` light / `#0E0C0A` dark. ▲ `#00AA55` light / `#00E07A` dark; ▼ `#E5281C` light / `#FF3B30` dark.
 - **Fonts:** Archivo (display/headers/body) + Space Mono (all numbers and labels, no
   exception) — both registered and bundled (`Info.plist` `UIAppFonts`,
-  `Extensions/Font+Design.swift`). Not Bebas Neue/DM Mono/Inter — that was an earlier,
+  `Core/DesignSystem/Font+Design.swift`). Not Bebas Neue/DM Mono/Inter — that was an earlier,
   superseded plan.
 - **No drop shadows.** Elevation via background tint only. (Some pre-existing accent
   shadows remain in the codebase as a known deviation, not yet swept.)
@@ -189,9 +194,72 @@ Key design tokens implemented in Swift:
 - **PR is a treatment, not a color** — `inkPrimary` text + 1.5px `inkPrimary` underline,
   not amber. Amber (`#c9892e`) is reserved app-wide for Fuel's over-target signal.
 
+## Widgets (PumpShared + PulsePumpWidget)
+
+- `PumpShared/` is a synchronized folder compiled into **both** the app and the widget extension (`WorkoutActivityAttributes`, `BodyHeat`, the custom-widget catalog/canvas, the fixed widget layouts). Nothing in it may import app-only code; it uses `Color("…")` asset names and the `.archivo` / `.spaceMono` / `Color(hex:)` helpers, which the extension mirrors in `PulsePumpWidget/WidgetSupport.swift`.
+- **Fixed widgets** (Pump Widgets.dc.html): every layout is a pure SwiftUI view in `PumpShared/Widgets/*Widget.swift` drawn at the design's point size (`PWFamily.size`: small 170², medium 364×170, large 364×382) and scaled to the real container by `PWHost`. Data comes only from `PumpWidgetSnapshot` (`snap.fixed` = `PWFixedData`); `PumpWidgetSnapshot.sample` mirrors the numbers printed in the design. Add a widget by writing the view + `static var gallery`, registering it in `PWRegistry`, and adding a descriptor in `PulsePumpWidget/FixedWidgets.swift` + the bundle.
+- **Widget Gallery** (More › Widgets › Widget gallery) renders every registered widget in light / dark / tinted — what you see is what WidgetKit draws. DEBUG: launch with `-debugGallery <section id|all>` to open it directly.
+- **Custom widgets** (Widget Builder): library saved in the App Group (`PumpWidgetStore`); builder in `Features/Widgets/`; "Pump Custom" extension widget picks a saved widget via an App Intent.
+- `WidgetDataService` computes the snapshot (app side) after workouts / on launch; the extension never touches SwiftData or Firebase.
+- Plus widgets (04-07) show `LockedWidgetPreview` (`PWPlusGate`) when `snap.fixed.isPlus` is false; its button opens `pulsepump://pulse-plus`.
+
+## Units (kg stored, display converts)
+
+**Everything stored or synced is kg** (`User.weight`, `SetLog.weight`, `BarConfig.weightKg`, `EquipmentProfile.availablePlates`, bodyweight log, widget snapshot numbers, Live Activity values, feed payloads, challenge scores); height is cm. `UnitPreference` (`PumpShared/WeightUnit.swift`, alias `WeightUnit`) only changes display and typed input, so changing it must never mutate stored data.
+- Views read `@Environment(\.weightUnit)` (injected once in `RootView` from the User). Use `unit.format(kg)` / `number(kg)` / `label` for output and `unit.parseKg(text)` / `kg(fromDisplay:)` for input. Never hard-code "KG"/"LB" or `String(format: "%g", weight)`.
+- Logger text fields hold kg strings (`SetEntry.weight`) but edit in the display unit via `KgTextField`. Plate maths goes through `PlateMath` (loads real lb plates in lbs mode).
+- Widgets: `PumpWidgetSnapshot.weightUnit`; widget views convert/label via `snap.unit`. Services without a view use `UnitPreference.current` (UserDefaults mirror written by `RootView`).
+- Exports are always kg (JSON `weightUnit`, CSV `Unit` column). Imports convert from the file's unit (header, else the unit the user picks).
+
+## Testing
+
+Four tiers, all run in CI (`.github/workflows/ci.yml`):
+
+| Tier | Where | Run |
+|---|---|---|
+| Unit | `PulsePumpTests/` (Core, Features, DevData) with in-memory fakes (`InMemoryRemoteStore`, `FakeSocialRemote`) | `bin/test.sh` (CI job `test`) |
+| Firebase rules + functions | `firebase/rules-tests`, `firebase/functions/test` (vitest, emulators) | `npm test` in each folder (CI job `firebase`) |
+| iOS UI (XCUITest) | `PulsePumpUITests/`: tap-through flows (sign-up/onboarding, logging, history, programs, body, settings, account lifecycle, social) vs the emulators | `bin/test-ui.sh` (CI job `ios-ui`, `continue-on-error` until stable) |
+| iOS emulator integration | `PulsePumpTests/Integration/`: real Swift auth/sync/social code vs the Auth, Firestore and Functions emulators (project `demo-pump`) | `bin/test-integration.sh` (CI job `ios-integration`) |
+
+The Integration suites are skipped (not failed) unless `PUMP_EMULATOR=1`, so `bin/test.sh` stays emulator-free. `bin/test-integration.sh` builds the functions, starts the emulators with `firebase emulators:exec` and forwards the flag to the test host (`TEST_RUNNER_PUMP_EMULATOR=1`); it builds with ad-hoc signing because Firebase Auth needs a keychain entitlement. Shared helpers are in `Integration/Support/`: `EmulatorKit` (one named FirebaseApp per simulated user, so several accounts are signed in at once and the host's default app is never touched; Auth and Firestore are wiped between tests), `TestAccount`, and `IntegrationData` factories that reuse `SyncDevice` and `DevDataService` for realistic workouts. One test file per feature. Clients are asserted to be on `demo-pump`, never the real project. DEBUG demo fixtures (`DevFlags.socialFixtures`, `FakeSocialRemote` data) are never used by integration tests. CI uploads the xcresult and emulator logs on failure.
+
+### UI tests (`PulsePumpUITests`)
+
+Each test launches the app with DEBUG launch arguments only (`LaunchConfig` builds them): `-useFirebaseEmulator 1`, `-debugEmail/-debugPassword` (a fresh emulator account per test, signed in or created by `DevDataAutoAccount`), `-debugAutoOnboard 1`, `-createDevData 1 -devDataReset 1 -devDataScenario busy|lapsed|new-user -devDataUnits kg|lb -devDataPlus/-devDataDraft`, `-debugStartTab`, `-wantsTutorial`, and `-debugFreshSession 1` (signs out the previous login and clears the SwiftData store before any view exists, so tests are independent). Social tests sign in as the seeded `friend1@example.com` / `password` (`firebase/seed`, run by the script). Under `-useFirebaseEmulator` the default Firebase app is re-targeted to project `demo-pump` (the emulators namespace data by project).
+`bin/test-ui.sh` builds the functions, starts auth+firestore+functions with `firebase emulators:exec`, seeds, uninstalls the app and resets the simulator keychain, then runs the UI target with ad-hoc signing; failures keep a screenshot and the UI hierarchy in `build/UITestResults.xcresult`. The target cannot import app code, so it compiles `Core/DesignSystem/AccessibilityIDs.swift` (enum `AX`, strings only) directly via a file reference in the project; add an identifier there, attach it with `.accessibilityIdentifier(AX…)` (or `.axID`) and use the same constant from a page object in `PulsePumpUITests/Pages/`. `MoreRow`, `MoreMenuRow`, `MoreScreenHeader` and `SocialPill` derive their identifiers from their labels (`AX.row("Settings")`).
+Rules for new tests: wait with `waitForExistence`/predicate expectations (`UITestCase.require`, `waitForLabel`), never sleep; one account per test; quarantine a flaky test with `XCTSkip("reason")` and a note here rather than loosening assertions.
+
+## Progression suggestions (Pulse+)
+
+`ProgressionRule` (Features/Workout/Services) is the pure double-progression rule; `WorkoutViewModel.ghostText` applies it to the next row. Thresholds live on `User.progressionThresholds` (keyed by `Exercise.normalisedName`), increment in `User.progressionIncrementKg` (kg), master toggle is the `smartWeightSuggestions` UserDefaults key (default on). Warm-up/drop/rest-pause/failure sets are ignored. Synced as `users/{uid}.progression`.
+
+## Dev data (fake data for testing)
+
+DEBUG-only seeder in `PulsePump/DevData/` (compiled out of Release) — the iOS counterpart of `manage.py createdevdata`.
+
+```bash
+bin/createdevdata.sh                       # build, clean-install on the simulator, seed, launch
+bin/createdevdata.sh --scenario lapsed     # busy (default) | lapsed (no sessions in 12 days) | new-user (empty states)
+bin/createdevdata.sh --weeks 24 --seed 7 --units lb --plus --draft --help
+```
+
+It works through launch arguments (`-createDevData 1 -devDataReset 1 -devDataScenario … -devDataWeeks … -devDataSeed … -devDataUnits … -devDataPlus 1 -devDataDraft 1 -devDataSocialFixtures 1`), so the same flags can be added in the Xcode scheme, `simctl launch`, or XCUITest. Same seed → identical data. Dataset: user "Dev Lifter", PPL split with days populated, Home/Commercial equipment profiles, Push/Pull/Leg templates with real exercise ids, ~5 sessions/week with progressive overload, warm-ups, a deload week, fresh PRs, a 60-day bodyweight log, and (for Firestore-backed screens that can't be seeded locally) the built-in demo friends/feed/challenges via `DevFlags.socialFixtures`. Add new models to `DevDataFactory` / `DevDataService.reset` when you add them to the schema. Demo/fixture data is never reachable in Release.
+
+**Auto sign-in (DEBUG):** `-debugEmail <e> -debugPassword <p> -debugAutoOnboard 1` signs in (or signs up) and completes onboarding with no taps (`DevData/DevDataAutoAccount.swift`); combine with `-createDevData 1 -devDataReset 1` to push a seeded history through sync. Add `-useFirebaseEmulator 1` to stay off the real project. Build with ad-hoc signing (`CODE_SIGN_IDENTITY=-`) or Firebase Auth fails with a keychain error.
+
+## Journey tests (real-user scenarios at the logic level)
+
+`PulsePumpTests/Journeys/` drives the same code the screens use (WorkoutViewModel, SwiftData, the pure stats types `HomeStats` / `BodyMapStats` / `WeeklyRecapStats` / `HistoryStats` / `ExerciseProgress`, `WidgetDataService.buildSnapshot`, `WorkoutPredictor`, `FeedPostBuilder`, `SyncDevice`) with an in-memory store and a clock the test moves. Screen maths lives in those stats types (the views just call them), so keep new view maths there, not inline.
+
+- To add a scenario: `let sim = try UserSim(...)` (`JourneyKit.swift`: unit, Monday/Sunday week start, time zone, split), then `sim.startSession(template:)` / `log` / `warmup` / `finish` / `skipToDay(n)` / `restDays(n)`, and read what the user sees via `sim.home()`, `body(weekOffset:day:)`, `recap(weeksBack:)`, `history()`, `progress(of:)`, `widget()`, `prediction()`, `postPayload(of:)`. `sim.ledger` records every set typed, independently of SwiftData: compute expected numbers from it (or hand-derive literals), never by calling the function under test again. The clock only goes forward for sessions; moving it back shows the world as it was (screens only see workouts started by `now`).
+- `MarcusJourney.shared` is a 16-week lifter built once and read by the OverTime suite; `MarcusJourney(sim:weeks:)` reuses the plan on any sim (the sync suite).
+- Known app bugs are written as the CORRECT behaviour inside `withKnownIssue("<what is wrong / audit ref>", isIntermittent: true)`; remove the wrapper when the bug is fixed. Keep the injectable parameters (`now:`, `calendar:`, `widgetUpdater`) defaulted so app behaviour is unchanged.
+- Run only these: `xcodebuild test ... -only-testing:PulsePumpTests/OverTimeJourneyTests` (suites: DayOne, DraftAndCrash, OverTime, EditingHistory, PatternDetection, Units, StreakAndCalendar, SettingsAndOnboarding, SyncJourney, SocialPosting).
+
 ## Known Gaps (from spec)
 
-See `pulse-pump-spec.md` §"Known Gaps & Backlog" for the full list. High-priority items:
+See `docs/pulse-pump-spec.md` §"Known Gaps & Backlog" for the full list. High-priority items:
 - Template share-via-link (`pulsepump://template?data=<base64>`) — URL handling exists but Firestore backend not wired
 - Challenges not gated behind Pulse+ check
 - Friend profile tap destination missing

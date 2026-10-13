@@ -1,0 +1,192 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+# A newer push to the same PR/branch cancels the older run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  firebase:
+    name: Firebase rules + functions
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            firebase/functions/package-lock.json
+            firebase/rules-tests/package-lock.json
+
+      - uses: actions/setup-java@v4          # the Firestore emulator needs a JVM
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install
+        run: |
+          npm install -g firebase-tools
+          npm --prefix firebase/functions ci
+          npm --prefix firebase/rules-tests ci
+
+      - name: Functions typecheck + build
+        run: |
+          npm --prefix firebase/functions run typecheck
+          npm --prefix firebase/functions run build
+
+      - name: Functions unit tests
+        run: npm --prefix firebase/functions test
+
+      - name: Security rules tests (Firestore emulator)
+        run: npm --prefix firebase/rules-tests test
+
+      - name: Functions integration tests (Functions + Firestore + Auth emulators)
+        run: npm --prefix firebase/functions run test:integration
+
+  test:
+    name: Build + unit tests
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          # Project is built with Xcode 26.4; use the newest 26.x on the runner.
+          xcode=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$xcode" ] && sudo xcode-select -s "$xcode"
+          xcodebuild -version
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: build/SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('PulsePump.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Unit tests + Release build check
+        run: bin/test.sh --release
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: build/TestResults.xcresult
+          if-no-files-found: ignore
+          retention-days: 14
+
+  ios-integration:
+    name: iOS integration tests (Firebase emulators)
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          xcode=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$xcode" ] && sudo xcode-select -s "$xcode"
+          xcodebuild -version
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: firebase/functions/package-lock.json
+
+      - uses: actions/setup-java@v4          # the Firestore emulator needs a JVM
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install Firebase CLI and function dependencies
+        run: |
+          npm install -g firebase-tools
+          npm --prefix firebase/functions ci
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: build/SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('PulsePump.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Integration tests (app code vs Auth + Firestore + Functions emulators)
+        run: bin/test-integration.sh
+
+      - name: Upload integration results and emulator logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-results
+          path: |
+            build/IntegrationResults.xcresult
+            build/emulator-logs
+          if-no-files-found: ignore
+          retention-days: 14
+
+  ios-ui:
+    name: iOS UI tests (XCUITest vs Firebase emulators)
+    runs-on: macos-26
+    timeout-minutes: 90
+    # Non-blocking until the suite has proven stable across a few CI runs: a red job here does not fail the PR.
+    # Delete this line once it has been green consistently.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          xcode=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$xcode" ] && sudo xcode-select -s "$xcode"
+          xcodebuild -version
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            firebase/functions/package-lock.json
+            firebase/seed/package-lock.json
+
+      - uses: actions/setup-java@v4          # the Firestore emulator needs a JVM
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install Firebase CLI, function and seed dependencies
+        run: |
+          npm install -g firebase-tools
+          npm --prefix firebase/functions ci
+          npm --prefix firebase/seed ci
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: build/SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('PulsePump.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: UI tests (tap-through app flows vs Auth + Firestore + Functions emulators)
+        run: bin/test-ui.sh
+
+      - name: Upload UI test results (screenshots + hierarchy on failure) and emulator logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-results
+          path: |
+            build/UITestResults.xcresult
+            build/emulator-logs
+          if-no-files-found: ignore
+          retention-days: 14
