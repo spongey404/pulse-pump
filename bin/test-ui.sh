@@ -56,7 +56,7 @@ if [ "$inner" = true ]; then
 	xcodebuild test-without-building \
 		-scheme PulsePump -destination "$dest" -derivedDataPath "$dd" \
 		-parallel-testing-enabled NO "${only[@]}" -resultBundlePath "$result" "${sign[@]}" \
-		| (command -v xcpretty >/dev/null && xcpretty || cat) | grep -E "error:|Test case .* (passed|failed)|\*\* TEST" || true
+		| (command -v xcpretty >/dev/null && xcpretty || cat) | grep -iE "error:|Test case .* (passed|failed)|Failing tests|^\s+[A-Za-z]+UITests[./]|\*\* TEST" || true
 	exit 0
 fi
 

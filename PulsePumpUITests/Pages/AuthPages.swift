@@ -5,7 +5,13 @@ struct SignInPage {
     let t: UITestCase
 
     func openEmailSheet() {
-        t.tapID(AX.auth.useEmail)
+        // On a slow CI runner a late "Save Password?" sheet (from an earlier password field) can swallow the first tap,
+        // so retry the tap, dismissing that sheet in between, before declaring the email field missing.
+        for _ in 0..<3 {
+            t.tapID(AX.auth.useEmail)
+            if t.el(AX.auth.emailField).waitForExistence(timeout: 8) { return }
+            t.declineSavePasswordPrompt(timeout: 3)
+        }
         t.require(t.el(AX.auth.emailField), "email field")
     }
 
