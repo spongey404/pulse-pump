@@ -59,7 +59,6 @@ struct SupernovaPaywallView: View {
         .onPreferenceChange(SupernovaAsteriskFrameKey.self) { anchor = $0 }
         .environment(\.colorScheme, .dark)
         .preferredColorScheme(.dark)
-        .accessibilityIdentifier(AX.supernova.paywall)
         .task {
             service.startListening()
             await service.loadProducts()
@@ -83,7 +82,7 @@ struct SupernovaPaywallView: View {
             }
             .padding(.top, 18)
 
-            SupernovaWordmark(size: 44, tracking: -0.5)
+            SupernovaWordmark(size: 44, tracking: -0.5, gapEm: SupernovaAsterisk.paywallGapEm)
                 .frame(height: 44 * 0.95, alignment: .bottom)
                 .padding(.top, 18)
 

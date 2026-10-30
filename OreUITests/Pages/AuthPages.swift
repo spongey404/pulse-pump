@@ -97,7 +97,9 @@ struct OnboardingPage {
     }
 
     /// Last step: `showTutorial` picks "YES, SHOW ME AROUND" over skipping (experienced users get a single START button).
-    func finish(showTutorial: Bool = false) {
+    /// The Supernova paywall follows onboarding (once): without the tutorial it appears straight after the last step, and
+    /// `dismissPaywall` (the default) takes "TRAIN FREE →" so the test carries on from Home.
+    func finish(showTutorial: Bool = false, dismissPaywall: Bool = true) {
         waitForStep(9)
         let yes = t.el(AX.onboarding.tutorialYes)
         if yes.waitForExistence(timeout: 2) {
@@ -105,5 +107,11 @@ struct OnboardingPage {
         } else {
             t.tapID(AX.onboarding.tutorialStart)
         }
+        if dismissPaywall && !showTutorial { trainFree() }
+    }
+
+    func trainFree() {
+        t.waitForPaywall()
+        t.tapID(AX.supernova.free)
     }
 }

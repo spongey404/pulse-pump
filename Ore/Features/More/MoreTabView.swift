@@ -19,6 +19,9 @@ struct MoreTabView: View {
     #endif
     @State private var showSignOutAlert = false
     @State private var showAccentPicker = false
+    #if DEBUG
+    @State private var showStarFieldPanel = false
+    #endif
     @State private var showTutorialDraftAlert = false
     @Query(filter: #Predicate<Workout> { $0.isDraft && $0.deletedAt == nil }) private var drafts: [Workout]
     @State private var supernovaService = SupernovaService()
@@ -58,6 +61,9 @@ struct MoreTabView: View {
             }
         }
         .sheet(isPresented: $showAccentPicker) { AccentPickerView() }
+        #if DEBUG
+        .sheet(isPresented: $showStarFieldPanel) { StarFieldDevPanel() }
+        #endif
     }
 
     private func consumeRouter() {
@@ -79,6 +85,9 @@ struct MoreTabView: View {
                     .tracking(0.5)
                     .foregroundStyle(Color.inkPrimary)
                     .accessibilityIdentifier(AX.more.screen)
+                    #if DEBUG
+                    .onLongPressGesture(minimumDuration: 1.0) { showStarFieldPanel = true }   // hidden glitter tuning panel
+                    #endif
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)

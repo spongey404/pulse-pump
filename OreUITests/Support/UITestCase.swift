@@ -144,6 +144,18 @@ class UITestCase: XCTestCase {
         return false
     }
 
+    /// Waits for the Supernova paywall (shown once, after onboarding). The notification permission prompt can land on top of
+    /// it and hides the app's elements from queries until it is answered, so it is dismissed while waiting.
+    func waitForPaywall(timeout: TimeInterval = 30, file: StaticString = #filePath, line: UInt = #line) {
+        let end = Date().addingTimeInterval(timeout)
+        while Date() < end {
+            dismissSystemAlert()
+            if el(AX.supernova.start).exists { return }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        }
+        XCTFail("the Supernova paywall did not appear within \(Int(timeout))s", file: file, line: line)
+    }
+
     /// iOS offers to save a password after a password field was used ("Save Password?"); decline it if shown.
     func declineSavePasswordPrompt(timeout: TimeInterval = 4) {
         let notNow = app.buttons["Not Now"].firstMatch

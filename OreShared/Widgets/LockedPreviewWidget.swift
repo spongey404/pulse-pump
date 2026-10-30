@@ -51,7 +51,7 @@ struct LockedWidgetPreview: View {
 
     private func unlock(_ size: CGFloat) -> some View {
         Link(destination: Self.url) {
-            Text("UNLOCK SUPERNOVA").font(.archivo(size, weight: .black)).tracking(0.5).foregroundStyle(.white)
+            SupernovaWordmark(size: size, tracking: 0.5, prefix: "UNLOCK ")
                 .frame(maxWidth: .infinity).frame(height: 34)
                 .background(OreTheme.accent, in: RoundedRectangle(cornerRadius: 12))
         }

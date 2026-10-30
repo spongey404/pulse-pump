@@ -51,7 +51,7 @@ final class NoOpSyncLifecycle: SyncLifecycle {
 final class SwiftDataSyncLifecycle: SyncLifecycle {
     static let ownerKey = "localStoreOwnerUid"
     /// Per-user preferences that must not leak to the next account on the device.
-    static let userDefaultsKeysToClear = ["wantsTutorial"]
+    static let userDefaultsKeysToClear = ["wantsTutorial", SupernovaPaywallGate.pendingKey, SupernovaPaywallGate.shownKey]
 
     private let container: ModelContainer
     private let defaults: UserDefaults

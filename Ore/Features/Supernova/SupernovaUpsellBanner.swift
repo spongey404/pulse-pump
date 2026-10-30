@@ -53,10 +53,7 @@ struct SupernovaBlurOverlay: View {
                     .font(.display(34))
                     .foregroundStyle(Color.accentInk)
 
-                Text("UNLOCK WITH SUPERNOVA")
-                    .font(.spaceMono(16, weight: .bold))
-                    .tracking(1)
-                    .foregroundStyle(Color.inkPrimary)
+                SupernovaWordmark(size: 16, face: .mono(bold: true), tracking: 1, color: Color.inkPrimary, prefix: "UNLOCK WITH ")
 
                 Text(feature)
                     .font(.archivo(14))

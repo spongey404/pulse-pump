@@ -123,10 +123,8 @@ final class MoreSettingsUITests: UITestCase {
 
     func testTutorialCoachMarksAppearOnFirstRunAndCanBeSkipped() {
         launch(LaunchConfig(email: LaunchConfig.uniqueEmail("t"), tutorial: true))
+        // The walkthrough is interactive (the user taps the highlighted control), so the first card has no NEXT button.
         require(el(AX.tutorial.card), "first coach mark card", timeout: 30)
-        tapID(AX.tutorial.next)
-        let second = el(AX.tutorial.card)
-        XCTAssertTrue(second.exists)
         tapID(AX.tutorial.skip)
         waitUntilGone(el(AX.tutorial.card), "coach mark card after SKIP")
         require(el(AX.tab.home), "the app underneath is usable")

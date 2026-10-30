@@ -28,6 +28,37 @@ final class AuthOnboardingUITests: UITestCase {
         XCTAssertFalse(home.hasRecentTable, "A brand-new account has no recent workouts")
     }
 
+    func testThePaywallFollowsOnboardingOnceAndTrainFreeGoesStraightToHome() {
+        launch(LaunchConfig(email: LaunchConfig.uniqueEmail("paywall"), autoOnboard: false))
+        let onboarding = OnboardingPage(t: self)
+        onboarding.name("Paige")
+        onboarding.typeHandle("p" + UUID().uuidString.prefix(6).lowercased(), expecting: "Available")
+        onboarding.next()
+        onboarding.weight("70")
+        onboarding.height(cm: "170")
+        onboarding.age("28")
+        onboarding.gender("Prefer not to say")
+        onboarding.experience("Some experience")
+        onboarding.split("Push / Pull / Legs")
+        onboarding.finish(dismissPaywall: false)
+
+        waitForPaywall()
+        XCTAssertTrue(app.staticTexts["ORE · SUPERNOVA MEMBERSHIP"].exists)
+        XCTAssertTrue(app.staticTexts["Smart weight suggestions"].exists, "the feature list")
+        XCTAssertTrue(app.buttons[AX.supernova.start].label.contains("START 3 MONTHS FREE"))
+        XCTAssertTrue(app.staticTexts["Logging, PRs and body map stay free."].exists, "the free strip")
+        XCTAssertTrue(app.otherElements["Supernova"].exists || app.staticTexts["Supernova"].exists, "VoiceOver reads the wordmark as Supernova, with no asterisk")
+
+        tapID(AX.supernova.free)
+        require(el(AX.tab.home), "Home after TRAIN FREE", timeout: 15)
+        XCTAssertFalse(el(AX.supernova.start).exists, "no confirm dialog, no second paywall")
+
+        // Once means once: relaunching does not bring it back.
+        relaunchKeepingAccount()
+        require(el(AX.tab.home), "Home after relaunch", timeout: 30)
+        XCTAssertFalse(el(AX.supernova.start).waitForExistence(timeout: 4), "the paywall is shown once")
+    }
+
     func testHandleStepReportsInvalidTakenAndAvailableUsernames() {
         launch(LaunchConfig(email: LaunchConfig.uniqueEmail("handle"), autoOnboard: false))
         let onboarding = OnboardingPage(t: self)

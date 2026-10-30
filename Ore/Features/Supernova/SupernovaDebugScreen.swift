@@ -5,7 +5,11 @@ import SwiftUI
 struct SupernovaDebugScreen: View {
     let screen: String
     var body: some View {
-        SupernovaPaywallView(onSubscribed: {}, onTrainFree: {})
+        if screen == "starfield" {
+            StarFieldDevPanel()
+        } else {
+            SupernovaPaywallView(onSubscribed: {}, onTrainFree: {})
+        }
     }
 }
 #endif

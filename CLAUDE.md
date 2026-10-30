@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Ore
 
-iOS workout logging app. Part of the Pulse ecosystem.
+iOS strength-training app (formerly Pump, part of the Pulse family). Siblings: Tare (calorie tracker, not built here) and Drift (steps and routes, provisional name).
 
 ## Build Commands
 
@@ -72,9 +72,21 @@ Where things go: a screen and everything only it uses → its `Features/<Name>/`
 
 ## Naming
 
-- **Xcode project:** Ore
-- **Display name (on device):** Ore
-- **Bundle ID:** com.pulse.PulsePump
+The app was renamed from Pulse Pump to **Ore** (strength training). The Pulse family is replaced by independent names.
+
+| Was | Is | Notes |
+|---|---|---|
+| Pump / Pulse Pump | **Ore** | project, targets, module, folders (`Ore/`, `OreTests/`, `OreUITests/`, `OreWidget/`, `OreShared/`), display name |
+| Pulse Fuel | **Tare** | sibling app, not built here |
+| Pulse Stride | **Drift** | **provisional**, may change |
+| Pulse+ | **Supernova\*** | one membership across the apps; plans: 1 app, 2 apps, all 3 (monthly/yearly) |
+| company name | **not final** | never hardcode one (`Brand.companyName` is nil) |
+
+- Every brand string lives in `OreShared/Brand/Brand.swift` (`Brand.appName`, `.membershipName`, `.tareName`, `.driftName`, `.urlScheme`, …). Add or change names there, not at call sites.
+- **Supernova\* rules.** In code the name is always "Supernova"; the gold asterisk is a separate drawn element (`SupernovaWordmark`, `SupernovaAsterisk` in `OreShared/Brand/`). The asterisk is on branded surfaces only: the paywall wordmark, the More banner ("GO SUPERNOVA\*"), locked/blurred inline sections ("UNLOCK WITH SUPERNOVA\*"), the member profile tag, locked widgets. Never in plain text: notifications, share-sheet text, emails, StoreKit display names, App Store copy. The gold is the `SupernovaGold` colour token. The share-card watermark says "Ore" only. VoiceOver reads "Supernova".
+- Product ids for the three tiers are placeholders in `SupernovaTier` (`supernova.1app.monthly` … `supernova.allapps.yearly`); the live subscription still uses `SupernovaService.monthlyProductId/yearlyProductId`.
+- URL scheme: `ore://` (links we generate); the old `pulsepump://` still opens (`Brand.isOwnScheme`, host `pulse-plus` is still accepted next to `supernova`).
+- **Deliberately unchanged** (renaming would orphan data or break installs): bundle ID `com.pulse.PulsePump` (and `…Tests`, `…UITests`, `….widget`), App Group `group.com.pulse.PulsePump`, notification identifiers `com.pulse.PulsePump.*`, StoreKit product ids `com.pulse.PulsePump.monthly/.yearly`, SwiftData models and store, UserDefaults keys (`pulsePlusSubscribedMirror`, `pulse_eco_fuel`, `pulse_eco_stride`, …), widget `kind` strings (`PumpStreak`, `PulsePumpWidget`, …: renaming removes widgets people already placed), the deterministic template-id seed `pump.preset.template.*`, Firebase config (`GoogleService-Info.plist`, project `pulsepump-81986`, `demo-pump`), the `PUMP_EMULATOR*` test env vars, `Notification.Name("pump.liveActivity.*")`, and the GitHub remote `pulse-pump` (repo rename pending). **Open decision: the bundle ID.** If the app was never uploaded to App Store Connect/TestFlight it can still change (also needs a new App Group, entitlements, Firebase app/plist, notification and StoreKit ids); decide before the company name is final.
 
 ## Branch Strategy
 
@@ -139,7 +151,7 @@ Lowercase prefixes, present tense:
 - `WorkoutActivityAttributes` is defined in **both** the main app (`LiveActivityService.swift`) and the widget extension (`WorkoutLiveActivity.swift`) — must be kept in sync manually until a shared framework is added
 - Feed caching: `SocialViewModel` stores `lastFeedFetch` timestamp with a 5-min TTL; pull-to-refresh forces a network fetch
 - `StreakCalculator` (Core/Utilities/) is the single source of truth for streak logic — gap-based, 3-day expiry window
-- `Color.oreAccent` is the canonical accent token (`Core/DesignSystem/Color+Theme.swift` + xcassets `OreAccent.colorset`). Set to blue `#1AA7FF` (Ore Design System e68c2807, same light/dark). `Color.accentInk` (xcassets `AccentInk.colorset`) is the same hex today but is the token for text/glyph/border use — use it instead of `oreAccent` for anything that isn't a filled surface. `Color.orePrimary` is a deprecated alias — do not use it. Full rationale in `design_handoff_pulse_color_system/README.md` (Claude Design project "App color system redesign").
+- `Color.oreAccent` is the canonical accent token (`Core/DesignSystem/Color+Theme.swift`). Default blue `#1AA7FF` (Ore Design System e68c2807, same light/dark; catalogue colour `OreAccentDefault`). `Color.accentInk` is the same hex and is the token for text/glyph/border use — use it instead of `oreAccent` for anything that isn't a filled surface. Both (and `accentSoft`) are **dynamic**: they read `AccentStore`, so a Supernova member's chosen accent (More › Accent colour) replaces Ore's blue everywhere; free users and lapsed members always get Ore's. Widgets keep Ore's blue. Full rationale in `design_handoff_pulse_color_system/README.md` (Claude Design project "App color system redesign").
 
 ## UI Patterns
 
@@ -175,7 +187,7 @@ the reference screens for the ongoing UI/UX update:
 
 Design system reference: `design/pump and fuel design html files/uploads/pulse-design-system.md`
 (multi-app master doc). Ore-only reference with the confirmed token values:
-`docs/PULSE_ORE_DESIGN_REFERENCE.md`. Color token rationale and contrast numbers:
+`docs/PULSE_PUMP_DESIGN_REFERENCE.md`. Color token rationale and contrast numbers:
 `design_handoff_pulse_color_system/README.md` (Claude Design project "App color system
 redesign", also covers `Set Row States.dc.html`, the active-row/completed-row/PR states spec).
 
@@ -201,7 +213,7 @@ Key design tokens implemented in Swift:
 - **Widget Gallery** (More › Widgets › Widget gallery) renders every registered widget in light / dark / tinted — what you see is what WidgetKit draws. DEBUG: launch with `-debugGallery <section id|all>` to open it directly.
 - **Custom widgets** (Widget Builder): library saved in the App Group (`OreWidgetStore`); builder in `Features/Widgets/`; "Ore Custom" extension widget picks a saved widget via an App Intent.
 - `WidgetDataService` computes the snapshot (app side) after workouts / on launch; the extension never touches SwiftData or Firebase.
-- Plus widgets (04-07) show `LockedWidgetPreview` (`PWPlusGate`) when `snap.fixed.isPlus` is false; its button opens `pulsepump://supernova`.
+- Plus widgets (04-07) show `LockedWidgetPreview` (`PWPlusGate`) when `snap.fixed.isPlus` is false; its button opens `ore://supernova`.
 
 ## Units (kg stored, display converts)
 
@@ -259,6 +271,14 @@ Without scrolling: pull the list down past its top (`ScrollPullObserver` watches
 
 `Features/Home/GlobalSearchView.swift`, from Claude Design `Global Search Final.dc.html`: back arrow + sunken field, All/Exercises/Workouts/Friends pills, then RECENT (persisted in `UserDefaults`, `SearchRecents`) + YOUR TOP EXERCISES + FRIENDS when empty, grouped results (`EXERCISES · n`, `SEE ALL ›` past three rows) when typing. Limits and recents rules are pure (`GlobalSearchRules`, `SearchRecents`, tested in `GlobalSearchRulesTests`); `GlobalSearchUITests` drives the screen. Tutorial spotlight look is guarded by `SpotlightLookTests` (smooth fade, shape follows the control).
 
+## Supernova (membership visuals)
+
+Built from the Claude Design file `Supernova Final.dc.html` (project 1b1d68d9…, read with `/design-login` + the DesignSync tool).
+- **Paywall** (`Features/Supernova/SupernovaPaywallView.swift`): full-screen, always dark; glitter behind everything melting into the dark free strip, the "SUPERNOVA\*" wordmark (the glitter's gold attractor), four star bullets, one white CTA ("START 3 MONTHS FREE", yearly preselected), "TRAIN FREE →". `SupernovaPaywallGate` decides when: **once**, at the end of first-run onboarding (after the tutorial, or straight after onboarding when the tutorial is declined/skipped), never for a member. It replaces the tutorial's old "You're all set" screen on the first run; a replay from More › Tutorial (or a member) still ends on that done screen. Flags: `supernovaPaywallPending` (set by onboarding) and `supernovaPaywallShown`. From More, a free user's Supernova row/banner opens the same paywall (strip reads "FREE · YOUR PLAN" / "NOT NOW →"); members get `SupernovaView`.
+- **More tab** (`SupernovaMoreSurfaces.swift`): free = "GO SUPERNOVA\*" banner; member = glitter avatar, "SUPERNOVA\*" profile tag, glitter row icon ("RENEWS 14 MAR"), Weekly Recap card on glitter with an eased-edge panel, and the Accent colour row (`AccentPickerView`, `AccentStore`: Ore's blue first, a few blues from the design, then violet/pink/coral/mint; amber and gold are reserved).
+- **StarField** (`Core/StarField/`): `StarFieldEngine` (pure, seedable particle simulation ported from the design's canvas loop, no SwiftUI types), `StarFieldView` (batched Canvas drawing: stars of one colour and brightness level are one path/fill; paused off-screen, in the background, in Low Power Mode, with Reduce Motion (one still frame), and a `.more` field freezes after `settleAfterMs`; `.paywall` drops to the idle fps after `idleAfterMs`), `StarFieldConfig`. **Every tunable is in `Ore/Resources/starfield.config.json`** (density, speed, gold, sparkle, goldPull, sway, flash, flare, fps, palettes, variants paywall/banner/tag/avatar/rowIcon/recapCard). The JSON is the shared source (an Android build reads the same file); `StarFieldConfig.fallback` must equal it (a test checks). `StarFieldConfigStore.override`/`applyRemote(json:)` is the Remote Config hook (no Firebase dependency added yet). Member glitter palettes are derived from the accent (`StarPalette.derived`). Tests: `StarFieldTests`, `SupernovaPaywallFlowTests`, `AccentStoreTests`, `BrandTests`.
+- DEBUG: `-debugSupernova paywall` opens the paywall on launch.
+
 ## Progression suggestions (Supernova)
 
 `ProgressionRule` (Features/Workout/Services) is the pure double-progression rule; `WorkoutViewModel.ghostText` applies it to the next row. Thresholds live on `User.progressionThresholds` (keyed by `Exercise.normalisedName`), increment in `User.progressionIncrementKg` (kg), master toggle is the `smartWeightSuggestions` UserDefaults key (default on). Warm-up/drop/rest-pause/failure sets are ignored. Synced as `users/{uid}.progression`.
@@ -289,7 +309,7 @@ It works through launch arguments (`-createDevData 1 -devDataReset 1 -devDataSce
 ## Known Gaps (from spec)
 
 See `docs/pulse-pump-spec.md` §"Known Gaps & Backlog" for the full list. High-priority items:
-- Template share-via-link (`pulsepump://template?data=<base64>`) — URL handling exists but Firestore backend not wired
+- Template share-via-link (`ore://template?data=<base64>`, old `pulsepump://` links still open) — URL handling exists but Firestore backend not wired
 - Challenges not gated behind Supernova check
 - Friend profile tap destination missing
 - Post-workout share card missing body map silhouette

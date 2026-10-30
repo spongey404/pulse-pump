@@ -32,6 +32,13 @@ struct SupernovaView: View {
     private func close() { (onBack ?? { dismiss() })() }
 
     var body: some View {
+        // Someone without Supernova is shown the paywall, not a plan picker (this screen is for members).
+        if SupernovaPaywallGate.isMember() { membership } else {
+            SupernovaPaywallView(context: .more, onSubscribed: close, onTrainFree: close)
+        }
+    }
+
+    private var membership: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
                 heroSection
@@ -76,7 +83,7 @@ struct SupernovaView: View {
             HStack {
                 HStack(spacing: 8) {
                     Rectangle().fill(.white).frame(width: 10, height: 10)
-                    Text("ORE · MEMBERSHIP")
+                    Text("\(Brand.appName.uppercased()) · \(Brand.membershipName.uppercased()) MEMBERSHIP")
                         .font(.spaceMono(9, weight: .bold))
                         .tracking(2)
                         .foregroundStyle(.white)
@@ -93,9 +100,7 @@ struct SupernovaView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Close")
             }
-            (Text("PULSE").foregroundStyle(.white) + Text("+").foregroundStyle(Color(hex: "#F2C14E")))
-                .font(.archivo(44, weight: .black))
-                .tracking(0.5)
+            SupernovaWordmark(size: 44, tracking: 0.5)
                 .padding(.top, 10)
             Text("Train smarter. Track deeper. Share with your crew.")
                 .font(.archivo(15))
