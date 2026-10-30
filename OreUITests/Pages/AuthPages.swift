@@ -5,7 +5,12 @@ struct SignInPage {
     let t: UITestCase
 
     func openEmail() {
-        t.tapID(AX.auth.useEmail)
+        // Right after a sign-out or an account deletion the opening screen can be replaced once more (the gate clears the
+        // local store behind it), taking the first tap with it: tap again if the question doesn't come.
+        for attempt in 1...3 {
+            t.tapID(AX.auth.useEmail)
+            if t.el(AX.signup.input).waitForExistence(timeout: attempt == 3 ? 15 : 4) { return }
+        }
         t.require(t.el(AX.signup.input), "email question")
     }
 
