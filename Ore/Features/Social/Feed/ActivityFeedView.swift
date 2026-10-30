@@ -163,7 +163,7 @@ struct FeedPostCard: View {
     @State private var actionMessage: String?
 
     private var isMine: Bool { item.userId == viewModel.currentUid }
-    private var displayName: String { item.username.isEmpty ? (item.handle.isEmpty ? "Pump user" : item.handle) : item.username }
+    private var displayName: String { item.username.isEmpty ? (item.handle.isEmpty ? Brand.defaultUserName : item.handle) : item.username }
 
     var body: some View {
         VStack(spacing: 0) {

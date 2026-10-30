@@ -51,7 +51,7 @@ struct FirestoreUserProfile: Codable, Identifiable, Equatable {
     }
 
     /// The name to show in lists; never empty.
-    var shownName: String { displayName.isEmpty ? (username.isEmpty ? "Pump user" : username) : displayName }
+    var shownName: String { displayName.isEmpty ? (username.isEmpty ? Brand.defaultUserName : username) : displayName }
 }
 
 /// A handle search hit. The profile is nil when the owner's profile is not visible to the caller.

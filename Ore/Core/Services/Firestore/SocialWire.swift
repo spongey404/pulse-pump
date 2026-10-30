@@ -221,7 +221,7 @@ enum SocialWire {
         guard let author = d["authorUid"] as? String, let text = d["text"] as? String else { return nil }
         let handle = string(d["authorUsername"])
         let name = string(d["authorName"])
-        return FeedComment(id: id, userId: author, username: name.isEmpty ? (handle.isEmpty ? "Pump user" : handle) : name,
+        return FeedComment(id: id, userId: author, username: name.isEmpty ? (handle.isEmpty ? Brand.defaultUserName : handle) : name,
                            handle: handle, text: text, date: date(d["createdAt"]) ?? Date())
     }
 

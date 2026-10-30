@@ -352,14 +352,14 @@ extension WidgetDataService {
         }
         f.quickStarts = Array(f.quickStarts.prefix(6))
 
-        // --- 15 Pulse ecosystem
+        // --- 15 App ecosystem
         func eco(_ key: String, app: String, label: String) -> PWEcoRow {
             if let data = defaults?.data(forKey: key), let row = try? JSONDecoder().decode(PWEcoRow.self, from: data) { return row }
             return PWEcoRow(app: app, key: label, value: "—", of: "")
         }
         f.eco = [PWEcoRow(app: "ORE", key: "SESSIONS", value: "\(weekWorkouts.count)", of: "/ \(snap.sessionGoal)"),
-                 eco(ecoFuelKey, app: "FUEL", label: "KCAL TODAY"),
-                 eco(ecoStrideKey, app: "STRIDE", label: "KM THIS WK")]
+                 eco(ecoFuelKey, app: Brand.tareName.uppercased(), label: "KCAL TODAY"),
+                 eco(ecoStrideKey, app: Brand.driftName.uppercased(), label: "KM THIS WK")]
         return f
     }
 

@@ -20,6 +20,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>com.googleusercontent.apps.894714269580-rrd66himqvhc5fq7g34bd47t2s0se6kk</string>
+				<string>ore</string>
 				<string>pulsepump</string>
 			</array>
 		</dict>

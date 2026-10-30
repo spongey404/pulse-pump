@@ -96,7 +96,7 @@ struct GlobalLeaderboardView: View {
 
     private func boardRow(_ row: LeaderboardRow) -> some View {
         let (fg, glow) = medalColor(for: row.rank)
-        let name = row.entry.username.isEmpty ? "Pump user" : row.entry.username
+        let name = row.entry.username.isEmpty ? Brand.defaultUserName : row.entry.username
         return HStack(spacing: 10) {
             Text("\(row.rank)").font(Font.spaceMono(15, weight: .bold)).foregroundStyle(fg).shadow(color: glow, radius: 4)
                 .frame(width: 22, alignment: .leading)

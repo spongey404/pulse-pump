@@ -99,7 +99,7 @@ final class SocialViewModel {
         self.me = me
         self.privacyService = privacy
         self.defaults = defaults
-        self.displayName = displayName ?? { SocialServices.localName ?? SocialServices.currentUser.displayName ?? "Pump user" }
+        self.displayName = displayName ?? { SocialServices.localName ?? SocialServices.currentUser.displayName ?? Brand.defaultUserName }
         self.now = now
         self.onFeedLoaded = onFeedLoaded ?? { items, uid in WidgetDataService.writeFriends(from: items, myUid: uid) }
     }
@@ -172,7 +172,7 @@ final class SocialViewModel {
         if profile.currentStreak != streak { update.streak = streak }
         if profile.totalWorkouts != totalWorkouts { update.totalWorkouts = totalWorkouts }
         let name = displayName()
-        if !name.isEmpty, name != "Pump user", profile.displayName != name { update.displayName = name }
+        if !name.isEmpty, !Brand.isPlaceholderUserName(name), profile.displayName != name { update.displayName = name }
         guard update != ProfileUpdate() else { return }
         do {
             try await remote.updateOwnProfile(update)

@@ -99,7 +99,7 @@ struct ChallengesView: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("SET BY PULSE · \(challenge.startAt.formatted(.dateTime.day().month(.abbreviated)))–\(challenge.endAt.formatted(.dateTime.day().month(.abbreviated)))")
+                    Text("SET BY \(Brand.appName.uppercased()) · \(challenge.startAt.formatted(.dateTime.day().month(.abbreviated)))–\(challenge.endAt.formatted(.dateTime.day().month(.abbreviated)))")
                         .font(Font.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
                         .padding(.bottom, 5)
                     Text(challenge.name.uppercased())

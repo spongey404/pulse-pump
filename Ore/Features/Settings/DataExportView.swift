@@ -137,7 +137,7 @@ struct DataExportView: View {
     private func exportJSON() {
         do {
             let data = try DataExportService.exportWorkouts(from: modelContext)
-            let url = FileManager.default.temporaryDirectory.appendingPathComponent("pump_workouts.json")
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("ore_workouts.json")
             try data.write(to: url)
             exportURL = url
             showShareSheet = true
@@ -150,7 +150,7 @@ struct DataExportView: View {
     private func exportCSV() {
         do {
             let csv = try DataExportService.generateCSV(from: modelContext)
-            let url = FileManager.default.temporaryDirectory.appendingPathComponent("pump_workouts.csv")
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("ore_workouts.csv")
             try csv.write(to: url, atomically: true, encoding: .utf8)
             exportURL = url
             showShareSheet = true

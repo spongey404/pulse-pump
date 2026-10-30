@@ -34,7 +34,7 @@ struct OreWidgetEntryView: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
-        .widgetURL(URL(string: "pulsepump://home"))
+        .widgetURL(URL(string: "\(Brand.urlScheme)://home"))
     }
 
     // MARK: - Medium
@@ -87,7 +87,7 @@ struct OreWidgetEntryView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 4)
-        .widgetURL(URL(string: "pulsepump://home"))
+        .widgetURL(URL(string: "\(Brand.urlScheme)://home"))
     }
 
     // MARK: - Large
@@ -102,7 +102,7 @@ struct OreWidgetEntryView: View {
                     .font(.headline)
                 Spacer()
 
-                Link(destination: URL(string: "pulsepump://start-workout")!) {
+                Link(destination: URL(string: "\(Brand.urlScheme)://start-workout")!) {
                     Image(systemName: "plus.circle.fill")
                         .font(.title2)
                         .foregroundStyle(.orange)
@@ -152,6 +152,6 @@ struct OreWidgetEntryView: View {
                 Spacer(minLength: 0)
             }
         }
-        .widgetURL(URL(string: "pulsepump://home"))
+        .widgetURL(URL(string: "\(Brand.urlScheme)://home"))
     }
 }

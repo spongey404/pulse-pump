@@ -331,13 +331,13 @@ enum QuickStartDesc: PWWidgetDescriptor {
     }
 }
 
-// MARK: 15 Pulse
-enum PulseEcoDesc: PWWidgetDescriptor {
+// MARK: 15 Apps
+enum EcoDesc: PWWidgetDescriptor {
     static let kind = "PumpPulse"
-    static let displayName = "Pulse"
-    static let blurb = PulseEcoWidget.blurb
+    static let displayName = "Apps"
+    static let blurb = EcoWidget.blurb
     static let families: [WidgetFamily] = [.systemMedium]
     static func view(_ f: WidgetFamily, _ e: PWEntry) -> AnyView {
-        home(f, e) { PulseEcoWidget(family: $0, variant: e.variant, snap: e.snap) }
+        home(f, e) { EcoWidget(family: $0, variant: e.variant, snap: e.snap) }
     }
 }

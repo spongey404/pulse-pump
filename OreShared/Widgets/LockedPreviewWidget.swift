@@ -31,7 +31,7 @@ struct LockedWidgetPreview: View {
     var kind: LockedKind? = nil
 
     private var resolved: LockedKind { kind ?? (family == .small ? .bodyMap : .prWatch) }
-    private static let url = URL(string: "pulsepump://supernova")!
+    private static let url = URL(string: "\(Brand.urlScheme)://supernova")!
 
     var body: some View {
         Group {

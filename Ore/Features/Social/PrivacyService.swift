@@ -23,7 +23,7 @@ final class PrivacyService {
     @ObservationIgnored private let displayName: () -> String
     @ObservationIgnored private static let pendingKey = "privacy_pendingPush"
 
-    init(remote: SocialRemote, me: CurrentUser, defaults: UserDefaults = .standard, displayName: @escaping () -> String = { "Pump user" }) {
+    init(remote: SocialRemote, me: CurrentUser, defaults: UserDefaults = .standard, displayName: @escaping () -> String = { Brand.defaultUserName }) {
         self.remote = remote
         self.me = me
         self.defaults = defaults

@@ -151,7 +151,7 @@ extension OreWidgetSnapshot {
     /// Deep link for pieces that start a workout.
     static func startURL(template: String?) -> URL? {
         var c = URLComponents()
-        c.scheme = "pulsepump"; c.host = "start-workout"
+        c.scheme = Brand.urlScheme; c.host = "start-workout"
         if let template { c.queryItems = [URLQueryItem(name: "template", value: template)] }
         return c.url
     }

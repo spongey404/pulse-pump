@@ -35,7 +35,7 @@ enum SocialServices {
     static let remote: SocialRemote = SocialRemoteFactory.make(user: currentUser)
 
     static let privacy = PrivacyService(remote: remote, me: currentUser, displayName: {
-        localName ?? currentUser.displayName ?? "Pump user"
+        localName ?? currentUser.displayName ?? Brand.defaultUserName
     })
 
     static let viewModel = SocialViewModel(remote: remote, me: currentUser, privacy: privacy)

@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// Share-via-link for workout templates: `pulsepump://template?data=<base64 JSON>`.
+/// Share-via-link for workout templates: `ore://template?data=<base64 JSON>` (links from before the rebrand, `pulsepump://…`, still open).
 ///
 /// The payload carries everything a template is made of (name, notes, per-exercise sets / reps / RIR /
 /// rest / notes, in order) but not exercise ids, which are local to a device: on import each exercise
@@ -38,9 +38,9 @@ enum TemplateShareService {
     static func shareURLString(for template: WorkoutTemplate) -> String {
         guard let data = try? JSONEncoder().encode(payload(for: template)),
               let encoded = data.base64EncodedString().addingPercentEncoding(withAllowedCharacters: .alphanumerics) else {
-            return "pulsepump://template"
+            return "\(Brand.urlScheme)://template"
         }
-        return "pulsepump://template?data=\(encoded)"
+        return "\(Brand.urlScheme)://template?data=\(encoded)"
     }
 
     // MARK: Import

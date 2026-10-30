@@ -14,7 +14,7 @@ struct ShareCardView: View {
         VStack(spacing: 16) {
             cardContent
 
-            // Subtle Pulse branding
+            // Subtle branding: the app name only
             HStack {
                 Spacer()
                 Text("Ore")

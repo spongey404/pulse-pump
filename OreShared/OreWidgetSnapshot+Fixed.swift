@@ -121,7 +121,7 @@ struct PWFixedData: Codable, Equatable {
     // 14 Quick start
     var quickStarts: [PWQuickStart] = []
 
-    // 15 Pulse ecosystem (Fuel / Stride write their own rows into the App Group)
+    // 15 App ecosystem (Tare / Drift write their own rows into the App Group)
     var eco: [PWEcoRow] = []
 }
 
@@ -270,8 +270,8 @@ extension OreWidgetSnapshot {
         ]
         f.eco = [
             PWEcoRow(app: "ORE", key: "SESSIONS", value: "4", of: "/ 5"),
-            PWEcoRow(app: "FUEL", key: "KCAL TODAY", value: "1,840", of: "/ 2,400"),
-            PWEcoRow(app: "STRIDE", key: "KM THIS WK", value: "18.2", of: "/ 25"),
+            PWEcoRow(app: Brand.tareName.uppercased(), key: "KCAL TODAY", value: "1,840", of: "/ 2,400"),
+            PWEcoRow(app: Brand.driftName.uppercased(), key: "KM THIS WK", value: "18.2", of: "/ 25"),
         ]
         s.fixed = f
         return s

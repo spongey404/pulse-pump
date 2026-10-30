@@ -19,7 +19,7 @@ struct OreWidgetBundle: WidgetBundle {
         PWWidget<BodyweightDesc>()
         PWWidget<FriendsDesc>()
         PWWidget<QuickStartDesc>()
-        PWWidget<PulseEcoDesc>()
+        PWWidget<EcoDesc>()
         WorkoutLiveActivity()
     }
 }

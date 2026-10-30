@@ -20,7 +20,7 @@ enum PWRegistry {
             PWGallerySection(id: "12", name: "Bodyweight", tier: "FREE", blurb: BodyweightWidget.blurb, items: BodyweightWidget.gallery),
             PWGallerySection(id: "13", name: "Friends", tier: "FREE", blurb: FriendsWidget.blurb, items: FriendsWidget.gallery),
             PWGallerySection(id: "14", name: "Quick start", tier: "FREE", blurb: QuickStartWidget.blurb, items: QuickStartWidget.gallery),
-            PWGallerySection(id: "15", name: "Pulse", tier: "FREE", blurb: PulseEcoWidget.blurb, items: PulseEcoWidget.gallery),
+            PWGallerySection(id: "15", name: "Apps", tier: "FREE", blurb: EcoWidget.blurb, items: EcoWidget.gallery),
             PWGallerySection(id: "16", name: "Lock screen", tier: "FREE · PLUS", blurb: LockScreenWidgets.blurb, items: LockScreenWidgets.gallery),
             PWGallerySection(id: "17", name: "Locked preview", tier: "PLUS", blurb: LockedPreviews.blurb, items: LockedPreviews.gallery),
         ]

@@ -85,7 +85,7 @@ struct OreApp: App {
             }
                 .preferredColorScheme(preferredColorScheme)
                 .onOpenURL { url in
-                    if url.scheme == "pulsepump" {
+                    if Brand.isOwnScheme(url.scheme) {
                         handleDeepLink(url)
                     } else {
                         GIDSignIn.sharedInstance.handle(url)
@@ -96,14 +96,14 @@ struct OreApp: App {
     }
 
     private func handleDeepLink(_ url: URL) {
-        guard url.scheme == "pulsepump" else { return }
+        guard Brand.isOwnScheme(url.scheme) else { return }
         switch url.host {
         case "start-workout":
             let template = URLComponents(url: url, resolvingAgainstBaseURL: false)?
                 .queryItems?.first(where: { $0.name == "template" })?.value
             NotificationCenter.default.post(name: .startWorkoutFromWidget, object: template)
-        case "supernova":
-            // Locked-widget "UNLOCK SUPERNOVA" — jump to More › Supernova.
+        case let host where Brand.membershipLinkHosts.contains(host ?? ""):
+            // Locked-widget "UNLOCK WITH SUPERNOVA" — jump to More › Supernova. (`pulse-plus` is the old spelling.)
             NotificationCenter.default.post(name: .openSupernova, object: nil)
         case "template":
             if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),

@@ -105,7 +105,7 @@ struct ChallengeLeaderboardView: View {
         let entry = row.entry
         // "You" always renders in accent blue so it never washes out against the highlighted row.
         let (fg, glow): (Color, Color) = row.isMe ? (Color.accentInk, .clear) : medalColor(for: row.rank)
-        let name = entry.username.isEmpty ? "Pump user" : entry.username
+        let name = entry.username.isEmpty ? Brand.defaultUserName : entry.username
 
         return HStack(spacing: 10) {
             Text("\(row.rank)").font(Font.spaceMono(15, weight: .bold)).foregroundStyle(fg).shadow(color: glow, radius: 4)

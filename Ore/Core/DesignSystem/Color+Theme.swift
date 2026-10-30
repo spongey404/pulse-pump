@@ -22,7 +22,6 @@ extension Color {
     }
 
     // MARK: - Legacy aliases
-    static var orePrimary: Color { Color.oreAccent }
     static var oreSoft: Color   { Color.accentSoft }
 
     // MARK: - Accent
@@ -55,7 +54,7 @@ extension Color {
     // MARK: - Ticker bar (adapts to color scheme — use TickerStripView which reads environment)
     static let tickerBgDark  = Color(hex: "#0E0C0A")
     static let tickerFgDark  = Color(hex: "#ECE5D6")
-    static let tickerBgLight = Color(hex: "#E0E5EB")   // --pump-paper-sunken
+    static let tickerBgLight = Color(hex: "#E0E5EB")   // --surface-sunken
     static let tickerFgLight = Color(hex: "#151A21")
 
     // Legacy: keep tickerBg/tickerFg pointing to dark variant for any hardcoded uses

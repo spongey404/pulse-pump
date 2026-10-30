@@ -9,9 +9,9 @@ enum HandleValidator {
 
     /// Handles nobody may claim (impersonation / routes / system).
     static let reserved: Set<String> = [
-        "admin", "administrator", "root", "support", "help", "pump", "pulse", "pulsepump", "pulseplus",
+        "admin", "administrator", "root", "support", "help", "pump", "pulse", "pulsepump", "pulseplus", "ore", "supernova", "tare", "drift",
         "official", "staff", "team", "moderator", "mod", "system", "null", "undefined", "anonymous",
-        "me", "you", "settings", "privacy", "terms", "api", "www", "fuel",
+        "me", "you", "settings", "privacy", "terms", "api", "www", "fuel", "stride",
     ]
 
     enum Problem: Equatable {

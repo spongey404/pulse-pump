@@ -1,9 +1,9 @@
 import SwiftUI
 
-// MARK: - 15 Pulse ecosystem  (Ore Widgets.dc.html · w12)
-// ORE square is accent; Fuel and Stride accents are unresolved so their marks are ink.
+// MARK: - 15 App ecosystem  (Ore Widgets.dc.html · w12)
+// ORE square is accent; Tare and Drift accents are unresolved so their marks are ink.
 
-struct PulseEcoWidget: View {
+struct EcoWidget: View {
     let family: PWFamily
     var variant: PWVariant = .a
     let snap: OreWidgetSnapshot
@@ -11,7 +11,7 @@ struct PulseEcoWidget: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("PULSE").pwMono(9, bold: true, tracking: 2)
+                Text("TODAY").pwMono(9, bold: true, tracking: 2)
                 Spacer()
                 Text("WK \(snap.weekNumber)").pwCap(9, tracking: 1)
             }
@@ -39,9 +39,9 @@ struct PulseEcoWidget: View {
     }
 }
 
-extension PulseEcoWidget {
-    static let blurb = "One line per Pulse app. Fuel and Stride accents are unresolved, so their marks are ink."
+extension EcoWidget {
+    static let blurb = "One line per app. Tare and Drift accents are unresolved, so their marks are ink."
     static var gallery: [PWGalleryItem] {
-        [PWGalleryItem("15 · MEDIUM", .medium) { AnyView(PulseEcoWidget(family: .medium, snap: $0)) }]
+        [PWGalleryItem("15 · MEDIUM", .medium) { AnyView(EcoWidget(family: .medium, snap: $0)) }]
     }
 }

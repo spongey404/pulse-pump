@@ -141,7 +141,7 @@ struct BlockedUsersView: View {
                         HStack(spacing: 12) {
                             Avatar(initial: blocked.displayName.isEmpty ? blocked.username : blocked.displayName, size: 36)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(blocked.displayName.isEmpty ? "Pump user" : blocked.displayName)
+                                Text(blocked.displayName.isEmpty ? Brand.defaultUserName : blocked.displayName)
                                     .font(.archivo(16, weight: .semibold)).foregroundStyle(Color.inkPrimary)
                                 if !blocked.username.isEmpty {
                                     Text("@\(blocked.username)").font(Font.spaceMono(9)).foregroundStyle(Color.inkMuted)
