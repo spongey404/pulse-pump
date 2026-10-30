@@ -260,6 +260,16 @@ enum AX {
         static let gallery = "widgets.gallery"
     }
 
+    enum supernova {
+        static let paywall = "supernova.paywall"
+        static let start = "supernova.start"
+        static let free = "supernova.train-free"
+        static let restore = "supernova.restore"
+        static let banner = "supernova.banner"
+        static let accentRow = "supernova.accent-row"
+        static func accentSwatch(_ name: String) -> String { "supernova.accent." + slug(name) }
+    }
+
     enum tutorial {
         static let card = "tutorial.card"
         static let next = "tutorial.next"

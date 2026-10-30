@@ -19,6 +19,10 @@ extension Font {
         return Font.custom(name, size: size)
     }
 
+    /// Archivo 500, used by the Supernova paywall's subhead. (Not mapped from `.medium` in `archivo(_:weight:)`, which
+    /// would restyle every existing `.medium` callsite.)
+    static func archivoMedium(_ size: CGFloat) -> Font { Font.custom("Archivo-Medium", size: size) }
+
     // MARK: - Space Mono
     // All numbers, all labels, all metadata — always
     // weight .bold → SpaceMono-Bold (hero numbers, set row data)

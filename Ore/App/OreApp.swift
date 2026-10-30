@@ -78,6 +78,9 @@ struct OreApp: App {
                 // `-debugGallery <section id or all>` shows the widget gallery on launch (no onboarding needed).
                 if let g = UserDefaults.standard.string(forKey: "debugGallery") {
                     WidgetGalleryView(section: g == "all" ? nil : g)
+                } else if let s = UserDefaults.standard.string(forKey: "debugSupernova") {
+                    // `-debugSupernova paywall` shows the paywall on launch, for visual checks.
+                    SupernovaDebugScreen(screen: s)
                 } else { RootView(session: session, gate: gate, syncLifecycle: syncLifecycle) }
                 #else
                 RootView(session: session, gate: gate, syncLifecycle: syncLifecycle)
