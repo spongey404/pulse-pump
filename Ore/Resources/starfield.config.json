@@ -1,0 +1,30 @@
+{
+  "density": 1600,
+  "minParticles": 40,
+  "speed": 1.1,
+  "gold": 0.40,
+  "sparkle": 0.55,
+  "goldPull": 180,
+  "sway": { "base": 6, "perSize": 5 },
+  "flash": { "prob": 0.0015, "decay": 0.04 },
+  "flare": { "minSize": 1.1, "length": 4, "flashLength": 5, "width": 0.7 },
+  "fps": { "paywall": 60, "paywallIdle": 30, "more": 30 },
+  "idleAfterMs": 10000,
+  "settleAfterMs": 4000,
+  "palettes": {
+    "sky": {
+      "stops": ["#1A7FE0", "#3DB8FF", "#9FDDFF"],
+      "blob": "rgba(15,90,190,0.30)",
+      "veil": "rgba(10,70,140,0.05)"
+    }
+  },
+  "defaultPalette": "sky",
+  "variants": {
+    "paywall": { "mode": "full" },
+    "banner": { "mode": "compact", "pullScale": 0.45 },
+    "tag": { "mini": true, "speedScale": 0.2, "sizeScale": 0.5, "min": 26, "pullScale": 0.12 },
+    "avatar": { "mini": true, "speedScale": 0.35, "sizeScale": 0.8, "min": 30, "pull": 0 },
+    "rowIcon": { "mini": true, "speedScale": 0.3, "sizeScale": 0.6, "min": 18, "pull": 0 },
+    "recapCard": { "mini": true, "speedScale": 0.6, "sizeScale": 0.9, "min": 120, "pull": 0 }
+  }
+}
