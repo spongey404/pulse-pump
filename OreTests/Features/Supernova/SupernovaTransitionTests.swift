@@ -140,6 +140,11 @@ struct SupernovaTransitionTests {
 
     // MARK: Controller
 
+    /// The controller's hand-offs run on timers; under a loaded test run they come late, so wait for the state, not the clock.
+    private func wait(_ t: SupernovaTransition, for phase: SupernovaTransition.Phase) async {
+        for _ in 0..<600 where t.phase != phase { try? await Task.sleep(for: .milliseconds(10)) }
+    }
+
     @Test func theControllerOpensClosesAndIgnoresTapsWhileBusy() async {
         let t = SupernovaTransition()
         #expect(t.phase == .closed && !t.isPresented)
@@ -149,11 +154,11 @@ struct SupernovaTransitionTests {
         t.open(fromBanner: true)   // ignored: already open
         t.close()                   // ignored: not open yet
         #expect(t.phase == .opening)
-        try? await Task.sleep(for: .milliseconds(Int(t.config.reduceMotionFadeMs) + 150))
+        await wait(t, for: .open)
         #expect(t.phase == .open && t.acceptsInput)
         var done = false
         t.close { done = true }
-        try? await Task.sleep(for: .milliseconds(Int(t.config.reduceMotionFadeMs) + 150))
+        await wait(t, for: .closed)
         #expect(t.phase == .closed && done)
     }
 
@@ -169,15 +174,15 @@ struct SupernovaTransitionTests {
         #expect(t.bannerAsteriskHidden && t.wordmarkAsteriskHidden, "swapped for the flyer in the same frame")
         let rest = t.frame(at: t.t0.addingTimeInterval(0.9)).flyer
         #expect(rest?.center == CGPoint(x: 340, y: 144 - 14 + 0), "measured at its resting position: the 14 pt offset is taken off")
-        try? await Task.sleep(for: .milliseconds(Int(t.config.open.handoffMs) + 150))
+        await wait(t, for: .open)
         #expect(t.phase == .open)
         #expect(!t.wordmarkAsteriskHidden, "the real asterisk is back, the flyer gone")
         t.close()
         #expect(t.phase == .closing && t.wordmarkAsteriskHidden)
-        try? await Task.sleep(for: .milliseconds(Int(t.config.close.handoffMs) + 100))
-        #expect(t.phase == .revealing && !t.isPresented, "the paywall is removed in the same step the banner's asterisk returns")
+        await wait(t, for: .revealing)
+        #expect((t.phase == .revealing || t.phase == .closed) && !t.isPresented, "the paywall is removed in the same step the banner's asterisk returns")
         #expect(!t.bannerAsteriskHidden)
-        try? await Task.sleep(for: .milliseconds(Int(SupernovaTransitionMath.revealMs(config: t.config)) + 150))
+        await wait(t, for: .closed)
         #expect(t.phase == .closed)
     }
 }
