@@ -279,6 +279,13 @@ Built from the Claude Design file `Supernova Final.dc.html` (project 1b1d68d9…
 - **StarField** (`Core/StarField/`): `StarFieldEngine` (pure, seedable particle simulation ported from the design's canvas loop, no SwiftUI types), `StarFieldView` (batched Canvas drawing: stars of one colour and brightness level are one path/fill; paused off-screen, in the background, in Low Power Mode, with Reduce Motion (one still frame), and a `.more` field freezes after `settleAfterMs`; `.paywall` drops to the idle fps after `idleAfterMs`), `StarFieldConfig`. **Every tunable is in `Ore/Resources/starfield.config.json`** (density, speed, gold, sparkle, goldPull, sway, flash, flare, fps, palettes, variants paywall/banner/tag/avatar/rowIcon/recapCard). The JSON is the shared source (an Android build reads the same file); `StarFieldConfig.fallback` must equal it (a test checks). `StarFieldConfigStore.override`/`applyRemote(json:)` is the Remote Config hook (no Firebase dependency added yet). Member glitter palettes are derived from the accent (`StarPalette.derived`). Tests: `StarFieldTests`, `SupernovaPaywallFlowTests`, `AccentStoreTests`, `BrandTests`.
 - DEBUG: `-debugSupernova paywall` opens the paywall on launch.
 
+## Remote settings (change without a release)
+
+`Core/Services/RemoteSettings.swift` reads **Firebase Remote Config** at launch (background; skipped under tests and the emulators) and caches the result, so a change made in the Firebase console reaches users on their next launch or two. Every value has an in-app default, so the app works offline and before the first fetch; a missing or invalid value is ignored.
+- `supernova_trial_months` (number, 0–12, default **3**): the free trial, counted in calendar months from `appInstallDate` (`SupernovaTrial`). The paywall copy follows it ("START 3 MONTHS FREE"; 0 = no trial and the copy drops the free offer). This is the in-app trial only: the App Store's own introductory offer is set in App Store Connect and must be kept the same.
+- `starfield_config` (JSON string): replaces `starfield.config.json` (`StarFieldConfigStore.applyRemote`); invalid JSON is ignored.
+- Add a setting: a key + default in `RemoteSettings.start()`, a pure apply step in `RemoteSettings.apply`, a unit test. Android reads the same keys.
+
 ## Progression suggestions (Supernova)
 
 `ProgressionRule` (Features/Workout/Services) is the pure double-progression rule; `WorkoutViewModel.ghostText` applies it to the next row. Thresholds live on `User.progressionThresholds` (keyed by `Exercise.normalisedName`), increment in `User.progressionIncrementKg` (kg), master toggle is the `smartWeightSuggestions` UserDefaults key (default on). Warm-up/drop/rest-pause/failure sets are ignored. Synced as `users/{uid}.progression`.
@@ -314,4 +321,4 @@ See `docs/pulse-pump-spec.md` §"Known Gaps & Backlog" for the full list. High-p
 - Friend profile tap destination missing
 - Post-workout share card missing body map silhouette
 - Widget extension shows streak only — missing predicted workout and weekly volume widgets
-- Free trial uses `UserDefaults` install date instead of StoreKit introductory offer
+- Free trial uses `UserDefaults` install date instead of StoreKit introductory offer (length is remote: see "Remote settings")

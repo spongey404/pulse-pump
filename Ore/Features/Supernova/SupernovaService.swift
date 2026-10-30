@@ -145,16 +145,14 @@ class SupernovaService {
         guard let installDate = UserDefaults.standard.object(forKey: "appInstallDate") as? Date else {
             // First launch — record install date
             UserDefaults.standard.set(Date(), forKey: "appInstallDate")
-            return true
+            return SupernovaTrial.months > 0
         }
-        let daysSinceInstall = Calendar.current.dateComponents([.day], from: installDate, to: Date()).day ?? 0
-        return daysSinceInstall <= 14
+        return SupernovaTrial.isActive(installDate: installDate, months: SupernovaTrial.months)
     }
 
     var trialDaysRemaining: Int {
-        guard let installDate = UserDefaults.standard.object(forKey: "appInstallDate") as? Date else { return 14 }
-        let daysSinceInstall = Calendar.current.dateComponents([.day], from: installDate, to: Date()).day ?? 0
-        return max(0, 14 - daysSinceInstall)
+        guard let installDate = UserDefaults.standard.object(forKey: "appInstallDate") as? Date else { return 0 }
+        return SupernovaTrial.daysRemaining(installDate: installDate, months: SupernovaTrial.months)
     }
 
     /// "RENEWS 14 MAR" (or "ACTIVE" when the date isn't known), the member's value on the More › Supernova row.

@@ -86,7 +86,7 @@ struct SupernovaPaywallView: View {
                 .frame(height: 44 * 0.95, alignment: .bottom)
                 .padding(.top, 18)
 
-            Text("3 months free across \(Brand.appName), \(Brand.tareName) and \(Brand.driftName).")
+            Text(SupernovaTrial.headline(months: SupernovaTrial.months, apps: "\(Brand.appName), \(Brand.tareName) and \(Brand.driftName)"))
                 .font(.archivoMedium(17))
                 .cssLineHeight(fontName: "Archivo-Medium", size: 17, multiple: 1.35)
                 .foregroundStyle(.white)
@@ -124,7 +124,7 @@ struct SupernovaPaywallView: View {
             Spacer(minLength: 12)
 
             Button(action: start) {
-                Text(isPurchasing ? "…" : "START 3 MONTHS FREE")
+                Text(isPurchasing ? "…" : SupernovaTrial.ctaTitle(months: SupernovaTrial.months))
                     .font(.archivo(15, weight: .black))
                     .tracking(1.5)
                     .foregroundStyle(SupernovaPaywallStyle.ctaInk)
