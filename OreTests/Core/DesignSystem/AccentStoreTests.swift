@@ -17,7 +17,8 @@ struct AccentStoreTests {
     @Test func everyoneStartsOnOresAccent() {
         let (s, _) = store(member: false)
         #expect(s.active == AccentChoices.ore)
-        #expect(AccentChoices.ore.hex == "#1AA7FF")
+        #expect(s.usesOreAccent, "drawn with the catalogue's Ore blue, not the swatch's hex")
+        #expect(AccentChoices.ore.id == "sky" && AccentChoices.all.count == 5)
     }
 
     @Test func aFreeUserKeepsOresAccentEvenWithAnOldPick() {
@@ -37,10 +38,10 @@ struct AccentStoreTests {
     }
 
     @Test func buyingOrLosingSupernovaSwitchesTheAccent() {
-        let (s, d) = store(member: false, pick: "coral")
+        let (s, d) = store(member: false, pick: "pink")
         #expect(s.active == AccentChoices.ore)
         d.set(true, forKey: SupernovaService.subscribedMirrorKey); s.refreshMembership()
-        #expect(s.active.id == "coral")
+        #expect(s.active.id == "pink" && !s.usesOreAccent)
         d.set(false, forKey: SupernovaService.subscribedMirrorKey); s.refreshMembership()
         #expect(s.active == AccentChoices.ore)
     }
@@ -56,13 +57,15 @@ struct AccentStoreTests {
         #expect(Set(AccentChoices.all.map(\.id)).count == AccentChoices.all.count)
         #expect(AccentChoices.all.first == AccentChoices.ore, "Ore's own blue is the first swatch, so it can always be put back")
         #expect(!hexes.contains("#C9892E") && !hexes.contains("#FFC83D"), "amber is Fuel's signal, gold is Supernova's")
+        #expect(AccentChoices.all.map(\.id) == ["sky", "pink", "red", "violet", "teal"], "the design's five")
     }
 
     @Test func theGlitterFollowsTheAccent() {
         let (s, _) = store(member: true, pick: "pink")
-        #expect(s.starPalette.accent == AccentChoices.choice(id: "pink").rgba)
+        #expect(s.starPalette == AccentChoices.choice(id: "pink").palette, "the design's three stops, not derived")
+        #expect(s.starPalette.accent == StarRGBA(css: "#FD4A9F"))
         let (free, _) = store(member: false, pick: "pink")
-        #expect(free.starPalette.accent == AccentChoices.ore.rgba)
+        #expect(free.starPalette == AccentChoices.ore.palette)
     }
 
     @Test func shortSplitNames() {

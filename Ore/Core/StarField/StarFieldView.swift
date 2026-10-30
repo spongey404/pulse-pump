@@ -117,13 +117,23 @@ struct StarFieldView: View {
 
     /// The banner's compact background inside `rect`: the same gradient (from the rect's top left toward 40 % of its height),
     /// the two drifting glows positioned inside the rect, and the veil, at `alpha`.
-    private func drawBannerMorph(ctx: inout GraphicsContext, rect: CGRect, alpha: Double, t: Double, palette pal: StarPalette) {
+    private func drawBannerMorph(ctx: inout GraphicsContext, rect: CGRect, alpha: Double, t: Double, palette pal: StarPalette,
+                                 style: SupernovaTransitionFrame.MorphStyle) {
         func color(_ c: StarRGBA, _ a: Double? = nil) -> Color {
             Color(.sRGB, red: c.r / 255, green: c.g / 255, blue: c.b / 255, opacity: a ?? c.a)
         }
         var layer = ctx
         layer.opacity = alpha
         let path = Path(rect)
+        if style == .card {
+            // The member card's own background: g0 → g1 at 80 % diagonally across the rect, and the veil (no glows).
+            let stops: [Gradient.Stop] = [.init(color: color(pal.deep, 1), location: 0), .init(color: color(pal.accent, 1), location: 0.8),
+                                          .init(color: color(pal.accent, 1), location: 1)]
+            layer.fill(path, with: .linearGradient(Gradient(stops: stops), startPoint: CGPoint(x: rect.minX, y: rect.minY),
+                                                   endPoint: CGPoint(x: rect.maxX, y: rect.maxY)))
+            layer.fill(path, with: .color(color(pal.veil)))
+            return
+        }
         let stops: [Gradient.Stop] = [.init(color: color(pal.deep, 1), location: 0), .init(color: color(pal.accent, 1), location: 0.75),
                                       .init(color: color(pal.accent, 1), location: 1)]
         layer.fill(path, with: .linearGradient(Gradient(stops: stops), startPoint: CGPoint(x: rect.minX, y: rect.minY),
@@ -176,7 +186,7 @@ struct StarFieldView: View {
         }
 
         if let m = morph, !p.mini, m.alpha > 0.001 {
-            drawBannerMorph(ctx: &ctx, rect: m.rect.offsetBy(dx: -runner.origin.x, dy: -runner.origin.y), alpha: m.alpha, t: t, palette: pal)
+            drawBannerMorph(ctx: &ctx, rect: m.rect.offsetBy(dx: -runner.origin.x, dy: -runner.origin.y), alpha: m.alpha, t: t, palette: pal, style: m.style)
         }
 
         #if DEBUG

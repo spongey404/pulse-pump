@@ -30,7 +30,9 @@ struct CubicBezier: Equatable {
 struct SupernovaTransitionFrame: Equatable {
     struct Piece: Equatable { var opacity: Double; var offset: Double }
     struct Flyer: Equatable { var center: CGPoint; var scale: Double }
-    struct Morph: Equatable { var rect: CGRect; var alpha: Double }
+    /// Which source's own background the star field draws while the page closes into it.
+    enum MorphStyle: Equatable { case banner, card }
+    struct Morph: Equatable { var rect: CGRect; var alpha: Double; var style: MorphStyle = .banner }
 
     var maskRect: CGRect
     var maskRadius: Double
@@ -47,6 +49,8 @@ struct SupernovaTransitionGeometry: Equatable {
     var bannerAsterisk: CGPoint
     var wordmarkAsterisk: CGPoint
     var screen: CGRect
+    /// The flyer's scale at the source: the banner's fixed 18/44, or the card's asterisk height over the 44 pt glyph.
+    var startScale: Double = 18.0 / 44.0
 }
 
 enum SupernovaTransitionMath {
@@ -78,13 +82,14 @@ enum SupernovaTransitionMath {
             maskRadius: lerp(c.maskRadiusStart, c.maskRadiusEnd, mask),
             paywallOpacity: 1,
             groups: (0..<c.content.groups).map { piece(index: $0, t: t, startMs: c.content.startMs, offsetPt: c.content.offsetPt, config: c) },
-            flyer: .init(center: lerp(g.bannerAsterisk, g.wordmarkAsterisk, fly), scale: lerp(c.flyer.startScale, 1, fly)),
+            flyer: .init(center: lerp(g.bannerAsterisk, g.wordmarkAsterisk, fly), scale: lerp(g.startScale, 1, fly)),
             morph: nil,
             bannerText: Array(repeating: .init(opacity: 1 - textT, offset: c.content.bannerOffsetPt * textT), count: c.content.bannerItems))
     }
 
     /// Closing: the paywall shrinks back into the banner and the gradient morphs to the banner's look (`t` ms since the start).
-    static func closing(t: Double, g: SupernovaTransitionGeometry, config c: SupernovaTransitionConfig) -> SupernovaTransitionFrame {
+    static func closing(t: Double, g: SupernovaTransitionGeometry, config c: SupernovaTransitionConfig,
+                        morph style: SupernovaTransitionFrame.MorphStyle = .banner) -> SupernovaTransitionFrame {
         let q = clamp(t / c.close.ms)
         let e = CubicBezier(c.close.curve)(q)
         let rect = lerp(g.screen, g.bannerRect, e)
@@ -94,8 +99,8 @@ enum SupernovaTransitionMath {
             maskRadius: lerp(c.maskRadiusEnd, c.maskRadiusStart, e),
             paywallOpacity: 1,
             groups: Array(repeating: .init(opacity: fade, offset: 0), count: c.content.groups),
-            flyer: .init(center: lerp(g.wordmarkAsterisk, g.bannerAsterisk, e), scale: lerp(1, c.flyer.startScale, e)),
-            morph: .init(rect: rect, alpha: pow(q, c.close.morphAlphaExponent)),
+            flyer: .init(center: lerp(g.wordmarkAsterisk, g.bannerAsterisk, e), scale: lerp(1, g.startScale, e)),
+            morph: .init(rect: rect, alpha: pow(q, c.close.morphAlphaExponent), style: style),
             bannerText: hidden(c.content.bannerItems, offset: c.content.bannerOffsetPt))
     }
 

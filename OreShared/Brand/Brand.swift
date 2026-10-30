@@ -16,6 +16,9 @@ enum Brand {
     static let tareName = "Tare"
     static let driftName = "Drift"
     static let siblingAppNames = [tareName, driftName]
+    /// Where each sibling app is on the App Store (the member page's "GET ›"). nil until they are published.
+    static let tareStoreURL: URL? = nil
+    static let driftStoreURL: URL? = nil
     /// "Ore, Tare and Drift": the three apps one membership covers.
     static var allAppNames: [String] { [appName] + siblingAppNames }
 

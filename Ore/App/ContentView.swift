@@ -6,6 +6,8 @@ struct ContentView: View {
     @State private var workoutViewModel = WorkoutViewModel()
     @State private var tutorialViewModel = TutorialViewModel()
     @State private var showSupernovaPaywall = false
+    /// `onAppear` can run again (a full-screen cover coming and going); the first-run tutorial starts once.
+    @State private var autoStartedTutorial = false
     #if DEBUG
     // `-debugStartTab <n>` launch argument jumps straight to a tab for visual checks.
     @State private var selectedTab = Int(UserDefaults.standard.string(forKey: "debugStartTab") ?? "") ?? 2
@@ -64,8 +66,8 @@ struct ContentView: View {
                 // Notifications are asked for after the paywall, never over it.
                 Task { _ = await NotificationService.shared.requestPermission() }
             }
-            .onReceive(NotificationCenter.default.publisher(for: .showSupernovaPaywall)) { _ in
-                presentSupernovaPaywall(after: .milliseconds(600))   // after the tutorial's overlay and practice workout are gone
+            .onReceive(NotificationCenter.default.publisher(for: .showSupernovaPaywall)) { note in
+                presentSupernovaPaywall(after: .milliseconds(600), force: (note.object as? Bool) == true)   // after the tutorial's overlay and practice workout are gone
             }
             .fullScreenCover(isPresented: $workoutViewModel.showCompletionSummary) {
                 if let data = workoutViewModel.completionData {
@@ -134,7 +136,8 @@ struct ContentView: View {
             TemplateSeedService.seedIfNeeded(modelContext: modelContext)   // links presets to the catalogue by name
             // Onboarding without the tutorial: the paywall comes straight after onboarding.
             if !UserDefaults.standard.bool(forKey: "wantsTutorial") { presentSupernovaPaywall(after: .milliseconds(900)) }
-            if UserDefaults.standard.bool(forKey: "wantsTutorial") {
+            if UserDefaults.standard.bool(forKey: "wantsTutorial"), !autoStartedTutorial {
+                autoStartedTutorial = true
                 tutorialViewModel.start(firstRun: true)
                 #if DEBUG
                 // `-debugTutorialStep <n>` starts the walkthrough on step n (0-based).
@@ -147,12 +150,14 @@ struct ContentView: View {
 
     /// Shows the Supernova paywall if it is due (once, never for a member). A subscription bought on another device is
     /// picked up first, so a returning member isn't shown it.
-    private func presentSupernovaPaywall(after delay: Duration) {
+    private func presentSupernovaPaywall(after delay: Duration, force: Bool = false) {
+        // `force`: the end of the tutorial, which always leads here for someone without Supernova (even a replay).
+        func due() -> Bool { force ? !SupernovaPaywallGate.isMember() : SupernovaPaywallGate.shouldShowNow() }
         Task {
             try? await Task.sleep(for: delay)
-            guard SupernovaPaywallGate.shouldShowNow() else { return }
+            guard due() else { return }
             await SupernovaService().refreshSubscriptionStatus()
-            guard SupernovaPaywallGate.shouldShowNow(), !showSupernovaPaywall,
+            guard due(), !showSupernovaPaywall,
                   !workoutViewModel.isActive, !workoutViewModel.showCompletionSummary else { return }
             showSupernovaPaywall = true   // used up when it is dismissed (below), so a rebuilt ContentView shows it again
         }

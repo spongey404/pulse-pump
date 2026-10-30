@@ -13,6 +13,8 @@ struct RootView: View {
     @State private var devDataReady = DevDataConfig.fromLaunchArguments() == nil
     #endif
 
+    @State private var signupHolder = SignupHolder()
+
     let session: AuthSession
     let gate: AccountGate
     let syncLifecycle: SyncServiceLifecycle
@@ -36,7 +38,7 @@ struct RootView: View {
             case .signIn, .onboarding:
                 // One continuous console: sign-in choices, the questions, setup and the welcome. The same view stays
                 // up while the account is created, so the route changing under it doesn't restart anything.
-                SignupConsoleView(session: session, remote: gate.remote, onCreated: { gate.accountCreated(uid: $0) })
+                SignupConsoleView(model: signupHolder.model(session: session, remote: gate.remote, onCreated: { gate.accountCreated(uid: $0) }))
             case .restoring:
                 RestoringView()
                     .task { await gate.waitForRestore() }
@@ -63,6 +65,7 @@ struct RootView: View {
             }
         }
         .environment(session)
+        .onChange(of: route) { _, new in if new == .main { signupHolder.reset() } }   // a later sign-out starts a fresh console
         .environment(\.weightUnit, weightUnit)
         .onAppear { UnitPreference.current = weightUnit }
         #if DEBUG

@@ -239,6 +239,11 @@ struct SupernovaPaywallView: View {
     }
 }
 
+/// Ascent + descent in em (hhea) of the bundled faces: Archivo 0.878 + 0.210, Space Mono 1.120 + 0.361.
+private enum FontContent {
+    static func em(_ name: String) -> CGFloat { name.hasPrefix("SpaceMono") ? 1.481 : 1.088 }
+}
+
 extension View {
     /// CSS-style `line-height: <multiple>` for a custom font: every line box is `size × multiple` tall with the text centred
     /// in it (CSS half-leading). iOS 26 has the exact line height; before that, lines are spaced to match and a single line
@@ -251,7 +256,7 @@ extension View {
             // The exact line box keeps the glyphs at the top of the line, where CSS puts the half-leading above and below.
             // Measured against Chrome: iOS puts the first baseline at about 1.0 em in an exact line box, CSS at
             // (line − 1.088 em) / 2 + 0.878 em for Archivo (hhea ascent 0.878, descent 0.210).
-            self.lineHeight(.exact(points: target)).offset(y: target / 2 - 0.671 * size)
+            self.lineHeight(.exact(points: target)).offset(y: (target - FontContent.em(fontName) * size) / 2 - 0.127 * size)
         } else {
             self.lineSpacing(target - natural).frame(minHeight: target, alignment: .leading)
         }

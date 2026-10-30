@@ -243,10 +243,11 @@ describe('usernames', () => {
     await ok(setDoc(doc(db('dave'), 'usernames/abc'), { uid: 'dave', createdAt: ts() }));
     await ok(setDoc(doc(db('dave'), `usernames/${'a'.repeat(20)}`), { uid: 'dave', createdAt: ts() }));
   });
-  it('signed in can get a handle, cannot list, unauthenticated cannot get', async () => {
+  it('anyone can get a handle (sign-up checks availability before the account exists), nobody can list', async () => {
     await ok(getDoc(doc(db('dave'), 'usernames/taken')));
     await no(getDocs(collection(db('dave'), 'usernames')));
-    await no(getDoc(doc(db(null), 'usernames/taken')));
+    await ok(getDoc(doc(db(null), 'usernames/taken')));
+    await no(getDocs(collection(db(null), 'usernames')));
   });
   it('update denied, delete only by owner', async () => {
     await no(updateDoc(doc(db('bob'), 'usernames/taken'), { uid: 'dave' }));

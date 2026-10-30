@@ -197,7 +197,9 @@ service cloud.firestore {
 
     // ----------------------------------------------------------------- usernames
     match /usernames/{handle} {
-      allow get: if signedIn();
+      // Anyone may check one handle (not list them): the sign-up screen shows "AVAILABLE" before the account exists,
+      // because nothing is saved until the last answer. Handles are public (they are shown on profiles) and reveal only a uid.
+      allow get: if true;
       allow list: if false;
       allow create: if isUser(request.resource.data.uid)
         && request.resource.data.keys().hasOnly(['uid', 'createdAt'])

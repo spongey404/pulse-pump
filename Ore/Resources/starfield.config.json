@@ -10,7 +10,7 @@
   "flare": { "minSize": 1.1, "length": 4, "flashLength": 5, "width": 0.7 },
   "fps": { "paywall": 60, "paywallIdle": 30, "more": 30 },
   "idleAfterMs": 10000,
-  "settleAfterMs": 4000,
+  "settleAfterMs": 0,
   "palettes": {
     "sky": {
       "stops": ["#1A7FE0", "#3DB8FF", "#9FDDFF"],

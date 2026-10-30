@@ -26,6 +26,10 @@ final class SignUpScreenshotsUITests: UITestCase {
         type("pw", into: AX.signup.input); try shot("04-password-too-short")
         replaceText(in: AX.signup.input, with: LaunchConfig.defaultPassword); try shot("05-password-ok")
         tapID(AX.signup.next)
+        waitForLabel(el(AX.signup.number), matching: "CONTAINS[c]", "CONFIRM PASSWORD")
+        type("pw", into: AX.signup.input); try shot("05b-confirm-mismatch")
+        replaceText(in: AX.signup.input, with: LaunchConfig.defaultPassword); try shot("05c-confirm-matches")
+        tapID(AX.signup.next)
         Self.signedInEmail = email
 
         let o = OnboardingPage(t: self)

@@ -11,10 +11,12 @@ final class SignupSurge {
     var boost: Double = 0
 }
 
-/// The state machine of the sign-up console (design "Ore Signup Final"): the opening screen, ten questions asked one at a
-/// time (eight after Apple / Google), the setup lines, the welcome. It owns no views. Accounts: email and password
-/// create (or sign in to) the Firebase account at the password step; the profile is written when the last answer is in;
-/// the local user is created only when the tour choice is made, so the console stays up until then.
+/// The state machine of the sign-up console (design "Ore Signup Final"): the opening screen, eleven questions asked one at a
+/// time (eight after Apple / Google), the setup lines, the welcome. It owns no views. Nothing is saved until the last
+/// answer is in, so every row (email and password included) stays editable: then the Firebase account is created, the
+/// profile is written, and the local user is created only when the tour choice is made, so the console stays up until then.
+/// An email that already has an account signs in at its password question instead (found at the email step when the
+/// project reveals it, otherwise when creating the account fails at the end).
 @MainActor
 @Observable
 final class SignupFlowModel {
@@ -42,22 +44,29 @@ final class SignupFlowModel {
     @ObservationIgnored private var typing: Task<Void, Never>?
     @ObservationIgnored private var setup: Task<Void, Never>?
     @ObservationIgnored private var namePrefill = ""
+    /// The first typing of the password, kept in memory until the account is created.
+    @ObservationIgnored private var password = ""
+    /// Username availability. It works before sign-in (the `usernames` rules allow a get for anyone).
+    let handleInput: HandleInput
     /// Fires with the uid once the local user exists, so the gate leaves onboarding.
     @ObservationIgnored var onCreated: (String) -> Void
 
     private(set) var stage: SignupStage = .landing
     private(set) var method: SignupMethod = .email
-    private(set) var steps: [SignupConfig.Step]
+    /// Apple / Google / an account that already exists: no email, password or confirm questions.
+    private(set) var socialFlow = false
     private(set) var stepIndex = 0
     private(set) var typed = 0
     private(set) var answers: [String: String] = [:]
     private(set) var units = ["weight": "KG", "height": "CM"]
     /// The email has an account: the password question becomes "Enter your password."
     private(set) var signInMode = false
-    /// The Firebase account exists, so the email and password rows can no longer be edited.
+    /// The Firebase account exists already (Apple / Google, a sign-in, or created at the end): email and password are done.
     private(set) var accountExists = false
     private(set) var isBusy = false
     private(set) var errorHint: String?
+    /// A note that is not an error (e.g. "that email already has an account").
+    private(set) var noticeHint: String?
     private(set) var resetSent = false
     private(set) var setupLines = 0
     private(set) var setupError: String?
@@ -73,7 +82,7 @@ final class SignupFlowModel {
         self.instant = instant
         self.onCreated = onCreated
         debounce = .milliseconds(config.validation.usernameDebounceMs)
-        steps = config.steps
+        handleInput = HandleInput(remote: remote, uid: session.user?.uid ?? "", debounce: .milliseconds(config.validation.usernameDebounceMs))
         // Already signed in (the app was closed after creating the account, or the account has no profile yet):
         // the questions that need the account are done.
         if let user = session.user { resume(with: user) }
@@ -82,7 +91,7 @@ final class SignupFlowModel {
         if session.user == nil, UserDefaults.standard.string(forKey: "debugSignupStep") == "setup" {
             // The setup lines, as they look when all four are in.
             beginEmail()
-            answers = ["email": "casey@ore.app", "password": "••••••••••••", "name": "Casey", "username": "casey.lifts", "weight": "82",
+            answers = ["email": "casey@ore.app", "password": "••••••••••••", "confirm": "••••••••••••", "name": "Casey", "username": "casey.lifts", "weight": "82",
                        "height": "180", "age": "31", "gender": "preferNotToSay", "exp": "intermediate", "split": "ppl"]
             stepIndex = steps.count
             stage = .setup
@@ -100,6 +109,16 @@ final class SignupFlowModel {
     }
 
     // MARK: Derived
+
+    /// The questions in play: all of them, minus the account ones for Apple / Google / an existing account, minus the
+    /// confirmation when signing in.
+    var steps: [SignupConfig.Step] {
+        config.steps.filter { s in
+            if socialFlow { return !["email", "password", "confirm"].contains(s.key) }
+            if signInMode && s.key == "confirm" { return false }
+            return true
+        }
+    }
 
     var current: SignupConfig.Step? { stage == .console && stepIndex < steps.count ? steps[stepIndex] : nil }
     var total: Int { steps.count }
@@ -127,9 +146,9 @@ final class SignupFlowModel {
     var check: SignupValidation.Check {
         guard let s = current, s.kind != "choice" else { return .init(ok: false, hint: "") }
         return SignupValidation.check(key: s.key, value: value, units: units,
-                                      handleStatus: onboarding?.handleInput.status ?? .idle, config: config)
+                                      handleStatus: handleInput.status, password: password, config: config)
     }
-    var hint: String { errorHint ?? (signInMode && current?.key == "password" && resetSent ? "RESET LINK SENT" : check.hint) }
+    var hint: String { errorHint ?? noticeHint ?? (signInMode && current?.key == "password" && resetSent ? "RESET LINK SENT" : check.hint) }
     var hintIsBad: Bool { errorHint != nil || check.bad }
     var canSubmit: Bool { check.ok && !isBusy }
     var showsMeter: Bool { current?.key == "password" && !signInMode && !value.isEmpty }
@@ -159,7 +178,7 @@ final class SignupFlowModel {
         for (i, s) in config.steps.enumerated() {
             guard let v = answers[s.key], !v.isEmpty else { continue }
             let index = steps.firstIndex { $0.key == s.key }
-            let locked = (s.key == "email" || s.key == "password") && (accountExists || index == nil)
+            let locked = ["email", "password", "confirm"].contains(s.key) && (accountExists || index == nil)
             rows.append(LogRow(id: s.key, label: s.label, value: display(key: s.key, value: v),
                                editable: stage == .console && !locked && index != nil,
                                delay: -(Double(i) * config.bullet.logOffset).truncatingRemainder(dividingBy: config.bullet.seconds)))
@@ -186,7 +205,7 @@ final class SignupFlowModel {
 
     func beginEmail() {
         method = .email
-        steps = config.steps
+        socialFlow = false
         enterConsole(startAt: 0, boost: config.stars.boostEmail)
     }
 
@@ -202,12 +221,19 @@ final class SignupFlowModel {
         resume(with: user, boost: config.stars.boostApple)
     }
 
+    /// The session got a user while the console was still on its opening screen (an auto sign-in, or the app opened signed in
+    /// without a profile): carry on from the name.
+    func sessionChanged() {
+        guard let user = session.user, !accountExists, stage == .landing else { return }
+        resume(with: user)
+    }
+
     /// The account exists already: the questions that need it are answered, start at the name.
     private func resume(with user: AuthUser, boost: Double = 0) {
         accountExists = true
         let provider = user.primaryProvider
         method = provider == .apple ? .apple : provider == .google ? .google : .email
-        steps = config.steps.filter { $0.key != "email" && $0.key != "password" }
+        socialFlow = true
         answers["email"] = provider == .apple ? "Apple" : provider == .google ? "Google" : (user.email ?? "")
         makeOnboarding(user)
         enterConsole(startAt: 0, boost: boost)
@@ -234,6 +260,7 @@ final class SignupFlowModel {
         switch s.key {
         case "email": Task { await answerEmail(v) }
         case "password": Task { await answerPassword(v) }
+        case "confirm": answer(String(repeating: "•", count: min(12, v.count)))
         default: answer(v)
         }
     }
@@ -257,24 +284,27 @@ final class SignupFlowModel {
         answer(email)
     }
 
-    private func answerPassword(_ password: String) async {
-        guard let email = answers["email"] else { return }
-        isBusy = true
-        errorHint = nil
-        let ok = signInMode ? await session.signInWithEmail(email, password: password) : await session.signUp(email: email, password: password)
-        isBusy = false
-        if ok, let user = session.user {
-            accountExists = true
-            makeOnboarding(user)
-            answer(String(repeating: "•", count: min(12, password.count)))
-        } else if !signInMode, session.lastFailure == .emailInUse {
-            // The email has an account after all: ask for its password instead.
-            signInMode = true
-            value = ""
-            prepareStep()
-        } else {
-            errorHint = (session.errorMessage ?? "SOMETHING WENT WRONG").uppercased()
+    private func answerPassword(_ typed: String) async {
+        if signInMode {
+            // An existing account: sign in now (there is nothing to collect first).
+            guard let email = answers["email"] else { return }
+            isBusy = true
+            errorHint = nil
+            let ok = await session.signInWithEmail(email, password: typed)
+            isBusy = false
+            if ok, let user = session.user {
+                accountExists = true
+                makeOnboarding(user)
+                answer(String(repeating: "•", count: min(12, typed.count)))
+            } else {
+                errorHint = (session.errorMessage ?? "SOMETHING WENT WRONG").uppercased()
+            }
+            return
         }
+        // A new account is created at the end; for now the password is just kept, and has to be typed twice.
+        if typed != password { answers["confirm"] = nil }
+        password = typed
+        answer(String(repeating: "•", count: min(12, typed.count)))
     }
 
     /// Forgotten password, while signing in.
@@ -293,18 +323,19 @@ final class SignupFlowModel {
         stepIndex = next
         value = ""
         errorHint = nil
+        noticeHint = nil
         if next < steps.count { prepareStep() } else { beginSetup() }
     }
 
     /// Tap a log row: that question reopens (a password reopens empty); later answers are kept and skipped over.
     func edit(_ key: String) {
         guard stage == .console, let i = steps.firstIndex(where: { $0.key == key }) else { return }
-        guard !(accountExists && (key == "email" || key == "password")) else { return }
+        guard !(accountExists && ["email", "password", "confirm"].contains(key)) else { return }
         let old = answers[key]
         answers[key] = nil
         stepIndex = i
         errorHint = nil
-        let reopened = steps[i].key == "password" || steps[i].kind == "choice" ? "" : (old ?? "")
+        let reopened = ["password", "confirm"].contains(steps[i].key) || steps[i].kind == "choice" ? "" : (old ?? "")
         prepareStep(prefill: reopened)
     }
 
@@ -314,6 +345,7 @@ final class SignupFlowModel {
         typing?.cancel()
         typed = 0
         errorHint = nil
+        noticeHint = nil
         let s = steps[stepIndex]
         var start = prefill ?? ""
         if prefill == nil, s.key == "name" { start = namePrefill }
@@ -333,9 +365,10 @@ final class SignupFlowModel {
         let clean = SignupValidation.sanitize(key: s.key, text: value, heightUnit: heightUnit)
         if clean != value { value = clean; return }
         errorHint = nil
-        if s.key == "username", let ob = onboarding {
-            ob.handleInput.text = value
-            ob.handleInput.textChanged()
+        noticeHint = nil
+        if s.key == "username" {
+            handleInput.text = value
+            handleInput.textChanged()
         }
     }
 
@@ -345,7 +378,6 @@ final class SignupFlowModel {
         stage = .setup
         setupLines = 0
         setupError = nil
-        apply(to: onboarding)
         runSetup()
     }
 
@@ -354,9 +386,15 @@ final class SignupFlowModel {
     private func runSetup() {
         setup?.cancel()
         setup = Task { [weak self] in
-            guard let self, let ob = self.onboarding else { return }
+            guard let self else { return }
+            // 1. The account (email and password; Apple / Google / a sign-in already have theirs).
+            if !self.accountExists, !(await self.createAccount()) { return }
+            guard let ob = self.onboarding else { return }
+            // 2. The profile: line 1 appears only once this call has succeeded.
+            self.apply(to: ob)
             guard await ob.submitRemote() else {
                 if ob.handleInput.status == .taken {
+                    self.handleInput.markTaken()
                     self.stage = .console
                     self.edit("username")
                     self.errorHint = "ALREADY TAKEN"
@@ -376,6 +414,38 @@ final class SignupFlowModel {
             self.stage = .welcome
             self.surge.boost = self.config.stars.boostDone
         }
+    }
+
+    /// Creates the Firebase account from the email and password typed earlier. If it can't be created, the question that
+    /// has to change reopens (an email that already has an account asks for that account's password instead).
+    private func createAccount() async -> Bool {
+        guard let email = answers["email"] else { return false }
+        let ok = await session.signUp(email: email, password: password)
+        if ok, let user = session.user {
+            accountExists = true
+            password = ""
+            makeOnboarding(user)
+            return true
+        }
+        let message = (session.errorMessage ?? "").uppercased()
+        switch session.lastFailure {
+        case .emailInUse:
+            signInMode = true
+            stage = .console
+            edit("password")
+            noticeHint = "THAT EMAIL ALREADY HAS AN ACCOUNT · ENTER ITS PASSWORD"
+        case .weakPassword:
+            stage = .console
+            edit("password")
+            errorHint = message
+        case .invalidEmail:
+            stage = .console
+            edit("email")
+            errorHint = message
+        default:
+            setupError = session.errorMessage ?? "Couldn't create your account. Please try again."
+        }
+        return false
     }
 
     /// The tour choice: creates the local user and hands over to the app (tutorial, then paywall, or paywall).
@@ -404,5 +474,5 @@ final class SignupFlowModel {
         ob.selectedSplitType = answers["split"].flatMap(SplitType.init(rawValue:)) ?? .none
     }
 
-    func cancelTasks() { typing?.cancel(); setup?.cancel(); onboarding?.handleInput.cancel() }
+    func cancelTasks() { typing?.cancel(); setup?.cancel(); handleInput.cancel(); onboarding?.handleInput.cancel() }
 }

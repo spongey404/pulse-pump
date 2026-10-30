@@ -18,7 +18,6 @@ struct MoreTabView: View {
     @State private var screen: MoreScreen = .hub
     #endif
     @State private var showSignOutAlert = false
-    @State private var showAccentPicker = false
     #if DEBUG
     @State private var showStarFieldPanel = false
     #endif
@@ -26,7 +25,6 @@ struct MoreTabView: View {
     @Query(filter: #Predicate<Workout> { $0.isDraft && $0.deletedAt == nil }) private var drafts: [Workout]
     @State private var supernovaService = SupernovaService()
     @State private var social = SocialViewModel.shared
-    private var accent: AccentStore { AccentStore.shared }
 
     private var user: User? { users.first }
     private var streak: Int { StreakCalculator.currentStreak(from: workouts.map(\.date)) }
@@ -54,20 +52,13 @@ struct MoreTabView: View {
             #endif
         }
         .onChange(of: MoreRouter.shared.pendingSupernova) { _, _ in consumeRouter() }
-        // Members' Supernova screen is presented full-screen over the tab bar and closed with its ✕. A free user's paywall is
-        // `SupernovaTransitionHost`'s (it grows out of the banner); any other way in (a row, a locked widget's link) lands on it too.
-        .fullScreenCover(isPresented: Binding(
-            get: { screen == .supernova && !isFree },
-            set: { if !$0 { screen = .hub } }
-        )) {
-            SupernovaView(onBack: { screen = .hub })
-        }
+        // Both Supernova pages are `SupernovaTransitionHost`'s (the free paywall grows out of the banner, the members' page out
+        // of their membership card); any other way in (a row, a locked widget's link) lands on the right one too.
         .onChange(of: screen) { _, new in
-            guard new == .supernova, isFree else { return }
+            guard new == .supernova else { return }
             screen = .hub
-            SupernovaTransition.shared.open(fromBanner: false)
+            SupernovaTransition.shared.open(isFree ? .paywall : .member, fromSource: false)
         }
-        .sheet(isPresented: $showAccentPicker) { AccentPickerView() }
         #if DEBUG
         .sheet(isPresented: $showStarFieldPanel) { StarFieldDevPanel() }
         #endif
@@ -91,6 +82,7 @@ struct MoreTabView: View {
                     .font(.archivo(28, weight: .black))
                     .tracking(0.5)
                     .foregroundStyle(Color.inkPrimary)
+                    .cssLineHeight(fontName: "Archivo-Black", size: 28, multiple: 1.0)
                     .accessibilityIdentifier(AX.more.screen)
                     #if DEBUG
                     .onLongPressGesture(minimumDuration: 1.0) { showStarFieldPanel = true }   // hidden glitter tuning panel
@@ -98,17 +90,19 @@ struct MoreTabView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                Rectangle().fill(Color.dsHairLine).frame(height: 1)
+                if isFree { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
             }
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    userHeader
-                    statsRow
                     if isFree {
+                        userHeader
+                        statsRow
                         SupernovaBanner()
                     } else {
-                        MemberRecapCard(stats: recapStats) { screen = .weeklyRecap }
+                        // Members: the membership card takes the profile row's place; no glitter anywhere else.
+                        SupernovaMemberCard(name: user?.name ?? "Athlete", username: memberHandle, program: memberProgram, service: supernovaService)
+                        statsRow
                     }
 
                     MoreSectionLabel(title: "TRAINING", top: 16, bottom: 6)
@@ -124,13 +118,9 @@ struct MoreTabView: View {
 
                     MoreSectionLabel(title: "ACCOUNT", top: 16, bottom: 6)
                     MoreRow(icon: "gearshape", label: "Settings", minHeight: 48) { screen = .settings }
-                    MoreRow(icon: "bolt", label: Brand.membershipName, value: isFree ? "FREE" : supernovaService.statusLabel,
-                            minHeight: 48, memberStarIcon: !isFree) { screen = .supernova }
-                    .accessibilityIdentifier(AX.row(Brand.membershipName))
-                    if !isFree {
-                        MoreRow(icon: "paintpalette", label: "Accent colour", value: accent.picked.name.uppercased(),
-                                minHeight: 48) { showAccentPicker = true }
-                            .accessibilityIdentifier(AX.supernova.accentRow)
+                    if isFree {
+                        MoreRow(icon: "bolt", label: Brand.membershipName, value: "FREE", minHeight: 48) { screen = .supernova }
+                            .accessibilityIdentifier(AX.row(Brand.membershipName))
                     }
 
                     MoreSectionLabel(title: "HELP", top: 16, bottom: 6)
@@ -185,30 +175,15 @@ struct MoreTabView: View {
     private var userHeader: some View {
         Button { screen = .profile } label: {
             HStack(spacing: 14) {
-                if isFree {
-                    Avatar(initial: user?.name ?? "?", size: 48)
-                } else {
-                    MemberAvatar(name: user?.name ?? "?", size: 48)
-                }
-                VStack(alignment: .leading, spacing: isFree ? 3 : 4) {
+                Avatar(initial: user?.name ?? "?", size: 48)
+                VStack(alignment: .leading, spacing: 3) {
                     Text(user?.name ?? "Athlete")
                         .font(.archivo(20, weight: .bold))
                         .foregroundStyle(Color.inkPrimary)
-                    if isFree {
-                        Text(handleLine)
-                            .font(.spaceMono(9))
-                            .tracking(0.8)
-                            .foregroundStyle(Color.inkMuted)
-                    } else {
-                        HStack(spacing: 8) {
-                            MemberProfileTag()
-                            Text(handleLine)
-                                .font(.spaceMono(9))
-                                .tracking(0.8)
-                                .foregroundStyle(Color.inkMuted)
-                                .lineLimit(1)
-                        }
-                    }
+                    Text(handleLine)
+                        .font(.spaceMono(9))
+                        .tracking(0.8)
+                        .foregroundStyle(Color.inkMuted)
                 }
                 Spacer()
                 Text("›").font(.spaceMono(16)).foregroundStyle(Color.inkGhost)
@@ -217,6 +192,15 @@ struct MoreTabView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private var memberHandle: String {
+        let raw = (user?.username.isEmpty == false ? user?.username : user?.name) ?? "athlete"
+        return raw.lowercased().replacingOccurrences(of: " ", with: "")
+    }
+    private var memberProgram: String {
+        guard let split = user?.selectedSplit?.name, !split.isEmpty else { return "" }
+        return Self.shortSplit(split)
     }
 
     private var handleLine: String {
@@ -259,12 +243,6 @@ struct MoreTabView: View {
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
     }
 
-    // MARK: - Weekly Recap card (members)
-
-    private var recapStats: WeeklyRecapStats {
-        WeeklyRecapStats(workouts: workouts, unit: user?.unitPreference ?? .kg,
-                         splitDayCount: user?.selectedSplit?.days.count ?? 0)
-    }
 }
 
 /// Lets deep links (e.g. a locked widget) ask the More tab to open Supernova even before it has appeared.

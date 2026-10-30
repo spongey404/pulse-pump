@@ -20,23 +20,24 @@ struct SignInPage {
         t.tapID(AX.signup.next)
     }
 
-    /// New account: email, then a password (the account is created there). The caller carries on with the name question.
+    /// New account: email, password and its confirmation. Nothing is created yet; the caller carries on with the name question.
     func signUp(email: String, password: String) {
         openEmail()
         answer(email)
-        t.waitForLabel(t.el(AX.signup.number), matching: "CONTAINS[c]", "PASSWORD")
+        t.waitForLabel(t.el(AX.signup.number), matching: "CONTAINS[c]", "/ PASSWORD")
+        answer(password)
+        t.waitForLabel(t.el(AX.signup.number), matching: "CONTAINS[c]", "CONFIRM PASSWORD")
         answer(password)
     }
 
-    /// Existing account: email, then its password. The console learns the email has an account either at the email step
-    /// or when creating it fails, in which case it asks again, so the password is typed a second time if needed.
+    /// Existing account: email, then its password. The emulator reveals that the email has an account, so the question
+    /// is "Enter your password." and the answer signs in at once.
     func signIn(email: String, password: String) {
         openEmail()
         answer(email)
-        t.waitForLabel(t.el(AX.signup.number), matching: "CONTAINS[c]", "PASSWORD")
-        let knew = t.el(AX.signup.forgot).waitForExistence(timeout: 3)
+        t.waitForLabel(t.el(AX.signup.number), matching: "CONTAINS[c]", "/ PASSWORD")
+        t.require(t.el(AX.signup.forgot), "the password-only sign-in question (the email has an account)")
         answer(password)
-        if !knew, t.el(AX.signup.forgot).waitForExistence(timeout: 5), !t.el(AX.auth.emailError).exists { answer(password) }
     }
 }
 

@@ -10,8 +10,8 @@ struct SignupConfigTests {
         #expect(decoded == SignupConfig.fallback)
     }
 
-    @Test func theStepsAreTheDesignsTenInOrder() {
-        #expect(SignupConfig.fallback.steps.map(\.key) == ["email", "password", "name", "username", "weight", "height", "age", "gender", "exp", "split"])
+    @Test func theStepsAreTheDesignsInOrderPlusConfirm() {
+        #expect(SignupConfig.fallback.steps.map(\.key) == ["email", "password", "confirm", "name", "username", "weight", "height", "age", "gender", "exp", "split"])
         #expect(SignupConfig.fallback.step("gender")?.choices.map(\.label) == ["Male", "Female", "Non-binary", "Other", "Prefer not to say"])
         #expect(SignupConfig.fallback.step("split")?.choices.map(\.meta) == ["6 DAYS/WK", "4 DAYS/WK", "3 DAYS/WK", "5 DAYS/WK", "YOUR OWN", "LOG FREELY"])
     }

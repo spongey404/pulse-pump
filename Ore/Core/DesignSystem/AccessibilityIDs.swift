@@ -285,6 +285,12 @@ enum AX {
         static let restore = "supernova.restore"
         static let banner = "supernova.banner"
         static let accentRow = "supernova.accent-row"
+        static let memberCard = "supernova.member-card"
+        static let memberPage = "supernova.member-page"
+        static let memberBack = "supernova.member-back"
+        static func memberTab(_ name: String) -> String { "supernova.member-tab." + slug(name) }
+        static let manageSubscription = "supernova.manage"
+        static let cancelMembership = "supernova.cancel"
         static func accentSwatch(_ name: String) -> String { "supernova.accent." + slug(name) }
     }
 

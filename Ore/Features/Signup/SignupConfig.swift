@@ -120,7 +120,7 @@ struct SignupConfig: Codable, Equatable {
 
 extension SignupConfig {
     /// The flow reads these answers by key, so a remote step list must keep them.
-    static let requiredSteps = ["email", "password", "name", "username", "weight", "height", "age", "gender", "exp", "split"]
+    static let requiredSteps = ["email", "password", "confirm", "name", "username", "weight", "height", "age", "gender", "exp", "split"]
 
     func step(_ key: String) -> Step? { steps.first { $0.key == key } }
 
@@ -136,6 +136,7 @@ extension SignupConfig {
             steps: [
                 step("email", "email", "EMAIL", "Enter your email.", ph: "you@example.com"),
                 step("password", "password", "PASSWORD", "Create a password.", ph: "At least 8 characters"),
+                step("confirm", "confirm", "CONFIRM PASSWORD", "Confirm your password.", ph: "Type it again"),
                 step("name", "name", "NAME", "What should we call you?", ph: "First name"),
                 step("username", "username", "USERNAME", "Pick your username.", ph: "casey.lifts", prefix: "@"),
                 step("weight", "weight", "WEIGHT", "How much do you weigh, {name}?", ph: "0", units: ["KG", "LB"]),

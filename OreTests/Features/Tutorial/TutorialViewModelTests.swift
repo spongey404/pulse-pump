@@ -57,7 +57,12 @@ struct TutorialViewModelTests {
         vm.skip()
     }
 
-    @Test @MainActor func advancePastLastStepShowsCompletion() {
+    @Test @MainActor func advancePastLastStepShowsCompletionForAMember() {
+        // A member has no paywall to go to, so the tutorial ends on its done screen.
+        let d = UserDefaults.standard
+        let saved = d.object(forKey: SupernovaService.subscribedMirrorKey)
+        d.set(true, forKey: SupernovaService.subscribedMirrorKey)
+        defer { d.set(saved, forKey: SupernovaService.subscribedMirrorKey) }
         let vm = makeVM()
         vm.start()
         for _ in 1..<TutorialStep.allCases.count { vm.advance() }

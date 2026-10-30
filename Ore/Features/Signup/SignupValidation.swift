@@ -10,10 +10,11 @@ enum SignupValidation {
     }
 
     static func check(key: String, value v: String, units: [String: String], handleStatus: HandleStatus,
-                      config c: SignupConfig) -> Check {
+                      password: String = "", config c: SignupConfig) -> Check {
         switch key {
         case "email": return email(v, config: c)
-        case "password": return password(v, config: c)
+        case "password": return Self.password(v, config: c)
+        case "confirm": return confirm(v, password: password)
         case "name": return Check(ok: !v.trimmingCharacters(in: .whitespaces).isEmpty, hint: "FIRST NAME IS FINE · CAN CHANGE LATER")
         case "username": return username(v, status: handleStatus, config: c)
         case "weight": return weight(v, unit: units["weight"] ?? "KG", config: c)
@@ -42,6 +43,13 @@ enum SignupValidation {
         let min = c.validation.passwordMin
         if v.count >= min { return Check(ok: true, hint: ["", "WEAK", "OK", "GOOD", "STRONG"][passwordScore(v, config: c)]) }
         return Check(ok: false, hint: v.isEmpty ? "AT LEAST \(min) CHARACTERS" : "\(min - v.count) MORE CHARACTERS")
+    }
+
+    /// The second typing of the password: must match the first.
+    static func confirm(_ v: String, password: String) -> Check {
+        if v.isEmpty { return Check(ok: false, hint: "TYPE IT ONCE MORE") }
+        if v == password { return Check(ok: true, hint: "MATCHES") }
+        return Check(ok: false, hint: "DOESN'T MATCH YET", bad: v.count >= password.count)
     }
 
     static func username(_ v: String, status: HandleStatus, config c: SignupConfig) -> Check {

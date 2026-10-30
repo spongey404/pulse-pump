@@ -5,7 +5,9 @@ import SwiftData
 /// typed out one at a time over a sky that fills with stars as the answers come in, then the setup lines and the welcome.
 /// Always the Sky theme. Replaces the sign-in screen, the email sheet and the nine onboarding screens.
 struct SignupConsoleView: View {
-    @State private var model: SignupFlowModel
+    /// Owned by `SignupHolder`, not by this view: the gate swaps the screen for the splash while the account is created, and
+    /// the answers typed so far have to survive that.
+    @Bindable var model: SignupFlowModel
     @State private var runner: SignupSkyRunner
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -16,15 +18,13 @@ struct SignupConsoleView: View {
 
     private var config: SignupConfig { model.config }
 
-    init(session: AuthSession, remote: ProfileRemote, onCreated: @escaping (String) -> Void) {
-        let config = SignupConfigStore.shared.current
-        let m = SignupFlowModel(config: config, session: session, remote: remote, instant: Self.instantTyping, onCreated: onCreated)
-        _model = State(initialValue: m)
-        _runner = State(initialValue: SignupSkyRunner(config: config, surge: m.surge))
+    init(model: SignupFlowModel) {
+        self.model = model
+        _runner = State(initialValue: SignupSkyRunner(config: model.config, surge: model.surge))
     }
 
     /// UI tests skip the typing animation (`-signupInstant 1`); Reduce Motion does too.
-    private static var instantTyping: Bool {
+    static var instantTyping: Bool {
         #if DEBUG
         return UserDefaults.standard.bool(forKey: "signupInstant")
         #else
@@ -47,8 +47,8 @@ struct SignupConsoleView: View {
         #if DEBUG
         .sheet(isPresented: $showDevPanel) { SignupDevPanel() }
         #endif
-        .onAppear { model.instant = model.instant || reduceMotion }
-        .onDisappear { model.cancelTasks() }
+        .onAppear { model.instant = model.instant || reduceMotion; model.sessionChanged() }
+        .onChange(of: model.session.user?.uid) { _, _ in model.sessionChanged() }
     }
 
     // MARK: Header
@@ -244,7 +244,7 @@ struct SignupConsoleView: View {
     @ViewBuilder private func field(_ step: SignupConfig.Step) -> some View {
         let prompt = Text(step.placeholder).foregroundStyle(SignupSkyColors.placeholder)
         Group {
-            if step.kind == "password" {
+            if step.kind == "password" || step.kind == "confirm" {
                 SecureField("", text: $model.value, prompt: prompt)
                     .textContentType(Self.instantTyping ? .oneTimeCode : (model.isSignInMode ? .password : .newPassword))
             } else {
@@ -254,7 +254,7 @@ struct SignupConsoleView: View {
             }
         }
         // Archivo has no glyph for the secure-entry bullet (the dots would be invisible), so a password uses the system font.
-        .font(step.kind == "password" ? .system(size: 21, weight: .semibold) : .archivo(21, weight: .semibold))
+        .font(step.kind == "password" || step.kind == "confirm" ? .system(size: 21, weight: .semibold) : .archivo(21, weight: .semibold))
         .foregroundStyle(SignupSkyColors.ink)
         .tint(.white)
         .textInputAutocapitalization(step.kind == "name" ? .words : .never)
@@ -522,4 +522,21 @@ enum SignupCaret {
     }
     private static var on: UIImage?
     private static var off: UIImage?
+}
+
+/// Keeps the sign-up console's model alive while `RootView` swaps the screen (signed out → the splash while the account is
+/// created → onboarding): a reference, so creating it from `body` is fine. Reset once the app is on its main screen.
+@MainActor
+final class SignupHolder {
+    private var model: SignupFlowModel?
+
+    func model(session: AuthSession, remote: ProfileRemote, onCreated: @escaping (String) -> Void) -> SignupFlowModel {
+        if let model { return model }
+        let m = SignupFlowModel(config: SignupConfigStore.shared.current, session: session, remote: remote,
+                                instant: SignupConsoleView.instantTyping, onCreated: onCreated)
+        model = m
+        return m
+    }
+
+    func reset() { model?.cancelTasks(); model = nil }
 }

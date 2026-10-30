@@ -148,9 +148,11 @@ final class TutorialUITests: SeededUITestCase {
         shot("12-discard")
 
         tap(AX.modal.primary)
-        XCTAssertTrue(app.buttons[AX.tutorial.next].waitForExistence(timeout: 8), "completion screen")
-        shot("13-done")
-        app.buttons[AX.tutorial.next].tap()
+        // The end of the tutorial leads to the Supernova paywall (it replaced the "You're all set" screen).
+        XCTAssertTrue(app.buttons[AX.supernova.start].waitForExistence(timeout: 20), "the paywall")
+        RunLoop.current.run(until: Date().addingTimeInterval(1))
+        shot("13-paywall")
+        tap(AX.supernova.free)
         XCTAssertTrue(app.descendants(matching: .any)[AX.home.startWorkout].waitForExistence(timeout: 5), "back on Home, no draft left")
     }
 }

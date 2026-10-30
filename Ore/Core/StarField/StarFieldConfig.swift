@@ -54,7 +54,7 @@ struct StarFieldConfig: Codable, Equatable {
         density: 1600, minParticles: 40, speed: 1.1, gold: 0.40, sparkle: 0.55, goldPull: 180,
         sway: .init(base: 6, perSize: 5), flash: .init(prob: 0.0015, decay: 0.04),
         flare: .init(minSize: 1.1, length: 4, flashLength: 5, width: 0.7),
-        fps: .init(paywall: 60, paywallIdle: 30, more: 30), idleAfterMs: 10_000, settleAfterMs: 4_000,
+        fps: .init(paywall: 60, paywallIdle: 30, more: 30), idleAfterMs: 10_000, settleAfterMs: 0,
         palettes: ["sky": .init(stops: ["#1A7FE0", "#3DB8FF", "#9FDDFF"], blob: "rgba(15,90,190,0.30)", veil: "rgba(10,70,140,0.05)")],
         defaultPalette: "sky",
         variants: [

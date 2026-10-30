@@ -67,9 +67,11 @@ struct SupernovaTransitionHost<Content: View>: View {
         ZStack {
             Color.black.ignoresSafeArea()
             content
+                // Rounded to the device's corners while pushed back; the mask covers the whole screen (safe areas included),
+                // or the shell's backgrounds would be cut off at the status bar.
+                .mask(RoundedRectangle(cornerRadius: pushed > 0 ? c.hubCornerRadius : 0, style: .continuous).ignoresSafeArea())
                 .scaleEffect(hub.scale)
                 .opacity(hub.opacity)
-                .clipShape(RoundedRectangle(cornerRadius: pushed > 0 ? c.hubCornerRadius : 0, style: .continuous))
                 .allowsHitTesting(!transition.isBusy)
                 .accessibilityHidden(transition.isPresented)   // VoiceOver stays on the paywall, not the page behind it
             if transition.isPresented { overlay }
@@ -94,10 +96,16 @@ struct SupernovaTransitionHost<Content: View>: View {
             GeometryReader { proxy in
                 let origin = proxy.frame(in: .global).origin
                 ZStack {
-                    SupernovaPaywallView(
-                        context: .more,
-                        onSubscribed: { transition.close(crossfade: true) { onSubscribed() } },
-                        onTrainFree: { transition.close() })
+                    Group {
+                        if transition.kind == .member {
+                            SupernovaMemberPage(onBack: { transition.close() })
+                        } else {
+                            SupernovaPaywallView(
+                                context: .more,
+                                onSubscribed: { transition.close(crossfade: true) { onSubscribed() } },
+                                onTrainFree: { transition.close() })
+                        }
+                    }
                         .environment(\.paywallReveal, f.groups)
                         .environment(\.starFieldMorph, f.morph)
                         .clipShape(SupernovaMaskShape(rect: f.maskRect.offsetBy(dx: -origin.x, dy: -origin.y), radius: f.maskRadius))

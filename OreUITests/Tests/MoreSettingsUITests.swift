@@ -19,13 +19,14 @@ final class MoreSettingsUITests: UITestCase {
             tapID(AX.nav.back)
             require(el(AX.more.screen), "More hub after leaving \(screen.title)")
         }
-        // Supernova opens full screen with its own close button.
-        let plus = el(AX.row("Supernova"))
-        scrollTo(plus)
-        plus.tap()
-        require(labelContaining("Weekly Recaps"), "Supernova feature list")
-        tap(app.buttons["Close"].firstMatch, "Supernova close button")
-        require(el(AX.more.screen), "More hub after closing Supernova")
+        // A member's card opens the membership page, which has its own back button.
+        let card = el(AX.supernova.memberCard)
+        scrollTo(card)
+        card.tap()
+        require(el(AX.supernova.memberBack), "the membership page", timeout: 10)
+        RunLoop.current.run(until: Date().addingTimeInterval(1.8))
+        tapID(AX.supernova.memberBack)
+        require(el(AX.more.screen), "More hub after leaving the membership page", timeout: 10)
     }
 
     func testChangingTheWeightUnitInSettingsSwitchesTheAppToPounds() {

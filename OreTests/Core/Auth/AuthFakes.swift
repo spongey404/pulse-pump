@@ -22,6 +22,9 @@ final class FakeAuthProvider: AuthProviding {
     var knownEmails: Set<String> = []
     /// Whether `emailHasAccount` can tell (a project with email enumeration protection can't).
     var revealsAccounts = false
+    /// Makes `signUp` fail with this.
+    var signUpError: Error?
+    private(set) var signUpCalls: [String] = []
 
     private(set) var reauthCalls: [(AuthProviderKind, String?)] = []
     private(set) var deleteCalls = 0
@@ -63,6 +66,8 @@ final class FakeAuthProvider: AuthProviding {
     }
     func emailHasAccount(_ email: String) async -> Bool? { revealsAccounts && knownEmails.contains(email) ? true : nil }
     func signUp(email: String, password: String) async throws -> AuthUser {
+        signUpCalls.append(email)
+        if let signUpError { throw signUpError }
         if knownEmails.contains(email) { throw AuthFailure.emailInUse }
         return try signIn(as: Fixtures.user(email: email, providers: [.password], isNew: true))
     }

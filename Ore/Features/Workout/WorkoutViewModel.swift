@@ -171,7 +171,10 @@ class WorkoutViewModel {
         guard exerciseEntries.indices.contains(exerciseIndex),
               exerciseEntries[exerciseIndex].sets.indices.contains(setIndex) else { return }
         if let ctx = modelContext ?? liveModelContext {
+            // A suggested weight is only offered while the field is empty, so ask before the ghost fills it in.
+            let suggested = progressionSuggestionKg(exerciseId: exerciseEntries[exerciseIndex].exerciseId, setIndex: setIndex) != nil
             applyGhostValues(exerciseIndex: exerciseIndex, setIndex: setIndex, modelContext: ctx)
+            exerciseEntries[exerciseIndex].sets[setIndex].usedSuggestion = suggested
         }
         exerciseEntries[exerciseIndex].sets[setIndex].isCompleted = true
         restTimer.clearCompletion()
@@ -193,6 +196,7 @@ class WorkoutViewModel {
         guard exerciseEntries.indices.contains(exerciseIndex),
               exerciseEntries[exerciseIndex].sets.indices.contains(setIndex) else { return }
         exerciseEntries[exerciseIndex].sets[setIndex].isCompleted = false
+        exerciseEntries[exerciseIndex].sets[setIndex].usedSuggestion = false
         updateLiveCalories()
         persistDraftIfActive()
     }
@@ -285,7 +289,10 @@ class WorkoutViewModel {
         var compoundSets = 0
         var isolationSets = 0
         var countedExercises = 0
+        var suggestedUsed = 0
+        var prsOnSuggested = 0
 
+        defer { SupernovaImpact.record(suggestedWeightsUsed: suggestedUsed, prsOnSuggestedWeight: prsOnSuggested) }
         for entry in exerciseEntries {
             // Warm-ups are saved, but never count toward sets, volume, PRs or calories.
             let working = entry.sets.filter { $0.isCompleted && $0.setType != .warmup }
@@ -293,6 +300,8 @@ class WorkoutViewModel {
             countedExercises += 1
             totalWorkingSets += working.count
             if entry.isCompound { compoundSets += working.count } else { isolationSets += working.count }
+            suggestedUsed += working.filter(\.usedSuggestion).count
+            prsOnSuggested += working.filter { $0.usedSuggestion && $0.isPR }.count
 
             guard let exercise = exerciseById[entry.exerciseId] else { continue }
             let weights = working.map { parseDecimal($0.weight) ?? 0 }
@@ -760,6 +769,8 @@ struct SetEntry: Identifiable {
     var side: Side = .both
     var isCompleted: Bool = false
     var isPR: Bool = false
+    /// The weight in this set is the one Supernova suggested (counted in the member page's "what Supernova did for you").
+    var usedSuggestion: Bool = false
     var targetReps: Int?
     var targetRIR: Int?
     /// The persisted `SetLog` this completed set maps to (draft persistence / resume).

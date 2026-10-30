@@ -26,6 +26,14 @@ struct SignupValidationTests {
         #expect(SignupValidation.passwordScore("abcdefgh", config: c) == 1)
     }
 
+    @Test func theConfirmationMatchesThePassword() {
+        #expect(SignupValidation.confirm("", password: "abcdefgh") == .init(ok: false, hint: "TYPE IT ONCE MORE"))
+        #expect(SignupValidation.confirm("abcd", password: "abcdefgh") == .init(ok: false, hint: "DOESN'T MATCH YET"))
+        #expect(SignupValidation.confirm("abcdefgX", password: "abcdefgh") == .init(ok: false, hint: "DOESN'T MATCH YET", bad: true))
+        #expect(SignupValidation.confirm("abcdefgh", password: "abcdefgh") == .init(ok: true, hint: "MATCHES"))
+        #expect(check("confirm", "x").hint == "TYPE IT ONCE MORE" || !check("confirm", "x").ok)
+    }
+
     @Test func nameNeedsSomethingButNotMuch() {
         #expect(!check("name", "  ").ok)
         #expect(check("name", "Casey").ok)

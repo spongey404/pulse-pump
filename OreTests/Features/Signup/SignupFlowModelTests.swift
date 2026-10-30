@@ -55,22 +55,122 @@ struct SignupFlowModelTests {
         #expect(r.model.progressLabel == "SIGN UP")
     }
 
-    @Test func emailPathAsksTenQuestionsAndCreatesTheAccountAtThePassword() async {
+    @Test func emailPathAsksElevenQuestionsAndSavesNothingUntilTheEnd() async {
         let r = rig()
         r.model.beginEmail()
-        #expect(r.model.total == 10)
-        #expect(r.model.progressLabel == "STEP 1 OF 10")
+        #expect(r.model.total == 11)
+        #expect(r.model.progressLabel == "STEP 1 OF 11")
         await type(r.model, "casey@ore.app")
         await settle { r.model.current?.key == "password" }
         #expect(r.model.prompt == "Create a password.")
-        #expect(r.session.user == nil, "nothing is created before the password")
+        await type(r.model, "pw-lifts-2026")
+        await settle { r.model.current?.key == "confirm" }
+        #expect(r.model.prompt == "Confirm your password.")
         await type(r.model, "pw-lifts-2026")
         await settle { r.model.current?.key == "name" }
-        #expect(r.session.user?.email == "casey@ore.app")
+        #expect(r.session.user == nil, "no account is created before the last answer")
         let rows = r.model.logRows
-        #expect(rows.map(\.id) == ["email", "password"])
-        #expect(rows.allSatisfy { !$0.editable }, "the account exists, so email and password can't be reopened")
+        #expect(rows.map(\.id) == ["email", "password", "confirm"])
+        let editable = rows.map { $0.editable }
+        #expect(!editable.contains(false), "so email and password can still be changed")
         #expect(rows[1].value == String(repeating: "•", count: 12))
+    }
+
+    @Test func theConfirmationHasToMatch() async {
+        let r = rig()
+        r.model.beginEmail()
+        await type(r.model, "casey@ore.app")
+        await settle { r.model.current?.key == "password" }
+        await type(r.model, "pw-lifts-2026")
+        await settle { r.model.current?.key == "confirm" }
+        r.model.value = "pw-lifts-20"
+        #expect(!r.model.canSubmit && r.model.hint == "DOESN'T MATCH YET" && !r.model.hintIsBad, "still typing: not an error yet")
+        r.model.value = "pw-lifts-2027"
+        #expect(!r.model.canSubmit && r.model.hintIsBad)
+        r.model.value = "pw-lifts-2026"
+        #expect(r.model.canSubmit && r.model.hint == "MATCHES")
+    }
+
+    @Test func changingThePasswordAsksForItsConfirmationAgain() async {
+        let r = rig()
+        r.model.beginEmail()
+        await type(r.model, "casey@ore.app")
+        await settle { r.model.current?.key == "password" }
+        await type(r.model, "pw-lifts-2026")
+        await settle { r.model.current?.key == "confirm" }
+        await type(r.model, "pw-lifts-2026")
+        await settle { r.model.current?.key == "name" }
+        r.model.edit("password")
+        #expect(r.model.current?.key == "password" && r.model.value.isEmpty, "a password reopens empty")
+        await type(r.model, "another-pw-1")
+        await settle { r.model.current?.key == "confirm" }
+        #expect(r.model.current?.key == "confirm", "the confirmation is asked again, then back to where we were")
+        await type(r.model, "another-pw-1")
+        await settle { r.model.current?.key == "name" }
+        #expect(r.model.current?.key == "name")
+        // The same password typed again keeps its confirmation.
+        r.model.edit("password")
+        await type(r.model, "another-pw-1")
+        await settle { r.model.current?.key == "name" }
+        #expect(r.model.current?.key == "name")
+    }
+
+    @Test func theAccountIsCreatedAtTheEndWithTheEmailAndPassword() async {
+        let r = rig()
+        r.model.beginEmail()
+        await type(r.model, "casey@ore.app")
+        await settle { r.model.current?.key == "password" }
+        await type(r.model, "pw-lifts-2026")
+        await settle { r.model.current?.key == "confirm" }
+        await type(r.model, "pw-lifts-2026")
+        await settle { r.model.current?.key == "name" }
+        await finishQuestions(r)
+        await settle { r.model.stage == .welcome }
+        #expect(r.model.stage == .welcome)
+        #expect(r.session.user?.email == "casey@ore.app")
+        #expect(r.remote.createdProfiles.count == 1)
+        #expect(r.provider.signUpCalls == ["casey@ore.app"])
+    }
+
+    @Test func aTakenEmailFoundAtTheEndSendsYouToItsPassword() async {
+        let r = rig(known: ["casey@ore.app"], reveals: false)
+        r.model.beginEmail()
+        await type(r.model, "casey@ore.app")
+        await settle { r.model.current?.key == "password" }
+        await type(r.model, "pw-lifts-2026")
+        await settle { r.model.current?.key == "confirm" }
+        await type(r.model, "pw-lifts-2026")
+        await settle { r.model.current?.key == "name" }
+        await finishQuestions(r)
+        await settle { r.model.isSignInMode }
+        #expect(r.model.stage == .console && r.model.current?.key == "password")
+        #expect(r.model.prompt == "Enter your password.")
+        #expect(r.model.hint == "THAT EMAIL ALREADY HAS AN ACCOUNT · ENTER ITS PASSWORD" && !r.model.hintIsBad)
+        #expect(r.model.answers["weight"] == "82", "everything typed is kept")
+        let hasConfirm = r.model.steps.contains { $0.key == "confirm" }
+        #expect(!hasConfirm)
+        // Signing in with it goes straight on to the profile.
+        r.provider.knownEmails = []   // the fake signs anyone in; the point is the flow
+        await type(r.model, "its-real-password")
+        await settle { r.model.stage == .welcome }
+        #expect(r.model.stage == .welcome)
+        #expect(r.remote.createdProfiles.count == 1)
+    }
+
+    @Test func aWeakPasswordReopensThePasswordQuestion() async {
+        let r = rig()
+        r.provider.signUpError = AuthFailure.weakPassword
+        r.model.beginEmail()
+        await type(r.model, "casey@ore.app")
+        await settle { r.model.current?.key == "password" }
+        await type(r.model, "pw-lifts-2026")
+        await settle { r.model.current?.key == "confirm" }
+        await type(r.model, "pw-lifts-2026")
+        await settle { r.model.current?.key == "name" }
+        await finishQuestions(r)
+        await settle { r.model.stage == .console && r.model.current?.key == "password" }
+        #expect(r.model.current?.key == "password" && r.model.hintIsBad)
+        #expect(r.remote.createdProfiles.isEmpty)
     }
 
     @Test func applePathSkipsEmailAndPasswordAndLogsTheSignIn() async {
@@ -92,20 +192,18 @@ struct SignupFlowModelTests {
         #expect(r.model.prompt == "Enter your password.")
         #expect(r.model.isSignInMode)
         #expect(!r.model.showsMeter)
+        #expect(r.model.total == 10, "no confirmation when signing in")
     }
 
-    @Test func anEmailTheProjectHidesSwitchesToSignInWhenCreatingItFails() async {
-        let r = rig(known: ["casey@ore.app"], reveals: false)
-        r.model.beginEmail()
-        await type(r.model, "casey@ore.app")
-        await settle { r.model.current?.key == "password" }
-        #expect(r.model.prompt == "Create a password.")
-        await type(r.model, "pw-lifts-2026")
-        await settle { r.model.isSignInMode }
-        #expect(r.model.prompt == "Enter your password.")
-        #expect(r.model.value.isEmpty)
-        #expect(!r.model.hintIsBad, "switching is not an error")
-        #expect(r.model.current?.key == "password")
+    @Test func aSessionThatStartsOnTheOpeningScreenContinuesFromTheName() async {
+        let r = rig()
+        #expect(r.model.stage == .landing)
+        await r.session.signInWithEmail("casey@ore.app", password: "pw-lifts-2026")   // e.g. an auto sign-in
+        r.model.sessionChanged()
+        #expect(r.model.stage == .console && r.model.current?.key == "name")
+        #expect(r.model.total == 8)
+        r.model.sessionChanged()   // idempotent
+        #expect(r.model.current?.key == "name")
     }
 
     @Test func signedInWithoutAProfileResumesAtTheName() {
@@ -152,7 +250,7 @@ struct SignupFlowModelTests {
         #expect(r.model.current?.key == "height", "resumes at the first unanswered question, skipping the answered ones")
     }
 
-    @Test func aPasswordReopensEmptyAndASocialLoginHasNoPasswordRow() async {
+    @Test func theEmailCanBeReopenedAndKeepsItsText() async {
         let r = rig()
         r.model.beginEmail()
         await type(r.model, "casey@ore.app")

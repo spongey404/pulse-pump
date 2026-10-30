@@ -18,8 +18,12 @@ final class SupernovaTransition {
     static let shared = SupernovaTransition()
 
     enum Phase: Equatable { case closed, measuring, opening, open, closing, revealing }
+    /// What grows out of what: the free paywall out of the More banner, or the member page out of the More membership card.
+    enum Kind: Hashable { case paywall, member }
+    struct Source: Equatable { var rect: CGRect; var asterisk: CGPoint?; var starHeight: Double }
 
     private(set) var phase: Phase = .closed
+    private(set) var kind: Kind = .paywall
     /// When the running phase began.
     private(set) var t0 = Date()
     /// The shared-element version (flyer, mask, morph); false = the cross-fade.
@@ -31,16 +35,15 @@ final class SupernovaTransition {
 
     /// The screen, set by the host.
     var screen: CGRect = UIScreen.main.bounds
-    /// The banner's frame and its asterisk's centre (global), reported while the screen is at rest.
-    private(set) var bannerRect: CGRect?
-    private(set) var bannerAsterisk: CGPoint?
+    /// Each source's frame, its asterisk's centre and that asterisk's height (global), reported while the screen is at rest.
+    private(set) var sources: [Kind: Source] = [:]
     private var wordmarkRest: CGPoint?
     private var geometry: SupernovaTransitionGeometry?
     private var timers: [Task<Void, Never>] = []
     private var onClosed: (() -> Void)?
 
     #if DEBUG
-    /// `-debugTransition open:400` / `close:300`: run to that point and hold, for screenshots.
+    /// While set, the transition is held at this many ms (screenshots).
     var frozenMs: Double?
 
     /// While frozen, the More layer's progress is computed from the same time (the animation would run in real time).
@@ -55,18 +58,21 @@ final class SupernovaTransition {
         }
     }
 
-    /// `-debugTransition open:400` or `close:300` (More tab, free plan): run the transition and hold at that many ms.
+    /// `-debugTransition open:400` / `close:300` (the free banner) or `member-open:400` / `member-close:300` (the member card,
+    /// with `-devDataPlus 1`): run the transition and hold at that many ms, for screenshots.
     func runDebugRequest() {
         guard let spec = UserDefaults.standard.string(forKey: "debugTransition"), phase == .closed else { return }
         let parts = spec.split(separator: ":")
         guard parts.count == 2, let ms = Double(parts[1]) else { return }
+        let source: Kind = parts[0].hasPrefix("member") ? .member : .paywall
+        let opening = parts[0].hasSuffix("open")
         Task {
-            try? await Task.sleep(for: .milliseconds(1500))
-            if parts[0] == "open" {
+            try? await Task.sleep(for: .milliseconds(2000))
+            if opening {
                 frozenMs = ms
-                open(fromBanner: true)
+                open(source, fromSource: true)
             } else {
-                open(fromBanner: true)
+                open(source, fromSource: true)
                 try? await Task.sleep(for: .milliseconds(2500))
                 frozenMs = ms
                 close()
@@ -75,7 +81,9 @@ final class SupernovaTransition {
     }
     #endif
 
-    var config: SupernovaTransitionConfig { SupernovaTransitionConfigStore.shared.current }
+    var config: SupernovaTransitionConfig {
+        kind == .member ? SupernovaMemberConfigStore.shared.current.transition : SupernovaTransitionConfigStore.shared.current
+    }
 
     // MARK: Derived
 
@@ -86,15 +94,21 @@ final class SupernovaTransition {
     var acceptsInput: Bool { phase == .open }
     /// The banner's asterisk is swapped for the flyer for the whole flight and while the paywall is open; the wordmark's is
     /// swapped for it during the flight. Never faded: only switched, in the same frame as the flyer appears or goes.
-    var bannerAsteriskHidden: Bool { isShared && (phase == .opening || phase == .open || phase == .closing) }
+    func sourceAsteriskHidden(_ source: Kind) -> Bool { source == kind && isShared && (phase == .opening || phase == .open || phase == .closing) }
+    var bannerAsteriskHidden: Bool { sourceAsteriskHidden(.paywall) }
     var wordmarkAsteriskHidden: Bool { isShared && (phase == .opening || phase == .closing) }
 
     // MARK: Geometry (from the banner and the paywall)
 
-    func reportBanner(rect: CGRect, asterisk: CGPoint?) {
+    func reportBanner(rect: CGRect, asterisk: CGPoint?) { report(.paywall, rect: rect, asterisk: asterisk, starHeight: 0) }
+
+    func report(_ source: Kind, rect: CGRect, asterisk: CGPoint?, starHeight: Double) {
         guard phase == .closed else { return }
-        bannerRect = rect
-        if let asterisk { bannerAsterisk = asterisk }
+        var s = sources[source] ?? Source(rect: rect, asterisk: nil, starHeight: starHeight)
+        s.rect = rect
+        if let asterisk { s.asterisk = asterisk }
+        if starHeight > 0 { s.starHeight = starHeight }
+        sources[source] = s
     }
 
     /// The paywall's wordmark asterisk (global). Taken once, while the paywall is mounted but not started: its content is
@@ -108,17 +122,22 @@ final class SupernovaTransition {
     // MARK: Open and close
 
     /// The banner was tapped (`fromBanner`), or the paywall is opened from somewhere else (cross-fade).
-    func open(fromBanner: Bool) {
+    func open(fromBanner: Bool) { open(.paywall, fromSource: fromBanner) }
+
+    /// Opens what grows out of `source` (the banner or the member card); `fromSource` false: no source tapped, cross-fade.
+    func open(_ source: Kind, fromSource: Bool) {
         guard phase == .closed else { return }
         cancelTimers()
         fadingOut = false
+        kind = source
         let reduce = UIAccessibility.isReduceMotionEnabled
-        if fromBanner, !reduce, let rect = bannerRect, let star = bannerAsterisk {
+        if fromSource, !reduce, let src = sources[source], let star = src.asterisk {
             isShared = true
-            geometry = SupernovaTransitionGeometry(bannerRect: rect, bannerAsterisk: star, wordmarkAsterisk: star, screen: screen)
+            let scale = source == .member && src.starHeight > 0 ? src.starHeight / config.flyer.glyphSize : config.flyer.startScale
+            geometry = SupernovaTransitionGeometry(bannerRect: src.rect, bannerAsterisk: star, wordmarkAsterisk: star, screen: screen, startScale: scale)
             wordmarkRest = nil
             phase = .measuring
-            // If the paywall never reports its asterisk, fall back to the cross-fade rather than hang.
+            // If the page never reports its asterisk, fall back to the cross-fade rather than hang.
             schedule(ms: 250) { [self] in if phase == .measuring { isShared = false; geometry = nil; start() } }
         } else {
             isShared = false
@@ -196,7 +215,7 @@ final class SupernovaTransition {
         case .measuring: return isShared ? SupernovaTransitionMath.measuring(g: g, config: c) : fade(0, c)
         case .opening: return isShared ? SupernovaTransitionMath.opening(t: t, g: g, config: c) : fade(SupernovaTransitionMath.clamp(t / c.reduceMotionFadeMs), c)
         case .open: return SupernovaTransitionMath.open(g: g, config: c)
-        case .closing: return SupernovaTransitionMath.closing(t: t, g: g, config: c)
+        case .closing: return SupernovaTransitionMath.closing(t: t, g: g, config: c, morph: kind == .member ? .card : .banner)
         case .revealing: return SupernovaTransitionMath.revealing(t: t, g: g, config: c)
         }
     }
@@ -206,6 +225,12 @@ final class SupernovaTransition {
         f.paywallOpacity = p
         f.bannerText = SupernovaTransitionMath.shown(c.content.bannerItems)
         return f
+    }
+
+    /// The text pieces of one source (the banner's four, the card's three) at `date`: animating only while that source is the
+    /// one in play, otherwise just shown.
+    func sourceText(_ source: Kind, at date: Date) -> [SupernovaTransitionFrame.Piece] {
+        source == kind ? frame(at: date).bannerText : SupernovaTransitionMath.shown(source == .member ? 3 : 4)
     }
 
     /// While the cross-fade closes, the paywall's opacity runs 1 → 0.

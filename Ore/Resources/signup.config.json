@@ -160,6 +160,23 @@
       "choices" : [
 
       ],
+      "key" : "confirm",
+      "kind" : "confirm",
+      "label" : "CONFIRM PASSWORD",
+      "placeholder" : "Type it again",
+      "prefix" : "›",
+      "prompt" : "Confirm your password.",
+      "suffix" : "",
+      "units" : [
+
+      ],
+      "uppercaseChoices" : false
+    },
+    {
+      "cardHeight" : 0,
+      "choices" : [
+
+      ],
       "key" : "name",
       "kind" : "name",
       "label" : "NAME",

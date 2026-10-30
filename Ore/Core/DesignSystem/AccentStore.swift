@@ -1,31 +1,16 @@
 import SwiftUI
 import Observation
 
-/// One selectable accent colour.
-struct AccentChoice: Identifiable, Equatable {
-    let id: String
-    let name: String
-    let hex: String
-    var rgba: StarRGBA { StarRGBA(css: hex) ?? StarRGBA(r: 26, g: 167, b: 255) }
-}
+/// One selectable accent colour, from `supernovaMember.config.json` (the design's five: Sky, Pink, Signal red, Violet, Teal).
+typealias AccentChoice = SupernovaMemberConfig.Accent
 
 enum AccentChoices {
-    /// The app's own accent, what everyone without Supernova sees.
-    static let ore = AccentChoice(id: "ore", name: "Ore", hex: "#1AA7FF")
-    /// Ore first, then the blue family from the Supernova design's palettes, then a few that aren't blue. Amber is left out
-    /// on purpose: it is reserved for Fuel's over-target signal, and gold for Supernova itself.
-    static let all: [AccentChoice] = [
-        ore,
-        AccentChoice(id: "sky", name: "Sky", hex: "#3DB8FF"),
-        AccentChoice(id: "electric", name: "Electric", hex: "#1A8CFF"),
-        AccentChoice(id: "cyan", name: "Cyan", hex: "#14B4F0"),
-        AccentChoice(id: "indigo", name: "Indigo", hex: "#5B6CFF"),
-        AccentChoice(id: "violet", name: "Violet", hex: "#9B6BFF"),
-        AccentChoice(id: "pink", name: "Pink", hex: "#FD4A9F"),
-        AccentChoice(id: "coral", name: "Coral", hex: "#FF6B57"),
-        AccentChoice(id: "mint", name: "Mint", hex: "#19C3A1"),
-    ]
-    static func choice(id: String?) -> AccentChoice { all.first { $0.id == id } ?? ore }
+    /// The picker's choices.
+    @MainActor static var all: [AccentChoice] { SupernovaMemberConfigStore.shared.current.accents }
+    /// What nobody has changed: Ore's own accent. It is the first swatch (Sky), so it can always be put back; it is drawn with the
+    /// catalogue colour, not the swatch's hex.
+    @MainActor static var ore: AccentChoice { SupernovaMemberConfigStore.shared.current.accent(id: SupernovaMemberConfigStore.shared.current.defaultAccent) }
+    @MainActor static func choice(id: String?) -> AccentChoice { SupernovaMemberConfigStore.shared.current.accent(id: id) }
 }
 
 /// The accent colour the whole app draws with. Everyone sees Ore's accent; a Supernova member's own choice replaces it.
@@ -45,7 +30,7 @@ final class AccentStore {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        choiceId = defaults.string(forKey: Self.defaultsKey) ?? AccentChoices.ore.id
+        choiceId = defaults.string(forKey: Self.defaultsKey) ?? SupernovaMemberConfigStore.shared.current.defaultAccent
         isMember = SupernovaPaywallGate.isMember(defaults)
     }
 
@@ -53,6 +38,8 @@ final class AccentStore {
     var active: AccentChoice { isMember ? AccentChoices.choice(id: choiceId) : AccentChoices.ore }
     /// What the member has picked, even while it isn't in use.
     var picked: AccentChoice { AccentChoices.choice(id: choiceId) }
+    /// Ore's own colour is in use (the default pick, or not a member).
+    var usesOreAccent: Bool { active.id == AccentChoices.ore.id }
 
     func select(_ choice: AccentChoice) {
         choiceId = choice.id
@@ -68,11 +55,11 @@ final class AccentStore {
     // MARK: Tokens
 
     /// Ore's own accent comes from the asset catalogue; a member's pick is a flat colour in both schemes.
-    var accent: Color { active == AccentChoices.ore ? .oreAccentDefault : Color(hex: active.hex) }
-    var accentInk: Color { active == AccentChoices.ore ? .accentInkDefault : Color(hex: active.hex) }
+    var accent: Color { usesOreAccent ? .oreAccentDefault : Color(hex: active.hex) }
+    var accentInk: Color { usesOreAccent ? .accentInkDefault : Color(hex: active.hex) }
     /// 8% (light) / 14%… the catalogue's tint, 8% in both schemes.
-    var accentSoft: Color { active == AccentChoices.ore ? .accentSoftDefault : Color(hex: active.hex).opacity(0.08) }
+    var accentSoft: Color { usesOreAccent ? .accentSoftDefault : Color(hex: active.hex).opacity(0.08) }
 
-    /// Palette for the member glitter, derived from the accent.
-    var starPalette: StarPalette { StarPalette.derived(fromAccent: active.rgba) }
+    /// Palette for the member glitter: the design's three stops for the chosen accent.
+    var starPalette: StarPalette { active.palette }
 }

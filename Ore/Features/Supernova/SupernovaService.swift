@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import StoreKit
 import Observation
 
@@ -56,6 +57,10 @@ class SupernovaService {
     private(set) var isLoading = false
     /// When the current subscription renews (or ends), for the More row's "RENEWS 14 MAR".
     private(set) var renewalDate: Date?
+    /// When the membership began (the first purchase of this subscription).
+    private(set) var memberSince: Date?
+    /// The plan in use: "YEARLY" or "MONTHLY".
+    private(set) var planWord = "YEARLY"
 
     static let monthlyProductId = "com.pulse.PulsePump.monthly"
     static let yearlyProductId = "com.pulse.PulsePump.yearly"
@@ -124,17 +129,27 @@ class SupernovaService {
     func refreshSubscriptionStatus() async {
         var foundActive = false
         var renewal: Date?
+        var since: Date?
         for await result in Transaction.currentEntitlements {
             if let transaction = try? checkVerified(result) {
                 if transaction.productID == Self.monthlyProductId ||
                    transaction.productID == Self.yearlyProductId {
                     foundActive = true
                     renewal = transaction.expirationDate
+                    since = transaction.originalPurchaseDate
+                    planWord = transaction.productID == Self.yearlyProductId ? "YEARLY" : "MONTHLY"
                     currentSubscription = availableProducts.first { $0.id == transaction.productID }
                 }
             }
         }
         renewalDate = renewal
+        memberSince = since
+        #if DEBUG
+        if DevFlags.plusOverride, since == nil {   // a seeded member has no purchase: pretend one began at install
+            memberSince = UserDefaults.standard.object(forKey: "appInstallDate") as? Date
+            renewalDate = renewalDate ?? Calendar.current.date(byAdding: .month, value: 5, to: Date())
+        }
+        #endif
         isSubscribed = foundActive || DevFlags.plusOverride   // plusOverride is DEBUG-only
         UserDefaults.standard.set(isSubscribed, forKey: Self.subscribedMirrorKey)
         AccentStore.shared.refreshMembership()
@@ -153,6 +168,34 @@ class SupernovaService {
     var trialDaysRemaining: Int {
         guard let installDate = UserDefaults.standard.object(forKey: "appInstallDate") as? Date else { return 0 }
         return SupernovaTrial.daysRemaining(installDate: installDate, months: SupernovaTrial.months)
+    }
+
+    /// "$84 / YR" or "$7 / MO": the price of the plan in use, when the product is loaded.
+    var planPriceLabel: String? {
+        guard let p = currentSubscription ?? availableProducts.first(where: { $0.subscription?.subscriptionPeriod.unit == .year }) else { return nil }
+        let unit = p.subscription?.subscriptionPeriod.unit == .month ? "MO" : "YR"
+        return p.displayPrice + " / " + unit
+    }
+
+    /// "03/26": the membership card's MEMBER SINCE.
+    var memberSinceShort: String { memberSince.map { Self.format($0, "MM/yy") } ?? "—" }
+    /// "14 MAR 27": the card's RENEWS.
+    var renewsShort: String { renewalDate.map { Self.format($0, "d MMM yy").uppercased() } ?? "—" }
+    /// "14 MAR 2027".
+    var renewsLong: String { renewalDate.map { Self.format($0, "d MMM yyyy").uppercased() } ?? "—" }
+    var memberSinceLong: String { memberSince.map { Self.format($0, "d MMM yyyy").uppercased() } ?? "—" }
+    /// "MAR 2026".
+    var memberSinceMonth: String { memberSince.map { Self.format($0, "MMM yyyy").uppercased() } ?? "—" }
+
+    private static func format(_ d: Date, _ pattern: String) -> String {
+        let f = DateFormatter(); f.dateFormat = pattern; f.locale = Locale(identifier: "en_US_POSIX")
+        return f.string(from: d)
+    }
+
+    /// The App Store's subscription page, where a membership is managed and cancelled.
+    @MainActor func showManageSubscriptions() async {
+        guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first else { return }
+        try? await AppStore.showManageSubscriptions(in: scene)
     }
 
     /// "RENEWS 14 MAR" (or "ACTIVE" when the date isn't known), the member's value on the More › Supernova row.

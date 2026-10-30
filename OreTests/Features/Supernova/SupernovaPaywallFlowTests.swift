@@ -75,8 +75,14 @@ struct SupernovaPaywallFlowTests {
         r.vm.skip()
     }
 
-    @Test @MainActor func aReplayEndsOnTheDoneScreenNotThePaywall() async {
-        let r = await finishTheLastStep(firstRun: false, due: true)
+    @Test @MainActor func aReplayAlsoEndsOnThePaywallForSomeoneWithoutSupernova() async {
+        let r = await finishTheLastStep(firstRun: false, due: false)
+        #expect(r.shown, "the done screen is replaced by the paywall every time, not only on the first run")
+        #expect(!r.vm.isFinished)
+    }
+
+    @Test @MainActor func aMemberReplayKeepsTheDoneScreen() async {
+        let r = await finishTheLastStep(firstRun: false, due: false, member: true)
         #expect(!r.shown)
         #expect(r.vm.isFinished)
         r.vm.skip()

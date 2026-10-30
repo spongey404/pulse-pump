@@ -344,11 +344,12 @@ class TutorialViewModel {
         let all = TutorialStep.allCases
         if currentStep == .startWorkout { startedPracticeWorkout = true }
         guard let i = all.firstIndex(of: currentStep), i + 1 < all.count else {
-            if isFirstRun, SupernovaPaywallGate.shouldShowNow() {
+            if SupernovaPaywallGate.isMember() {
+                // Someone who already has Supernova has no paywall to see: the plain done screen.
+                withAnimation(.easeInOut(duration: 0.2)) { isFinished = true }
+            } else {
                 // The old "You're all set" screen is replaced by the paywall, presented by ContentView.
                 complete()
-            } else {
-                withAnimation(.easeInOut(duration: 0.2)) { isFinished = true }
             }
             return
         }
@@ -368,12 +369,11 @@ class TutorialViewModel {
         }
         UserDefaults.standard.set(false, forKey: "wantsTutorial")
         UserDefaults.standard.set(true, forKey: "tutorialCompleted")
-        // The end of the first-run tutorial (finished or skipped) leads to the Supernova paywall, once.
-        if isFirstRun {
-            isFirstRun = false
-            if SupernovaPaywallGate.shouldShowNow() {
-                NotificationCenter.default.post(name: .showSupernovaPaywall, object: nil)
-            }
+        // The end of the tutorial (finished or skipped, first run or replayed from More) leads to the Supernova paywall,
+        // unless the user already has Supernova.
+        isFirstRun = false
+        if !SupernovaPaywallGate.isMember() {
+            NotificationCenter.default.post(name: .showSupernovaPaywall, object: true)   // true: even if it was shown before
         }
     }
 
