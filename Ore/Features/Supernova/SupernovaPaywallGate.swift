@@ -20,7 +20,8 @@ enum SupernovaPaywallGate {
 
     /// True for someone who already has Supernova (a subscription, or the DEBUG override).
     static func isMember(_ defaults: UserDefaults = .standard) -> Bool {
-        defaults.bool(forKey: SupernovaService.subscribedMirrorKey) || DevFlags.plusOverride
+        // The DEBUG override lives in the standard defaults, so a test's private suite is judged on its own flag only.
+        defaults.bool(forKey: SupernovaService.subscribedMirrorKey) || (defaults === UserDefaults.standard && DevFlags.plusOverride)
     }
 
     /// Onboarding finished: the paywall is due once the tutorial (or onboarding itself) ends.

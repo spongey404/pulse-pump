@@ -43,11 +43,12 @@ struct SupernovaPaywallFlowTests {
 
     @MainActor private func finishTheLastStep(firstRun: Bool, due: Bool, member: Bool = false) async -> (shown: Bool, vm: TutorialViewModel) {
         let d = UserDefaults.standard
-        let saved = [SupernovaPaywallGate.pendingKey, SupernovaPaywallGate.shownKey, SupernovaService.subscribedMirrorKey].map { ($0, d.object(forKey: $0)) }
+        let saved = [SupernovaPaywallGate.pendingKey, SupernovaPaywallGate.shownKey, SupernovaService.subscribedMirrorKey, "devDataPlus"].map { ($0, d.object(forKey: $0)) }
         defer { saved.forEach { d.set($0.1, forKey: $0.0) } }
         d.set(due, forKey: SupernovaPaywallGate.pendingKey)
         d.set(false, forKey: SupernovaPaywallGate.shownKey)
         d.set(member, forKey: SupernovaService.subscribedMirrorKey)
+        d.set(false, forKey: "devDataPlus")   // the simulator may be seeded as a member
 
         let vm = TutorialViewModel()
         vm.didSucceed = { _ in true }
@@ -83,9 +84,9 @@ struct SupernovaPaywallFlowTests {
 
     @Test @MainActor func skippingTheFirstRunTutorialAlsoLeadsToThePaywall() async {
         let d = UserDefaults.standard
-        let saved = [SupernovaPaywallGate.pendingKey, SupernovaPaywallGate.shownKey, SupernovaService.subscribedMirrorKey].map { ($0, d.object(forKey: $0)) }
+        let saved = [SupernovaPaywallGate.pendingKey, SupernovaPaywallGate.shownKey, SupernovaService.subscribedMirrorKey, "devDataPlus"].map { ($0, d.object(forKey: $0)) }
         defer { saved.forEach { d.set($0.1, forKey: $0.0) } }
-        d.set(true, forKey: SupernovaPaywallGate.pendingKey); d.set(false, forKey: SupernovaPaywallGate.shownKey); d.set(false, forKey: SupernovaService.subscribedMirrorKey)
+        d.set(true, forKey: SupernovaPaywallGate.pendingKey); d.set(false, forKey: SupernovaPaywallGate.shownKey); d.set(false, forKey: SupernovaService.subscribedMirrorKey); d.set(false, forKey: "devDataPlus")
         var posted = false
         let token = NotificationCenter.default.addObserver(forName: .showSupernovaPaywall, object: nil, queue: .main) { _ in posted = true }
         defer { NotificationCenter.default.removeObserver(token) }

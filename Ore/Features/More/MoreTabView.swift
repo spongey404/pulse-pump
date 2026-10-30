@@ -18,10 +18,12 @@ struct MoreTabView: View {
     @State private var screen: MoreScreen = .hub
     #endif
     @State private var showSignOutAlert = false
+    @State private var showAccentPicker = false
     @State private var showTutorialDraftAlert = false
     @Query(filter: #Predicate<Workout> { $0.isDraft && $0.deletedAt == nil }) private var drafts: [Workout]
     @State private var supernovaService = SupernovaService()
     @State private var social = SocialViewModel.shared
+    private var accent: AccentStore { AccentStore.shared }
 
     private var user: User? { users.first }
     private var streak: Int { StreakCalculator.currentStreak(from: workouts.map(\.date)) }
@@ -49,8 +51,13 @@ struct MoreTabView: View {
             get: { screen == .supernova },
             set: { if !$0 { screen = .hub } }
         )) {
-            SupernovaView(onBack: { screen = .hub })
+            if isFree {
+                SupernovaPaywallView(context: .more, onSubscribed: { screen = .hub }, onTrainFree: { screen = .hub })
+            } else {
+                SupernovaView(onBack: { screen = .hub })
+            }
         }
+        .sheet(isPresented: $showAccentPicker) { AccentPickerView() }
     }
 
     private func consumeRouter() {
@@ -82,7 +89,11 @@ struct MoreTabView: View {
                 VStack(spacing: 0) {
                     userHeader
                     statsRow
-                    if isFree { plusBanner }
+                    if isFree {
+                        SupernovaBanner { screen = .supernova }
+                    } else {
+                        MemberRecapCard(stats: recapStats) { screen = .weeklyRecap }
+                    }
 
                     MoreSectionLabel(title: "TRAINING", top: 16, bottom: 6)
                     MoreRow(icon: "clock.arrow.circlepath", label: "History",
@@ -97,8 +108,14 @@ struct MoreTabView: View {
 
                     MoreSectionLabel(title: "ACCOUNT", top: 16, bottom: 6)
                     MoreRow(icon: "gearshape", label: "Settings", minHeight: 48) { screen = .settings }
-                    MoreRow(icon: "bolt", label: "Supernova", value: isFree ? "FREE" : "ACTIVE",
-                            minHeight: 48) { screen = .supernova }
+                    MoreRow(icon: "bolt", label: Brand.membershipName, value: isFree ? "FREE" : supernovaService.statusLabel,
+                            minHeight: 48, memberStarIcon: !isFree) { screen = .supernova }
+                    .accessibilityIdentifier(AX.row(Brand.membershipName))
+                    if !isFree {
+                        MoreRow(icon: "paintpalette", label: "Accent colour", value: accent.picked.name.uppercased(),
+                                minHeight: 48) { showAccentPicker = true }
+                            .accessibilityIdentifier(AX.supernova.accentRow)
+                    }
 
                     MoreSectionLabel(title: "HELP", top: 16, bottom: 6)
                     MoreRow(icon: "questionmark.circle", label: "Tutorial", minHeight: 48) {
@@ -152,15 +169,30 @@ struct MoreTabView: View {
     private var userHeader: some View {
         Button { screen = .profile } label: {
             HStack(spacing: 14) {
-                Avatar(initial: user?.name ?? "?", size: 48)
-                VStack(alignment: .leading, spacing: 3) {
+                if isFree {
+                    Avatar(initial: user?.name ?? "?", size: 48)
+                } else {
+                    MemberAvatar(name: user?.name ?? "?", size: 48)
+                }
+                VStack(alignment: .leading, spacing: isFree ? 3 : 4) {
                     Text(user?.name ?? "Athlete")
                         .font(.archivo(20, weight: .bold))
                         .foregroundStyle(Color.inkPrimary)
-                    Text(handleLine)
-                        .font(.spaceMono(9))
-                        .tracking(0.8)
-                        .foregroundStyle(Color.inkMuted)
+                    if isFree {
+                        Text(handleLine)
+                            .font(.spaceMono(9))
+                            .tracking(0.8)
+                            .foregroundStyle(Color.inkMuted)
+                    } else {
+                        HStack(spacing: 8) {
+                            MemberProfileTag()
+                            Text(handleLine)
+                                .font(.spaceMono(9))
+                                .tracking(0.8)
+                                .foregroundStyle(Color.inkMuted)
+                                .lineLimit(1)
+                        }
+                    }
                 }
                 Spacer()
                 Text("›").font(.spaceMono(16)).foregroundStyle(Color.inkGhost)
@@ -174,8 +206,17 @@ struct MoreTabView: View {
     private var handleLine: String {
         let raw = (user?.username.isEmpty == false ? user?.username : user?.name) ?? "athlete"
         var parts = ["@" + raw.lowercased().replacingOccurrences(of: " ", with: "")]
-        if let split = user?.selectedSplit?.name, !split.isEmpty { parts.append(split.uppercased()) }
+        if let split = user?.selectedSplit?.name, !split.isEmpty { parts.append(isFree ? split.uppercased() : Self.shortSplit(split)) }
         return parts.joined(separator: " · ")
+    }
+
+    /// "Push Pull Legs" → "PPL" beside a member's tag (the design's "@alexmercer · PPL"); other names stay whole.
+    static func shortSplit(_ name: String) -> String {
+        switch name.lowercased() {
+        case "push pull legs", "ppl": "PPL"
+        case "upper lower", "upper/lower": "U/L"
+        default: name.uppercased()
+        }
     }
 
     private var statsRow: some View {
@@ -202,42 +243,11 @@ struct MoreTabView: View {
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
     }
 
-    // MARK: - Supernova banner (free plan only)
+    // MARK: - Weekly Recap card (members)
 
-    private var plusBanner: some View {
-        Button { screen = .supernova } label: {
-            HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(.white.opacity(0.18))
-                    .frame(width: 36, height: 36)
-                    .overlay {
-                        Image(systemName: "bolt.fill")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(.white)
-                    }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("UNLOCK SUPERNOVA")
-                        .font(.archivo(18, weight: .black))
-                        .tracking(1.2)
-                        .foregroundStyle(.white)
-                    Text("SMART SUGGESTIONS · CLOUD SYNC · ANALYTICS")
-                        .font(.spaceMono(9))
-                        .tracking(0.5)
-                        .foregroundStyle(.white.opacity(0.85))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                }
-                Spacer(minLength: 0)
-                Text("›").font(.spaceMono(16, weight: .bold)).foregroundStyle(.white)
-            }
-            .padding(.horizontal, 16).padding(.vertical, 14)
-            .background(Color.oreAccent)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 16)
-        .padding(.top, 14)
-        .padding(.bottom, 4)
+    private var recapStats: WeeklyRecapStats {
+        WeeklyRecapStats(workouts: workouts, unit: user?.unitPreference ?? .kg,
+                         splitDayCount: user?.selectedSplit?.days.count ?? 0)
     }
 }
 

@@ -96,6 +96,8 @@ struct MoreRow: View {
     var minHeight: CGFloat = 52
     /// Small outlined tag before the value, e.g. "SUPERNOVA".
     var tag: String? = nil
+    /// A member's Supernova row: accent tile with glitter and a white bolt instead of the plain icon tile.
+    var memberStarIcon = false
     var toggle: Binding<Bool>? = nil
     var action: () -> Void = {}
 
@@ -103,6 +105,9 @@ struct MoreRow: View {
         let fg: Color = destructive ? .signalDown : .inkPrimary
         Button(action: toggle == nil ? action : { toggle?.wrappedValue.toggle() }) {
             HStack(spacing: 12) {
+                if memberStarIcon {
+                    SupernovaRowIcon()
+                } else {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(destructive ? Color.signalDown.opacity(0.10) : Color.surf2)
                     .frame(width: 32, height: 32)
@@ -111,6 +116,7 @@ struct MoreRow: View {
                             .font(.system(size: 14, weight: .regular))
                             .foregroundStyle(destructive ? Color.signalDown : Color.inkMuted)
                     }
+                }
                 HStack(spacing: 10) {
                     Text(label)
                         .font(.archivo(14, weight: .semibold))

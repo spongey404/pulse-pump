@@ -11,6 +11,8 @@ struct KPIBlock: View {
     var valueColor: Color = Color.inkPrimary
     /// Small muted trailing text after the value, e.g. "OF 2,412" on a RANK block.
     var delta: String?
+    /// Colour of `delta` (muted unless set; the design colours a rising figure with the "up" signal).
+    var deltaColor: Color = Color.inkMuted
     var alignment: HorizontalAlignment = .leading
 
     var body: some View {
@@ -33,7 +35,7 @@ struct KPIBlock: View {
                 if let delta {
                     Text(delta)
                         .font(.spaceMono(8))
-                        .foregroundStyle(Color.inkMuted)
+                        .foregroundStyle(deltaColor)
                 }
             }
         }

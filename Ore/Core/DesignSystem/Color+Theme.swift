@@ -24,8 +24,14 @@ extension Color {
     // MARK: - Legacy aliases
     static var oreSoft: Color   { Color.accentSoft }
 
-    // MARK: - Accent
-    // `oreAccent` (#0A6FC0, flat in both schemes) is for FILLED surfaces —
+    // MARK: - Accent (dynamic: Supernova members can pick their own; see AccentStore)
+    // The catalogue colours are `oreAccentDefault`, `accentInkDefault` and `accentSoftDefault` (Xcode-generated symbols).
+    // These three names are what the rest of the app uses; they follow the member's choice.
+    static var oreAccent: Color { AccentStore.shared.accent }
+    static var accentInk: Color { AccentStore.shared.accentInk }
+    static var accentSoft: Color { AccentStore.shared.accentSoft }
+
+    // `oreAccent` (flat in both schemes) is for FILLED surfaces —
     // CTA fill, tab-bar active fill, chip fill — so white `onAccent` text keeps its contrast.
     // `accentInk` (AccentInk.colorset) lifts to #4DB8FF on the dark canvas and is for accent
     // TEXT, glyphs, borders and the active-row left border, which read as under-saturated ink
@@ -60,4 +66,10 @@ extension Color {
     // Legacy: keep tickerBg/tickerFg pointing to dark variant for any hardcoded uses
     static let tickerBg = Color(hex: "#0E0C0A")
     static let tickerFg = Color(hex: "#ECE5D6")
+}
+
+extension ShapeStyle where Self == Color {
+    static var oreAccent: Color { Color.oreAccent }
+    static var accentInk: Color { Color.accentInk }
+    static var accentSoft: Color { Color.accentSoft }
 }

@@ -54,6 +54,8 @@ class SupernovaService {
     private(set) var currentSubscription: Product?
     private(set) var availableProducts: [Product] = []
     private(set) var isLoading = false
+    /// When the current subscription renews (or ends), for the More row's "RENEWS 14 MAR".
+    private(set) var renewalDate: Date?
 
     static let monthlyProductId = "com.pulse.PulsePump.monthly"
     static let yearlyProductId = "com.pulse.PulsePump.yearly"
@@ -121,17 +123,21 @@ class SupernovaService {
 
     func refreshSubscriptionStatus() async {
         var foundActive = false
+        var renewal: Date?
         for await result in Transaction.currentEntitlements {
             if let transaction = try? checkVerified(result) {
                 if transaction.productID == Self.monthlyProductId ||
                    transaction.productID == Self.yearlyProductId {
                     foundActive = true
+                    renewal = transaction.expirationDate
                     currentSubscription = availableProducts.first { $0.id == transaction.productID }
                 }
             }
         }
+        renewalDate = renewal
         isSubscribed = foundActive || DevFlags.plusOverride   // plusOverride is DEBUG-only
         UserDefaults.standard.set(isSubscribed, forKey: Self.subscribedMirrorKey)
+        AccentStore.shared.refreshMembership()
         WidgetDataService.setSubscribed(foundActive)
     }
 
@@ -149,6 +155,13 @@ class SupernovaService {
         guard let installDate = UserDefaults.standard.object(forKey: "appInstallDate") as? Date else { return 14 }
         let daysSinceInstall = Calendar.current.dateComponents([.day], from: installDate, to: Date()).day ?? 0
         return max(0, 14 - daysSinceInstall)
+    }
+
+    /// "RENEWS 14 MAR" (or "ACTIVE" when the date isn't known), the member's value on the More › Supernova row.
+    var statusLabel: String {
+        guard let renewalDate else { return "ACTIVE" }
+        let f = DateFormatter(); f.dateFormat = "d MMM"
+        return "RENEWS " + f.string(from: renewalDate).uppercased()
     }
 
     func hasAccess(to feature: SupernovaFeature) -> Bool {

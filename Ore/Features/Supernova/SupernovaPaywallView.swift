@@ -7,6 +7,9 @@ import StoreKit
 ///
 /// Always dark, like the design. Shown once, at the end of first-run onboarding (`SupernovaPaywallGate`).
 struct SupernovaPaywallView: View {
+    /// Where it is shown: at the end of first-run onboarding (the design), or opened from More.
+    enum Context { case firstRun, more }
+    var context: Context = .firstRun
     /// Called after a successful purchase.
     var onSubscribed: () -> Void
     /// "TRAIN FREE →": straight to Home, free. No confirmation, no second paywall.
@@ -164,7 +167,7 @@ struct SupernovaPaywallView: View {
     private var freeStrip: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("FREE · TUTORIAL DONE ✓")
+                Text(context == .firstRun ? "FREE · TUTORIAL DONE ✓" : "FREE · YOUR PLAN")
                     .font(.spaceMono(9))
                     .tracking(1.5)
                     .foregroundStyle(.white.opacity(0.75))
@@ -176,7 +179,7 @@ struct SupernovaPaywallView: View {
             .layoutPriority(1)
             Spacer(minLength: 0)
             Button(action: onTrainFree) {
-                Text("TRAIN FREE →")
+                Text(context == .firstRun ? "TRAIN FREE →" : "NOT NOW →")
                     .font(.spaceMono(10, weight: .bold))
                     .tracking(1.5)
                     .foregroundStyle(.white)
