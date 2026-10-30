@@ -7,11 +7,13 @@ final class SignUpScreenshotsUITests: UITestCase {
         let dir = try XCTUnwrap(ProcessInfo.processInfo.environment["SIGNUP_SHOTS"])
         RunLoop.current.run(until: Date().addingTimeInterval(settle))
         try XCUIScreen.main.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "\(dir)/\(name).png"))
+        // The element frames too, for measuring against the design.
+        try app.debugDescription.write(toFile: "\(dir)/\(name).txt", atomically: true, encoding: .utf8)
     }
 
     func testCaptureSignUpAndOnboardingScreens() throws {
         try XCTSkipIf(ProcessInfo.processInfo.environment["SIGNUP_SHOTS"] == nil, "set SIGNUP_SHOTS to a folder to capture screens")
-        launch(LaunchConfig(email: nil))
+        launch(LaunchConfig(email: nil, extraArguments: ProcessInfo.processInfo.environment["SIGNUP_NO_STARS"] == nil ? [] : ["-debugSignupNoStars", "1"]))
         try shot("01-opening")
 
         let page = SignInPage(t: self)

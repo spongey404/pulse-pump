@@ -179,6 +179,10 @@ struct StarFieldView: View {
             drawBannerMorph(ctx: &ctx, rect: m.rect.offsetBy(dx: -runner.origin.x, dy: -runner.origin.y), alpha: m.alpha, t: t, palette: pal)
         }
 
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "debugSignupNoStars") { ctx.fill(full, with: .color(color(pal.veil))); return }   // clean frames for measuring against the design
+        #endif
+
         let (dots, flares) = runner.frame(size: size, t: t)
 
         // Stars, batched: one path per (colour, brightness level).

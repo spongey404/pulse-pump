@@ -292,6 +292,14 @@ Sign-in, sign-up and onboarding are **one continuous console**, built from the C
 - **Notifications** are asked for after the paywall closes (`ContentView`), not over it.
 - UI tests: `SignInPage` / `OnboardingPage` in `OreUITests/Pages/AuthPages.swift` (`AX.signup.*`; the opening buttons keep `AX.auth.apple/google/useEmail`); `SignUpScreenshotsUITests` saves every state.
 
+## Checking a screen against its Claude Design file (how the sign-up and paywall were matched)
+
+Don't eyeball it: measure. The recipe (scripts lived in the session scratchpad; rebuild them in minutes):
+1. **Render the design's own markup** (the inline styles in the `.dc.html`, filled for one state) as a static page at the simulator's size (402 × 874) with the bundled fonts, served from `python3 -m http.server`, and screenshot it with headless Chrome (`--headless=new --force-device-scale-factor=3 --window-size=402,874 --screenshot=…`). Put the status bar's height at the simulator's safe-area top (62).
+2. **Screenshot the app at 3×** from a UI test (`SignUpScreenshotsUITests` with `SIGNUP_SHOTS=<dir>`; `SIGNUP_NO_STARS=1` / DEBUG `-debugSignupNoStars 1` removes the stars, which the static design doesn't have). The test also saves `app.debugDescription` (every element's frame) next to each PNG.
+3. **Compare ink bands**: find the rows where white text pixels (≥ 235) occur in both images and compare their tops/bottoms and left/right extents; compare element frames from the hierarchy with `getBoundingClientRect()` from the page. The sign-up states agree to within 1 pt, the paywall to 0.4 pt.
+Things this found: SwiftUI's `lineSpacing` doesn't give CSS line boxes (use `cssLineHeight`, which on iOS 26 uses `.lineHeight(.exact)` plus a measured baseline correction), a CSS `border` takes space but a SwiftUI overlay doesn't, a CSS blur of N px is `blur(radius: N/2)` in SwiftUI, and docked blocks measured from the screen's bottom edge must subtract the safe area. XCUITest screenshots blank `SecureField` text (it does render on screen).
+
 ## Remote settings (change without a release)
 
 `Core/Services/RemoteSettings.swift` reads **Firebase Remote Config** at launch (background; skipped under tests and the emulators) and caches the result, so a change made in the Firebase console reaches users on their next launch or two. Every value has an in-app default, so the app works offline and before the first fetch; a missing or invalid value is ignored.

@@ -42,7 +42,7 @@ struct SupernovaFlyer: View {
         let font = Font.custom("Archivo-Black", size: config.glyphSize)
         let gold = Color(hex: config.colorHex)
         ZStack {
-            Text(SupernovaAsterisk.glyph).font(font).foregroundStyle(gold).blur(radius: config.glowRadius).opacity(config.glowAlpha)
+            Text(SupernovaAsterisk.glyph).font(font).foregroundStyle(gold).blur(radius: config.glowRadius / 2).opacity(config.glowAlpha)   // CSS text-shadow blur 14 px is a Gaussian of σ 7
             Text(SupernovaAsterisk.glyph).font(font).foregroundStyle(gold)
         }
         .fixedSize()

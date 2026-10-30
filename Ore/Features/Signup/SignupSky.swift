@@ -118,6 +118,10 @@ struct SignupBackdrop: View {
         ctx.fill(full, with: .radialGradient(Gradient(stops: glowStops), center: CGPoint(x: W * 0.85, y: 0), startRadius: 0,
                                              endRadius: W * (bg.topGlowRadiusBase + lv * bg.topGlowRadiusPerLevel)))
 
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "debugSignupNoStars") { return }   // clean frames for measuring against the design
+        #endif
+
         // Stars: one path per (colour, brightness level).
         let levels = Self.levels
         let s = config.stars
@@ -179,6 +183,13 @@ struct SignupProgressBar: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var runner = SignupBarRunner()
+    private static var noStars: Bool {
+        #if DEBUG
+        UserDefaults.standard.bool(forKey: "debugSignupNoStars")
+        #else
+        false
+        #endif
+    }
     @State private var start = Date()
 
     var body: some View {
@@ -187,7 +198,7 @@ struct SignupProgressBar: View {
                 Capsule().fill(SignupSkyColors.track)
                 ZStack(alignment: .leading) {
                     LinearGradient(colors: [.white, Color(red: 221 / 255, green: 242 / 255, blue: 1)], startPoint: .leading, endPoint: .trailing)
-                    if !reduceMotion {
+                    if !reduceMotion && !Self.noStars {
                         TimelineView(.animation(minimumInterval: 1.0 / Double(max(1, config.stars.fps)), paused: scenePhase != .active || progress <= 0)) { tl in
                             Canvas { ctx, size in
                                 let t = tl.date.timeIntervalSince(start) * 1000

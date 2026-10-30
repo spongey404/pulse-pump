@@ -28,7 +28,7 @@ struct StarBullet: View {
     private var star: some View {
         ZStack {
             // The halo: a blurred copy behind the star (the app has no drop shadows).
-            FourPointStar().fill(Self.gold).blur(radius: config.glowRadius).opacity(config.glowAlpha)
+            FourPointStar().fill(Self.gold).blur(radius: config.glowRadius / 2).opacity(config.glowAlpha)   // CSS drop-shadow blur 3 px is a Gaussian of σ 1.5
             FourPointStar().fill(Self.gold)
             Circle().fill(Self.core).frame(width: size * 4.4 / 24, height: size * 4.4 / 24)
         }

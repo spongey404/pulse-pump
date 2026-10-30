@@ -69,7 +69,7 @@ struct SignupConsoleView: View {
                               progress: model.stage == .landing ? 0 : model.stage == .console ? Double(model.answeredCount) / Double(max(1, model.total)) : 1)
         }
         .padding(.horizontal, 24)
-        .padding(.top, 14)
+        .padding(.top, 4)   // the design: 4 pt under the status bar
     }
 
     // MARK: Body
@@ -126,7 +126,7 @@ struct SignupConsoleView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 24)
-        .padding(.bottom, 8)
+        .padding(.bottom, 20)   // the scroll area's bottom padding in the design
     }
 
     // MARK: Log and questions
@@ -145,6 +145,7 @@ struct SignupConsoleView: View {
                         if row.editable { Text("EDIT").font(.spaceMono(8)).tracking(1.2).foregroundStyle(SignupSkyColors.muted) }
                     }
                     .frame(minHeight: 36)
+                    .padding(.bottom, 1)   // min-height 36 + a 1 pt bottom border = 37
                     .overlay(alignment: .bottom) { Rectangle().fill(SignupSkyColors.rule).frame(height: 1) }
                     .contentShape(Rectangle())
                 }
@@ -178,15 +179,19 @@ struct SignupConsoleView: View {
     }
 
     private func promptText(_ step: SignupConfig.Step) -> some View {
-        // The caret blinks at the end of the prompt, and goes away once a text field has taken over.
+        // The caret (2 × 24 pt, 3 pt after the text, blinking at 1 s) sits at the end of the prompt, and goes away once a
+        // text field has taken over.
         let caretVisible = !(model.promptDone && step.kind != "choice")
-        return (Text(model.typedPrompt).foregroundStyle(SignupSkyColors.ink)
-                + Text(caretVisible ? "▏" : "").foregroundStyle(SignupSkyColors.ink))
-            .font(.archivo(24, weight: .black)).tracking(-0.2).textCase(.uppercase)
-            .cssLineHeight(fontName: "Archivo-Black", size: 24, multiple: 1.1)
-            .frame(maxWidth: .infinity, minHeight: 30, alignment: .topLeading)
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityLabel(model.prompt)
+        return TimelineView(.periodic(from: .now, by: 0.5)) { tl in
+            let on = Int(tl.date.timeIntervalSinceReferenceDate / 0.5) % 2 == 0
+            (Text(model.typedPrompt).foregroundStyle(SignupSkyColors.ink)
+                + Text(Image(uiImage: SignupCaret.image(visible: caretVisible && on))).baselineOffset(-3))
+                .font(.archivo(24, weight: .black)).tracking(-0.2).textCase(.uppercase)
+                .cssLineHeight(fontName: "Archivo-Black", size: 24, multiple: 1.1)
+                .frame(maxWidth: .infinity, minHeight: 30, alignment: .topLeading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityLabel(model.prompt)
     }
 
     // MARK: Input
@@ -383,6 +388,12 @@ struct SignupConsoleView: View {
 
     // MARK: Docked buttons
 
+    /// The design's docked blocks end 28 pt above the screen's bottom edge; the safe area (home indicator) counts toward that.
+    private static var dockBottom: CGFloat {
+        let inset = UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.safeAreaInsets.bottom ?? 34
+        return 28 - inset
+    }
+
     @ViewBuilder private var docked: some View {
         switch model.stage {
         case .landing:
@@ -393,7 +404,7 @@ struct SignupConsoleView: View {
                 legal.padding(.top, 6)
             }
             .disabled(model.isBusy || model.session.isBusy)
-            .padding(.horizontal, 24).padding(.top, 12).padding(.bottom, 12)
+            .padding(.horizontal, 24).padding(.top, 12).padding(.bottom, Self.dockBottom)
         case .welcome:
             VStack(spacing: 10) {
                 Button { model.finish(tutorial: true, modelContext: modelContext) } label: {
@@ -418,7 +429,7 @@ struct SignupConsoleView: View {
                 Text("TUTORIAL ALWAYS AVAILABLE IN MORE → HELP").font(.spaceMono(9)).tracking(1.5)
                     .foregroundStyle(SignupSkyColors.muted).padding(.top, 4)
             }
-            .padding(.horizontal, 24).padding(.top, 12).padding(.bottom, 12)
+            .padding(.horizontal, 24).padding(.top, 12).padding(.bottom, Self.dockBottom)
             .transition(.opacity.combined(with: .offset(y: config.typing.risePt)))
         default:
             EmptyView()
@@ -473,7 +484,7 @@ private struct ChoiceCard: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if !choice.meta.isEmpty { Text(choice.meta).font(.spaceMono(9)).tracking(1.2).foregroundStyle(SignupSkyColors.muted) }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 17)   // 16 pt of padding inside the 1 pt border, as in CSS
             .frame(minHeight: height).frame(maxWidth: .infinity)
             .background(SignupSkyColors.card)
             .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(SignupSkyColors.cardBorder, lineWidth: 1))
@@ -492,4 +503,23 @@ struct PressOpacityStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.opacity(configuration.isPressed ? 0.85 : 1)
     }
+}
+
+/// The blinking caret: a 2 × 24 pt white bar after 3 pt of space (the design's `margin-left: 3px`), as an inline image so it
+/// follows the end of the last line.
+enum SignupCaret {
+    static func image(visible: Bool) -> UIImage {
+        let size = CGSize(width: 5, height: 24)
+        let cached = visible ? on : off
+        if let cached { return cached }
+        let img = UIGraphicsImageRenderer(size: size).image { ctx in
+            guard visible else { return }
+            UIColor.white.setFill()
+            ctx.fill(CGRect(x: 3, y: 0, width: 2, height: 24))
+        }
+        if visible { on = img } else { off = img }
+        return img
+    }
+    private static var on: UIImage?
+    private static var off: UIImage?
 }

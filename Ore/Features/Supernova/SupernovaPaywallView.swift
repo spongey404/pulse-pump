@@ -87,13 +87,13 @@ struct SupernovaPaywallView: View {
                     .tracking(2)
                     .foregroundStyle(.white)
             }
-            .padding(.top, 18)
+            .padding(.top, 23.3)   // the design: the header label is 24 pt under the status bar (ink, measured)
             .paywallGroup(0, reveal)
 
             SupernovaWordmark(size: 44, tracking: -0.5, gapEm: SupernovaAsterisk.paywallGapEm,
                               asteriskHidden: context == .more && transition.wordmarkAsteriskHidden)
                 .frame(height: 44 * 0.95, alignment: .bottom)
-                .padding(.top, 18)
+                .padding(.top, 21.3)   // measured against the design (its 0.95 line box sits the glyphs lower than a bottom-aligned Text)
                 .paywallGroup(1, reveal)
 
             Text(SupernovaTrial.headline(months: SupernovaTrial.months, apps: "\(Brand.appName), \(Brand.tareName) and \(Brand.driftName)"))
@@ -101,7 +101,7 @@ struct SupernovaPaywallView: View {
                 .cssLineHeight(fontName: "Archivo-Medium", size: 17, multiple: 1.35)
                 .foregroundStyle(.white)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 10)
+                .padding(.top, 6.7)
                 .paywallGroup(2, reveal)
 
             VStack(spacing: 0) {
@@ -125,11 +125,12 @@ struct SupernovaPaywallView: View {
                         Spacer(minLength: 0)
                     }
                     .padding(.vertical, 9)
+                    .padding(.bottom, 1)   // the row's 1 pt bottom border takes space in CSS
                     .overlay(alignment: .bottom) { Rectangle().fill(.white.opacity(0.3)).frame(height: 1) }
                 }
             }
             .overlay(alignment: .top) { Rectangle().fill(.white.opacity(0.3)).frame(height: 1) }
-            .padding(.top, 18)
+            .padding(.top, 19.1)
             .paywallGroup(3, reveal)
 
             Spacer(minLength: 12)
@@ -138,7 +139,9 @@ struct SupernovaPaywallView: View {
                 .paywallGroup(4, reveal)
         }
         .padding(.horizontal, 24)
-        .padding(.bottom, 22)
+        // The design's 25 pt between the small print and the free strip; RESTORE PURCHASES (not in the design, but the App
+        // Store requires it) sits in that gap, so it adds no height.
+        .padding(.bottom, 25 - 22.9)
         .frame(maxHeight: .infinity, alignment: .top)
     }
 
@@ -183,7 +186,7 @@ struct SupernovaPaywallView: View {
     // MARK: Free strip
 
     private var freeStrip: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(context == .firstRun ? "FREE · TUTORIAL DONE ✓" : "FREE · LOGGING STAYS FREE")
                     .font(.spaceMono(9))
@@ -195,7 +198,7 @@ struct SupernovaPaywallView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .layoutPriority(1)
-            Spacer(minLength: 0)
+            Spacer(minLength: 12)
             Button(action: onTrainFree) {
                 Text("TRAIN FREE →")
                     .font(.spaceMono(10, weight: .bold))
@@ -210,7 +213,11 @@ struct SupernovaPaywallView: View {
         }
         .padding(.horizontal, 24)
         .padding(.top, 14)
-        .padding(.bottom, 26)
+        .padding(.bottom, 26 - Self.safeBottom)   // 26 pt above the screen's bottom edge, as in the design (the home indicator counts)
+    }
+
+    private static var safeBottom: CGFloat {
+        UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.safeAreaInsets.bottom ?? 34
     }
 
     // MARK: Purchase
@@ -233,12 +240,21 @@ struct SupernovaPaywallView: View {
 }
 
 extension View {
-    /// CSS-style `line-height: <multiple>` for a custom font: lines are at least `size × multiple` tall (text centred in
-    /// its line box, like CSS half-leading) and wrapped lines are spaced to match.
+    /// CSS-style `line-height: <multiple>` for a custom font: every line box is `size × multiple` tall with the text centred
+    /// in it (CSS half-leading). iOS 26 has the exact line height; before that, lines are spaced to match and a single line
+    /// is padded to the box.
+    @ViewBuilder
     func cssLineHeight(fontName: String, size: CGFloat, multiple: CGFloat) -> some View {
         let target = size * multiple
         let natural = UIFont(name: fontName, size: size)?.lineHeight ?? size * 1.2
-        return lineSpacing(target - natural).frame(minHeight: target, alignment: .leading)
+        if #available(iOS 26.0, *) {
+            // The exact line box keeps the glyphs at the top of the line, where CSS puts the half-leading above and below.
+            // Measured against Chrome: iOS puts the first baseline at about 1.0 em in an exact line box, CSS at
+            // (line − 1.088 em) / 2 + 0.878 em for Archivo (hhea ascent 0.878, descent 0.210).
+            self.lineHeight(.exact(points: target)).offset(y: target / 2 - 0.671 * size)
+        } else {
+            self.lineSpacing(target - natural).frame(minHeight: target, alignment: .leading)
+        }
     }
 }
 
