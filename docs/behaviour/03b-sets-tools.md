@@ -1,7 +1,7 @@
 # 03b Workout logging: sets, set types, plate tools, rest timer, supersets, notes
 
 Scope: everything on an exercise card during a session: set rows, ghost ("previous") text, set types, inline and standalone plate calculators, the warm-up generator, the rest timer and its notification, supersets and notes.
-Key sources: `Features/Workout/Views/Logger/{SetRowViews,ExerciseCardView,SetTypeSheetView,SetTypeStyle,InlinePlateViews,RestTimerViews,WorkoutNotesAndBars}.swift`, `Features/Workout/WorkoutViewModel.swift`, `Features/Workout/Services/RestTimerService.swift`, `Features/Workout/Tools/*`, `Core/Utilities/{PlateMath,DecimalParsing}.swift`, `PumpShared/WeightUnit.swift`, `Core/Services/Notifications/SystemRestEndNotifier.swift`.
+Key sources: `Features/Workout/Views/Logger/{SetRowViews,ExerciseCardView,SetTypeSheetView,SetTypeStyle,InlinePlateViews,RestTimerViews,WorkoutNotesAndBars}.swift`, `Features/Workout/WorkoutViewModel.swift`, `Features/Workout/Services/RestTimerService.swift`, `Features/Workout/Tools/*`, `Core/Utilities/{PlateMath,DecimalParsing}.swift`, `OreShared/WeightUnit.swift`, `Core/Services/Notifications/SystemRestEndNotifier.swift`.
 Weights are stored in kg; text fields show and accept the user's unit (`KgTextField`).
 
 Status legend: ✅ implemented and verified in code | 🟡 partial | ❌ not built | 🐞 known bug | 🧭 proposed (owner decides).
@@ -57,7 +57,7 @@ Status legend: ✅ implemented and verified in code | 🟡 partial | ❌ not bui
 | SET-E12 | History exists but fewer sets than today | Rows beyond the previous count show no ghost | `setIndex < sorted.count` | ✅ | [ ] | — |
 | SET-E13 | Exercise replaced mid-session | Ghosts follow the new exercise id at once | | ✅ | [ ] | — |
 | SET-E14 | Previous session was logged on another device and synced | Ghost uses it once pulled (same store) | | ✅ | [ ] | — |
-| SET-E15 | Free vs Pulse+ | Ghost text and logging identical | `spec` lists ghost text as free | ✅ | [ ] | — |
+| SET-E15 | Free vs Supernova | Ghost text and logging identical | `spec` lists ghost text as free | ✅ | [ ] | — |
 
 ## STY  Set types
 
@@ -178,7 +178,7 @@ Status legend: ✅ implemented and verified in code | 🟡 partial | ❌ not bui
 | RTM-E07 | Clock changes (DST, manual) | Countdown uses an end `Date`; a manual clock jump shifts it | | 🟡 | [ ] | — |
 | RTM-E08 | Rest overlaps with discard / finish | Timer and notification are stopped | | ✅ | [ ] | — |
 | RTM-E09 | Override minutes huge (taps +15 many times) | Allowed, no cap | | 🧭 propose: cap at 30 min | [ ] | — |
-| RTM-E10 | Free vs Pulse+ | Same for everyone | | ✅ | [ ] | — |
+| RTM-E10 | Free vs Supernova | Same for everyone | | ✅ | [ ] | — |
 
 ## SUP  Supersets
 

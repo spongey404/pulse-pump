@@ -70,7 +70,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build/SourcePackages
-          key: spm-${{ runner.os }}-${{ hashFiles('PulsePump.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: spm-${{ runner.os }}-${{ hashFiles('Ore.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: spm-${{ runner.os }}-
 
       - name: Unit tests + Release build check
@@ -118,7 +118,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build/SourcePackages
-          key: spm-${{ runner.os }}-${{ hashFiles('PulsePump.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: spm-${{ runner.os }}-${{ hashFiles('Ore.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: spm-${{ runner.os }}-
 
       - name: Integration tests (app code vs Auth + Firestore + Functions emulators)
@@ -174,7 +174,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build/SourcePackages
-          key: spm-${{ runner.os }}-${{ hashFiles('PulsePump.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: spm-${{ runner.os }}-${{ hashFiles('Ore.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: spm-${{ runner.os }}-
 
       - name: UI tests (tap-through app flows vs Auth + Firestore + Functions emulators)

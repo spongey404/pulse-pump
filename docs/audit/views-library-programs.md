@@ -1,12 +1,12 @@
 # Audit: views-library-programs
-Scope: Views/ExerciseLibrary, Views/Programs, Views/Shared, Views/Tutorial, Extensions, Views/Home/GlobalSearchView (+ ProgramsTabView/PresetTemplatePicker in ContentView, because Programs UI lives there). Paths are relative to /Users/vasanth.santosh/Documents/Apps/Pump/PulsePump.
+Scope: Views/ExerciseLibrary, Views/Programs, Views/Shared, Views/Tutorial, Extensions, Views/Home/GlobalSearchView (+ ProgramsTabView/PresetTemplatePicker in ContentView, because Programs UI lives there). Paths are relative to /Users/vasanth.santosh/Documents/Apps/Ore/Ore.
 
 ## Summary
-- A large part of this scope is dead code. `ExerciseLibraryView`, `ExerciseFilterSheet`, `CreateExerciseView`, `TemplateListView`, `EditTemplateView`, `PulsePlusUpsellBanner`/`PulsePlusBlurOverlay`, `PumpPillButton`/`PumpChipButton`, `InlineHint`, `StartWorkoutView` (the only `HintButton` user) and `programsTickerItems` have no call sites. Result: users cannot create custom exercises, browse or filter the library, remove an exercise from a template, or reorder one.
+- A large part of this scope is dead code. `ExerciseLibraryView`, `ExerciseFilterSheet`, `CreateExerciseView`, `TemplateListView`, `EditTemplateView`, `SupernovaUpsellBanner`/`SupernovaBlurOverlay`, `OrePillButton`/`OreChipButton`, `InlineHint`, `StartWorkoutView` (the only `HintButton` user) and `programsTickerItems` have no call sites. Result: users cannot create custom exercises, browse or filter the library, remove an exercise from a template, or reorder one.
 - Template share-via-link is half built. Encoding works, but nothing observes `.importTemplate`, so a received link does nothing.
 - All preset/seeded templates use random `UUID()` exercise ids. Starting a workout from any preset then saves `ExerciseLog.exercise == nil`, which breaks history, PRs, body map and exercise detail for the most common path.
 - Per-set type, per-exercise rest and RIR editing in `TemplateDetailView` is mostly cosmetic: set types are `@State` only and rest is never consumed. Editing a template in the live UI keeps sets/reps/RIR/rest.
-- Pulse+ gating is inconsistent (4 different checks, `hasAccess(to:)` unused, MET calories unreachable for everyone, challenges/export/profiles ungated).
+- Supernova gating is inconsistent (4 different checks, `hasAccess(to:)` unused, MET calories unreachable for everyone, challenges/export/profiles ungated).
 - Exercise detail maths (Epley, volume PR) is correct, but it counts warm-ups and the fake history that `injectTestData` writes into the real store.
 - Tests: only `TutorialViewModelTests` touches this scope. Nothing covers search, stats, template share, grouping or seeding.
 
@@ -25,7 +25,7 @@ Every `TemplateExercise(exerciseId: UUID(), exerciseName: "Barbell Bench Press",
 Evidence: I checked all 21 template exercise names against `ExerciseSeedService`; every one exists (242 seeded exercises), so a name lookup would work.
 Fix: when seeding or copying a preset, resolve `exerciseId` by name against `Exercise`. Also repair existing templates once, at start-workout time or in a migration.
 
-[HIGH] ContentView.swift:1137 / App/PulsePumpApp.swift:88-92 — template import link is never handled
+[HIGH] ContentView.swift:1137 / App/OreApp.swift:88-92 — template import link is never handled
 `handleDeepLink` decodes base64 and posts `.importTemplate` with `object: Data`. `grep importTemplate` finds only the declaration and the post, so there is no observer and no JSON decode. Tapping a `pulsepump://template?data=...` link does nothing. Missing pieces:
 - JSON decode of `{name, exercises:[{name,sets,reps,rir}]}`.
 - Exercise resolve by name.
@@ -56,24 +56,24 @@ Fix: persist `setTypes: [String]?` on `TemplateExercise` and pass it into `SetEn
 [HIGH] Views/Programs/TemplateDetailView.swift:370-377,720 + ViewModels/WorkoutViewModel.swift:57-67 — template rest timer is never used
 `TemplateExercise.restSeconds` is saved through the rest sheet, but `grep restSeconds` finds no consumer in WorkoutViewModel or RestTimerService (only live-activity fields). The per-exercise rest feature is dead. Notes (`template.notes`) are likewise never shown in the active workout (unverified for the ActiveWorkout UI, but the VM does not read them).
 
-[HIGH] Extensions/PulsePlusUpsellBanner.swift + Services/CalorieEstimationService.swift:52-60 + ViewModels/WorkoutViewModel.swift:252,413 — MET calories unreachable even for subscribers
-`CalorieEstimationService.estimate(... isSubscribed: Bool = false)` falls back to basic when `isSubscribed` is false. Both call sites omit the argument. A Pulse+ user who picks MET in Settings (the picker is unlocked at SettingsView.swift:122) still gets the basic estimate. This is the only calorie feature gated in code.
-Fix: pass `PulsePlusService().isSubscribed || isInFreeTrial` (or cache the entitlement) at both call sites.
+[HIGH] Extensions/SupernovaUpsellBanner.swift + Services/CalorieEstimationService.swift:52-60 + ViewModels/WorkoutViewModel.swift:252,413 — MET calories unreachable even for subscribers
+`CalorieEstimationService.estimate(... isSubscribed: Bool = false)` falls back to basic when `isSubscribed` is false. Both call sites omit the argument. A Supernova user who picks MET in Settings (the picker is unlocked at SettingsView.swift:122) still gets the basic estimate. This is the only calorie feature gated in code.
+Fix: pass `SupernovaService().isSubscribed || isInFreeTrial` (or cache the entitlement) at both call sites.
 
-[HIGH] Pulse+ gating is inconsistent and incomplete (see the audit table below)
+[HIGH] Supernova gating is inconsistent and incomplete (see the audit table below)
 Gated:
 - Widgets (MoreTabView.swift:103: subscribed or trial).
 - Deload toggle (WorkoutDetailView.swift:49: subscribed or trial).
 - Calorie formula picker (SettingsView.swift:54,122: subscribed or trial).
 - MuscleDetailSheet sub-regions (lines 29,58,78): `isSubscribed` only, so trial users are locked out, unlike the rest.
 - MoreTabView.swift:74: `isFree = !isSubscribed`, so trial users see a "FREE" label and a banner while having access.
-Ungated but listed in `PulsePlusFeature` / the spec:
+Ungated but listed in `SupernovaFeature` / the spec:
 - Challenges (known gap): `CreateChallenge*` and `ChallengesView` have no Plus check.
 - Data export: DataExportView has none, though `.exportData` is a feature.
 - Unlimited equipment profiles: `CreateEquipmentProfileView` has no limit.
 - Smart weight suggestions, advanced substitutions, advanced analytics, advanced body customization, cloud sync, priority support: no gate found (unverified whether each feature exists).
-Dead infrastructure: `PulsePlusService.hasAccess(to:)` ignores its argument and has no callers; `PulsePlusUpsellBanner` and `PulsePlusBlurOverlay` are unused.
-Each view creates its own `PulsePlusService()`, so `isSubscribed` starts false until `refreshSubscriptionStatus()` finishes; a paying user sees locked UI briefly, or permanently if the view never calls refresh. `startListening()` is called only from PulsePlusView.
+Dead infrastructure: `SupernovaService.hasAccess(to:)` ignores its argument and has no callers; `SupernovaUpsellBanner` and `SupernovaBlurOverlay` are unused.
+Each view creates its own `SupernovaService()`, so `isSubscribed` starts false until `refreshSubscriptionStatus()` finishes; a paying user sees locked UI briefly, or permanently if the view never calls refresh. `startListening()` is called only from SupernovaView.
 Fix: a single shared `@Observable` service in the environment, with one `hasAccess(to:)` used everywhere.
 
 [HIGH] Views/Programs/CreateTemplateView.swift:349-360 + ContentView.swift:1147-1153 — user programs merge with unrelated programs
@@ -132,7 +132,7 @@ Only `HintButton(hint: .startWorkout)` exists, in `StartWorkoutView`, which itse
 [LOW] Views/ExerciseLibrary/ExerciseLibraryView.swift:20-77 — pending custom items appear twice
 `filteredExercises` accepts `isApproved || isCustom`, so pending submissions (`isCustom && !isApproved`) are listed in both "Pending Submissions" and the main list; the pending section also ignores filters. There is no backend for submissions (known gap), and "Replace Exercise" is the title in selection mode even if used elsewhere.
 
-[LOW] Extensions/PulsePlusService (Services/PulsePlusService.swift:131-143) — trial boundary
+[LOW] Extensions/SupernovaService (Services/SupernovaService.swift:131-143) — trial boundary
 `daysSinceInstall <= 14` gives 15 days of access while `trialDaysRemaining` is 0 on day 14. Reading `isInFreeTrial` has a side effect (writes `appInstallDate` on first read). Reinstall resets the trial (known gap).
 
 [LOW] Extensions/WorkoutModal.swift:12,67-90 — `primaryDestructive` is accepted but never used (the button is always accent). `UIScreen.main.bounds` (deprecated, wrong in split view). Both modals carry accent/red drop shadows, against the "no drop shadows" design rule (DestructiveModal.swift:150, WorkoutModal.swift:79,92, CreateTemplateView.swift:228).
@@ -159,5 +159,5 @@ Only `HintButton(hint: .startWorkout)` exists, in `StartWorkoutView`, which itse
 ## Not verifiable
 - Whether SwiftUI propagates `anchorPreference` values from non-selected or lazily-built `TabView` pages to `overlayPreferenceValue` on the `TabView` itself (needs a device or simulator run; I was not allowed to build).
 - Whether the tutorial dim layer blocks touches to the spotlighted element (hit testing of the `Rectangle` with a reverse mask).
-- ActiveWorkoutView consumption of `template.notes` and the remaining Pulse+ features (smart weight suggestions, advanced substitutions) — outside this scope; presence of gating there was checked only by grepping for `isSubscribed`/`hasAccess`.
+- ActiveWorkoutView consumption of `template.notes` and the remaining Supernova features (smart weight suggestions, advanced substitutions) — outside this scope; presence of gating there was checked only by grepping for `isSubscribed`/`hasAccess`.
 - Firestore security rules for the `users` collection used by friend search.

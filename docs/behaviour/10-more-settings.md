@@ -1,8 +1,8 @@
-# 10 More hub, Settings, units, equipment, import/export, Pulse+ screen, tutorial
+# 10 More hub, Settings, units, equipment, import/export, Supernova screen, tutorial
 
-Scope: the More tab (tab 4) and everything one tap below it. Source: `PulsePump/Features/More/MoreTabView.swift`, `PrivacyLegalView.swift`, `PulsePump/Features/Settings/{SettingsView,EditProfileView,DataExportView,CloudSyncSection}.swift`, `PulsePump/Features/Equipment/EquipmentProfilesView.swift`, `PulsePump/Features/PulsePlus/{PulsePlusView,PulsePlusService}.swift`, `PulsePump/Features/Tutorial/*`, `PulsePump/Features/Widgets/WidgetsView.swift`, `PulsePump/Core/Persistence/{DataImportService,DataExportService}.swift`, `PulsePump/Core/Services/Notifications/NotificationService.swift`, `PumpShared/WeightUnit.swift`.
+Scope: the More tab (tab 4) and everything one tap below it. Source: `Ore/Features/More/MoreTabView.swift`, `PrivacyLegalView.swift`, `Ore/Features/Settings/{SettingsView,EditProfileView,DataExportView,CloudSyncSection}.swift`, `Ore/Features/Equipment/EquipmentProfilesView.swift`, `Ore/Features/Supernova/{SupernovaView,SupernovaService}.swift`, `Ore/Features/Tutorial/*`, `Ore/Features/Widgets/WidgetsView.swift`, `Ore/Core/Persistence/{DataImportService,DataExportService}.swift`, `Ore/Core/Services/Notifications/NotificationService.swift`, `OreShared/WeightUnit.swift`.
 
-Navigation model: More is a single view with an internal `screen` enum (hub, history, profile, settings, equipment, pulsePlus, weeklyRecap, dataImport, privacy, widgets); every sub-screen has its own back chevron that returns to the hub. Pulse+ is presented as a full-screen cover. History, Profile, Weekly Recap and Delete Account/Sign Out internals are specified in other files (05, 09, 01); this file only specifies the entry rows.
+Navigation model: More is a single view with an internal `screen` enum (hub, history, profile, settings, equipment, supernova, weeklyRecap, dataImport, privacy, widgets); every sub-screen has its own back chevron that returns to the hub. Supernova is presented as a full-screen cover. History, Profile, Weekly Recap and Delete Account/Sign Out internals are specified in other files (05, 09, 01); this file only specifies the entry rows.
 
 Not in this app (the brief asked about them): there is NO week-start setting (Home and Weekly Recap hard-code Monday via `WeekMath.mondayWeekStart` and `calendar.firstWeekday = 2`; widgets use the device calendar). There is NO default rest time (compound / isolation) setting UI even though `RestTimerService` reads `compoundRestSeconds` / `isolationRestSeconds` from UserDefaults (never written). There is NO reminder-time setting (fixed 08:00 workout, 10:00 rest day). The standalone Plate Calculator and Warm-up generator screens exist but are unreachable (see TOL).
 
@@ -10,16 +10,16 @@ Not in this app (the brief asked about them): there is NO week-start setting (Ho
 
 | ID | User does → App does (observable result) | Status | Manual check | Tests |
 |---|---|---|---|---|
-| MOR-03 | User taps the More tab → App shows title "MORE", a tappable user header (avatar, name, "@handle · SPLIT NAME" in small caps), a 4-cell stats strip (WORKOUTS, STREAK as "{n}D", FRIENDS, FANS), and (free plan only) a blue banner "UNLOCK PULSE+" / "SMART SUGGESTIONS · CLOUD SYNC · ANALYTICS". | ✅ MoreTabView.swift:77-142 | [ ] | — |
+| MOR-03 | User taps the More tab → App shows title "MORE", a tappable user header (avatar, name, "@handle · SPLIT NAME" in small caps), a 4-cell stats strip (WORKOUTS, STREAK as "{n}D", FRIENDS, FANS), and (free plan only) a blue banner "UNLOCK SUPERNOVA" / "SMART SUGGESTIONS · CLOUD SYNC · ANALYTICS". | ✅ MoreTabView.swift:77-142 | [ ] | — |
 | MOR-06 | System: hub appears → App refreshes subscription status, then loads the social profile and friend graph and pushes own streak and workout count to the social profile. | ✅ MoreTabView.swift:135-141 | [ ] | — |
 | MOR-09 | User taps the user header → App opens Profile (screen `.profile`), which has an "EDIT" button into Edit Profile. | ✅ MoreTabView.swift:156 | [ ] | — |
-| MOR-12 | User views the TRAINING section → App lists History (value = finished workout count), Equipment Profiles (value = first profile's name uppercased, blank if none), Weekly Recap (value "WK n" from the device calendar week of year), Widgets (outlined tag "PULSE+"). | ✅ MoreTabView.swift:96-105 | [ ] | — |
-| MOR-15 | User taps "Widgets" as a subscriber or inside the 14-day trial → App opens the Widgets library (WGE). As a free user after the trial → App opens the Pulse+ paywall. | ✅ MoreTabView.swift:103-105 | [ ] | — |
-| MOR-18 | User views the ACCOUNT section → App lists Settings and "Pulse+" with value "FREE" or "ACTIVE". The value and the banner use `!isSubscribed` only, so during the free trial the hub says "FREE" and still shows "UNLOCK PULSE+" although Plus features are unlocked. | 🟡 MoreTabView.swift:75,109 (trial ignored) | [ ] | — |
+| MOR-12 | User views the TRAINING section → App lists History (value = finished workout count), Equipment Profiles (value = first profile's name uppercased, blank if none), Weekly Recap (value "WK n" from the device calendar week of year), Widgets (outlined tag "SUPERNOVA"). | ✅ MoreTabView.swift:96-105 | [ ] | — |
+| MOR-15 | User taps "Widgets" as a subscriber or inside the 14-day trial → App opens the Widgets library (WGE). As a free user after the trial → App opens the Supernova paywall. | ✅ MoreTabView.swift:103-105 | [ ] | — |
+| MOR-18 | User views the ACCOUNT section → App lists Settings and "Supernova" with value "FREE" or "ACTIVE". The value and the banner use `!isSubscribed` only, so during the free trial the hub says "FREE" and still shows "UNLOCK SUPERNOVA" although Plus features are unlocked. | 🟡 MoreTabView.swift:75,109 (trial ignored) | [ ] | — |
 | MOR-21 | User views the HELP section → App lists Tutorial, "Data Import" (value "STRONG · HEVY"), "Privacy & Legal", and a red "Sign Out". | ✅ MoreTabView.swift:112-120 | [ ] | — |
 | MOR-24 | User taps "Sign Out" → App shows an alert "Sign Out": "This removes your data from this device. It stays safe in your account and comes back when you sign in." with Cancel / Sign Out (destructive). Confirm calls `session.signOut()` (flow in 01 SOUT). | ✅ MoreTabView.swift:127-134 | [ ] | — |
 | MOR-27 | User taps any sub-screen's back chevron → App returns to the hub with a 0.22 s ease animation. | ✅ MoreTabView.swift:42 | [ ] | — |
-| MOR-30 | System: a locked-widget "UNLOCK PULSE+" tap (`pulsepump://pulse-plus`) → App switches to the More tab and opens Pulse+ full screen. | 🟡 works when the app is running; dropped on cold launch (notification observed only by ContentView) | [ ] | — |
+| MOR-30 | System: a locked-widget "UNLOCK SUPERNOVA" tap (`pulsepump://supernova`) → App switches to the More tab and opens Supernova full screen. | 🟡 works when the app is running; dropped on cold launch (notification observed only by ContentView) | [ ] | — |
 | MOR-33 | System: tutorial is active and its step points at More → App forces the More screen to Equipment, Settings or hub according to the step. | ✅ MoreTabView.swift:64-71 | [ ] | — |
 
 ### MOR edge cases
@@ -50,12 +50,12 @@ Settings (More › Settings) is a scrolling ledger list with section labels. Row
 | SCF-33 | User looks at "Smart Weight Suggestions" → App shows a non-interactive row with value "COMING SOON". (`smartWeightSuggestion` exists in the view model but is not wired to the logger.) | ❌ not built | [ ] | — |
 | SCF-36 | User opens PRIVACY › "Profile Visibility" → App offers the privacy levels for the profile row (Everyone, Friends only, Only me per `PrivacyLevel`); choosing one saves it locally, to `users/{uid}.privacy` and to the public profile. Defaults: Workout posts = friends only, Body map = friends only, Global leaderboards = visible, Profile = everyone. Only the Profile row is in Settings; the other three rows are on the Friends › Activity screen. | ✅ SettingsView.swift:144-145, PrivacyLevel.swift:60-110 | [ ] | — |
 | SCF-39 | User toggles "Auto-Share to Feed" → App flips `autoShareToFeed` (default ON). The post-workout screen reads it to decide whether to auto-post (see 03 PST). | ✅ SettingsView.swift:146 | [ ] | — |
-| SCF-42 | User opens APPEARANCE › "Theme" → App offers System (default), Light, Dark; the whole app re-themes immediately (`preferredColorScheme` at the scene root). | ✅ SettingsView.swift:150-151, PulsePumpApp.swift:64-91 | [ ] | — |
+| SCF-42 | User opens APPEARANCE › "Theme" → App offers System (default), Light, Dark; the whole app re-themes immediately (`preferredColorScheme` at the scene root). | ✅ SettingsView.swift:150-151, OreApp.swift:64-91 | [ ] | — |
 | SCF-45 | User looks at "Simple Body Map" → App shows "COMING SOON" (non-interactive). | ❌ not built | [ ] | — |
 | SCF-48 | User opens TRAINING › "Training Split" → App pushes the split list (flow SPL in 07). The row value is the current split name uppercased, or blank. | ✅ SettingsView.swift:156-157 | [ ] | — |
 | SCF-51 | User looks at NOTIFICATIONS › "Social Activity" and "Challenge Updates" → App shows "COMING SOON" (non-interactive). | ❌ not built (no push pipeline, see 14) | [ ] | — |
 | SCF-54 | User opens DATA › "Import / Export Data" → App swaps the settings content for the Import / Export screen (IMP/EXP). "Equipment Profiles" swaps in the Equipment screen (EQP). Back returns to Settings. | ✅ SettingsView.swift:57-66,168-169 | [ ] | — |
-| SCF-57 | User views CLOUD SYNC → App shows rows "Status" (text such as "Up to date", "N changes waiting", "Syncing…", "Restoring your data…", "Offline — will sync when connected", "Sync problem: ...", "Sign in to sync"), "Last Synced" ("NEVER" or relative time) and "Sync Now" (disabled look when sync is not running; taps do nothing while syncing). Cloud sync is available to every signed-in user, not only Pulse+. | ✅ CloudSyncSection.swift, SyncService.swift:369-378; gating mismatch see 13 GAT | [ ] | — |
+| SCF-57 | User views CLOUD SYNC → App shows rows "Status" (text such as "Up to date", "N changes waiting", "Syncing…", "Restoring your data…", "Offline — will sync when connected", "Sync problem: ...", "Sign in to sync"), "Last Synced" ("NEVER" or relative time) and "Sync Now" (disabled look when sync is not running; taps do nothing while syncing). Cloud sync is available to every signed-in user, not only Supernova. | ✅ CloudSyncSection.swift, SyncService.swift:369-378; gating mismatch see 13 GAT | [ ] | — |
 | SCF-60 | User views ABOUT › "Version" → App shows `CFBundleShortVersionString` (fallback "1.0"). | ✅ SettingsView.swift:176-178 | [ ] | — |
 | SCF-63 | User taps red "Sign Out" → App shows the same sign-out alert as the hub (MOR-24). | ✅ SettingsView.swift:76-81,182 | [ ] | — |
 | SCF-66 | User taps red "Delete Account" → App starts the delete-account flow (01 DEL). | ✅ SettingsView.swift:184,85 | [ ] | — |
@@ -114,7 +114,7 @@ Settings (More › Settings) is a scrolling ledger list with section labels. Row
 | EQP-15 | User taps "Add Equipment" or the pencil on an equipment row → App does nothing (`DashedAdd` has an empty action; the pencil is decorative). | ❌ EquipmentProfilesView.swift:147,271 | [ ] | — |
 | EQP-18 | User looks to rename or delete a profile, or edit its plates → App offers no way. | ❌ not built | [ ] | — |
 | EQP-21 | System: active workout plate calculator → App uses the default plate set for the unit (`PlateMath.storedPlatesKg`), not the selected equipment profile. Equipment profiles also do not filter substitutions. | ❌ profile data is stored but not consumed by any other feature | [ ] | — |
-| EQP-24 | User is on the free plan and creates many profiles → App allows any number. Spec lists "unlimited equipment profiles" as a Pulse+ module on the paywall (PulsePlusFeature) but there is no limit. | 🟡 see 13 GAT | [ ] | — |
+| EQP-24 | User is on the free plan and creates many profiles → App allows any number. Spec lists "unlimited equipment profiles" as a Supernova module on the paywall (SupernovaFeature) but there is no limit. | 🟡 see 13 GAT | [ ] | — |
 
 ### EQP edge cases
 
@@ -150,7 +150,7 @@ Settings (More › Settings) is a scrolling ledger list with section labels. Row
 | IMP-E04 | Very large file (tens of thousands of rows) | Parsed and committed on the main actor in one pass with no progress UI; the screen can freeze. | | 🟡 not measured | [ ] | — |
 | IMP-E05 | Kill the app mid-import | The context is saved once at the end; a kill before that loses the import; re-running is safe (dedupe). | | ✅ | [ ] | — |
 | IMP-E06 | Dates and time zones | Strong dates have no zone and are parsed in the device zone; Hevy ISO dates carry zones. DST gaps follow the system calendar. | | 🟡 | [ ] | — |
-| IMP-E07 | Import gating | Free for everyone (spec: data import is free). The paywall lists "Import / Export" as a Pulse+ module, which is misleading. | | ✅ code / 🟡 copy | [ ] | — |
+| IMP-E07 | Import gating | Free for everyone (spec: data import is free). The paywall lists "Import / Export" as a Supernova module, which is misleading. | | ✅ code / 🟡 copy | [ ] | — |
 | IMP-E08 | Imported workouts and streak / PRs | They count toward history, streaks and PRs because they are normal finished workouts. | | 🧭 PROPOSED: confirm that backfilled history should affect streak/PR badges | [ ] | — |
 
 ## EXP  Export (JSON / CSV)
@@ -174,24 +174,24 @@ Settings (More › Settings) is a scrolling ledger list with section labels. Row
 | EXP-E03 | Export gating | Free for everyone (the spec's "Things NOT to build in V1" listed export; it was built and ungated). | | ✅ | [ ] | — |
 | EXP-E04 | Share sheet on iPad | Presented as a sheet with `UIActivityViewController`; popover anchoring not handled. | iPad not supported in V1. | 🧭 | [ ] | — |
 
-## PLS  Pulse+ screen (the presentation; gating is in 13)
+## PLS  Supernova screen (the presentation; gating is in 13)
 
 | ID | User does → App does (observable result) | Status | Manual check | Tests |
 |---|---|---|---|---|
-| PLS-03 | User taps the hub banner, the "Pulse+" row, or Widgets as a free user → App presents Pulse+ full-screen: blue hero "PULSE/PUMP · MEMBERSHIP", a "✕" close, big "PULSE+" (the "+" in gold) and "Train smarter. Track deeper. Share with your crew." | ✅ PulsePlusView.swift:73-111 | [ ] | — |
-| PLS-06 | System: the user has a finished workout of the predicted template → App shows a "NEXT SESSION · PREVIEW" card (up to 3 exercises with target weight x reps, a delta like "▲ +2.5 KG VS LAST" or "HOLD AT LAST", 1-5 confidence dots, "BUILT FROM YOUR LAST {n} WORKOUTS"). Shown to every user, including subscribers. | ✅ PulsePlusView.swift:126-228 | [ ] | — |
-| PLS-09 | System: spec sheet → App lists "SPEC SHEET  06 MODULES": Smart Predictions, Cloud Sync, Advanced Analytics, Weekly Recaps, Friend Challenges, Import / Export, each with a subtitle. Several of these are not gated in code (see 13). | 🟡 PulsePlusView.swift:20-29 | [ ] | — |
-| PLS-12 | System: not subscribed and inside the trial → App shows "{n} DAYS LEFT IN TRIAL" in accent (see TRL in 13). | ✅ PulsePlusView.swift:306-314 | [ ] | — |
-| PLS-15 | System: not subscribed → App shows "PLAN" with two cards, MONTHLY and ANNUAL (ANNUAL pre-selected). Each shows price per month (annual = yearly price / 12), the yearly total, and for annual a "▼ n%" saving versus 12 monthly payments. Before products load, prices show "—". | ✅ PulsePlusView.swift:324-407 | [ ] | — |
+| PLS-03 | User taps the hub banner, the "Supernova" row, or Widgets as a free user → App presents Supernova full-screen: blue hero "ORE · MEMBERSHIP", a "✕" close, big "SUPERNOVA" (the "+" in gold) and "Train smarter. Track deeper. Share with your crew." | ✅ SupernovaView.swift:73-111 | [ ] | — |
+| PLS-06 | System: the user has a finished workout of the predicted template → App shows a "NEXT SESSION · PREVIEW" card (up to 3 exercises with target weight x reps, a delta like "▲ +2.5 KG VS LAST" or "HOLD AT LAST", 1-5 confidence dots, "BUILT FROM YOUR LAST {n} WORKOUTS"). Shown to every user, including subscribers. | ✅ SupernovaView.swift:126-228 | [ ] | — |
+| PLS-09 | System: spec sheet → App lists "SPEC SHEET  06 MODULES": Smart Predictions, Cloud Sync, Advanced Analytics, Weekly Recaps, Friend Challenges, Import / Export, each with a subtitle. Several of these are not gated in code (see 13). | 🟡 SupernovaView.swift:20-29 | [ ] | — |
+| PLS-12 | System: not subscribed and inside the trial → App shows "{n} DAYS LEFT IN TRIAL" in accent (see TRL in 13). | ✅ SupernovaView.swift:306-314 | [ ] | — |
+| PLS-15 | System: not subscribed → App shows "PLAN" with two cards, MONTHLY and ANNUAL (ANNUAL pre-selected). Each shows price per month (annual = yearly price / 12), the yearly total, and for annual a "▼ n%" saving versus 12 monthly payments. Before products load, prices show "—". | ✅ SupernovaView.swift:324-407 | [ ] | — |
 | PLS-18 | User taps a plan card → App highlights it (accent border) and updates the bottom button price. | ✅ | [ ] | — |
-| PLS-21 | User taps the bottom "START PULSE+" button (shows the store price and "PER YEAR" / "PER MONTH") → App starts the StoreKit 2 purchase sheet. Verified purchase: transaction finished, entitlement refreshed, dock disappears and "ACTIVE · ANNUAL / MONTHLY / PULSE+" with "Thank you for subscribing. Manage in App Store." appears. | ✅ PulsePlusView.swift:411-459,489-497, PulsePlusService.swift:91-107 | [ ] | — |
-| PLS-24 | User cancels the purchase sheet or the purchase is pending → App returns silently (no toast). | 🟡 PulsePlusView.swift:492 (empty branch) | [ ] | — |
-| PLS-27 | System: purchase throws (store error or unverified transaction) → App shows alert "Purchase Error" with the message (or "Something went wrong."). | ✅ PulsePlusView.swift:64-68 | [ ] | — |
-| PLS-30 | System: products fail to load or none exist (simulator) → App shows "Subscriptions unavailable" in place of the button; while loading, a spinner. | ✅ PulsePlusView.swift:415-448 | [ ] | — |
-| PLS-33 | System: the chosen period has no product → App buys the first product (cheapest, normally monthly) while the UI still shows the annual price. | 🐞 PulsePlusView.swift:461-469 | [ ] | — |
-| PLS-36 | User taps "Restore Purchases" → App calls `AppStore.sync()` then refreshes entitlements. No spinner, no success or failure message; on success the screen flips to the ACTIVE state. | 🟡 PulsePlusService.swift:109-112, PulsePlusView.swift:473-485 | [ ] | — |
-| PLS-39 | User taps "✕" → App closes the cover and returns to the hub. | ✅ PulsePlusView.swift:84 | [ ] | — |
-| PLS-42 | System: while the screen is open → App listens to `Transaction.updates` (renewals, family sharing, refunds) and refreshes entitlement; stops on disappear. | ✅ PulsePlusView.swift:53-63 | [ ] | — |
+| PLS-21 | User taps the bottom "START SUPERNOVA" button (shows the store price and "PER YEAR" / "PER MONTH") → App starts the StoreKit 2 purchase sheet. Verified purchase: transaction finished, entitlement refreshed, dock disappears and "ACTIVE · ANNUAL / MONTHLY / SUPERNOVA" with "Thank you for subscribing. Manage in App Store." appears. | ✅ SupernovaView.swift:411-459,489-497, SupernovaService.swift:91-107 | [ ] | — |
+| PLS-24 | User cancels the purchase sheet or the purchase is pending → App returns silently (no toast). | 🟡 SupernovaView.swift:492 (empty branch) | [ ] | — |
+| PLS-27 | System: purchase throws (store error or unverified transaction) → App shows alert "Purchase Error" with the message (or "Something went wrong."). | ✅ SupernovaView.swift:64-68 | [ ] | — |
+| PLS-30 | System: products fail to load or none exist (simulator) → App shows "Subscriptions unavailable" in place of the button; while loading, a spinner. | ✅ SupernovaView.swift:415-448 | [ ] | — |
+| PLS-33 | System: the chosen period has no product → App buys the first product (cheapest, normally monthly) while the UI still shows the annual price. | 🐞 SupernovaView.swift:461-469 | [ ] | — |
+| PLS-36 | User taps "Restore Purchases" → App calls `AppStore.sync()` then refreshes entitlements. No spinner, no success or failure message; on success the screen flips to the ACTIVE state. | 🟡 SupernovaService.swift:109-112, SupernovaView.swift:473-485 | [ ] | — |
+| PLS-39 | User taps "✕" → App closes the cover and returns to the hub. | ✅ SupernovaView.swift:84 | [ ] | — |
+| PLS-42 | System: while the screen is open → App listens to `Transaction.updates` (renewals, family sharing, refunds) and refreshes entitlement; stops on disappear. | ✅ SupernovaView.swift:53-63 | [ ] | — |
 
 ### PLS edge cases
 
@@ -199,7 +199,7 @@ Settings (More › Settings) is a scrolling ledger list with section labels. Row
 |---|---|---|---|---|---|---|
 | PLS-E01 | Offline | Products cannot load → "Subscriptions unavailable"; existing entitlement is read from the on-device StoreKit cache. | | ✅ | [ ] | — |
 | PLS-E02 | Subscription expires or is refunded | `currentEntitlements` no longer contains it; `isSubscribed` becomes false on the next refresh (hub appear, paywall, Settings, workout detail, body map). Plus-only options stay selected but gated UI hides. | | ✅ | [ ] | — |
-| PLS-E03 | Another Apple ID signs in on the device | Entitlement follows the App Store account, not the Pump account. | | 🧭 PROPOSED: decide whether Plus should also be tied to the Pump account | [ ] | — |
+| PLS-E03 | Another Apple ID signs in on the device | Entitlement follows the App Store account, not the Ore account. | | 🧭 PROPOSED: decide whether Plus should also be tied to the Ore account | [ ] | — |
 | PLS-E04 | Multi-app pricing tiers in the spec (1 / 2 / 3 apps) | Only two single-app products exist (`com.pulse.PulsePump.monthly`, `.yearly`). | | ❌ | [ ] | — |
 | PLS-E05 | Debug builds | `-devDataPlus 1` forces `isSubscribed = true` (DEBUG only). | | ✅ DevFlags.swift:31-37 | [ ] | — |
 
@@ -228,7 +228,7 @@ Settings (More › Settings) is a scrolling ledger list with section labels. Row
 
 | ID | User does → App does (observable result) | Status | Manual check | Tests |
 |---|---|---|---|---|
-| WGE-03 | User opens More › Widgets (subscriber / trial) → App shows "WIDGETS" with a "NEW" button, instructions ("Build a widget from only the pieces you want. On the home screen, add Pump Custom, then choose one of these in Edit Widget."), "MY WIDGETS {count}" (presets are created on first open), a "+ NEW WIDGET" button and a "Widget gallery / ALL WIDGETS" row. | ✅ WidgetsView.swift | [ ] | — |
+| WGE-03 | User opens More › Widgets (subscriber / trial) → App shows "WIDGETS" with a "NEW" button, instructions ("Build a widget from only the pieces you want. On the home screen, add Ore Custom, then choose one of these in Edit Widget."), "MY WIDGETS {count}" (presets are created on first open), a "+ NEW WIDGET" button and a "Widget gallery / ALL WIDGETS" row. | ✅ WidgetsView.swift | [ ] | — |
 | WGE-06 | User taps "Widget gallery" → App opens the gallery full-screen showing every registered widget in light / dark / tinted. | ✅ WidgetsView.swift:86-94 | [ ] | — |
 | WGE-09 | User taps a saved widget or "NEW" → App opens the builder (details in 11 WGB). A saved widget row can be deleted via an alert with "Delete". | ✅ | [ ] | — |
 | WGE-12 | User (free, trial over) taps Widgets → App shows the paywall instead (MOR-15). Gating is at the entry row only: `WidgetsView` itself has no Plus check. | 🟡 see 13 GAT | [ ] | — |
@@ -237,7 +237,7 @@ Settings (More › Settings) is a scrolling ledger list with section labels. Row
 
 | ID | User does → App does (observable result) | Status | Manual check | Tests |
 |---|---|---|---|---|
-| PLG-03 | User opens More › Privacy & Legal → App shows LEGAL: "Privacy Policy", "Terms of Service", "Open-Source Licenses"; YOUR DATA: "Download My Data" (JSON) and red "Delete Account"; the note "Profile visibility and auto-share are in Settings › Privacy."; and a footer "PULSE/PUMP · VERSION x". | ✅ PrivacyLegalView.swift | [ ] | — |
+| PLG-03 | User opens More › Privacy & Legal → App shows LEGAL: "Privacy Policy", "Terms of Service", "Open-Source Licenses"; YOUR DATA: "Download My Data" (JSON) and red "Delete Account"; the note "Profile visibility and auto-share are in Settings › Privacy."; and a footer "ORE · VERSION x". | ✅ PrivacyLegalView.swift | [ ] | — |
 | PLG-06 | User taps "Privacy Policy", "Terms of Service" or "Open-Source Licenses" → App does nothing (`openLegal()` is empty; URLs not defined). | ❌ PrivacyLegalView.swift:53 (required for App Store review) | [ ] | — |
 | PLG-09 | User taps "Download My Data" → App does nothing (see EXP-21). The working export is under Settings › Import / Export Data. | ❌ | [ ] | — |
 | PLG-12 | User taps "Delete Account" → App starts the delete-account flow (01 DEL). | ✅ PrivacyLegalView.swift:49 | [ ] | — |

@@ -1,12 +1,12 @@
-# Pump user flows
+# Ore user flows
 
-One-page, plain-language walkthroughs of what Pump does today, for checking by hand. The technical spec stays in `docs/behaviour/`.
+One-page, plain-language walkthroughs of what Ore does today, for checking by hand. The technical spec stays in `docs/behaviour/`.
 
 ## Areas
 1. [Account](01-account.md): sign in, onboarding, restore, sign out
 2. [Home](02-home.md): prediction, streak, start button, search
 3. [Workout logging](03-workout-logging.md): sets, rest, plates, finish, post
-4. [Smart suggestions](04-smart-suggestions.md): Pulse+ next-weight hints
+4. [Smart suggestions](04-smart-suggestions.md): Supernova next-weight hints
 5. [History](05-history.md): past workouts, editing, exercise progress, recap
 6. [Body](06-body.md): muscle heat map
 7. [Programs](07-programs.md): saved plans, sharing, split
@@ -15,7 +15,7 @@ One-page, plain-language walkthroughs of what Pump does today, for checking by h
 10. [More and Settings](10-more-settings.md): settings, import, equipment
 11. [Widgets](11-widgets-live-activity.md): widgets, Live Activity
 12. [Cloud sync](12-cloud-sync.md): backup and restore
-13. [Pulse+](13-pulse-plus.md): paid tier and trial
+13. [Supernova](13-supernova.md): paid tier and trial
 14. [Notifications](14-notifications.md): reminders, rest alerts
 
 ## How to review
@@ -27,7 +27,7 @@ One-page, plain-language walkthroughs of what Pump does today, for checking by h
 ## Decisions for you
 Reply "1 yes, 2 no, …". Each is my recommendation, based on Strong, Hevy and Apple Fitness.
 
-1. Pulse+ = smart suggestions, MET calories, sub-regions, deload, Plus widgets and builder, creating challenges. Sync and the rest stay free; paywall rewritten to match.
+1. Supernova = smart suggestions, MET calories, sub-regions, deload, Plus widgets and builder, creating challenges. Sync and the rest stay free; paywall rewritten to match.
 2. 14-day Apple trial tied to the Apple ID, countdown in More, "trial ended" notice.
 3. Sign-out warns about unsynced changes, is blocked mid-workout, and cancels reminders.
 4. Block sign-up under 13.

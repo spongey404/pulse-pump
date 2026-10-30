@@ -1,6 +1,6 @@
 #!/bin/bash -e
-# Build Pump, install it on a simulator with a clean store, and launch it with the dev-data seeder.
-# (The iOS equivalent of `manage.py createdevdata` — see PulsePump/DevData/DevDataConfig.swift.)
+# Build Ore, install it on a simulator with a clean store, and launch it with the dev-data seeder.
+# (The iOS equivalent of `manage.py createdevdata` — see Ore/DevData/DevDataConfig.swift.)
 set -o pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
@@ -16,7 +16,7 @@ Usage: $0 [options]
   --weeks N         weeks of history, 2-52 (default 16)
   --seed N          RNG seed; same seed = same data (default 42)
   --units kg|lb     display units (default kg)
-  --plus            pretend Pulse+ is active
+  --plus            pretend Supernova is active
   --draft           also leave one in-progress workout (Continue card)
   --device NAME     simulator name (default "iPhone 17 Pro")
   --no-build        reuse the last build in build/DerivedData
@@ -50,10 +50,10 @@ bundle="com.pulse.PulsePump"
 
 if $build; then
 	echo "==> Building"
-	xcodebuild -scheme PulsePump -destination "platform=iOS Simulator,name=$device" \
+	xcodebuild -scheme Ore -destination "platform=iOS Simulator,name=$device" \
 		-derivedDataPath "$dd" build 2>&1 | grep -E "error:|BUILD (SUCCEEDED|FAILED)" | sort -u
 fi
-app="$dd/Build/Products/Debug-iphonesimulator/PulsePump.app"
+app="$dd/Build/Products/Debug-iphonesimulator/Ore.app"
 [ -d "$app" ] || { echo "No build at $app" >&2; exit 1; }
 
 echo "==> Preparing simulator: $device"

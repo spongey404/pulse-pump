@@ -1,6 +1,6 @@
 # 08 Exercise library
 
-Scope: how a user finds, picks, inspects and creates exercises. Source: `PulsePump/Features/Workout/Views/ExercisePickerView.swift` (the live picker), `PulsePump/Features/Home/GlobalSearchView.swift` (the only route to exercise detail), `PulsePump/Features/Exercises/{ExerciseLibraryView,ExerciseFilterSheet,CreateExerciseView,ExerciseDetailView}.swift`, `PulsePump/Core/Persistence/ExerciseSeedService.swift`, `PulsePump/Core/Models/Exercise.swift`, `PulsePump/Core/Utilities/String+Search.swift`.
+Scope: how a user finds, picks, inspects and creates exercises. Source: `Ore/Features/Workout/Views/ExercisePickerView.swift` (the live picker), `Ore/Features/Home/GlobalSearchView.swift` (the only route to exercise detail), `Ore/Features/Exercises/{ExerciseLibraryView,ExerciseFilterSheet,CreateExerciseView,ExerciseDetailView}.swift`, `Ore/Core/Persistence/ExerciseSeedService.swift`, `Ore/Core/Models/Exercise.swift`, `Ore/Core/Utilities/String+Search.swift`.
 
 IMPORTANT reachability summary (verified by grepping call sites, 2026-10):
 
@@ -42,7 +42,7 @@ Consequence: a user cannot create a custom exercise from the UI. Custom exercise
 | LIB-60 | (Unreachable) User sets a name that already exists (built-in or custom) in the creator → App would allow it; there is no duplicate-name check. | 🧭 PROPOSED: block exact normalized-name duplicates when the creator is wired | [ ] | — |
 | LIB-63 | System: custom exercises appear in picker and search → Row shows name; custom ones are flagged "CUSTOM" only in `ExerciseRowView` (the unreachable library). In the picker there is no badge. | 🟡 ExerciseLibraryView.swift:159 vs ExercisePickerView | [ ] | — |
 | LIB-66 | System: exercises created by CSV import / shared-template import → App creates `isCustom = true`, `isApproved = false`, no muscles, equipment guessed from words in the name (dumbbell, barbell, cable, machine, kettlebell, band, smith, bodyweight, else other), movement pattern isolation. They appear in the picker and Global Search (because `isCustom`), but contribute nothing to the body map. | ✅ DataImportService.swift:289-303, 319-330 | [ ] | — |
-| LIB-69 | User replaces an exercise during a workout → App opens `ExercisePickerView(title: "REPLACE EXERCISE", excludedIds: other exercises in the session)`. Smart suggestions for Pulse+ users (spec) do not exist; the old `ExerciseSubstitutionView` is unused. | 🟡 manual replacement only; smart alternatives not built | [ ] | — |
+| LIB-69 | User replaces an exercise during a workout → App opens `ExercisePickerView(title: "REPLACE EXERCISE", excludedIds: other exercises in the session)`. Smart suggestions for Supernova users (spec) do not exist; the old `ExerciseSubstitutionView` is unused. | 🟡 manual replacement only; smart alternatives not built | [ ] | — |
 
 ### LIB edge cases
 
@@ -57,7 +57,7 @@ Consequence: a user cannot create a custom exercise from the UI. Custom exercise
 | LIB-E07 | lbs user | Detail PRs, 1RM, volume and chart convert from kg to lb and label "lb". | | ✅ ExerciseDetailView.swift:109-115,152 | [ ] | — |
 | LIB-E08 | Seed version bump | Only names that do not exist yet are added; edits to existing seeded exercises are not re-applied. | | ✅ | [ ] | — |
 | LIB-E09 | Exercise with one session | No chart (needs 2 points); stat cards still show. | | ✅ | [ ] | — |
-| LIB-E10 | Pulse+ vs free | The library, search and detail are ungated. Sub-region muscle detail for Pulse+ lives on the body tab (see 13-pulse-plus-gating.md). | | ✅ | [ ] | — |
+| LIB-E10 | Supernova vs free | The library, search and detail are ungated. Sub-region muscle detail for Supernova lives on the body tab (see 13-supernova-gating.md). | | ✅ | [ ] | — |
 | LIB-E11 | Time-based / distance-based exercise PRs | Detail screen shows weight and rep PRs only; no time or distance PR. | | 🟡 | [ ] | — |
 
 ## Open decisions for the owner (08)
@@ -67,4 +67,4 @@ Consequence: a user cannot create a custom exercise from the UI. Custom exercise
 - LIB-E02: PROPOSED single search rule across picker and global search.
 - Community submissions (LIB-57): no backend; decide whether to keep the "Submit to community library" toggle.
 - CLAUDE.md says 84 seeded exercises; actual ~240. Update docs.
-- `ExerciseSubstitutionView` is dead; Pulse+ smart substitutions are not built (see GAT).
+- `ExerciseSubstitutionView` is dead; Supernova smart substitutions are not built (see GAT).

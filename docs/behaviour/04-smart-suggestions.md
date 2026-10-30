@@ -1,14 +1,14 @@
 # 04 Smart weight suggestions (progression)
 
 Scope: the agreed design for Smart Weight Suggestions, which is being built, plus the current baseline it replaces. Baseline rows describe what the code does today. Feature rows describe the agreed design and carry `🚧 IN PROGRESS`.
-Baseline sources: `Features/Workout/WorkoutViewModel.swift` (`ghostText`, `applyGhostValues`, `smartWeightSuggestion`), `Features/Workout/Views/Logger/SetRowViews.swift`, `Features/Settings/SettingsView.swift`, `Features/PulsePlus/PulsePlusService.swift`, `PumpShared/WeightUnit.swift`, `firebase/firestore.rules`, `docs/sync-architecture.md`.
+Baseline sources: `Features/Workout/WorkoutViewModel.swift` (`ghostText`, `applyGhostValues`, `smartWeightSuggestion`), `Features/Workout/Views/Logger/SetRowViews.swift`, `Features/Settings/SettingsView.swift`, `Features/Supernova/SupernovaService.swift`, `OreShared/WeightUnit.swift`, `firebase/firestore.rules`, `docs/sync-architecture.md`.
 Logging itself is in `03a`, `03b`, `03c`; sync in `12`; gating in `13`.
 
 Status legend (six tags in this file only): ✅ implemented and verified in code | 🟡 partial | ❌ not built | 🐞 known bug | 🧭 PROPOSED (not decided; default proposed in text) | 🚧 IN PROGRESS (agreed design, being built).
 
 ## The agreed design in one paragraph
 
-For each exercise the user has a rep threshold R. During a session the app finds the highest weight W among that exercise's completed working sets. When a completed working set at W reaches R reps, the next set shows a ghost weight of W plus the user's increment, and the user only types reps. The increment is set in Settings, stored in kg, default 2.5 kg or 5 lb. Warm-ups are ignored. The feature is Pulse+ only, has a toggle in Settings, and the thresholds sync to the cloud. Everything else below is edge-case detail; items that the design does not settle are marked 🧭.
+For each exercise the user has a rep threshold R. During a session the app finds the highest weight W among that exercise's completed working sets. When a completed working set at W reaches R reps, the next set shows a ghost weight of W plus the user's increment, and the user only types reps. The increment is set in Settings, stored in kg, default 2.5 kg or 5 lb. Warm-ups are ignored. The feature is Supernova only, has a toggle in Settings, and the thresholds sync to the cloud. Everything else below is edge-case detail; items that the design does not settle are marked 🧭.
 
 ## SGB  Baseline today (what the app does now)
 
@@ -20,8 +20,8 @@ For each exercise the user has a rep threshold R. During a session the app finds
 | SGB-12 | System: `smartWeightSuggestion(for:setIndex:)` → App has this function (last 3 sessions, needs at least 2; if last weight beat the one before it suggests last plus the same gap, else the same weight; returns a kg string; ignores set type) but nothing calls it | ❌ dead code `WorkoutViewModel.swift:428-453`; to be removed or replaced when the feature ships | [ ] | — |
 | SGB-15 | System: legacy `SetRowView` has a `smartSuggestion` parameter → App never passes it and never reads it | ❌ dead `SetRowViews.swift:236-259` | [ ] | — |
 | SGB-18 | User opens Settings › Workout → App shows "Smart Weight Suggestions" with the value "COMING SOON" and no switch (honest placeholder instead of a dead toggle) | ✅ `SettingsView.swift:140` | [ ] | — |
-| SGB-21 | System: Pulse+ feature list → App has the case `smartWeightSuggestions` ("Smart Weight Suggestions", brain icon). `hasAccess(to:)` ignores which feature is asked and returns true for subscribers and for the 14-day trial counted from install date | ✅ `PulsePlusService.swift:12,145-147,129-143` | [ ] | — |
-| SGB-24 | System: Pulse+ paywall list → App lists "Smart Predictions / AI-powered workout suggestions" (workout prediction), with no weight-suggestion line | 🟡 marketing does not name this feature `PulsePlusView.swift:22` | [ ] | — |
+| SGB-21 | System: Supernova feature list → App has the case `smartWeightSuggestions` ("Smart Weight Suggestions", brain icon). `hasAccess(to:)` ignores which feature is asked and returns true for subscribers and for the 14-day trial counted from install date | ✅ `SupernovaService.swift:12,145-147,129-143` | [ ] | — |
+| SGB-24 | System: Supernova paywall list → App lists "Smart Predictions / AI-powered workout suggestions" (workout prediction), with no weight-suggestion line | 🟡 marketing does not name this feature `SupernovaView.swift:22` | [ ] | — |
 | SGB-27 | System: increment constant → App has `UnitPreference.stepperIncrement` (2.5 kg, 5 lb) used only by the warm-up generator, which is unreachable. No stored user increment exists | 🟡 `WeightUnit.swift:65` | [ ] | — |
 | SGB-30 | System: settings storage → App keeps rest timer mode, alert, calorie formula, auto-share and per-exercise rest overrides in this device's UserDefaults. None of them sync | ✅ `SettingsView.swift:43-47`, `SyncMapper.swift:148-160` | [ ] | — |
 | SGB-33 | System: cloud contract → The `users/{uid}` rules accept an optional `settings` map (document capped at 40 keys) but the client writes none; no per-exercise settings collection exists in rules, mapper or applier | ✅ `firestore.rules:63-76` | [ ] | — |
@@ -34,7 +34,7 @@ For each exercise the user has a rep threshold R. During a session the app finds
 | ID | Situation | What the app does | Why/notes | Status | Manual check | Tests |
 |---|---|---|---|---|---|---|
 | SGB-E01 | Free user taps the placeholder row | Nothing happens | row has no action | ✅ | [ ] | — |
-| SGB-E02 | Pulse+ user | Same placeholder; no difference | feature not wired | ✅ | [ ] | — |
+| SGB-E02 | Supernova user | Same placeholder; no difference | feature not wired | ✅ | [ ] | — |
 | SGB-E03 | Warm-up in last session | Ghost for later rows is shifted by one position | positional ghost (SET-21) | 🟡 | [ ] | — |
 
 ## SUG  Suggestion behaviour in the logger (agreed design)
@@ -95,7 +95,7 @@ Terms. W = highest weight among this exercise's ticked, non-warm-up sets in the 
 
 | ID | User does → App does (observable result) | Status | Manual check | Tests |
 |---|---|---|---|---|
-| SGS-03 | User opens Settings › Workout as a Pulse+ or trial user → App replaces the "COMING SOON" row with a "Smart Weight Suggestions" on/off switch | 🚧 IN PROGRESS | [ ] | — |
+| SGS-03 | User opens Settings › Workout as a Supernova or trial user → App replaces the "COMING SOON" row with a "Smart Weight Suggestions" on/off switch | 🚧 IN PROGRESS | [ ] | — |
 | SGS-06 | User looks at the switch for the first time → App shows its default state | 🧭 proposed: ON for entitled users, so the feature is discoverable | [ ] | — |
 | SGS-09 | User sees "Weight Increment" under the switch → App shows the current value as "2.5 KG" or "5 LB" and opens a picker or stepper on tap | 🚧 IN PROGRESS | [ ] | — |
 | SGS-12 | User never changes the increment → App uses 2.5 kg for kg users and 5 lb for lb users | 🚧 IN PROGRESS | [ ] | — |
@@ -104,11 +104,11 @@ Terms. W = highest weight among this exercise's ticked, non-warm-up sets in the 
 | SGS-21 | User switches the weight unit with the default untouched → App follows the new unit's default (5 lb) | 🧭 proposed: store nothing until the user picks, so the default tracks the unit | [ ] | — |
 | SGS-24 | User switches the weight unit after explicitly picking 2.5 kg → App keeps 2.5 kg and shows about 5.5 lb | 🧭 proposed: explicit value is a kg quantity | [ ] | — |
 | SGS-27 | User turns the switch off → App stops suggestions at once, even in a live session; thresholds and increment are kept and still sync | 🚧 IN PROGRESS | [ ] | — |
-| SGS-30 | Free user opens Settings › Workout → App shows the row locked with "PULSE+" and tapping opens the paywall | 🧭 proposed: locked row plus paywall, not hidden | [ ] | — |
+| SGS-30 | Free user opens Settings › Workout → App shows the row locked with "SUPERNOVA" and tapping opens the paywall | 🧭 proposed: locked row plus paywall, not hidden | [ ] | — |
 | SGS-33 | System: entitlement check → App allows the feature when the user is subscribed or inside the 14-day trial (existing `hasAccess(to: .smartWeightSuggestions)`) | 🚧 IN PROGRESS | [ ] | — |
 | SGS-36 | System: the trial ends or the subscription lapses mid-session → App stops suggesting on the next render; logged data is untouched | 🧭 proposed as written | [ ] | — |
 | SGS-39 | System: where the toggle and increment live → App stores them with the user's synced settings, not only in this device's UserDefaults | 🧭 proposed: `users/{uid}.settings` map (rules already allow it): `smartWeightSuggestions` (bool) and `weightIncrementKg` (number) | [ ] | — |
-| SGS-42 | System: the paywall feature list → App names the feature on the Pulse+ screen | 🧭 proposed: add "Smart Weight Suggestions" with the one-line explanation | [ ] | — |
+| SGS-42 | System: the paywall feature list → App names the feature on the Supernova screen | 🧭 proposed: add "Smart Weight Suggestions" with the one-line explanation | [ ] | — |
 
 ### SGS edge cases
 
@@ -174,7 +174,7 @@ Terms. W = highest weight among this exercise's ticked, non-warm-up sets in the 
 - SGS-30 (🧭): free users see a locked row that opens the paywall.
 - SGS-36 (🧭): behaviour when entitlement lapses mid-session.
 - SGS-39 (🧭): store toggle and increment in the synced `users/{uid}.settings` map (rules already allow it).
-- SGS-42 (🧭): add the feature to the Pulse+ paywall copy.
+- SGS-42 (🧭): add the feature to the Supernova paywall copy.
 - SGS-E02, SGS-E03, SGS-E04, SGS-E05, SGS-E06 (🧭): offline cold start, two-device settings, mid-session settings changes, new-device restore, wipe on account switch.
 - SGT-06 (🧭): where the user edits R (card menu and exercise detail).
 - SGT-09 (🧭): range 1 to 50 reps.

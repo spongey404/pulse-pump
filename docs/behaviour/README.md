@@ -1,6 +1,6 @@
-# Pulse Pump behaviour spec
+# Ore behaviour spec
 
-The single source of truth for what Pump does (and should do). The product owner walks through it on a device and corrects it; unit/UI tests and CI reference step IDs later. It describes what the app REALLY does today, read from the code at commit `bd28578` (branch `feature/social-tab-redesign`), not what older docs claimed. Where docs and code disagree, both are stated.
+The single source of truth for what Ore does (and should do). The product owner walks through it on a device and corrects it; unit/UI tests and CI reference step IDs later. It describes what the app REALLY does today, read from the code at commit `bd28578` (branch `feature/social-tab-redesign`), not what older docs claimed. Where docs and code disagree, both are stated.
 
 ## How to read it
 
@@ -44,7 +44,7 @@ Counts below are rows (steps + edge cases) per status. Nothing here was run on a
 | [10 More and Settings](10-more-settings.md) | MOR, SCF, UNT, NTS, EQP, IMP, EXP, PLS, TUT, WGE, PLG, TOL | 106 | 37 | 95 | 25 | 5 | 13 | 5 | 0 |
 | [11 Widgets and Live Activity](11-widgets-live-activity.md) | WGD, WGT, WGP, WGU, WGB, WGG, LIV | 128 | 38 | 114 | 35 | 13 | 0 | 4 | 0 |
 | [12 Cloud sync and data](12-cloud-sync-data.md) | SYN, SYC, SYA, SYS, SYR, SYX | 85 | 40 | 100 | 16 | 2 | 1 | 6 | 0 |
-| [13 Pulse+ and gating](13-pulse-plus-gating.md) | GAT, TRL, RPU | 36 | 10 | 18 | 14 | 6 | 6 | 2 | 0 |
+| [13 Supernova and gating](13-supernova-gating.md) | GAT, TRL, RPU | 36 | 10 | 18 | 14 | 6 | 6 | 2 | 0 |
 | [14 Notifications and reminders](14-notifications-reminders.md) | NTF | 27 | 25 | 35 | 8 | 2 | 3 | 4 | 0 |
 | **Total** | | **1304** | **659** | **1338** | **328** | **79** | **58** | **121** | **39** |
 
@@ -52,7 +52,7 @@ Key numbers quoted across the spec (verify against the cited rows): streak expir
 
 ## Cross-cutting notes
 
-- The audit docs in `docs/audit/` and parts of `CLAUDE.md` / `docs/pulse-pump-spec.md` are stale in places (social is real Firestore now, the widget extension has 14 fixed widgets, `WorkoutActivityAttributes` is in `PumpShared`, ~240 exercises are seeded not 84, split days are populated). The spec follows the code.
+- The audit docs in `docs/audit/` and parts of `CLAUDE.md` / `docs/pulse-pump-spec.md` are stale in places (social is real Firestore now, the widget extension has 14 fixed widgets, `WorkoutActivityAttributes` is in `OreShared`, ~240 exercises are seeded not 84, split days are populated). The spec follows the code.
 - Several screens exist in code but are unreachable (see decisions below); they are documented as such rather than as flows users can walk.
 - Rule of thumb for fixing a disagreement: edit the row first, then the code or the test. The spec is the contract.
 
@@ -60,7 +60,7 @@ Key numbers quoted across the spec (verify against the cited rows): streak expir
 
 The ten with the widest product impact; the complete per-area lists follow below.
 
-1. **What is Pulse+?** The paywall and spec sell cloud sync, challenges, smart predictions, weekly recaps and import/export as Plus; the code gates only MET calories, deload toggle, body-map sub-regions and four widgets (13: GAT-48, GAT-27, GAT-51). Decide the real free/Plus line and the trial rule (14 vs 15 days, UserDefaults date vs StoreKit introductory offer).
+1. **What is Supernova?** The paywall and spec sell cloud sync, challenges, smart predictions, weekly recaps and import/export as Plus; the code gates only MET calories, deload toggle, body-map sub-regions and four widgets (13: GAT-48, GAT-27, GAT-51). Decide the real free/Plus line and the trial rule (14 vs 15 days, UserDefaults date vs StoreKit introductory offer).
 2. **Sign-out can silently lose unsynced edits** while the alert says data is safe (01 SOUT-E01, 12 SYA-E01/E02). Warn, block, or accept.
 3. **One definition of PR and "improved"** across Home, completion, recap, exercise detail and widgets (05 PRR-30; 02 HOM-24/27) and of "WK n" (02 HOM-39).
 4. **Unreachable screens**: Exercise Library / custom exercise creation (08 LIB-54/57), standalone Plate Calculator and Warm-up generator (10 TOL-03/06, 03b PLT-36), PostWorkoutCustomizationView (the earlier-audited AnalyticsView, MuscleBalanceView and BodyModelView no longer exist in code) (10 SCF-69), EquipmentProfiles edit (10 EQP), ProfileMenuSheet (02 PMN-12). Wire in, or delete.
@@ -119,7 +119,7 @@ Every 🧭 row and every product decision already surfaced, verbatim from each a
 - WK-E04 (🧭): keep the workout date at session start (current behaviour) versus finish time.
 - CRS-E06 (🧭): rest timer is not restored after a crash (current behaviour).
 - EXA-E02 (🧭): allow adding the same exercise twice.
-- EXA-45: smart (Pulse+) substitutions are promised by the spec and `ExerciseSubstitutionView` is dead code; build or remove.
+- EXA-45: smart (Supernova) substitutions are promised by the spec and `ExerciseSubstitutionView` is dead code; build or remove.
 - EXA-18: multi-select in the picker is not offered; decide if wanted.
 - EXA-39: reorder uses a fixed 190 pt card height; replace with measured heights or a list reorder.
 ## 03b Workout logging: sets, set types, plate tools, rest timer, supersets, notes
@@ -161,7 +161,7 @@ Every 🧭 row and every product decision already surfaced, verbatim from each a
 - PST-69 (🐞), PST-E01: failed posts have no retry and are not persisted. Proposed: persist a pending post and retry on foreground.
 - PST-E04, PST-E08 (🧭): tag validity after unfriend; photo downscale.
 - SHR-09: external sharing (save image, share sheet) is promised by the spec but not built; decide to build or drop. SHR-12: remove or wire `ShareCardView` recap cards.
-- SHR-E04 (🧭): choose one watermark ("PULSE/PUMP" or "Pump by Pulse").
+- SHR-E04 (🧭): choose one watermark ("ORE" or "Ore").
 ## 04 Smart weight suggestions (progression)
 
 - SUG-21 (🧭): suppress the reps ghost on a suggested row. Proposed: suppress.
@@ -184,7 +184,7 @@ Every 🧭 row and every product decision already surfaced, verbatim from each a
 - SGS-30 (🧭): free users see a locked row that opens the paywall.
 - SGS-36 (🧭): behaviour when entitlement lapses mid-session.
 - SGS-39 (🧭): store toggle and increment in the synced `users/{uid}.settings` map (rules already allow it).
-- SGS-42 (🧭): add the feature to the Pulse+ paywall copy.
+- SGS-42 (🧭): add the feature to the Supernova paywall copy.
 - SGS-E02, SGS-E03, SGS-E04, SGS-E05, SGS-E06 (🧭): offline cold start, two-device settings, mid-session settings changes, new-device restore, wipe on account switch.
 - SGT-06 (🧭): where the user edits R (card menu and exercise detail).
 - SGT-09 (🧭): range 1 to 50 reps.
@@ -196,7 +196,7 @@ Every 🧭 row and every product decision already surfaced, verbatim from each a
 
 - PRR-30 (🧭): choose one PR/improved definition for the whole app. Proposed: per exercise, strict weight PR over a previous best above 0, plus rep PR at same-or-lighter weight, plus e1RM "improved"; first-ever is a baseline.
 - HIS-39 (🧭): deleting a posted workout leaves the feed post. Proposed: keep, and warn in the dialog.
-- WRC-E07 (🧭): Weekly Recap is free in code but advertised as a Pulse+ feature; decide in the gating file.
+- WRC-E07 (🧭): Weekly Recap is free in code but advertised as a Supernova feature; decide in the gating file.
 - WRC-33: Monday recap notification and monthly recap modal are in the spec but not built; WRC-30 text promises "NEXT RECAP".
 - WRC-24: "VS WK 0" in ISO week 1.
 - XCH-24: no e1RM, volume or rep chart, and no PR history list despite the spec; XCH-15: two Epley formulas.
@@ -216,7 +216,7 @@ Every 🧭 row and every product decision already surfaced, verbatim from each a
 - BDY-E07: same-day second workout is invisible in label, VS LAST and calendar.
 - BDY-93: cold spots use a different window and secondary credit than the rest of the tab.
 - BDY-102: unbuilt spec items (sub-region zones, nudge badges, push/pull balance, sparkline, customisation, Simple Body Map, colour presets).
-- BMS-12: Pulse+ gate excludes the free trial here but not elsewhere. BMS-15: sheet has no trend graphs. BMS-18: generic-group mismatch.
+- BMS-12: Supernova gate excludes the free trial here but not elsewhere. BMS-15: sheet has no trend graphs. BMS-18: generic-group mismatch.
 - BDY-E01: no empty state for new users.
 - BDY-E02: week-number label differs by locale (also see file 02 HOM-39).
 ## 07 Programs, templates and template sharing
@@ -239,7 +239,7 @@ Every 🧭 row and every product decision already surfaced, verbatim from each a
 - LIB-E02: PROPOSED single search rule across picker and global search.
 - Community submissions (LIB-57): no backend; decide whether to keep the "Submit to community library" toggle.
 - CLAUDE.md says 84 seeded exercises; actual ~240. Update docs.
-- `ExerciseSubstitutionView` is dead; Pulse+ smart substitutions are not built (see GAT).
+- `ExerciseSubstitutionView` is dead; Supernova smart substitutions are not built (see GAT).
 ## 09a Social: feed, posts, comments, likes, friends, profiles, privacy, report/block
 
 - PRV-E01 / PRV-48: per-post audience override is not built. Proposed default: a composer chip that can only narrow the global setting.
@@ -260,10 +260,10 @@ Every 🧭 row and every product decision already surfaced, verbatim from each a
 - RPT-03 / RPT-E08: report reasons are fixed strings, no confirmation for post reports. Proposed default: reason sheet.
 - RPT-33: no moderation tooling or SLA (App Store UGC requirement). Needs an owner process.
 - RPT-E01: block should confirm the follow was removed (or delete both directions server side).
-## 09b Social: challenges, scoring, leaderboards, Pulse+ gating, Activity and counters
+## 09b Social: challenges, scoring, leaderboards, Supernova gating, Activity and counters
 
 - CHC-66 (bug/decision): copy says late joiners are scored from the day they join; the backend scores from challenge start. Design README lists this as an open question. Proposed default: keep scoring from start (simplest, honest total) and change the copy to "ALL WORKOUTS SINCE THE START COUNT".
-- CHP-03 / CHP-06 / CHP-09: Pulse+ gating of challenge creation is in the spec but not built. Proposed default: gate creation only, joining stays free.
+- CHP-03 / CHP-06 / CHP-09: Supernova gating of challenge creation is in the spec but not built. Proposed default: gate creation only, joining stays free.
 - CHS-27: Custom metric has no way to enter scores and is hidden from creation. Proposed default: remove Custom from the product, or add a callable function to submit a score.
 - CHS-30: win conditions "lowest" and "First to Reach Goal" have no UI (first has no goal field). Proposed default: drop them from the enum or build a goal field.
 - CHS-21: Longest hold shows seconds as a plain number. Proposed default: format as m:ss.
@@ -279,7 +279,7 @@ Every 🧭 row and every product decision already surfaced, verbatim from each a
 - ACT-30 / ACT-33: no activity history and no social push notifications (spec wants configurable ones). Decide scope; see 14 NTF.
 - ACT-36: bell dot may miss invites until the Challenges tab or Activity loads. Proposed default: load invites together with the graph at Social tab open.
 - CTR-E02: server friend/fan counters ignore blocks. Proposed default: accept the difference.
-## 10 More hub, Settings, units, equipment, import/export, Pulse+ screen, tutorial
+## 10 More hub, Settings, units, equipment, import/export, Supernova screen, tutorial
 
 - MOR-18: during the trial the hub says "FREE" and shows the upgrade banner. Decide whether to show "TRIAL · n DAYS".
 - SCF-24: MET calorie formula keeps working after Plus lapses (bug) — enforce the gate in the estimator or drop the gate.
@@ -298,7 +298,7 @@ Every 🧭 row and every product decision already surfaced, verbatim from each a
 - WGT-24, WGT-E01, WGT-87, WGT-132, WGT-138 (proposed default): add a dedicated empty state per widget ("Log your first workout", "Add your weight", "No friends yet") rather than zeros/blank.
 - WGT-66 (🧭): when last week's total is 0, hide the delta or show "NEW" instead of "+0.0%".
 - WGT-99 (🧭): lock-screen PR watch is free; either gate it behind Plus or mark the tier as FREE.
-- WGP-21 (🧭): decide whether built Pump Custom widgets keep working after Plus/trial ends.
+- WGP-21 (🧭): decide whether built Ore Custom widgets keep working after Plus/trial ends.
 - WGT-30 / WGP-09: small-size widgets cannot host Links; decide on `widgetURL` per fixed widget (or accept "opens app").
 - WGT-144: pass the real template name (not the uppercased display name) or match case-insensitively in `ContentView`.
 - LIV-E02 / LIV-E03: decide the policy for orphan Live Activities (reconcile on launch) and for a widget start-link while a session or draft exists (ignore, confirm, or resume).
@@ -323,7 +323,7 @@ Every 🧭 row and every product decision already surfaced, verbatim from each a
 - SYS-30: no sync on/off, Wi-Fi-only or pending-item list (architecture says sync is always on); confirm no controls are wanted.
 - SYX-E02 / SYX-E03 (PROPOSED): import dedupe is local-only; app JSON export is not a restore path.
 - Doc/code disagreement: `docs/sync-architecture.md` still says "implementation in progress" and lists `users/{uid}.settings{}` and `privacy{}` in the sync model; the engine writes neither.
-## 13 Pulse+ gating (free vs Plus), trial, restore
+## 13 Supernova gating (free vs Plus), trial, restore
 
 - Cloud sync is ungated while the paywall and spec say Plus (GAT-48). Decide: gate (and define free behaviour: local-only, no backup) or remove it from the paywall copy. Strong product implication: free users currently get account restore on a new device.
 - Challenges are ungated (GAT-27); decide who may create vs join.
@@ -332,10 +332,10 @@ Every 🧭 row and every product decision already surfaced, verbatim from each a
 - TRL-24 (PROPOSED): move to a StoreKit introductory offer; add a "trial ended" notice; define whether the trial is 14 or 15 days (TRL-06).
 - GAT-24: MET calories continue after Plus lapses; decide whether the estimator should enforce the gate.
 - RPU-09: start the `Transaction.updates` listener at app launch.
-- RPU-03 (PROPOSED): show a result toast for Restore ("Pulse+ restored" / "No purchases found").
+- RPU-03 (PROPOSED): show a result toast for Restore ("Supernova restored" / "No purchases found").
 - Not built features promised in the spec: smart weight suggestions, smart substitutions, balance / imbalance analytics, advanced analytics and tips, advanced body customization, neglected-muscle badge, upsell blur banners (GAT-54, GAT-21, GAT-60). Decide the V1 Plus line.
 - Multi-app pricing tiers (GAT-E07) are not implemented.
-- Dead gate scaffolding: `PulsePlusFeature`, `hasAccess(to:)`, `PulsePlusUpsellBanner`, `PulsePlusBlurOverlay`.
+- Dead gate scaffolding: `SupernovaFeature`, `hasAccess(to:)`, `SupernovaUpsellBanner`, `SupernovaBlurOverlay`.
 ## 14 Notifications and reminders
 
 - NTF-42 (🧭): skip a reminder when a workout is already logged that day; proposed to leave for later.

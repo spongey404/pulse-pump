@@ -1,7 +1,7 @@
 # 01 Account and onboarding
 
 ## What it's for
-Everyone signs in before using Pump, with Apple, Google or email. New people answer nine quick questions so the app can set up their profile and training split. Returning people get their data back on any phone.
+Everyone signs in before using Ore, with Apple, Google or email. New people answer nine quick questions so the app can set up their profile and training split. Returning people get their data back on any phone.
 
 ## The flow
 **New account**
@@ -31,7 +31,7 @@ Everyone signs in before using Pump, with Apple, Google or email. New people ans
 - Signing in with Apple or Google using an email that already has an email account shows a confusing error.
 - The "Restoring your data" screen can spin forever with no way out except killing the app.
 - The final onboarding step says "We've set up a basic template" but only the split is created.
-- Deleting an account does not remind you to cancel a Pulse+ subscription.
+- Deleting an account does not remind you to cancel a Supernova subscription.
 - You cannot use the app at all without an account and an internet connection for setup.
 
 ## Decide

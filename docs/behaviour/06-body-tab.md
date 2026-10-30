@@ -1,6 +1,6 @@
 # 06 Body tab
 
-Scope: the Body tab (tab index 3): week and day scrubber, hero totals, VS PACE / VS LAST / VS WK comparison, front and back muscle map with the two heat modes, TOP and GAPS columns, cold spots, the CAL calendar sheet and the muscle detail sheet. Sources: `PulsePump/Features/BodyMap/BodyMapTabView.swift`, `BodyMap2DView.swift`, `MuscleDetailSheet.swift`, `Core/Models/Enums/MuscleGroup+Tracked.swift`, `Core/Utilities/WeekMath.swift`, `Core/Models/Workout+Stats.swift`, `PumpShared/BodyHeat.swift` (used by Social, share cards and widgets, not by this tab), `docs/audit/views-body-home.md` (partly stale), `docs/PULSE_PUMP_DESIGN_REFERENCE.md` section 6.5, `docs/pulse-pump-spec.md` Phase 6.
+Scope: the Body tab (tab index 3): week and day scrubber, hero totals, VS PACE / VS LAST / VS WK comparison, front and back muscle map with the two heat modes, TOP and GAPS columns, cold spots, the CAL calendar sheet and the muscle detail sheet. Sources: `Ore/Features/BodyMap/BodyMapTabView.swift`, `BodyMap2DView.swift`, `MuscleDetailSheet.swift`, `Core/Models/Enums/MuscleGroup+Tracked.swift`, `Core/Utilities/WeekMath.swift`, `Core/Models/Workout+Stats.swift`, `OreShared/BodyHeat.swift` (used by Social, share cards and widgets, not by this tab), `docs/audit/views-body-home.md` (partly stale), `docs/PULSE_ORE_DESIGN_REFERENCE.md` section 6.5, `docs/pulse-pump-spec.md` Phase 6.
 
 Rules shared by every number on this tab: only finished (`isDraft == false`), non-deleted workouts count (the queries fetch everything and filter in code); only working sets count (warm-ups excluded); only the 17 tracked muscle groups exist (chest, lats, quads, hamstrings, glutes, front/side/rear delts, biceps, triceps, traps, upper back, forearms, lower back, calves, abs, obliques); exercises hitting only hip flexors, adductors, abductors or neck contribute nothing. A generic "back" or "shoulders" tag is folded into upper back or side delts only when no specific child (lats, upper/lower back, traps; front/side/rear delts) is present on the same exercise, and every group is counted once per exercise. Set counts are unit-free, so kg vs lb changes nothing on this tab. All state (week, day, mode, chips) is in-memory and resets on relaunch. Weeks start on Monday regardless of device locale (`mondayOfThisWeek`).
 
@@ -14,7 +14,7 @@ Extra flow prefixes used here (unique to area 06): BDC (CAL calendar sheet), BMS
 
 | ID | User does → App does (observable result) | Status | Manual check | Tests |
 |---|---|---|---|---|
-| BDY-03 | User opens the Body tab → App shows a masthead (accent square, "PULSE/PUMP", a "CAL" button), the ticker, the hero block, the week row, the day scrubber, the SHOW chips with the map, TOP and GAPS columns, and the cold spots section. The current week is selected with "ALL WEEK" active | ✅ | [ ] | — |
+| BDY-03 | User opens the Body tab → App shows a masthead (accent square, "ORE", a "CAL" button), the ticker, the hero block, the week row, the day scrubber, the SHOW chips with the map, TOP and GAPS columns, and the cold spots section. The current week is selected with "ALL WEEK" active | ✅ | [ ] | — |
 | BDY-06 | User reads the hero label → App shows "WEEK n · MMM D–D" (or "MMM D–MMM D" when the week crosses a month) for the whole-week view, and "MON · OCT 5 · PUSH DAY" style (weekday, date, template name uppercased, "WORKOUT" if none, "REST" if no workout) for a selected day | ✅ `BodyMapTabView.swift:656-671` | [ ] | — |
 | BDY-09 | User reads the big number → App shows working sets in the selected scope over a denominator: "/ 176" (sum of weekly targets) for the whole week, "/ 26" for a single day | ✅ | [ ] | — |
 | BDY-12 | User reads the line under the number → App shows "SETS · k/17 GROUPS", k = tracked groups hit as a primary muscle in the scope (each group once) | ✅ | [ ] | — |
@@ -46,8 +46,8 @@ Extra flow prefixes used here (unique to area 06): BDC (CAL calendar sheet), BMS
 | BDY-90 | User taps VOL ("UNDER TARGET · n LOW") → App shows the 3 groups with the lowest sets / weekly target over the rolling last 7 days from now (primary sets count in full, secondary-only sets count half using integer division), flagged red when under 50% | ✅ `BodyMapTabView.swift:432-446` | [ ] | — |
 | BDY-93 | User compares cold spots with the rest of the tab → App uses different windows and rules (rolling 7 days and secondary credit versus Monday weeks and primary only), so one muscle can read differently in two places | 🟡 Documented in the audit as intentional but undocumented in UI | [ ] | — |
 | BDY-96 | User reads the ticker (shown when any non-deleted workout exists) → App scrolls items: VS PACE or VS LAST with its value, "WK{n}" with the absolute percent change of last week versus the week before, the top 3 and bottom 3 groups with percentages, and PUSH, PULL, LEGS with days since the last workout whose template name contains that word ("—" if none). The item list is doubled before display | 🟡 `BodyMapTabView.swift:746-765`. Label "WK{n}" ignores the browsed week and the "VS WK" label is shown as "VS LAST" | [ ] | — |
-| BDY-99 | User with Pulse+ vs free uses the main tab → App behaves identically; there is no gating on the map, hero, TOP/GAPS, cold spots or calendar | ✅ | [ ] | — |
-| BDY-102 | User looks for the spec's extras → App has no Pulse+ muscle sub-region zones on the silhouette, no neglected-muscle nudge badges, no push/pull balance analysis, no volume sparkline, no skin tone or body type customisation, no colour scheme presets, and Settings shows "Simple Body Map" as "COMING SOON" | ❌ Not built (spec Phase 6; design reference 6.5 lists a 12-week sparkline) | [ ] | — |
+| BDY-99 | User with Supernova vs free uses the main tab → App behaves identically; there is no gating on the map, hero, TOP/GAPS, cold spots or calendar | ✅ | [ ] | — |
+| BDY-102 | User looks for the spec's extras → App has no Supernova muscle sub-region zones on the silhouette, no neglected-muscle nudge badges, no push/pull balance analysis, no volume sparkline, no skin tone or body type customisation, no colour scheme presets, and Settings shows "Simple Body Map" as "COMING SOON" | ❌ Not built (spec Phase 6; design reference 6.5 lists a 12-week sparkline) | [ ] | — |
 
 ### BDY edge cases
 
@@ -101,7 +101,7 @@ Extra flow prefixes used here (unique to area 06): BDC (CAL calendar sheet), BMS
 | BMS-03 | User taps a region → App opens a sheet titled with the muscle name ("Chest", "Rear Delts") and a "Done" button | ✅ | [ ] | — |
 | BMS-06 | User reads "Performed" → App lists exercises (approved or custom, with this muscle as primary or secondary) that have at least one finished log, A to Z, each with "{n} sessions" where n counts exercise logs (two logs in one workout count twice) | 🟡 Wording says sessions; `finalLogs.count` counts logs | [ ] | — |
 | BMS-09 | User reads "Not Yet Tried" → App lists the remaining matching exercises in muted text | ✅ | [ ] | — |
-| BMS-12 | User is a paying Pulse+ subscriber and the muscle has sub-regions → App shows a "Sub-Regions" section with "{n} exercises" per sub-region and sub-region labels under exercise names. A free user, and a user only in the free trial, do not see these | 🟡 `MuscleDetailSheet.swift:29,48`. Gate is `isSubscribed` only; other Plus gates (widgets, deload) also accept the trial. Proposed: include `isInFreeTrial` | [ ] | — |
+| BMS-12 | User is a paying Supernova subscriber and the muscle has sub-regions → App shows a "Sub-Regions" section with "{n} exercises" per sub-region and sub-region labels under exercise names. A free user, and a user only in the free trial, do not see these | 🟡 `MuscleDetailSheet.swift:29,48`. Gate is `isSubscribed` only; other Plus gates (widgets, deload) also accept the trial. Proposed: include `isInFreeTrial` | [ ] | — |
 | BMS-15 | User looks for trend graphs, volume or last-trained info in the sheet → App shows none; rows are not tappable and do not open the exercise detail | ❌ Spec: trend graphs at the top and coloured/greyed exercises | [ ] | — |
 | BMS-18 | User taps a back or shoulder region → App matches exercises by exact tag, so an exercise tagged only with the generic "back" or "shoulders" does not appear under Upper Back or Side Delts although the Body tab credits it there | 🐞 `MuscleDetailSheet.swift:13-16` vs `MuscleGroup+Tracked.swift`. Expected the same folding rule | [ ] | — |
 | BMS-21 | User sees the highlighted sub-region dot → App never lights it (the sheet is always opened with no sub-region) | 🟡 Dead parameter | [ ] | — |
@@ -112,7 +112,7 @@ Extra flow prefixes used here (unique to area 06): BDC (CAL calendar sheet), BMS
 |---|---|---|---|---|---|---|
 | BMS-E01 | No exercise has been done for the muscle | Only "Not Yet Tried" appears; with no matching exercises the sheet is empty | | 🟡 No empty-state text | [ ] | — |
 | BMS-E02 | Workout containing the exercise deleted | Exercise moves to "Not Yet Tried" if it has no other logs | | ✅ | [ ] | — |
-| BMS-E03 | Pulse+ status check fails offline | StoreKit status is cached locally; sub-region sections follow the last known state | | 🟡 Not verified | [ ] | — |
+| BMS-E03 | Supernova status check fails offline | StoreKit status is cached locally; sub-region sections follow the last known state | | 🟡 Not verified | [ ] | — |
 | BMS-E04 | Draft sets | Excluded (`finalLogs`) | | ✅ | [ ] | — |
 
 ## Open decisions for the owner (06)
@@ -125,6 +125,6 @@ Extra flow prefixes used here (unique to area 06): BDC (CAL calendar sheet), BMS
 - BDY-E07: same-day second workout is invisible in label, VS LAST and calendar.
 - BDY-93: cold spots use a different window and secondary credit than the rest of the tab.
 - BDY-102: unbuilt spec items (sub-region zones, nudge badges, push/pull balance, sparkline, customisation, Simple Body Map, colour presets).
-- BMS-12: Pulse+ gate excludes the free trial here but not elsewhere. BMS-15: sheet has no trend graphs. BMS-18: generic-group mismatch.
+- BMS-12: Supernova gate excludes the free trial here but not elsewhere. BMS-15: sheet has no trend graphs. BMS-18: generic-group mismatch.
 - BDY-E01: no empty state for new users.
 - BDY-E02: week-number label differs by locale (also see file 02 HOM-39).

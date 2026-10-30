@@ -1,5 +1,5 @@
 # Audit: viewmodels-workout
-Scope: PulsePump/ViewModels/WorkoutViewModel.swift, TutorialViewModel.swift, OnboardingViewModel.swift (+ call sites read for wiring).
+Scope: Ore/ViewModels/WorkoutViewModel.swift, TutorialViewModel.swift, OnboardingViewModel.swift (+ call sites read for wiring).
 Scratch scripts: scratchpad/predict.swift, scratchpad/pr.swift (ported verbatim logic, outputs quoted below).
 
 ## Summary
@@ -34,7 +34,7 @@ Scratch scripts: scratchpad/predict.swift, scratchpad/pr.swift (ported verbatim 
 - Fix: remove the auto-share from the VM (or move it into the completion view as "post on dismiss unless declined" with a deterministic doc id).
 
 [HIGH] WorkoutViewModel.swift:535-566 — Smart Weight Suggestion is dead code, and its Settings toggle is unused
-- What: `smartWeightSuggestion` has no callers (grep). The `smartWeightSuggestions` AppStorage toggle (SettingsView.swift:43,129) is never read. The Pulse+ feature `.smartWeightSuggestions` (PulsePlusService.swift:12) therefore delivers nothing.
+- What: `smartWeightSuggestion` has no callers (grep). The `smartWeightSuggestions` AppStorage toggle (SettingsView.swift:43,129) is never read. The Supernova feature `.smartWeightSuggestions` (SupernovaService.swift:12) therefore delivers nothing.
 - Logic note (unverified at runtime): it compares the last two sessions and doubles the increment, e.g. 100 -> 105 suggests 110. It ignores set type, so warm-ups skew it. It needs >= 2 logs.
 
 [HIGH] WorkoutViewModel.swift:218-231 / ActiveWorkoutView.swift:1254 — Superset (and other set types) have no behaviour
@@ -105,7 +105,7 @@ Script outputs (pr.swift):
 - Volume: `WorkoutCompletionData` carries no total-volume figure. Warm-ups are included in `totalSets`, `compoundSets/isolationSets`, calories, and the muscle list. (If volume is computed elsewhere, other agents should check warm-up exclusion.)
 - `exerciseCount` counts only entries with completed sets; `totalExercises` counts all entries (including empty ones), which the feed also stores.
 - `streakCount` uses `max(1, currentStreak)`, so a streak of 0 displays 1.
-- `workout.date` is the creation time (start); OK. `calorieBurnEstimate` uses `workout.duration` (includes rest), fine for MET, but MET falls back to basic unless `isSubscribed` (the call omits `isSubscribed`, default false, so MET is never used even for Pulse+ users: CalorieEstimationService.estimate line 52/59, called at WorkoutViewModel.swift:252 and 413).
+- `workout.date` is the creation time (start); OK. `calorieBurnEstimate` uses `workout.duration` (includes rest), fine for MET, but MET falls back to basic unless `isSubscribed` (the call omits `isSubscribed`, default false, so MET is never used even for Supernova users: CalorieEstimationService.estimate line 52/59, called at WorkoutViewModel.swift:252 and 413).
 
 [MEDIUM] WorkoutViewModel.swift:233-261 vs 399-409 — live vs final calorie classification differs
 - Live uses name keywords ("press" matches "leg press", "chest press machine", but also "Tricep Press..."; "row" matches "Upright Row"), final uses `movementPattern.isCompound`. The live number and final number can differ. `liveCalories` is not read anywhere outside the VM (grep), so it is wasted work. Warm-up sets count fully.

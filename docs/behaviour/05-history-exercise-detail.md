@@ -1,6 +1,6 @@
 # 05 History, workout detail, exercise detail, PR rules, weekly recap, profile stats
 
-Scope: everything reached from More > History (list, calendar, workout detail, edit, duplicate, delete), the exercise detail screen (reached from the Exercise Library and Global Search), the rules that decide what counts as a PR on every surface, the Weekly Recap screen and the More > Profile stats screen. Sources: `PulsePump/Features/More/WorkoutHistoryView.swift`, `WorkoutDetailView.swift`, `WeeklyRecapView.swift`, `ProfileView.swift`, `MoreTabView.swift`, `Features/Exercises/ExerciseDetailView.swift`, `Core/Models/Workout+Stats.swift`, `Core/Sync/SyncRecord.swift`, `Features/Workout/WorkoutViewModel.swift` (`checkPR`, `finishWorkout`), `PumpShared/WeightUnit.swift`.
+Scope: everything reached from More > History (list, calendar, workout detail, edit, duplicate, delete), the exercise detail screen (reached from the Exercise Library and Global Search), the rules that decide what counts as a PR on every surface, the Weekly Recap screen and the More > Profile stats screen. Sources: `Ore/Features/More/WorkoutHistoryView.swift`, `WorkoutDetailView.swift`, `WeeklyRecapView.swift`, `ProfileView.swift`, `MoreTabView.swift`, `Features/Exercises/ExerciseDetailView.swift`, `Core/Models/Workout+Stats.swift`, `Core/Sync/SyncRecord.swift`, `Features/Workout/WorkoutViewModel.swift` (`checkPR`, `finishWorkout`), `OreShared/WeightUnit.swift`.
 
 Shared rules: History lists only finished (`isDraft == false`), non-deleted workouts; "sets" always means working sets (warm-ups excluded) except where a row says otherwise; stored weights are kg and every screen converts for display (`@Environment(\.weightUnit)`); a delete is a soft delete (`deletedAt` tombstone) so it syncs.
 
@@ -39,7 +39,7 @@ Extra flow prefixes used here (unique to area 05): WRC (Weekly Recap), PFV (Prof
 | HIS-E06 | Month boundary / timezone change | THIS MONTH uses the device's current calendar and timezone at render time | | ✅ | [ ] | — |
 | HIS-E07 | Locale uses non-Latin digits or a non-Gregorian calendar | Dates in the row follow the locale; the calendar-mode key (CAL) uses a fixed "yyyy-MM-dd" format consistently on both sides | | 🟡 Not exercised | [ ] | — |
 | HIS-E08 | Draft in progress | Not listed (drafts are not history) | | ✅ | [ ] | — |
-| HIS-E09 | Pulse+ vs free | History is free and unlimited | | ✅ | [ ] | — |
+| HIS-E09 | Supernova vs free | History is free and unlimited | | ✅ | [ ] | — |
 
 ## CAL  History calendar
 
@@ -78,7 +78,7 @@ Extra flow prefixes used here (unique to area 05): WRC (Weekly Recap), PFV (Prof
 | WDT-15 | User reads a workout containing warm-ups → App lists the warm-up rows exactly like working sets, with no marker, while the SETS tile excludes them | 🟡 `WorkoutDetailView.swift:325`. Expected a visible "WU" marker | [ ] | — |
 | WDT-18 | User reads exercise notes → App shows the note under the sets when not empty | ✅ | [ ] | — |
 | WDT-21 | User scrolls to the end → App shows a "Notes" section with the workout notes, or "No notes added." | ✅ | [ ] | — |
-| WDT-24 | User is a Pulse+ subscriber or in the free trial → App also shows a "Deload Week" toggle that writes the workout's `isDeload` immediately, in view and edit mode. Free users do not see it | ✅ (gate: `isSubscribed || isInFreeTrial`) | [ ] | — |
+| WDT-24 | User is a Supernova subscriber or in the free trial → App also shows a "Deload Week" toggle that writes the workout's `isDeload` immediately, in view and edit mode. Free users do not see it | ✅ (gate: `isSubscribed || isInFreeTrial`) | [ ] | — |
 | WDT-27 | User taps "⋯" → App offers Edit, Duplicate and Delete (destructive) | ✅ | [ ] | — |
 | WDT-30 | User taps Delete → App shows the same "Delete Workout?" dialog; on confirm it soft-deletes and pops back | ✅ | [ ] | — |
 | WDT-33 | User taps Duplicate → App silently inserts a new draft workout dated now with the same template and copies of every exercise log and set (weight, reps, RIR, type, side); workout notes are not copied; the screen does not change and no message appears. The copy shows up on Home as a CONTINUE card | 🟡 `WorkoutDetailView.swift:194-224`. No feedback, can displace a real draft, and a resumed copy shows every set as completed (see DRF-33 and DRF-36 in file 02). Proposed: confirm and open it in the logger | [ ] | — |
@@ -152,7 +152,7 @@ Reached from Exercise Library rows and from Global Search results. Not reachable
 | XCH-E04 | Draft in progress | Draft sets are excluded from every number | `isFinal` | ✅ | [ ] | — |
 | XCH-E05 | Warm-up sets | Excluded from PRs, e1RM, volume and the chart; included in Recent Sessions text | | 🟡 | [ ] | — |
 | XCH-E06 | Same exercise twice in one workout | Counted as two logs, so two chart points at the same date | | 🟡 | [ ] | — |
-| XCH-E07 | Pulse+ vs free | The screen is free; nothing is gated | | ✅ | [ ] | — |
+| XCH-E07 | Supernova vs free | The screen is free; nothing is gated | | ✅ | [ ] | — |
 | XCH-E08 | Imported exercise merged by name | Uses the matched Exercise record; history from imports is included | | ✅ | [ ] | — |
 
 ## PRR  What counts as a PR (all surfaces)
@@ -186,7 +186,7 @@ There is no shared PR service; each surface re-derives PRs. All comparisons run 
 
 ## WRC  Weekly Recap
 
-Reached from More > "Weekly Recap" (row value "WK n"). Free for everyone in the code even though the Pulse+ screen lists "Weekly Recaps: Automated Monday summaries".
+Reached from More > "Weekly Recap" (row value "WK n"). Free for everyone in the code even though the Supernova screen lists "Weekly Recaps: Automated Monday summaries".
 
 | ID | User does → App does (observable result) | Status | Manual check | Tests |
 |---|---|---|---|---|
@@ -212,7 +212,7 @@ Reached from More > "Weekly Recap" (row value "WK n"). Free for everyone in the 
 | WRC-E04 | Midnight Sunday to Monday while open | The current week is recomputed at next render only | | 🟡 | [ ] | — |
 | WRC-E05 | lb user | Volume is converted before dividing by 1000 and labelled K LB; weights in PRs use LB | | ✅ | [ ] | — |
 | WRC-E06 | Exercise renamed | PR matching is by exercise name string, so a rename splits its history | | 🟡 | [ ] | — |
-| WRC-E07 | Pulse+ vs free | Not gated in code; the paywall copy implies it is a Plus feature | | 🧭 Proposed: decide and gate in file 13 | [ ] | — |
+| WRC-E07 | Supernova vs free | Not gated in code; the paywall copy implies it is a Plus feature | | 🧭 Proposed: decide and gate in file 13 | [ ] | — |
 
 ## PFV  Profile screen (More > profile header)
 
@@ -244,7 +244,7 @@ Reached by tapping the user header at the top of the More hub. A different, soci
 
 - PRR-30 (🧭): choose one PR/improved definition for the whole app. Proposed: per exercise, strict weight PR over a previous best above 0, plus rep PR at same-or-lighter weight, plus e1RM "improved"; first-ever is a baseline.
 - HIS-39 (🧭): deleting a posted workout leaves the feed post. Proposed: keep, and warn in the dialog.
-- WRC-E07 (🧭): Weekly Recap is free in code but advertised as a Pulse+ feature; decide in the gating file.
+- WRC-E07 (🧭): Weekly Recap is free in code but advertised as a Supernova feature; decide in the gating file.
 - WRC-33: Monday recap notification and monthly recap modal are in the spec but not built; WRC-30 text promises "NEXT RECAP".
 - WRC-24: "VS WK 0" in ISO week 1.
 - XCH-24: no e1RM, volume or rep chart, and no PR history list despite the spec; XCH-15: two Epley formulas.

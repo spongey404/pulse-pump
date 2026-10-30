@@ -1,7 +1,7 @@
 # 12 Cloud sync and data ownership
 
 Scope: what lives where, what syncs to the user's private Firestore area (`users/{uid}/**`), when it syncs, how conflicts resolve, and what happens on sign-out, account switch and a new device. Social data (feed, friends, challenges) is covered in area 09; sign-in/sign-out/delete screens in area 01 (this file covers only their sync side).
-Key sources: `PulsePump/Core/Sync/*` (SyncService, SyncApplier, SyncMapper, SyncChangeTracker, SyncRecord, SyncAccount, FirestoreRemoteStore), `PulsePump/Core/Services/Auth/SyncLifecycle.swift`, `PulsePump/Core/Services/Auth/AccountGate.swift`, `PulsePump/Features/Settings/CloudSyncSection.swift`, `PulsePump/Features/Widgets/BodyweightLog.swift`, `docs/sync-architecture.md`, `firebase/firestore.rules`.
+Key sources: `Ore/Core/Sync/*` (SyncService, SyncApplier, SyncMapper, SyncChangeTracker, SyncRecord, SyncAccount, FirestoreRemoteStore), `Ore/Core/Services/Auth/SyncLifecycle.swift`, `Ore/Core/Services/Auth/AccountGate.swift`, `Ore/Features/Settings/CloudSyncSection.swift`, `Ore/Features/Widgets/BodyweightLog.swift`, `docs/sync-architecture.md`, `firebase/firestore.rules`.
 
 Summary of the model: SwiftData is the source of truth for the UI. A background engine mirrors it to Firestore. Accounts are required, so sync is always on while signed in (there is no sync on/off switch). Conflicts are last-write-wins by the client-assigned `updatedAt` (epoch ms). Deletes are soft (`deletedAt` tombstones).
 
@@ -138,8 +138,8 @@ Invariant: everything stored and synced is kg (weights), cm (height), metres (di
 
 | ID | Situation | What the app does | Why/notes | Status | Manual check | Tests |
 |---|---|---|---|---|---|---|
-| SYA-E01 | Sign out while offline with unsynced edits | The flush fails, the result is ignored, and the data is wiped anyway: unsynced edits are permanently lost | `SyncServiceLifecycle.wipeLocalData`: `_ = await sync.flushPending()`. User gets no warning | 🐞 `PulsePump/Core/Sync/SyncServiceLifecycle.swift:23` expected: warn or block when `flushPending()` returns false; actual: silent loss. Owner to confirm | [ ] | — |
-| SYA-E02 | Sign out while a cycle is already in flight | `flushPending` returns immediately (the run is queued as a follow-up) and then `stop()` clears the queue, so the final push may not happen | `run` returns early when `cycleInFlight`; `stop()` sets `rerunRequested = nil` | 🐞 `PulsePump/Core/Sync/SyncService.swift:run` expected: wait for the in-flight cycle then push; actual: queued rerun dropped. Needs device confirmation | [ ] | — |
+| SYA-E01 | Sign out while offline with unsynced edits | The flush fails, the result is ignored, and the data is wiped anyway: unsynced edits are permanently lost | `SyncServiceLifecycle.wipeLocalData`: `_ = await sync.flushPending()`. User gets no warning | 🐞 `Ore/Core/Sync/SyncServiceLifecycle.swift:23` expected: warn or block when `flushPending()` returns false; actual: silent loss. Owner to confirm | [ ] | — |
+| SYA-E02 | Sign out while a cycle is already in flight | `flushPending` returns immediately (the run is queued as a follow-up) and then `stop()` clears the queue, so the final push may not happen | `run` returns early when `cycleInFlight`; `stop()` sets `rerunRequested = nil` | 🐞 `Ore/Core/Sync/SyncService.swift:run` expected: wait for the in-flight cycle then push; actual: queued rerun dropped. Needs device confirmation | [ ] | — |
 | SYA-E03 | New device, no network at sign-in (existing account) | "You're offline" gate with TRY AGAIN; nothing local is created | SYA-15 | ✅ | [ ] | — |
 | SYA-E04 | New device, network drops during the initial pull | Restoring screen stays up; the cycle fails, retries with backoff; cursors persisted so it resumes; there is no timeout or cancel except SIGN OUT on the failure screen only | The RESTORING view has no escape button | 🟡 | [ ] | — |
 | SYA-E05 | Initial pull completes but the cloud profile lacks `unit` (e.g. only a social/profile doc exists) | No local `User` is created and the user sees "Couldn't restore your data" | Engine-written profiles always carry `unit`; accounts created before sync may not | 🧭 PROPOSED: fall back to onboarding prefilled from the cloud doc | [ ] | — |
@@ -148,7 +148,7 @@ Invariant: everything stored and synced is kg (weights), cm (height), metres (di
 | SYA-E08 | App killed during the sign-out wipe | Owner marker is cleared last; on next launch a signed-in session with a partial store re-runs reconcile; if still signed in as the same user the remaining data stays | `SwiftDataSyncLifecycle.wipeLocalData` ordering | 🟡 partial-wipe recovery not verified | [ ] | — |
 | SYA-E09 | UserDefaults settings after account switch | Only `wantsTutorial` is cleared; theme, rest timer, reminders, calorie formula, summary toggles, `autoShareToFeed` persist to the next account on the device | `SwiftDataSyncLifecycle.userDefaultsKeysToClear` | 🧭 PROPOSED: acceptable as device preferences; confirm, or sync/clear them | [ ] | — |
 | SYA-E10 | Widget data after sign-out | Snapshot, custom library, friends cache and bodyweight log are removed from the App Group, so widgets show empty/sample state | `SyncAccount.widgetKeys` | ✅ | [ ] | — |
-| SYA-E11 | Pulse+ entitlement across devices | Not part of sync; StoreKit entitlement is read per device from the Apple ID (area 10 PLS/13 GAT) | | ✅ | [ ] | — |
+| SYA-E11 | Supernova entitlement across devices | Not part of sync; StoreKit entitlement is read per device from the Apple ID (area 10 PLS/13 GAT) | | ✅ | [ ] | — |
 
 ## SYS  Settings "CLOUD SYNC" section
 
@@ -172,7 +172,7 @@ Invariant: everything stored and synced is kg (weights), cm (height), metres (di
 |---|---|---|---|---|---|---|
 | SYS-E01 | Status text freshness | Status and Last Synced are driven by the observable `SyncService.shared`, so they update live while Settings is open; relative time text is not refreshed on a timer | | 🟡 | [ ] | — |
 | SYS-E02 | Tap Sync Now offline | Status moves to OFFLINE after the attempt fails (see SYN-E02 for the possible hang) | | 🟡 | [ ] | — |
-| SYS-E03 | Free vs Pulse+ | Sync is not gated by Pulse+ | No entitlement check in `Core/Sync` | ✅ | [ ] | — |
+| SYS-E03 | Free vs Supernova | Sync is not gated by Supernova | No entitlement check in `Core/Sync` | ✅ | [ ] | — |
 
 ## SYR  Firestore rules relevant to sync (`firebase/firestore.rules`)
 

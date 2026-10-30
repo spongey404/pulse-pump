@@ -1,7 +1,7 @@
 # 08 Exercise library
 
 ## What it's for
-Pump ships with about 240 exercises. You pick from them whenever you add an exercise to a workout or program, and you can look one up to see your progress on it.
+Ore ships with about 240 exercises. You pick from them whenever you add an exercise to a workout or program, and you can look one up to see your progress on it.
 
 ## The flow
 1. In a workout, tap + ADD EXERCISE → the picker opens: a search field, movement pills (ALL, push, pull, hinge, squat, carry…) and the list.
@@ -13,13 +13,13 @@ Pump ships with about 240 exercises. You pick from them whenever you add an exer
 - **Look up an exercise:** Home › magnifier › type a name → tap the result → exercise detail (info, muscles, PRs, chart, recent sessions, programs using it, notes).
 - **Replace during a workout:** card ··· → Replace Exercise → same picker.
 - **Nothing found:** the picker says "No exercises found · TRY A DIFFERENT SEARCH".
-- **Imported or shared names Pump doesn't know** are added automatically as custom exercises.
+- **Imported or shared names Ore doesn't know** are added automatically as custom exercises.
 
 ## Not working / not built yet
 - You can't create your own exercise; the creator screen exists but nothing opens it. (not built)
 - No browse-all library or filter by muscle or equipment. (not built)
 - You can only add one exercise per trip to the picker.
-- No "smart alternatives" when replacing an exercise (promised for Pulse+). (not built)
+- No "smart alternatives" when replacing an exercise (promised for Supernova). (not built)
 - The "Submit to community library" option has nothing behind it.
 - Custom exercises have no badge in the picker.
 - The picker and Home search match names differently ("press" vs words starting with "press").

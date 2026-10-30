@@ -1,6 +1,6 @@
 # Audit: views-more-settings-onboarding
 
-Scope: PulsePump/Views/More/** (incl. Widgets/), Views/Settings/**, Views/Onboarding/** + OnboardingViewModel. Read-only; no builds run. Paths below are relative to /Users/vasanth.santosh/Documents/Apps/Pump/PulsePump unless noted.
+Scope: Ore/Views/More/** (incl. Widgets/), Views/Settings/**, Views/Onboarding/** + OnboardingViewModel. Read-only; no builds run. Paths below are relative to /Users/vasanth.santosh/Documents/Apps/Ore/Ore unless noted.
 
 ## Summary
 - 3 CRITICAL, 9 HIGH, 11 MEDIUM, 6 LOW (plus the setting table below).
@@ -14,7 +14,7 @@ Scope: PulsePump/Views/More/** (incl. Widgets/), Views/Settings/**, Views/Onboar
 
 | Setting | Stored | Consumed | Verdict |
 |---|---|---|---|
-| Weight unit (kg/lbs) | `User.unitPreference` (SwiftData) | Display only: ProfileView.swift:246 (multiplies by 2.20462), EditProfileView.swift:31 (label), PulsePlusView.swift:123 (label) | INCONSISTENT. See findings 4, 5. Active workout, history, detail, recap, widgets, export, import, plate calc all hard-code kg. |
+| Weight unit (kg/lbs) | `User.unitPreference` (SwiftData) | Display only: ProfileView.swift:246 (multiplies by 2.20462), EditProfileView.swift:31 (label), SupernovaView.swift:123 (label) | INCONSISTENT. See findings 4, 5. Active workout, history, detail, recap, widgets, export, import, plate calc all hard-code kg. |
 | Body weight | `User.weight` (raw number typed in the chosen unit) | CalorieEstimation (as kg, WorkoutViewModel.swift:251/411), BodyweightLog (as kg), widget snapshot `bodyweight` (WidgetDataService.swift:88) | WRONG for lbs users (finding 4) |
 | Height | `User.height` (cm) | nowhere (only EditProfile) | STORED, NEVER CONSUMED (onboarding copy claims "baseline metabolism") |
 | Age | `User.age` | nowhere | STORED, NEVER CONSUMED |
@@ -25,7 +25,7 @@ Scope: PulsePump/Views/More/** (incl. Widgets/), Views/Settings/**, Views/Onboar
 | Rest timer mode | `restTimerMode` | RestTimerService.swift:15, WorkoutViewModel.swift:226 | Honoured; `autoStartWithDismiss` behaves identically to `autoStart` |
 | Timer alert | `restTimerAlertType` | RestTimerService.swift:20, playAlert | Honoured |
 | Smart weight suggestions | `smartWeightSuggestions` | NOWHERE. `smartWeightSuggestion()` (WorkoutViewModel.swift:535) is never called; ActiveWorkoutView `smartSuggestion` param is never passed | DEAD toggle AND dead feature (finding 7) |
-| Theme | `appTheme` | PulsePumpApp.swift:47-50 `preferredColorScheme` | Honoured |
+| Theme | `appTheme` | OreApp.swift:47-50 `preferredColorScheme` | Honoured |
 | Simple body map | `simpleBodyMap` | NOWHERE | STORED, NEVER CONSUMED |
 | Auto-share to feed | `autoShareToFeed` | WorkoutViewModel.swift:469; toggled off in WorkoutCompletionView.swift:522 | Honoured |
 | Profile visibility | `privacy_profile` | NOWHERE (also the other 3 PrivacyRow keys in ActivityView) | STORED, NEVER CONSUMED (finding 8) |
@@ -51,13 +51,13 @@ Only `showPreviewCompletion` (line 526) is inside `#if DEBUG`; `injectTestData` 
 Onboarding lets the user pick LBS and stores `Double(weightText)` verbatim in `User.weight` (line 113/126). `BodyweightLog.record(kg: user.weight)` (line 141), `EditProfileView.save()` (line 65), calorie estimation (`bodyWeightKg: user.weight`, WorkoutViewModel.swift:251,411) and the widget `bodyweight` all treat the number as kg. ProfileView then multiplies by 2.20462 when unit == lbs. Worked example: user enters 180 lbs: stored 180; Profile shows `Int(180*2.20462)` = "396 LBS"; the MET calorie formula would use 180 "kg" (2.2x too high); the bodyweight widget/log shows 180 kg. Changing "Weight Unit" in Settings (SettingsView.swift:108) just flips the label, never converts `user.weight`. Fix: store kg canonically (convert at onboarding/EditProfile by unit), add one `Weight.display(kg:unit:)` helper and use it everywhere.
 
 [HIGH] ViewModels/WorkoutViewModel.swift:249,412 / Services/CalorieEstimationService.swift:52-59 — MET formula can never be applied
-`estimate(... isSubscribed: Bool = false)` falls back to the basic formula unless `isSubscribed` is true, and neither call site in WorkoutViewModel passes it (grep: `isSubscribed` appears only in CalorieEstimationService and PulsePlusService). Settings offers "MET-Based" to Pulse+ and trial users (SettingsView.swift:122). Expected: selecting MET changes kcal. Actual: kcal is always the set-count estimate for everyone, including paying users. Fix: pass `isSubscribed` (or drop the gate) at both call sites.
+`estimate(... isSubscribed: Bool = false)` falls back to the basic formula unless `isSubscribed` is true, and neither call site in WorkoutViewModel passes it (grep: `isSubscribed` appears only in CalorieEstimationService and SupernovaService). Settings offers "MET-Based" to Supernova and trial users (SettingsView.swift:122). Expected: selecting MET changes kcal. Actual: kcal is always the set-count estimate for everyone, including paying users. Fix: pass `isSubscribed` (or drop the gate) at both call sites.
 
 [HIGH] Models/Split.swift + OnboardingViewModel.swift:135 + SettingsView.swift:307 — `Split.days` is never populated, which kills reminders, weekly goal and predictions
 `SplitDay(` is only declared in Models/Split.swift; onboarding (`Split(type:)`) and `SplitConfigView` ("Save Split") both create splits with `days = []`. Consequences (all verified by reading): `scheduleWorkoutReminders` returns at `!split.days.isEmpty` (NotificationService.swift:37) so "Workout Reminders" never schedules anything; `scheduleRestDayAlerts` treats all 7 days as rest days; WeeklyRecap target is always `max(week.count, 5)` (WeeklyRecapView.swift:47-48); widget goal falls back to 5; `predictNextWorkout` reads `split.days` (WorkoutViewModel.swift:626). Onboarding says "This sets up your first program template" but no template is created. Also `SplitConfigView` inserts a new `Split` each save and orphans the old one (nullify rule), and does not call `NotificationService.reschedule`. Fix: generate `SplitDay`s from `SplitType` on creation, delete/replace the old split, reschedule notifications.
 
 [HIGH] Views/Settings/SettingsView.swift:129 — "Smart Weight Suggestions" toggle is dead and the feature is unwired
-See table. `smartWeightSuggestion(for:setIndex:modelContext:)` has no callers, the `smartSuggestion` parameter in ActiveWorkoutView.swift:1886 defaults to nil and is never supplied, and no code reads `smartWeightSuggestions`. Fix: wire the call (gated on the setting + Pulse+) or remove the row.
+See table. `smartWeightSuggestion(for:setIndex:modelContext:)` has no callers, the `smartSuggestion` parameter in ActiveWorkoutView.swift:1886 defaults to nil and is never supplied, and no code reads `smartWeightSuggestions`. Fix: wire the call (gated on the setting + Supernova) or remove the row.
 
 [HIGH] Models/Enums/PrivacyLevel.swift + Views/Settings/SettingsView.swift:133 + Views/Social/ActivityView.swift:58 — all privacy levels are cosmetic
 Four `privacy_*` keys (profile, workoutPosts, bodyMap, globalLeaderboards) are stored but no code reads them: `shareWorkoutToFeed`, FirestoreService reads and friend/profile fetches ignore them. A user choosing "Only me" for workout posts still posts to the feed whenever auto-share is on (WorkoutViewModel.swift:469 checks only `autoShareToFeed`). The source comment admits server enforcement is a TODO, but the UI promises "YOUR PROFILE IS PRIVATE" / "BODY MAP NEVER SHOWS ON A POST". Fix: at minimum honour them client-side in the share path and store them on the Firestore profile; otherwise label as not yet active.
@@ -104,16 +104,16 @@ It creates `Workout(isDraft: true)` with copied logs and no feedback/navigation.
 [MEDIUM] Views/More/Widgets/WidgetBuilderView.swift:29,426,449 — piece ids collide after re-editing a saved widget
 `@State private var seq = 1` generates ids `"n1","n2"...` per builder session, but saved user widgets keep those ids. Re-open a saved widget containing `n1`, add a piece: new id `n1` duplicates the existing one. `ForEach(draft.pieces)` gets duplicate ids, `selected`/drag state target both, and `removeAll { $0.id == id }` (lines 416, 483) deletes both. Preset ids (a1, b2...) don't collide. Fix: UUID ids, or initialise `seq` above the max existing numeric suffix.
 
-[MEDIUM] PumpShared/PumpWidgetSnapshot.swift:94-117 (via WidgetBuilderView/WidgetsView snapshot hand-off) — fake sample data shown as real when `hasData == true`
+[MEDIUM] OreShared/OreWidgetSnapshot.swift:94-117 (via WidgetBuilderView/WidgetsView snapshot hand-off) — fake sample data shown as real when `hasData == true`
 `metric(for:)` starts from the catalog sample and only overrides some fields: (a) spark `bw` ("Bodyweight, 30 days") is never overridden, so it always plots the hard-coded 83.6->82.4 series and "82.4 KG" even though `BodyweightLog` has real data; (b) spark e1rm shows the sample series/value when fewer than 2 weekly points exist; (c) prog `program` ("PPL WEEK 3/8") is never computed; (d) `.next` keeps "PUSH DAY / 6 EX" when no prediction exists; (e) `.num` unknown metric and `.pr` unit are hard-coded. Users with real data can therefore see invented numbers on their home-screen widget. Fix: when hasData and the real value is missing, blank the piece ("—") instead of falling through to sample.
 
 [MEDIUM] Services/WidgetDataService.swift:77-99 (snapshot built from WidgetsView.load, WidgetsView.swift:41-43) — O(n^2) snapshot build on the main thread
 For each workout in the current week `improvements(w, history: workouts)` re-computes `topWeights` for every earlier workout; plus `predictNextWorkout` and per-set loops. Runs on every scene activation and every WidgetsView appear, synchronously. Fine for tens of workouts; slow for hundreds.
 
-[MEDIUM] Views/Settings/PulsePlusView.swift:19-25 — paywall advertises features that don't exist
-"Cloud Sync: Sync across all your devices" (no sync layer exists; CLAUDE.md says local-first), "Weekly Recaps: Automated Monday summaries" (recap is a free, manual screen with no automation), "Import / Export" (free, ungated: DataExportView has no Pulse+ check), "AI-powered workout suggestions" (the prediction is a template heuristic). Misleading marketing in a paid purchase flow is an App Review/refund risk. Also `matchedProduct` (line ~418) falls back to `availableProducts.first` if the chosen period's product is missing, so tapping "ANNUAL" can purchase the monthly plan while showing the annual price UI.
+[MEDIUM] Views/Settings/SupernovaView.swift:19-25 — paywall advertises features that don't exist
+"Cloud Sync: Sync across all your devices" (no sync layer exists; CLAUDE.md says local-first), "Weekly Recaps: Automated Monday summaries" (recap is a free, manual screen with no automation), "Import / Export" (free, ungated: DataExportView has no Supernova check), "AI-powered workout suggestions" (the prediction is a template heuristic). Misleading marketing in a paid purchase flow is an App Review/refund risk. Also `matchedProduct` (line ~418) falls back to `availableProducts.first` if the chosen period's product is missing, so tapping "ANNUAL" can purchase the monthly plan while showing the annual price UI.
 
-[MEDIUM] Views/Settings/PulsePlusView.swift:477-496,326-337 — purchase/restore give no feedback for pending/cancelled/restore
+[MEDIUM] Views/Settings/SupernovaView.swift:477-496,326-337 — purchase/restore give no feedback for pending/cancelled/restore
 `purchaseProduct` ignores the `false` result (`if !success { }`), so Ask-to-Buy "pending" shows nothing; "Restore Purchases" swallows errors (`try? await AppStore.sync()`) and shows no confirmation or "nothing to restore". `Transaction.updates` listener skips unverified transactions silently. The trial is `UserDefaults("appInstallDate")` based and reinstall/clear resets it; `isInFreeTrial` writes to defaults inside a getter (documented gap in CLAUDE.md).
 
 [MEDIUM] Views/Settings/DataExportView.swift:8 vs Services/DataExportService.swift:36,66 — export includes drafts and unlabelled units; CSV not escaped
@@ -139,28 +139,28 @@ Editing the name updates SwiftData only (Firestore `displayName` stays stale); w
 [LOW] Views/More/Widgets/WidgetBuilderGrid.swift:11-17 — `occupancy` traps on out-of-range stored pieces
 `for y in p.y..<min(p.y + p.h, size.rows)` crashes ("Range requires lowerBound <= upperBound") if a stored piece has `p.y > rows` (or x > cols), e.g. a hand-edited/corrupt App Group blob or a future size change. Normal builder flows can't produce it (setSize runs tidy). Clamp the lower bound.
 
-[LOW] Views/More/Widgets/WidgetBuilderView.swift:68-75 — back button discards unsaved edits without confirmation; WidgetGalleryView draws `PumpWidgetSnapshot.sample` (design sample data) while its header comment says "what ships"; gallery is a preview only.
+[LOW] Views/More/Widgets/WidgetBuilderView.swift:68-75 — back button discards unsaved edits without confirmation; WidgetGalleryView draws `OreWidgetSnapshot.sample` (design sample data) while its header comment says "what ships"; gallery is a preview only.
 
 ## Verified OK
-- Theme: `appTheme` -> `preferredColorScheme` (App/PulsePumpApp.swift:47-50, wired).
+- Theme: `appTheme` -> `preferredColorScheme` (App/OreApp.swift:47-50, wired).
 - Rest timer mode/alert: SettingsView bindings write the same keys RestTimerService reads (RestTimerService.swift:15,20), `restTimer.mode` gates auto-start (WorkoutViewModel.swift:226); alert type switch in `playAlert` covers all four cases.
 - Auto-share: key read at WorkoutViewModel.swift:469 and "never post automatically" correctly writes it (WorkoutCompletionView.swift:522).
 - WeeklyRecap: ISO calendar with Monday start (lines 18-22); week range is half-open [weekStart, weekStart+7d), no off-by-one or overlap with `prev`; drafts excluded via @Query; warm-ups excluded from volume/sets/muscle sets; volume = sum(weight*reps)/1000 tonnes; delta guards `b > 0` (no divide by zero); past-week navigation (`weeksBack`) arithmetic is DST-safe (calendar date math); PR detection uses only workouts strictly before `weekStart`, updates `bestBefore` as it walks the week chronologically so a second heavier set in the same week isn't double counted.
 - WorkoutHistory calendar: Monday-offset formula `(weekday + 5) % 7` correct for Sun..Sat; 42-cell grid always large enough (max offset 6 + 31 days = 37); month navigation via `Calendar.date(byAdding: .month)`; list stats (this month / streak) use the shared StreakCalculator and a drafts-excluded @Query; swipe-to-delete lives in a `List` per project convention and asks for confirmation.
 - WidgetBuilderGrid: occupancy/isFree/best/fit/tidy logic traced by hand: bounds checks correct, reading-order tie-break (`y*100+x`) correct, nearest-spot Euclidean distance, size fallback via `sizes(for:first:)`, tidy drops body-map on lock; covered by WidgetBuilderGridTests (empty grid, snap, fallback, full grid, skip, tidy, lock drop, presets fit, PR variant lookup).
-- Widget library save/load: `PumpWidgetStore` JSON round-trips through the App Group; first-run seeds presets; builder `save()` refuses empty widgets, republishes and calls `WidgetCenter.reloadAllTimelines()`.
+- Widget library save/load: `OreWidgetStore` JSON round-trips through the App Group; first-run seeds presets; builder `save()` refuses empty widgets, republishes and calls `WidgetCenter.reloadAllTimelines()`.
 - Widget snapshot data that is computed correctly: streak, sessions-this-week (ISO Monday), per-day sets/volume (warm-ups excluded), PR map, Epley weekly e1RM series, body-heat regions, template list, goal fallback.
 - Paywall price maths: monthly/annual per-month price, "/YR" label and saving % (`1 - (annual/12)/monthly`) use `Decimal` prices and `priceFormatStyle` correctly; entitlement check only counts verified, current entitlements for the two product ids.
 - Onboarding data flow for new sign-ups: name/weight/height (feet+inches -> cm: `ft*30.48 + in*2.54`)/age/gender/units/experience/split persisted into `User` + `Split`; tutorial flag `wantsTutorial` persisted and consumed (ContentView.swift:92) and cleared on completion (TutorialViewModel.swift:124); `shouldSkipToComplete` fires once.
-- Navigation: all MoreTabView hub rows route to a real screen; `screen == .pulsePlus` uses a full-screen cover with a close path; tutorial sync of Settings/Equipment screens works through `syncTutorialScreen`.
+- Navigation: all MoreTabView hub rows route to a real screen; `screen == .supernova` uses a full-screen cover with a close path; tutorial sync of Settings/Equipment screens works through `syncTutorialScreen`.
 
 ## Not verifiable
 - Runtime behaviour (SwiftData deleted-model access in WorkoutDetail, draft-resume after Duplicate, Ask-to-Buy, App Group widget refresh): no build/simulator allowed.
 - Real-world Strong/Hevy CSV compatibility (column variants, locale, exercise-name match rate): no sample files in the repo.
 - StoreKit product configuration (product ids `com.pulse.PulsePump.monthly/.yearly`, introductory offer) lives in App Store Connect / a .storekit file not examined.
-- Widget extension rendering (PulsePumpWidget/CustomWidget.swift) and whether the extension's intent lists the same library: out of scope here; only the app-side hand-off was checked.
+- Widget extension rendering (OreWidget/CustomWidget.swift) and whether the extension's intent lists the same library: out of scope here; only the app-side hand-off was checked.
 - EquipmentProfilesView internals and the Social privacy screen beyond how they use the settings keys.
 
 ## Tests
 Covered: WidgetBuilderGrid placement/tidy/PR-name lookup (WidgetBuilderGridTests), widget fixed data (WidgetFixedDataTests), calorie formulas (CalorieEstimationServiceTests), rest timer (RestTimerServiceTests), tutorial VM, enums.
-Not covered: WeeklyRecap bucketing/PR/comparison, WorkoutHistory calendar, OnboardingViewModel (height conversion, canContinue, completeOnboarding), unit conversion, DataImport/Export, PulsePlus, notification scheduling, BodyweightLog, snapshot fallbacks. PumpTests.swift is only the template `example()` test.
+Not covered: WeeklyRecap bucketing/PR/comparison, WorkoutHistory calendar, OnboardingViewModel (height conversion, canContinue, completeOnboarding), unit conversion, DataImport/Export, Supernova, notification scheduling, BodyweightLog, snapshot fallbacks. OreTests.swift is only the template `example()` test.

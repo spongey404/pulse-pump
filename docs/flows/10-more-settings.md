@@ -1,10 +1,10 @@
 # 10 More and Settings
 
 ## What it's for
-More holds everything that isn't a main screen: your profile, history, recap, widgets, settings, import and export, the Pulse+ screen, the tutorial and legal pages.
+More holds everything that isn't a main screen: your profile, history, recap, widgets, settings, import and export, the Supernova screen, the tutorial and legal pages.
 
 ## The flow
-1. Tap the More tab → your name and @username, a stats strip (WORKOUTS, STREAK, FRIENDS, FANS), an UNLOCK PULSE+ banner on the free plan, then sections: Training (History, Equipment Profiles, Weekly Recap, Widgets), Account (Settings, Pulse+), Help (Tutorial, Data Import, Privacy & Legal, Sign Out).
+1. Tap the More tab → your name and @username, a stats strip (WORKOUTS, STREAK, FRIENDS, FANS), an UNLOCK SUPERNOVA banner on the free plan, then sections: Training (History, Equipment Profiles, Weekly Recap, Widgets), Account (Settings, Supernova), Help (Tutorial, Data Import, Privacy & Legal, Sign Out).
 2. Tap Settings → Account (Edit Profile, Email, Signed In With, Username), Units, Workout (Calorie Formula, Rest Timer Mode, Timer Alert, Smart Weight Suggestions), Privacy (Profile Visibility, Auto-Share to Feed), Appearance (Theme), Training (Training Split), Notifications, Data, Cloud Sync, About, Sign Out, Delete Account.
 3. Change Weight Unit to Pounds → every weight in the app and widgets switches to lb; your saved data doesn't change.
 4. Change Theme to Dark → the whole app re-themes at once.
@@ -14,12 +14,12 @@ More holds everything that isn't a main screen: your profile, history, recap, wi
 - **Export:** Settings › Import / Export Data → Export as JSON or CSV → the share sheet opens (always in kg).
 - **Equipment:** More › Equipment Profiles → + → name it ("Home Gym") and tick your equipment → Save.
 - **Tutorial:** More › Tutorial → a guided card tour (GOT IT → to advance, SKIP to stop).
-- **Pulse+ screen:** tap the banner or Pulse+ → features, a preview of your next session, MONTHLY / ANNUAL plans → START PULSE+ → Apple's purchase sheet.
+- **Supernova screen:** tap the banner or Supernova → features, a preview of your next session, MONTHLY / ANNUAL plans → START SUPERNOVA → Apple's purchase sheet.
 
 ## Not working / not built yet
 - Privacy Policy, Terms of Service, Open-Source Licenses and Download My Data do nothing. (not built; App Store risk)
-- During the free trial the hub says FREE and still shows UNLOCK PULSE+. (broken)
-- MET calories keep working after Pulse+ ends. (broken)
+- During the free trial the hub says FREE and still shows UNLOCK SUPERNOVA. (broken)
+- MET calories keep working after Supernova ends. (broken)
 - Choosing Annual can buy Monthly if the annual product fails to load. (broken)
 - Restore Purchases gives no message either way.
 - Import errors are titled "Export Error". (broken)
@@ -40,7 +40,7 @@ More holds everything that isn't a main screen: your profile, history, recap, wi
 
 ## Rules I'll apply
 - Import errors say "Import Error"; an empty file says "Nothing to import"; imported workouts count toward streaks and PRs.
-- Restore Purchases says "Pulse+ restored" or "No purchases found".
+- Restore Purchases says "Supernova restored" or "No purchases found".
 - Choosing Annual only ever buys Annual.
-- Calories fall back to the basic formula when Pulse+ ends.
-- Pulse+ is tied to the Apple ID, not the Pump account.
+- Calories fall back to the basic formula when Supernova ends.
+- Supernova is tied to the Apple ID, not the Ore account.

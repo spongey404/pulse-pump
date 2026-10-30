@@ -1,4 +1,4 @@
-# Pump cloud sync — architecture and data contract (v1)
+# Ore cloud sync — architecture and data contract (v1)
 
 Status: agreed design, implementation in progress. This document is the contract shared by the iOS app,
 the future Android app, the Firestore security rules and the Cloud Functions.
@@ -84,7 +84,7 @@ The rules and functions need these additions to the tables above; the iOS and An
 - Queries on `posts` must pin `authorUid` (and an `audience` the caller may see) because visibility depends on other documents.
 - Functions: `onMemberWritten` (new), `closeEndedChallenges` (callable, `admin` claim) and `closeEndedChallengesDaily` (scheduled). Callable `deleteAccount` is in region `australia-southeast1`.
 
-## iOS client implementation notes (`PulsePump/Core/Sync/`)
+## iOS client implementation notes (`Ore/Core/Sync/`)
 - **Units on the wire:** `updatedAt` / `deletedAt` are epoch **milliseconds** (numbers; the rules require `updatedAt is number`), `date` / `createdAt` are Timestamps. Document ids are lower-case UUID strings; bodyweight ids are `yyyyMMdd`.
 - **Writes are `setData(merge: true)`.** A field that is nil locally (`templateId`, `selectedSplitId`, `deletedAt`...) is removed with `FieldValue.delete()`, never sent as `null` (the rules reject `null` strings). The profile write only ever contains `name, username, unit, experienceLevel, gender, age, heightCm, weightKg, selectedSplitId, createdAt, schemaVersion, updatedAt`; `privacy` and social fields are never touched.
 - **Pull** is per collection in the order splits, customExercises, profile, equipmentProfiles, templates, workouts, bodyweight: `updatedAt >= cursor` ordered by `(updatedAt, __name__)`, paged by 200. The persisted cursor is the highest `updatedAt` seen (boundary documents are re-read, which is idempotent). A remote record is applied only when its `updatedAt` is strictly greater than the local one; equal timestamps keep the local copy. Tombstones are applied to existing records and never created on a fresh device.

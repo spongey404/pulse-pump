@@ -25,13 +25,13 @@ The Body tab shows which muscles you've trained this week as a heat map, which a
 - The calendar's › arrow can't reach the current month in some weeks. (broken)
 - The muscle sheet misses exercises tagged generically as "back" or "shoulders". (broken)
 - The muscle sheet has no trend graph and its rows can't be tapped. (not built)
-- Pulse+ sub-regions in the muscle sheet are hidden from trial users. (broken)
+- Supernova sub-regions in the muscle sheet are hidden from trial users. (broken)
 - New users see an empty map with no guidance.
 - Cold spots use different rules from the rest of the tab, so one muscle can read differently in two places.
 - Not built from the spec: neglected-muscle badges, push/pull balance, volume sparkline, body customisation, colour presets, Simple Body Map.
 
 ## Decide
-- No owner questions here beyond the Pulse+ line (README decision 1). The layout stays as built: front and back side by side, not swiped.
+- No owner questions here beyond the Supernova line (README decision 1). The layout stays as built: front and back side by side, not swiped.
 
 ## Rules I'll apply
 - VS PACE shows a blank dash until your first workout of the week.

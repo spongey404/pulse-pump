@@ -40,11 +40,11 @@ Social lets you see your friends' workouts, cheer them on, and compete in challe
 - Creators can't end or delete a challenge. (not built)
 - Longest hold shows "95" instead of 1:35.
 - Hiding from global boards waits for your next workout. (broken)
-- Anyone can create challenges; the spec says Pulse+ only. (not built)
+- Anyone can create challenges; the spec says Supernova only. (not built)
 
 ## Decide
 - **Per-post audience:** add a chip in the post composer that can only narrow your default (for example "Only friends" or "Only me"); past posts keep their audience. *Recommended: yes.*
-- **Finding friends:** add an invite link that opens your profile in Pump; no contacts matching in v1; remove "Save workout". *Recommended: yes.*
+- **Finding friends:** add an invite link that opens your profile in Ore; no contacts matching in v1; remove "Save workout". *Recommended: yes.*
 - **Reports and moderation:** add a reason picker and set up a process where reports reach you by email and are reviewed within 24 hours (App Store requires this). *Recommended: yes, and you own the review.*
 - **Challenges:** count all workouts since the challenge started (fix the copy), let creators End a challenge, and drop the unused Custom score and "lowest wins" options. *Recommended: yes.*
 

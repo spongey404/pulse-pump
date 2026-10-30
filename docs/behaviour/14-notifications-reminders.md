@@ -1,7 +1,7 @@
 # 14 Notifications and reminders
 
 Scope: local notifications only (workout reminders, rest-day alerts, rest-timer-end), the OS permission prompt and denied state, the Settings switches that control them, the app-icon badge, and the in-app Activity bell. Remote/push notifications are not built.
-Key sources: `PulsePump/Core/Services/Notifications/NotificationService.swift`, `SystemRestEndNotifier.swift`, `RestEndNotifying.swift`, `PulsePump/Features/Settings/SettingsView.swift` (NOTIFICATIONS section, split save), `PulsePump/App/RootView.swift:87-97`, `PulsePump/App/PulsePumpApp.swift` (`AppDelegate`), `PulsePump/Features/Workout/Services/RestTimerService.swift`, `PulsePump/Features/Social/Friends/ActivityView.swift`, `Features/Social/Feed/ActivityFeedView.swift`.
+Key sources: `Ore/Core/Services/Notifications/NotificationService.swift`, `SystemRestEndNotifier.swift`, `RestEndNotifying.swift`, `Ore/Features/Settings/SettingsView.swift` (NOTIFICATIONS section, split save), `Ore/App/RootView.swift:87-97`, `Ore/App/OreApp.swift` (`AppDelegate`), `Ore/Features/Workout/Services/RestTimerService.swift`, `Ore/Features/Social/Friends/ActivityView.swift`, `Features/Social/Feed/ActivityFeedView.swift`.
 
 Defaults: `workoutReminders` = off, `restDayAlerts` = off (both `@AppStorage`, device-local, not synced). Workout reminder time is hard-coded 08:00 local time; rest-day alert time is hard-coded 10:00; neither is user-configurable. Notification identifiers: `com.pulse.PulsePump.workout.weekday.N`, `com.pulse.PulsePump.rest.weekday.N` (N 1=Sun..7=Sat), `com.pulse.PulsePump.restTimerEnd`.
 
@@ -35,7 +35,7 @@ Defaults: `workoutReminders` = off, `restDayAlerts` = off (both `@AppStorage`, d
 | NTF-72 | User opens the bell (ACTIVITY screen) → App lists real "Needs You" items (friend requests with accept/decline, challenge invites); with none it shows "NOTHING NEEDS YOU RIGHT NOW"; there is no history of past events | ✅ | [ ] | — |
 | NTF-75 | System: someone likes, comments on, or follows the user, or a challenge changes → App sends no push notification and shows no in-app event (no remote notification pipeline) | ❌ not built | [ ] | — |
 | NTF-78 | System: weekly recap on Monday → App sends no notification (spec calls for a Monday local recap notification) | ❌ not built (`docs/pulse-pump-spec.md:429`) | [ ] | — |
-| NTF-81 | System: neglected-muscle nudge (Pulse+ quiet badge) → Not delivered as any notification | ❌ not built | [ ] | — |
+| NTF-81 | System: neglected-muscle nudge (Supernova quiet badge) → Not delivered as any notification | ❌ not built | [ ] | — |
 
 ### NTF edge cases
 
@@ -62,7 +62,7 @@ Defaults: `workoutReminders` = off, `restDayAlerts` = off (both `@AppStorage`, d
 | NTF-E19 | Vibration-only alert type | Notification sound is the default (only "Silent" removes it); the vibration setting affects only the in-app alert | | 🟡 setting names suggest otherwise | [ ] | — |
 | NTF-E20 | Delivered rest notification left in Notification Centre | Removed when the next rest starts or stops | | ✅ | [ ] | — |
 | NTF-E21 | Remote push readiness | Entitlement `aps-environment = development` and background mode `remote-notification` are present, but the app never registers for remote notifications and no Cloud Function sends messages | Release builds need `production` | 🧭 PROPOSED: decide whether social push ships in v1; if not, drop the entitlement/background mode | [ ] | — |
-| NTF-E22 | Pulse+ vs free | Reminders and rest-end notifications are free; no gating | Spec lists workout reminders as free | ✅ | [ ] | — |
+| NTF-E22 | Supernova vs free | Reminders and rest-end notifications are free; no gating | Spec lists workout reminders as free | ✅ | [ ] | — |
 | NTF-E23 | Notification settings across devices | Switches are `@AppStorage` on one device and are not synced; a new device starts with both off | | 🟡 | [ ] | — |
 | NTF-E24 | "Social Activity" and "Challenge Updates" rows | Shown as non-interactive "COMING SOON" (earlier stored-but-unused switches were replaced) | Commit 1ce3ca6 | ✅ | [ ] | — |
 | NTF-E25 | Hard-coded reminder times | 08:00 workout and 10:00 rest cannot be changed in the UI; the service takes hour/minute parameters but Settings never passes them | | 🧭 PROPOSED: add a single "Reminder time" row | [ ] | — |

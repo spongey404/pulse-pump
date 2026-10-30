@@ -42,7 +42,7 @@ Status legend: ✅ implemented and verified in code | 🟡 partial | ❌ not bui
 | FIN-E08 | Bodyweight exercise with weight 0 | Rep PR logic applies only if earlier reps exist; weight PR never | `previousBestWeight > 0` | ✅ | [ ] | — |
 | FIN-E09 | Weight typed in lbs | Stored kg; PR deltas are kg and shown in the user's unit | kg invariant | ✅ | [ ] | — |
 | FIN-E10 | Two workouts logged for the same exercise on the same day | Second compares against the first as "previous" | | ✅ | [ ] | — |
-| FIN-E11 | Free vs Pulse+ | Same flow and numbers (only MET calories differ, see CAL) | | ✅ | [ ] | — |
+| FIN-E11 | Free vs Supernova | Same flow and numbers (only MET calories differ, see CAL) | | ✅ | [ ] | — |
 
 ## KCL  Calorie estimate
 
@@ -51,8 +51,8 @@ Status legend: ✅ implemented and verified in code | 🟡 partial | ❌ not bui
 | KCL-03 | System: "Basic (set-based)" formula (default) → App estimates 10 kcal per working compound set and 6 per working isolation set (compound = push, pull, hinge, squat or carry pattern) | ✅ `CalorieEstimationService.swift:27-32` | [ ] | — |
 | KCL-06 | System: "MET-Based" formula → App estimates 5.0 (moderate, fixed) x body weight in kg x duration in hours | ✅ `CalorieEstimationService.swift:36-40,83-89` | [ ] | — |
 | KCL-09 | System: MET chosen but body weight is 0 or duration is 0 → App falls back to the basic formula | ✅ `CalorieEstimationService.swift:60-62` | [ ] | — |
-| KCL-12 | User opens Settings › Workout › Calorie Formula as a free user → App offers only "Basic (set-based)"; Pulse+ and trial users also get "MET-Based" | ✅ `SettingsView.swift:130-132` | [ ] | — |
-| KCL-15 | System: a user whose Pulse+ or trial ended while "met" is stored → App still uses MET at finish (the gate is only in the Settings list) | 🐞 expected: fall back to basic when not entitled; actual: `isSubscribed` defaults to true in the call `WorkoutViewModel.swift:318` | [ ] | — |
+| KCL-12 | User opens Settings › Workout › Calorie Formula as a free user → App offers only "Basic (set-based)"; Supernova and trial users also get "MET-Based" | ✅ `SettingsView.swift:130-132` | [ ] | — |
+| KCL-15 | System: a user whose Supernova or trial ended while "met" is stored → App still uses MET at finish (the gate is only in the Settings list) | 🐞 expected: fall back to basic when not entitled; actual: `isSubscribed` defaults to true in the call `WorkoutViewModel.swift:318` | [ ] | — |
 | KCL-18 | System: result → App stores the value on the workout (`calorieBurnEstimate`) and shows it as "KCAL n" in the ticker only | 🟡 not shown in the stats row or the post | [ ] | — |
 | KCL-21 | User watches calories during the session → App shows nothing | ❌ see WK-54 | [ ] | — |
 
@@ -117,7 +117,7 @@ Status legend: ✅ implemented and verified in code | 🟡 partial | ❌ not bui
 | PST-E07 | Photo library permission denied | Picker returns nothing; no message | | 🟡 | [ ] | — |
 | PST-E08 | Very large photo | Loaded fully into memory, not downscaled | | 🧭 | [ ] | — |
 | PST-E09 | Profile photo fails to download | Initial letter avatar | | ✅ | [ ] | — |
-| PST-E10 | Free vs Pulse+ | Posting is not gated | | ✅ | [ ] | — |
+| PST-E10 | Free vs Supernova | Posting is not gated | | ✅ | [ ] | — |
 | PST-E11 | User changes privacy while on the summary | Post uses the value read at tap time | | ✅ | [ ] | — |
 | PST-E12 | Two devices | Post id is the workout id, so it cannot duplicate | | ✅ | [ ] | — |
 | PST-E13 | Tapping POST twice quickly | Second tap ignored by `hasPosted` | | ✅ | [ ] | — |
@@ -126,7 +126,7 @@ Status legend: ✅ implemented and verified in code | 🟡 partial | ❌ not bui
 
 | ID | User does → App does (observable result) | Status | Manual check | Tests |
 |---|---|---|---|---|
-| SHR-03 | User looks at the share card → App shows a card with the ticker strip, date, big workout name, duration, stats row, body map hero, the exercise table and the footer "PULSE/PUMP" | ✅ `WorkoutCompletionView.swift:230-284` | [ ] | — |
+| SHR-03 | User looks at the share card → App shows a card with the ticker strip, date, big workout name, duration, stats row, body map hero, the exercise table and the footer "ORE" | ✅ `WorkoutCompletionView.swift:230-284` | [ ] | — |
 | SHR-06 | User swipes between the photo and the card (when a photo is attached) → App pages between them and resizes the area to the active slide | ✅ `WorkoutCompletionView.swift:55-119` | [ ] | — |
 | SHR-09 | User wants to share the card as an image or to other apps → App has no Share, Save or Copy action; the card is a preview of the feed post | ❌ spec lists shareable cards; `renderShareCard` and `ShareCardView` exist but nothing calls them | [ ] | — |
 | SHR-12 | System: `ShareCardView` (Workout Complete, Weekly Recap, Monthly Recap, Milestone cards) → App never presents them | 🟡 dead code `ShareCardView.swift:10-156` | [ ] | — |
@@ -139,7 +139,7 @@ Status legend: ✅ implemented and verified in code | 🟡 partial | ❌ not bui
 | SHR-E01 | Zero PRs | PR block hidden; ticker omits the PR item | | ✅ | [ ] | — |
 | SHR-E02 | Name very long | Single line, scaled down to 50% | | ✅ | [ ] | — |
 | SHR-E03 | Dark mode | Card uses theme tokens | | ✅ | [ ] | — |
-| SHR-E04 | Watermark text | "PULSE/PUMP" while `ShareCardView` says "Pump by Pulse" | inconsistent branding | 🧭 | [ ] | — |
+| SHR-E04 | Watermark text | "ORE" while `ShareCardView` says "Ore" | inconsistent branding | 🧭 | [ ] | — |
 
 ## Open decisions for the owner (03c)
 
@@ -157,4 +157,4 @@ Status legend: ✅ implemented and verified in code | 🟡 partial | ❌ not bui
 - PST-69 (🐞), PST-E01: failed posts have no retry and are not persisted. Proposed: persist a pending post and retry on foreground.
 - PST-E04, PST-E08 (🧭): tag validity after unfriend; photo downscale.
 - SHR-09: external sharing (save image, share sheet) is promised by the spec but not built; decide to build or drop. SHR-12: remove or wire `ShareCardView` recap cards.
-- SHR-E04 (🧭): choose one watermark ("PULSE/PUMP" or "Pump by Pulse").
+- SHR-E04 (🧭): choose one watermark ("ORE" or "Ore").

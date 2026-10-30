@@ -4,7 +4,7 @@
 Home is the middle tab and the launch pad. It shows today's predicted workout, your streak and this week's numbers, and has one big button to start training.
 
 ## The flow
-1. Open the app → Home shows, top to bottom: a scrolling ticker of muscle changes, the PULSE/PUMP masthead with search and your avatar, the PREDICTED TODAY block, four tiles (STREAK, IMPROVED, PRs, SETS), a Monday-to-Sunday sets bar chart, a "friends trained today" banner, and your three most RECENT workouts.
+1. Open the app → Home shows, top to bottom: a scrolling ticker of muscle changes, the ORE masthead with search and your avatar, the PREDICTED TODAY block, four tiles (STREAK, IMPROVED, PRs, SETS), a Monday-to-Sunday sets bar chart, a "friends trained today" banner, and your three most RECENT workouts.
 2. Read the predicted block → workout name, when you last did it, about how long it takes, a 5-square confidence meter and its exercises.
 3. Tap START WORKOUT at the bottom → the workout logger opens with that program's exercises (see 03).
 4. Finish the workout → Home's tiles and bars update at once.

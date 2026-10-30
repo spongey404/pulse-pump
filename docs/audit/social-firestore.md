@@ -1,6 +1,6 @@
 # Audit: social-firestore
 
-Scope read in full: SocialViewModel, FirestoreService (+ FirestoreChallenge/ChallengeInvite DTOs), FirebaseAuthService, AuthService, FirestoreModels, Challenge, all of Views/Social/** (incl. Components), plus the call sites that feed them (OnboardingViewModel, WorkoutViewModel.completeWorkout, WorkoutCompletionView composer, ProfileView/MoreTabView, PulsePumpApp deep links, PrivacyLevel/SettingsView). No firestore.rules or firestore.indexes.json exists in the repo, so security rules and indexes are unverifiable.
+Scope read in full: SocialViewModel, FirestoreService (+ FirestoreChallenge/ChallengeInvite DTOs), FirebaseAuthService, AuthService, FirestoreModels, Challenge, all of Views/Social/** (incl. Components), plus the call sites that feed them (OnboardingViewModel, WorkoutViewModel.completeWorkout, WorkoutCompletionView composer, ProfileView/MoreTabView, OreApp deep links, PrivacyLevel/SettingsView). No firestore.rules or firestore.indexes.json exists in the repo, so security rules and indexes are unverifiable.
 
 ## Summary
 - Challenge scoring does not exist. Nothing ever writes `LeaderboardEntry.score` or `rank`; `updateLeaderboardEntry` has zero callers. Every real challenge shows 0 / rank 0 for everyone. Custom-metric entry, "first to goal", lowest-wins and tie rules are all unimplemented.
@@ -85,7 +85,7 @@ Scope read in full: SocialViewModel, FirestoreService (+ FirestoreChallenge/Chal
 [HIGH] ActivityView.swift:8-12 — Hardcoded fake notification history
 - `earlierEvents = [("Priya liked your post","2H"), ("Jay joined Bench 100 Club","1D")]` is shown to every user under "Earlier". The TODO is in a comment only. There are no real likes/comments/joins notifications at all.
 
-[HIGH] ActivityFeedView.swift:353-368 + PulsePumpApp.swift:66-72 — Comment count never updates; https share links are dead
+[HIGH] ActivityFeedView.swift:353-368 + OreApp.swift:66-72 — Comment count never updates; https share links are dead
 - Comments: `CommentsView` creates its own `@State SocialViewModel()` (CommentsView.swift:12). `postComment` increments `feedItems[index].commentCount` on that private VM's empty array, so the feed card's count never changes locally. `FeedPostCard.item` is a `let`. Server-side count is only updated by the second, non-atomic write (see MEDIUM). In-sheet, the comment heart ("0") and "REPLY" are non-functional.
 - Share links `https://pulsepump.app/post?id=`, `/invite?...`, `/u/<uid>` have no handler: `onOpenURL` routes non-`pulsepump` schemes to `GIDSignIn.handle`, and no associated-domains entitlement was found. The `ref` and `challenge` params are never consumed.
 
@@ -188,5 +188,5 @@ Scope read in full: SocialViewModel, FirestoreService (+ FirestoreChallenge/Chal
 - Firestore security rules and composite indexes: neither `firestore.rules` nor `firestore.indexes.json` exist in the repo. Whether non-owners may update `likes`/`commentCount`, whether users can read others' profiles/feeds, whether a user can write friendship docs naming another uid, and whether the indexes exist cannot be determined. Client-side, `acceptFriendRequest` does not check that the caller is the recipient, and `removeFriend` does not check membership, so correctness depends fully on rules.
 - Whether pre-redesign Firestore documents exist (impact of the non-optional Codable fields).
 - Runtime behavior (no xcodebuild/simulator allowed per brief); everything above is from reading code plus one standalone Swift decoding script.
-- Associated Domains for pulsepump.app (entitlements not examined beyond a grep of PulsePump/ for `applinks` which found nothing).
-- Test coverage beyond PulsePumpTests listing: no tests reference SocialViewModel, FirestoreService, challenges, leaderboards, feed caching or lift history.
+- Associated Domains for pulsepump.app (entitlements not examined beyond a grep of Ore/ for `applinks` which found nothing).
+- Test coverage beyond OreTests listing: no tests reference SocialViewModel, FirestoreService, challenges, leaderboards, feed caching or lift history.

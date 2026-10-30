@@ -7,13 +7,13 @@ Scope: Views/BodyMap/**, Views/Home/**, ContentView.swift. Read-only; scratch sc
 - Demo "friends trained today" banner (Marcus/Priya/Jake) shows to any user with no friends, no network or no auth. The banner button is a no-op. The prediction "HIGH CONF" dots are hardcoded.
 - Home "this week" uses the locale week start (Sunday in en_US), but the Body tab and `weekDayBars` assume Monday. The two tabs disagree on weekly sets.
 - Dead code: AnalyticsView, MuscleBalanceView/BalanceBar, QuickAnalyticsView, RecentWorkoutsWidget, BodyModelView, Body3DSceneView (+ FinalBaseMesh.obj), HeatmapColorScheme/HeatmapLegend, ProgramDayPickerSheet, ProfileMenuSheet, programsTickerItems. None is referenced.
-- No unit tests cover any of this (tests: Calorie, Enum, Firestore, RestTimer, Tutorial, Widget*; PumpTests is the empty template; StreakCalculator is untested).
+- No unit tests cover any of this (tests: Calorie, Enum, Firestore, RestTimer, Tutorial, Widget*; OreTests is the empty template; StreakCalculator is untested).
 - Warm-up sets are counted as sets and volume everywhere.
 
 ## Findings
 
 ### CRITICAL
-[CRITICAL] PulsePump/ViewModels/WorkoutViewModel.swift:81 (called from ContentView startFromTemplate/startBlankWorkout/StartWorkoutDock) — `injectTestData` runs on every workout start (not `#if DEBUG`; also in HEAD)
+[CRITICAL] Ore/ViewModels/WorkoutViewModel.swift:81 (called from ContentView startFromTemplate/startBlankWorkout/StartWorkoutDock) — `injectTestData` runs on every workout start (not `#if DEBUG`; also in HEAD)
 - `startWorkout` ends with `injectTestData(modelContext: modelContext)`. That function (line ~85) does `exerciseEntries = []`, replaces the template's exercises with 10 hardcoded exercises ("Barbell Bench Press"…"Pec Deck") with pre-completed sets, and backdates `startTime` by 78 min.
 - For each of those exercises it inserts a fake historical `Workout` (`date = now - 7d`, `isDraft = false`, user attached, `modelContext.insert`) with a fake ExerciseLog and SetLog. Up to 10 fake non-draft workouts are persisted per start.
 - Scenario: user taps START WORKOUT on "PUSH DAY". The session opens with the 10 hardcoded exercises, not the template. History gains up to 10 phantom workouts 7 days ago, per tap.
@@ -34,7 +34,7 @@ Scope: Views/BodyMap/**, Views/Home/**, ContentView.swift. Read-only; scratch sc
 - The tap does nothing, although the chevron suggests navigation (feed or friend profile). Wire it to the Social tab or remove the chevron.
 
 [HIGH] ContentView.swift:485-489 — prediction confidence is fake
-- `.fill(i < 4 ? Color.pumpAccent : Color.inkFaint)` always fills 4 of 5 dots, and the label is always "HIGH CONF".
+- `.fill(i < 4 ? Color.oreAccent : Color.inkFaint)` always fills 4 of 5 dots, and the label is always "HIGH CONF".
 - `predictNextWorkout` returns only a String; there is no confidence value anywhere. The same applies to the fallback "~55 MIN" (line 245) and `?? 55` in the dock (line 1033).
 - Fix: have `detectNextByPattern` return (name, support/total) and map it to dots, or remove the widget.
 
@@ -60,7 +60,7 @@ Scope: Views/BodyMap/**, Views/Home/**, ContentView.swift. Read-only; scratch sc
 
 [HIGH] Views/BodyMap/AnalyticsView.swift (whole file) and others — shipped but unreachable
 - `grep` shows zero references to `AnalyticsView`, `MuscleBalanceView`/`BalanceBar` (BodyMapTabView.swift:832-909), `QuickAnalyticsView`/`QuickStatTile`, `RecentWorkoutsWidget`, `BodyModelView`, `Body3DSceneView` (+ 100s KB `FinalBaseMesh.obj`, SceneKit import), `HeatmapColorScheme`/`HeatmapLegend` (only used by the dead 3D path), `HeatmapMode.recency` raw strings, `ProgramDayPickerSheet`, `ProfileMenuSheet`, `ProgramsTabView.programsTickerItems` (ContentView:1194), and the `ProgramRowView`/`TemplateCard` typealiases.
-- The Pulse+ "analytics / muscle balance" feature has no entry point. The Body tab does not gate on Pulse+, and Challenges are not gated either (known gap).
+- The Supernova "analytics / muscle balance" feature has no entry point. The Body tab does not gate on Supernova, and Challenges are not gated either (known gap).
 - Fix: either surface AnalyticsView/MuscleBalanceView from the Body or More tab (after fixing the bugs below), or delete the dead code and mesh.
 
 ### MEDIUM
@@ -110,7 +110,7 @@ Scope: Views/BodyMap/**, Views/Home/**, ContentView.swift. Read-only; scratch sc
 - No cleanup or expiry code exists (grep). A months-old draft keeps showing CONTINUE in the dock and blocks the normal START state. Only `drafts.first` (latest `updatedAt`) is shown; older drafts are orphaned and invisible.
 - Fix: delete or prompt on drafts older than 7 days at launch.
 
-[MEDIUM] ContentView.swift:62-68 + PulsePumpApp.swift:76-83 — widget / deep-link start handling
+[MEDIUM] ContentView.swift:62-68 + OreApp.swift:76-83 — widget / deep-link start handling
 - `startWorkoutFromWidget` is a NotificationCenter post; on a cold launch from the URL the post can happen before ContentView's `.onReceive` exists (RootView/onboarding first). Notifications are not buffered (unverified at runtime).
 - If a draft or an active workout already exists, `startWorkout` is called anyway: it creates a second draft and replaces the active session's `workout` pointer (the first draft is orphaned).
 - `guard let user` silently does nothing when no user. A template name not found silently starts a blank workout. `.importTemplate` is posted but never observed anywhere (dead; known gap).
@@ -136,7 +136,7 @@ Scope: Views/BodyMap/**, Views/Home/**, ContentView.swift. Read-only; scratch sc
 - Fix: memoise via `@State` + `.onChange`/`.task`, compute once per body into a local struct, and window the queries.
 
 [MEDIUM] BodyMapTabView.swift:93, 146 / MuscleDetailSheet.swift:9, 96 — unused/StoreKit refresh on every appearance
-- `pulsePlusService` in BodyMapTabView is never read (dead state + StoreKit round trip each time the tab is shown).
+- `supernovaService` in BodyMapTabView is never read (dead state + StoreKit round trip each time the tab is shown).
 - MuscleDetailSheet: `subRegion` is always nil (sheet created with `subRegion: nil`), so the highlight dot (`subRegion == sub`) never lights up. "Performed"/"sessions" use `exercise.logs.count` (includes ExerciseLogs of draft workouts and counts exercises, not sessions); the sheet doesn't show the muscle's actual volume.
 
 [MEDIUM] Views/BodyMap/AnalyticsView.swift (dead but buggy; fix before wiring)
@@ -144,7 +144,7 @@ Scope: Views/BodyMap/**, Views/Home/**, ContentView.swift. Read-only; scratch sc
 - :254-268 `improvementData` compares against `exercise.logs` of ALL sessions including later ones and drafts; excludes only itself.
 - :270-286 `muscleVolumeData` counts generic and specific groups separately, secondary `/2` truncation, warm-ups included, top-10 only; label "Weekly Volume" but it's the range total.
 - :55-56 custom end date `Date()` captured at init is stale; `<= effectiveEndDate` excludes same-day workouts later than the picker's time.
-- :296 `currentStreak` ignores the range; weight trend (`maxWeight`) has no unit handling; no Pulse+ gate.
+- :296 `currentStreak` ignores the range; weight trend (`maxWeight`) has no unit handling; no Supernova gate.
 
 ### LOW
 [LOW] BodyMapTabView.swift:826 — `return items + items` doubles the ticker content, but `TickerStripView` already tiles its own items (TickerStripView:~60-80), so every entry repeats twice per tile.
@@ -166,7 +166,7 @@ Scope: Views/BodyMap/**, Views/Home/**, ContentView.swift. Read-only; scratch sc
 - Heat level VOLUME for week: `min(1, sets/target)`; division guards (`max(…,1)`).
 - ColdSpots FREQ day-diff uses `startOfDay` both sides; flagged at `days >= 1.5*cadence`; VOL flags `<50%` of target; bar width clamped to 1.0.
 - ContentView draft detection: `StartWorkoutDock` `@Query(filter: #Predicate { $0.isDraft })` sorted by `updatedAt` desc; CONTINUE state uses it and START NEW goes through discard confirmation; `draftProgress` guarded for `target == 0` and clamped to 1.0.
-- Tab bar/tutorial wiring: five tabs tagged 0-4 match `TutorialStep.requiredTab`; only 3 of 10 steps have anchors (others show a dim card alone by design); `.openPulsePlus` routes to More; debug launch args are `#if DEBUG`.
+- Tab bar/tutorial wiring: five tabs tagged 0-4 match `TutorialStep.requiredTab`; only 3 of 10 steps have anchors (others show a dim card alone by design); `.openSupernova` routes to More; debug launch args are `#if DEBUG`.
 - Streak tile calls `StreakCalculator.currentStreak(from:)` with non-draft dates (single source of truth, same function in Analytics/RecentWorkoutsWidget).
 - GlobalSearchView: only fetches non-draft workouts, exercises limited to approved/custom, results `.prefix(8/5)`; friend search is async via `searchUsers` with `try?` fallback (no stale-result cancellation: latest-wins race possible, minor and unverified).
 - volumeDelta divides only after `prevVol > 0` guard; uses most recent earlier same-named workout (query is date-desc so `first` is correct).

@@ -1,0 +1,834 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		38UI00012F90000000DEC87C /* AccessibilityIDs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38UI00022F90000000DEC87C /* AccessibilityIDs.swift */; };
+		38AB00052F80B00000DEC87C /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 38AB00012F80B00000DEC87C /* FirebaseAuth */; };
+		38AB00062F80B00000DEC87C /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 38AB00022F80B00000DEC87C /* FirebaseCore */; };
+		38AB00072F80B00000DEC87C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 38AB00032F80B00000DEC87C /* GoogleSignIn */; };
+		38AB00082F80B00000DEC87C /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 38AB00042F80B00000DEC87C /* GoogleSignInSwift */; };
+		38AB00092F80B00000DEC87C /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 38AB000A2F80B00000DEC87C /* FirebaseFirestore */; };
+		38WG000D2F80C00000DEC87C /* OreWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 38WG00012F80C00000DEC87C /* OreWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		38AB000C2F80B00000DEC87C /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 38AB000B2F80B00000DEC87C /* FirebaseFunctions */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		3884EC2A2F800A5A00DEC87C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3884EC102F800A5900DEC87C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3884EC172F800A5900DEC87C;
+			remoteInfo = Ore;
+		};
+		3884EC342F800A5A00DEC87C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3884EC102F800A5900DEC87C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3884EC172F800A5900DEC87C;
+			remoteInfo = Ore;
+		};
+		38WG000A2F80C00000DEC87C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3884EC102F800A5900DEC87C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 38WG00022F80C00000DEC87C;
+			remoteInfo = OreWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		38WG000C2F80C00000DEC87C /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				38WG000D2F80C00000DEC87C /* OreWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		38UI00022F90000000DEC87C /* AccessibilityIDs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AccessibilityIDs.swift; path = Ore/Core/DesignSystem/AccessibilityIDs.swift; sourceTree = SOURCE_ROOT; };
+		3884EC182F800A5900DEC87C /* Ore.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ore.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3884EC292F800A5A00DEC87C /* OreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3884EC332F800A5A00DEC87C /* OreUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OreUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		38WG00012F80C00000DEC87C /* OreWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OreWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		3884EC3B2F800A5A00DEC87C /* Exceptions for "Ore" folder in "Ore" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 3884EC172F800A5900DEC87C /* Ore */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		3884EC1A2F800A5900DEC87C /* Ore */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				3884EC3B2F800A5A00DEC87C /* Exceptions for "Ore" folder in "Ore" target */,
+			);
+			path = Ore;
+			sourceTree = "<group>";
+		};
+		3884EC2C2F800A5A00DEC87C /* OreTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = OreTests;
+			sourceTree = "<group>";
+		};
+		3884EC362F800A5A00DEC87C /* OreUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = OreUITests;
+			sourceTree = "<group>";
+		};
+		38PS00012F80C00000DEC87C /* OreShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = OreShared;
+			sourceTree = "<group>";
+		};
+		38WG00062F80C00000DEC87C /* OreWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = OreWidget;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		3884EC152F800A5900DEC87C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				38AB00052F80B00000DEC87C /* FirebaseAuth in Frameworks */,
+				38AB00062F80B00000DEC87C /* FirebaseCore in Frameworks */,
+				38AB00092F80B00000DEC87C /* FirebaseFirestore in Frameworks */,
+				38AB000C2F80B00000DEC87C /* FirebaseFunctions in Frameworks */,
+				38AB00072F80B00000DEC87C /* GoogleSignIn in Frameworks */,
+				38AB00082F80B00000DEC87C /* GoogleSignInSwift in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3884EC262F800A5A00DEC87C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3884EC302F800A5A00DEC87C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		38WG00042F80C00000DEC87C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3884EC0F2F800A5900DEC87C = {
+			isa = PBXGroup;
+			children = (
+				3884EC1A2F800A5900DEC87C /* Ore */,
+				38WG00062F80C00000DEC87C /* OreWidget */,
+				38PS00012F80C00000DEC87C /* OreShared */,
+				3884EC2C2F800A5A00DEC87C /* OreTests */,
+				3884EC362F800A5A00DEC87C /* OreUITests */,
+				38UI00022F90000000DEC87C /* AccessibilityIDs.swift */,
+				3884EC192F800A5900DEC87C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		3884EC192F800A5900DEC87C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				3884EC182F800A5900DEC87C /* Ore.app */,
+				3884EC292F800A5A00DEC87C /* OreTests.xctest */,
+				3884EC332F800A5A00DEC87C /* OreUITests.xctest */,
+				38WG00012F80C00000DEC87C /* OreWidgetExtension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		3884EC172F800A5900DEC87C /* Ore */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3884EC3C2F800A5A00DEC87C /* Build configuration list for PBXNativeTarget "Ore" */;
+			buildPhases = (
+				3884EC142F800A5900DEC87C /* Sources */,
+				3884EC152F800A5900DEC87C /* Frameworks */,
+				3884EC162F800A5900DEC87C /* Resources */,
+				38WG000C2F80C00000DEC87C /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				38WG000B2F80C00000DEC87C /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				3884EC1A2F800A5900DEC87C /* Ore */,
+				38PS00012F80C00000DEC87C /* OreShared */,
+			);
+			name = Ore;
+			packageProductDependencies = (
+				38AB00012F80B00000DEC87C /* FirebaseAuth */,
+				38AB00022F80B00000DEC87C /* FirebaseCore */,
+				38AB000A2F80B00000DEC87C /* FirebaseFirestore */,
+				38AB000B2F80B00000DEC87C /* FirebaseFunctions */,
+				38AB00032F80B00000DEC87C /* GoogleSignIn */,
+				38AB00042F80B00000DEC87C /* GoogleSignInSwift */,
+			);
+			productName = Ore;
+			productReference = 3884EC182F800A5900DEC87C /* Ore.app */;
+			productType = "com.apple.product-type.application";
+		};
+		3884EC282F800A5A00DEC87C /* OreTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3884EC412F800A5A00DEC87C /* Build configuration list for PBXNativeTarget "OreTests" */;
+			buildPhases = (
+				3884EC252F800A5A00DEC87C /* Sources */,
+				3884EC262F800A5A00DEC87C /* Frameworks */,
+				3884EC272F800A5A00DEC87C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				3884EC2B2F800A5A00DEC87C /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				3884EC2C2F800A5A00DEC87C /* OreTests */,
+			);
+			name = OreTests;
+			packageProductDependencies = (
+			);
+			productName = OreTests;
+			productReference = 3884EC292F800A5A00DEC87C /* OreTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		3884EC322F800A5A00DEC87C /* OreUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3884EC442F800A5A00DEC87C /* Build configuration list for PBXNativeTarget "OreUITests" */;
+			buildPhases = (
+				3884EC2F2F800A5A00DEC87C /* Sources */,
+				3884EC302F800A5A00DEC87C /* Frameworks */,
+				3884EC312F800A5A00DEC87C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				3884EC352F800A5A00DEC87C /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				3884EC362F800A5A00DEC87C /* OreUITests */,
+			);
+			name = OreUITests;
+			packageProductDependencies = (
+			);
+			productName = OreUITests;
+			productReference = 3884EC332F800A5A00DEC87C /* OreUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		38WG00022F80C00000DEC87C /* OreWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 38WG00092F80C00000DEC87C /* Build configuration list for PBXNativeTarget "OreWidgetExtension" */;
+			buildPhases = (
+				38WG00032F80C00000DEC87C /* Sources */,
+				38WG00042F80C00000DEC87C /* Frameworks */,
+				38WG00052F80C00000DEC87C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				38WG00062F80C00000DEC87C /* OreWidget */,
+				38PS00012F80C00000DEC87C /* OreShared */,
+			);
+			name = OreWidgetExtension;
+			productName = OreWidgetExtension;
+			productReference = 38WG00012F80C00000DEC87C /* OreWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3884EC102F800A5900DEC87C /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2640;
+				LastUpgradeCheck = 2640;
+				TargetAttributes = {
+					3884EC172F800A5900DEC87C = {
+						CreatedOnToolsVersion = 26.4;
+					};
+					3884EC282F800A5A00DEC87C = {
+						CreatedOnToolsVersion = 26.4;
+						TestTargetID = 3884EC172F800A5900DEC87C;
+					};
+					3884EC322F800A5A00DEC87C = {
+						CreatedOnToolsVersion = 26.4;
+						TestTargetID = 3884EC172F800A5900DEC87C;
+					};
+					38WG00022F80C00000DEC87C = {
+						CreatedOnToolsVersion = 26.4;
+					};
+				};
+			};
+			buildConfigurationList = 3884EC132F800A5900DEC87C /* Build configuration list for PBXProject "Ore" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 3884EC0F2F800A5900DEC87C;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				387856342F80A70B00813102 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				3878563B2F80A74700813102 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 3884EC192F800A5900DEC87C /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				3884EC172F800A5900DEC87C /* Ore */,
+				38WG00022F80C00000DEC87C /* OreWidgetExtension */,
+				3884EC282F800A5A00DEC87C /* OreTests */,
+				3884EC322F800A5A00DEC87C /* OreUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		3884EC162F800A5900DEC87C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3884EC272F800A5A00DEC87C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3884EC312F800A5A00DEC87C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		38WG00052F80C00000DEC87C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3884EC142F800A5900DEC87C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3884EC252F800A5A00DEC87C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3884EC2F2F800A5A00DEC87C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				38UI00012F90000000DEC87C /* AccessibilityIDs.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		38WG00032F80C00000DEC87C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		3884EC2B2F800A5A00DEC87C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3884EC172F800A5900DEC87C /* Ore */;
+			targetProxy = 3884EC2A2F800A5A00DEC87C /* PBXContainerItemProxy */;
+		};
+		3884EC352F800A5A00DEC87C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3884EC172F800A5900DEC87C /* Ore */;
+			targetProxy = 3884EC342F800A5A00DEC87C /* PBXContainerItemProxy */;
+		};
+		38WG000B2F80C00000DEC87C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 38WG00022F80C00000DEC87C /* OreWidgetExtension */;
+			targetProxy = 38WG000A2F80C00000DEC87C /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		3884EC3D2F800A5A00DEC87C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Ore/Ore.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Ore/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Ore;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PulsePump;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		3884EC3E2F800A5A00DEC87C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Ore/Ore.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Ore/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Ore;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PulsePump;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		3884EC3F2F800A5A00DEC87C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		3884EC402F800A5A00DEC87C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		3884EC422F800A5A00DEC87C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PulsePumpTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ore.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Ore";
+			};
+			name = Debug;
+		};
+		3884EC432F800A5A00DEC87C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PulsePumpTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ore.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Ore";
+			};
+			name = Release;
+		};
+		3884EC452F800A5A00DEC87C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PulsePumpUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Ore;
+			};
+			name = Debug;
+		};
+		3884EC462F800A5A00DEC87C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PulsePumpUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Ore;
+			};
+			name = Release;
+		};
+		38WG00072F80C00000DEC87C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = OreWidget/OreWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = OreWidgetInfo.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Ore;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PulsePump.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		38WG00082F80C00000DEC87C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = OreWidget/OreWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = OreWidgetInfo.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Ore;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pulse.PulsePump.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		3884EC132F800A5900DEC87C /* Build configuration list for PBXProject "Ore" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3884EC3F2F800A5A00DEC87C /* Debug */,
+				3884EC402F800A5A00DEC87C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3884EC3C2F800A5A00DEC87C /* Build configuration list for PBXNativeTarget "Ore" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3884EC3D2F800A5A00DEC87C /* Debug */,
+				3884EC3E2F800A5A00DEC87C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3884EC412F800A5A00DEC87C /* Build configuration list for PBXNativeTarget "OreTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3884EC422F800A5A00DEC87C /* Debug */,
+				3884EC432F800A5A00DEC87C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3884EC442F800A5A00DEC87C /* Build configuration list for PBXNativeTarget "OreUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3884EC452F800A5A00DEC87C /* Debug */,
+				3884EC462F800A5A00DEC87C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		38WG00092F80C00000DEC87C /* Build configuration list for PBXNativeTarget "OreWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				38WG00072F80C00000DEC87C /* Debug */,
+				38WG00082F80C00000DEC87C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		387856342F80A70B00813102 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.11.0;
+			};
+		};
+		3878563B2F80A74700813102 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		38AB00012F80B00000DEC87C /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 387856342F80A70B00813102 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		38AB00022F80B00000DEC87C /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 387856342F80A70B00813102 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		38AB00032F80B00000DEC87C /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3878563B2F80A74700813102 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		38AB00042F80B00000DEC87C /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3878563B2F80A74700813102 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+		38AB000A2F80B00000DEC87C /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 387856342F80A70B00813102 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		38AB000B2F80B00000DEC87C /* FirebaseFunctions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 387856342F80A70B00813102 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFunctions;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 3884EC102F800A5900DEC87C /* Project object */;
+}

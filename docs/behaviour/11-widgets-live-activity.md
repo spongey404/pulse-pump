@@ -1,10 +1,10 @@
 # 11 Widgets and Live Activity
 
-Scope: home-screen and lock-screen widgets (fixed set + legacy streak widget + "Pump Custom"), the widget builder and gallery, and the workout Live Activity / Dynamic Island. Source: `PumpShared/Widgets/*.swift` (layouts), `PumpShared/PumpWidgetSnapshot*.swift` (data contract), `PumpShared/PumpWidgetCatalog.swift` (+ `PumpWidgetStore`), `PulsePump/Features/Widgets/*` (data service, builder, gallery), `PulsePumpWidget/*` (WidgetKit providers/bundle), `PulsePump/Features/Workout/Services/LiveActivityService.swift`, `PumpShared/WorkoutActivityAttributes.swift`, `PumpShared/WorkoutLiveActivityIntents.swift`, `PumpShared/Widgets/LiveActivityViews.swift`, and the `WorkoutViewModel` live-activity glue.
+Scope: home-screen and lock-screen widgets (fixed set + legacy streak widget + "Ore Custom"), the widget builder and gallery, and the workout Live Activity / Dynamic Island. Source: `OreShared/Widgets/*.swift` (layouts), `OreShared/OreWidgetSnapshot*.swift` (data contract), `OreShared/OreWidgetCatalog.swift` (+ `OreWidgetStore`), `Ore/Features/Widgets/*` (data service, builder, gallery), `OreWidget/*` (WidgetKit providers/bundle), `Ore/Features/Workout/Services/LiveActivityService.swift`, `OreShared/WorkoutActivityAttributes.swift`, `OreShared/WorkoutLiveActivityIntents.swift`, `OreShared/Widgets/LiveActivityViews.swift`, and the `WorkoutViewModel` live-activity glue.
 
-**CLAUDE.md claim vs reality.** CLAUDE.md "Known Gaps" says "Widget extension shows streak only - missing predicted workout and weekly volume widgets". That is stale. The extension bundle (`PulsePumpWidget/PulsePumpWidgetBundle.swift`) registers 16 widgets: the legacy streak-only `PulsePumpWidget` ("Pump", kept), the configurable "Pump Custom", 14 fixed widgets (Next workout, Streak, Weekly volume, Body map, Muscle balance, PR watch, Deload and recovery, Last session, Program, Weekly goal, Bodyweight, Friends, Quick start, Pulse) plus the `WorkoutLiveActivity`. Predicted workout and weekly volume both exist. Mark the CLAUDE.md line for removal (see WGD-45).
+**CLAUDE.md claim vs reality.** CLAUDE.md "Known Gaps" says "Widget extension shows streak only - missing predicted workout and weekly volume widgets". That is stale. The extension bundle (`OreWidget/OreWidgetBundle.swift`) registers 16 widgets: the legacy streak-only `OreWidget` ("Ore", kept), the configurable "Ore Custom", 14 fixed widgets (Next workout, Streak, Weekly volume, Body map, Muscle balance, PR watch, Deload and recovery, Last session, Program, Weekly goal, Bodyweight, Friends, Quick start, Pulse) plus the `WorkoutLiveActivity`. Predicted workout and weekly volume both exist. Mark the CLAUDE.md line for removal (see WGD-45).
 
-Vocabulary: "snapshot" = `PumpWidgetSnapshot` JSON in the App Group (`group.com.pulse.PulsePump`, key `widget_snapshot`); "fixed" = `snap._fixed` (`PWFixedData`). Family sizes are drawn at design points (small 170x170, medium 364x170, large 364x382) and scaled by `PWHost`.
+Vocabulary: "snapshot" = `OreWidgetSnapshot` JSON in the App Group (`group.com.pulse.PulsePump`, key `widget_snapshot`); "fixed" = `snap._fixed` (`PWFixedData`). Family sizes are drawn at design points (small 170x170, medium 364x170, large 364x382) and scaled by `PWHost`.
 
 ## WGD  Data pipeline: snapshot, App Group, refresh
 
@@ -19,13 +19,13 @@ Vocabulary: "snapshot" = `PumpWidgetSnapshot` JSON in the App Group (`group.com.
 | WGD-21 | System: the user saves their profile or finishes onboarding with a weight → One bodyweight point per calendar day is appended to the App Group `BodyweightLog` (also on every snapshot rebuild) (same day: last write wins; max 400 entries) | ✅ | [ ] | — |
 | WGD-24 | System: snapshot is built → `hasData` is true only if at least one finished workout exists; `updated` = build time; `weekNumber` = ISO week; week starts Monday (ISO-8601 calendar); `sessionGoal` = number of days of the selected split, else 5 | ✅ | [ ] | — |
 | WGD-27 | System: widget timeline requested → Provider reads the stored snapshot only (never SwiftData/Firebase) and schedules the next reload `.after` 30 minutes. WidgetKit may delay this; a reload also happens whenever the app calls `reloadAllTimelines` | ✅ | [ ] | — |
-| WGD-30 | System: the stored snapshot has `hasData == false` (no workouts, or never written) → Widgets draw a real empty snapshot, not the design sample; only the genuine Plus flag is kept (`PumpWidgetSnapshot.resolved`) | ✅ | [ ] | — |
-| WGD-33 | System: WidgetKit asks for a placeholder or the widget-gallery preview (`context.isPreview`) → Widgets draw `PumpWidgetSnapshot.sample` (numbers from the design, Plus unlocked, 12-day streak) | ✅ | [ ] | — |
+| WGD-30 | System: the stored snapshot has `hasData == false` (no workouts, or never written) → Widgets draw a real empty snapshot, not the design sample; only the genuine Plus flag is kept (`OreWidgetSnapshot.resolved`) | ✅ | [ ] | — |
+| WGD-33 | System: WidgetKit asks for a placeholder or the widget-gallery preview (`context.isPreview`) → Widgets draw `OreWidgetSnapshot.sample` (numbers from the design, Plus unlocked, 12-day streak) | ✅ | [ ] | — |
 | WGD-36 | User signs out / account is wiped → `SyncAccount.wipe` removes `widget_snapshot`, `custom_widget_library`, `widget_friends` and the legacy `widget_*` keys and clears the bodyweight log. It does NOT call `reloadAllTimelines`, so already-rendered widgets keep the old picture until the next timeline refresh (up to ~30 min) | 🟡 | [ ] | — |
-| WGD-39 | System: legacy "Pump" widget refresh → `updateWidgetData` also writes the flat keys `widget_streak`, `widget_lastWorkoutName/Date`, `widget_exerciseCount`, `widget_durationMinutes`, `widget_recentWorkouts` (3 items) that only the legacy `PulsePumpWidget` reads | ✅ | [ ] | — |
+| WGD-39 | System: legacy "Ore" widget refresh → `updateWidgetData` also writes the flat keys `widget_streak`, `widget_lastWorkoutName/Date`, `widget_exerciseCount`, `widget_durationMinutes`, `widget_recentWorkouts` (3 items) that only the legacy `OreWidget` reads | ✅ | [ ] | — |
 | WGD-42 | User opens More › Widgets → App builds a throw-away snapshot in memory for previews (`WidgetsView.load`, `buildSnapshot`); this does NOT save it to the App Group | ✅ | [ ] | — |
 | WGD-45 | Owner edits CLAUDE.md → The "Widget extension shows streak only" known-gap line should be replaced by the real gaps in WGD-51 and WGT-30 | 🐞 CLAUDE.md "Known Gaps" is stale (see intro) | [ ] | — |
-| WGD-48 | System: Pulse+ flag computed for widgets → `isPlus = widget_isPlusSubscribed or PulsePlusService().isInFreeTrial` (14 days from `appInstallDate`; first call also records the install date) | ✅ | [ ] | — |
+| WGD-48 | System: Supernova flag computed for widgets → `isPlus = widget_isPlusSubscribed or SupernovaService().isInFreeTrial` (14 days from `appInstallDate`; first call also records the install date) | ✅ | [ ] | — |
 | WGD-51 | System: snapshot freshness → The snapshot is NOT rebuilt after editing/deleting a past workout, discarding a draft, importing history, editing templates/splits, or edit of bodyweight outside the profile editor. Widgets (streak, volume, next workout) stay stale until the app next becomes active | 🟡 stale until next foreground | [ ] | — |
 | WGD-54 | System: a day rolls over while the app is closed → Widgets keep the last snapshot's "today" (streak squares, today bar, "NEXT · day", GOAL "n DAYS" line) until the app is next opened; the 30-minute timeline only re-reads the stored snapshot | 🟡 | [ ] | — |
 
@@ -36,7 +36,7 @@ Vocabulary: "snapshot" = `PumpWidgetSnapshot` JSON in the App Group (`group.com.
 | WGD-E01 | App Group container unavailable (misconfigured entitlement) | `updateWidgetData` returns silently; widgets show the empty state | Both targets carry `group.com.pulse.PulsePump` | ✅ | [ ] | — |
 | WGD-E02 | Free trial expires on day 15 while the app is closed | Locked widgets stay unlocked until the app refreshes the snapshot; then Plus widgets flip to the locked preview | `isPlus` is baked into the snapshot at build time | 🟡 | [ ] | — |
 | WGD-E03 | Older stored snapshot without `weightUnit` / `_fixed` | Decodes (both optional); unit defaults to KG, fixed defaults to empty | Forward-compatible by design | ✅ | [ ] | — |
-| WGD-E04 | Snapshot JSON fails to decode | `loadSnapshot` returns an empty `PumpWidgetSnapshot()` (`hasData == false`) so widgets show the empty state | | ✅ | [ ] | — |
+| WGD-E04 | Snapshot JSON fails to decode | `loadSnapshot` returns an empty `OreWidgetSnapshot()` (`hasData == false`) so widgets show the empty state | | ✅ | [ ] | — |
 | WGD-E05 | Large history (hundreds of workouts) | Snapshot build is O(n^2) on the main thread at every foreground (`improvements()` per week workout) | Known perf finding, docs/audit | 🟡 | [ ] | — |
 | WGD-E06 | Draft workout in progress | Drafts (`isDraft`) and soft-deleted workouts are excluded from every figure | | ✅ | [ ] | — |
 | WGD-E07 | Warm-up sets | Excluded from sets, volume, PR watch, e1RM, body-map sets | `setType != .warmup` | ✅ | [ ] | — |
@@ -45,7 +45,7 @@ Vocabulary: "snapshot" = `PumpWidgetSnapshot` JSON in the App Group (`group.com.
 
 ## WGT  Fixed widgets (home and lock screen)
 
-Common to every fixed widget: background = `PumpTheme.canvas` via `containerBackground`; content margins disabled; Layout A/B chosen in the widget's Edit Widget sheet (`PWVariantIntent`, default A); numbers in Space Mono, headers in Archivo; no drop shadows.
+Common to every fixed widget: background = `OreTheme.canvas` via `containerBackground`; content margins disabled; Layout A/B chosen in the widget's Edit Widget sheet (`PWVariantIntent`, default A); numbers in Space Mono, headers in Archivo; no drop shadows.
 
 | ID | User does → App does (observable result) | Status | Manual check | Tests |
 |---|---|---|---|---|
@@ -58,12 +58,12 @@ Common to every fixed widget: background = `PumpTheme.canvas` via `containerBack
 | WGT-21 | User views lock-screen Next workout (rectangular / inline) → Rectangular: "NEXT · {day}", name, "{n} EX · ~{m} MIN". Inline: "{DAY d} · {NAME} NEXT". Both white-on-clear, no Plus gate | ✅ | [ ] | — |
 | WGT-24 | System: Next workout has no prediction (no template history / no split) → Name shows "—", meta "0 EX · 0 SETS · ~0M", dots "LOW CONF" (confidence 0); START still renders | 🟡 no dedicated empty copy (see WGT-E01) | [ ] | — |
 | WGT-27 | User taps START on Next workout (medium/large) → Opens `pulsepump://start-workout?template={name}`; app starts that template as a new workout and the logger opens (see WGT-144 and LIV-E03) | ✅ | [ ] | — |
-| WGT-30 | User taps START on a SMALL Next workout or SMALL Quick start tile → Layout uses `Link`, but WidgetKit honours only `widgetURL` for systemSmall; no `widgetURL` is set on fixed widgets, so the tap likely just opens the app (home) without starting a workout. Custom widgets do set `widgetURL` for small | 🐞 `PumpShared/Widgets/NextWorkoutWidget.swift:174`, `QuickStartWidget.swift:49` (verify on device: expected "starts workout", likely actual "opens app") | [ ] | — |
+| WGT-30 | User taps START on a SMALL Next workout or SMALL Quick start tile → Layout uses `Link`, but WidgetKit honours only `widgetURL` for systemSmall; no `widgetURL` is set on fixed widgets, so the tap likely just opens the app (home) without starting a workout. Custom widgets do set `widgetURL` for small | 🐞 `OreShared/Widgets/NextWorkoutWidget.swift:174`, `QuickStartWidget.swift:49` (verify on device: expected "starts workout", likely actual "opens app") | [ ] | — |
 | WGT-33 | User adds "Streak" small A → "STREAK", count + "DAYS", 7 squares for the last 7 days (oldest left, today right, filled = a workout that day) with weekday letters. Data: `snap.streak` (`StreakCalculator.currentStreak`), `fixed.streakLogged/streakLetters` | ✅ | [ ] | — |
 | WGT-36 | User views Streak small B → Big count + "DAY STREAK", "LAST · {NAME} · {WED}", Mon-Sun set bars (done = ink, today = accent, none = faint). Data `fixed.weekSetsPerDay/weekDone/todayIndex/lastWorkout*` | ✅ | [ ] | — |
 | WGT-39 | User views Streak medium → Left: count + squares; right: "LAST WORKOUT", name, "{n} DAYS AGO", EX and MIN stats | ✅ | [ ] | — |
 | WGT-42 | User views Streak large → Count, "START ›" (opens next workout), week bars, "RECENT / WK n" list of 3 sessions ("WED · 2 DAYS AGO", "6 EX · 58M"; 0 → "TODAY", 1 → "1 DAY AGO") | ✅ | [ ] | — |
-| WGT-45 | User views Streak medium with last workout yesterday → Text reads "1 DAYS AGO" (no singular), unlike Recap which writes "1 DAY AGO" | 🐞 `PumpShared/Widgets/StreakWidget.swift` medium ("\(daysAgo) DAYS AGO"); expected "1 DAY AGO" | [ ] | — |
+| WGT-45 | User views Streak medium with last workout yesterday → Text reads "1 DAYS AGO" (no singular), unlike Recap which writes "1 DAY AGO" | 🐞 `OreShared/Widgets/StreakWidget.swift` medium ("\(daysAgo) DAYS AGO"); expected "1 DAY AGO" | [ ] | — |
 | WGT-48 | User adds the Streak lock-screen circular → Count and "DAYS" on the system accessory disc | ✅ | [ ] | — |
 | WGT-51 | User adds "Weekly volume" small A → "SETS · WK n", sets this week, signed % vs last week up to the same weekday (green ▲ / red ▼), "VS LAST {n}". Data `fixed.setsThisWeek/setsLastWeekSameDay` (working sets) | ✅ | [ ] | — |
 | WGT-54 | User views Weekly volume small B (ticker surface) → Three quotes: SETS, VOL (T in kg / KLB in lb, from `volumeTonnes`, converted), HRS (`trainingHours` "h:mm"), each with ▲/▼ %. Header "WK n VS n-1" and today's weekday | ✅ | [ ] | — |
@@ -86,7 +86,7 @@ Common to every fixed widget: background = `PumpTheme.canvas` via `containerBack
 | WGT-105 | User views Deload small A / B / medium → A: headline + mini load bars + ratio. B: ratio "1.18" "VS 4-WK AVG", "DELOAD WK n" and "LAST WK n" (`—` if none). Medium: labelled bars ("D" over deload weeks), ratio and +/- delta vs last week | ✅ | [ ] | — |
 | WGT-108 | System: `isDeload` flag on a workout → Forces that week to count as a deload. No in-app UI sets the flag (only sync can); detection effectively relies on the 60% rule | 🟡 | [ ] | — |
 | WGT-111 | User adds "Last session" small/medium → Name, weekday, volume (display unit, thousands separator), delta vs the previous session of the same template name (first time: +0.0%), sets, time "mm:ss", and, when an exercise beat every earlier e1RM, a PR row with "weight x reps" in the display unit. Data `fixed.recap*` + `lastWorkout*` | ✅ | [ ] | — |
-| WGT-114 | System: Recap small shows a PR → Label on the left is the literal text "ROW" for any exercise (medium shows the real name) | 🐞 `PumpShared/Widgets/RecapWidget.swift:26`; expected the PR exercise name (shortened), actual always "ROW" | [ ] | — |
+| WGT-114 | System: Recap small shows a PR → Label on the left is the literal text "ROW" for any exercise (medium shows the real name) | 🐞 `OreShared/Widgets/RecapWidget.swift:26`; expected the PR exercise name (shortened), actual always "ROW" | [ ] | — |
 | WGT-117 | User adds "Program" small/medium → Active split name, week "n/8" in an 8-week block (weeks since the first matching template session or split creation, mod 8, +1), tick row, "{done}/{target} SESSIONS THIS WK". Medium: up to 4 day tiles (last done days "✓ MON", then "NEXT", then upcoming "—") | ✅ | [ ] | — |
 | WGT-120 | System: no split selected → Name "Program"; target falls back to `sessionGoal` (5); upcoming tiles come from the repeating cycle in history; otherwise only the done tiles | 🟡 | [ ] | — |
 | WGT-123 | User adds "Weekly goal" small or circular lock → "GOAL · WK n", "{done}/{goal}" and one square per session (min 1), line "{n} LEFT · {d} DAYS" (d = 6 - today's Monday-index). Lock circular: "{done}/{goal}" and squares (opacity 1 vs 0.3) | ✅ | [ ] | — |
@@ -97,10 +97,10 @@ Common to every fixed widget: background = `PumpTheme.canvas` via `containerBack
 | WGT-138 | System: feed never loaded / no friends → Friends widget shows only the "FRIENDS" header with no rows | 🟡 | [ ] | — |
 | WGT-141 | User adds "Quick start" small/medium → Small: 2 tiles, medium: 4 tiles in a 2x2 grid; first tile is the predicted template (accent fill, "PREDICTED . n EX"), the rest ordered by most recent use then name; up to 6 templates stored. Each tile is a link to `start-workout?template={NAME}` | ✅ | [ ] | — |
 | WGT-144 | User taps a Quick start tile (medium) → Link carries the template name UPPERCASED (`q.name`); app matches templates by exact name, so a mixed-case template name does not match and a BLANK workout starts instead | 🐞 `QuickStartWidget.swift:47` (passes `q.name`, uppercased by `buildFixed`) vs `ContentView.swift:64` (`$0.name == name`); expected the chosen template, actual blank workout for any template that is not all caps | [ ] | — |
-| WGT-147 | User adds "Pulse" medium → Rows PUMP (sessions this week / goal), FUEL (KCAL TODAY), STRIDE (KM THIS WK); Fuel/Stride read from App Group keys written by those apps, else `—` | ✅ | [ ] | — |
-| WGT-150 | User views Pulse widget → PUMP square in accent, FUEL/STRIDE marks in ink (accents unresolved per design) | ✅ | [ ] | — |
-| WGT-153 | User adds the legacy "Pump" widget (small/medium/large) → Flame + streak count, last workout, recent list; plain system fonts, `.fill.tertiary` background; tap opens `pulsepump://home` (a host the app ignores) or `start-workout` button on large | 🟡 legacy, off-design, redundant with Streak | [ ] | — |
-| WGT-156 | System: widget picker lists → Display names: Pump (legacy), Pump Custom, Next workout, Streak, Weekly volume, Body map, Muscle balance, PR watch, Deload and recovery, Last session, Program, Weekly goal, Bodyweight, Friends, Quick start, Pulse | ✅ | [ ] | — |
+| WGT-147 | User adds "Pulse" medium → Rows ORE (sessions this week / goal), FUEL (KCAL TODAY), STRIDE (KM THIS WK); Fuel/Stride read from App Group keys written by those apps, else `—` | ✅ | [ ] | — |
+| WGT-150 | User views Pulse widget → ORE square in accent, FUEL/STRIDE marks in ink (accents unresolved per design) | ✅ | [ ] | — |
+| WGT-153 | User adds the legacy "Ore" widget (small/medium/large) → Flame + streak count, last workout, recent list; plain system fonts, `.fill.tertiary` background; tap opens `pulsepump://home` (a host the app ignores) or `start-workout` button on large | 🟡 legacy, off-design, redundant with Streak | [ ] | — |
+| WGT-156 | System: widget picker lists → Display names: Ore (legacy), Ore Custom, Next workout, Streak, Weekly volume, Body map, Muscle balance, PR watch, Deload and recovery, Last session, Program, Weekly goal, Bodyweight, Friends, Quick start, Pulse | ✅ | [ ] | — |
 
 ### WGT edge cases
 
@@ -110,7 +110,7 @@ Common to every fixed widget: background = `PumpTheme.canvas` via `containerBack
 | WGT-E02 | lbs user | Every weight (next-lift kg column, recap volume, PR watch, bodyweight, 3B volume "VOL KLB") converts via `snap.unit`; labels "LB" | Stored kg; `weightUnit` in snapshot | ✅ | [ ] | — |
 | WGT-E03 | Unit changed but app not opened | Widgets keep the old unit until the app next refreshes (the unit change itself triggers a rebuild, WGD-12) | | ✅ | [ ] | — |
 | WGT-E04 | Free user, Plus widget (Body map, Balance, PR watch, Deload) added | Shows `LockedWidgetPreview` (see WGP) instead of data | | ✅ | [ ] | — |
-| WGT-E05 | Dark mode / light mode | Colours are dynamic (`PumpTheme.dyn`), so the widget follows the system appearance; accent `#1AA7FF` in both | | ✅ | [ ] | — |
+| WGT-E05 | Dark mode / light mode | Colours are dynamic (`OreTheme.dyn`), so the widget follows the system appearance; accent `#1AA7FF` in both | | ✅ | [ ] | — |
 | WGT-E06 | iOS tinted home-screen mode | No `widgetAccentable` / rendering-mode handling in the code, so the system applies its default tint; the in-app gallery "TINTED" tab is only a grayscale+blue simulation | | 🟡 | [ ] | — |
 | WGT-E07 | Template renamed or deleted after the snapshot | START/Quick start tile with the old name starts a blank workout (no match) until the next refresh | | 🟡 | [ ] | — |
 | WGT-E08 | Very long workout name | One line, scaled down to 70% (`minimumScaleFactor 0.7`) then truncated | | ✅ | [ ] | — |
@@ -123,13 +123,13 @@ Common to every fixed widget: background = `PumpTheme.canvas` via `containerBack
 
 | ID | User does → App does (observable result) | Status | Manual check | Tests |
 |---|---|---|---|---|
-| WGP-03 | User (free, trial over) views a Plus widget → `PWPlusGate` renders `LockedWidgetPreview`: lock glyph + "PULSE+", feature title (Muscle heatmap / PR watch / Muscle balance / Deload and recovery), a one-line fact, and a full-width accent "UNLOCK PULSE+" button; ghost silhouette or ghost rows at 0.18 opacity | ✅ | [ ] | — |
-| WGP-06 | User taps "UNLOCK PULSE+" (medium/large) → Opens `pulsepump://pulse-plus`; app posts `.openPulsePlus`, switches to the More tab (tab 4) and presents Pulse+ full screen | ✅ | [ ] | — |
+| WGP-03 | User (free, trial over) views a Plus widget → `PWPlusGate` renders `LockedWidgetPreview`: lock glyph + "SUPERNOVA", feature title (Muscle heatmap / PR watch / Muscle balance / Deload and recovery), a one-line fact, and a full-width accent "UNLOCK SUPERNOVA" button; ghost silhouette or ghost rows at 0.18 opacity | ✅ | [ ] | — |
+| WGP-06 | User taps "UNLOCK SUPERNOVA" (medium/large) → Opens `pulsepump://supernova`; app posts `.openSupernova`, switches to the More tab (tab 4) and presents Supernova full screen | ✅ | [ ] | — |
 | WGP-09 | User taps the SMALL locked preview → Same `Link` limitation as WGT-30: a small widget cannot host Link, so the tap probably only launches the app | 🐞 `LockedPreviewWidget.swift:34-40` (verify on device) | [ ] | — |
 | WGP-12 | User (trial or subscribed) views a Plus widget → Real content is drawn; `fixed.isPlus` true | ✅ | [ ] | — |
 | WGP-15 | User sees locked preview in Large → App: Large gate reuses the medium layout inside the large frame (Body map and PR watch support large) | 🟡 | [ ] | — |
 | WGP-18 | User taps the tinted home-screen / lock-screen widget body (not a button) → Opens the app at its last tab; no `widgetURL` on fixed widgets except custom small | ✅ | [ ] | — |
-| WGP-21 | User with a built Pump Custom widget loses Plus → The widget keeps rendering (custom widgets are not gated in the extension); only the More › Widgets builder row is Plus/trial gated (`MoreTabView.swift:103`) | 🧭 propose: leave as is or lock custom widgets after trial | [ ] | — |
+| WGP-21 | User with a built Ore Custom widget loses Plus → The widget keeps rendering (custom widgets are not gated in the extension); only the More › Widgets builder row is Plus/trial gated (`MoreTabView.swift:103`) | 🧭 propose: leave as is or lock custom widgets after trial | [ ] | — |
 
 ## WGU  Units and appearance
 
@@ -140,11 +140,11 @@ Common to every fixed widget: background = `PumpTheme.canvas` via `containerBack
 | WGU-09 | System: locale uses decimal comma → Widget numbers are formatted with `String(format:)` (always a dot) and `NumberFormatter` for thousands in recap volume (locale separator) | 🟡 mixed separators | [ ] | — |
 | WGU-12 | User switches the system to dark appearance → All widgets and the lock-screen card re-theme; the island is always black and uses the dark-mode values | ✅ | [ ] | — |
 
-## WGB  Widget builder ("Pump Custom") and library
+## WGB  Widget builder ("Ore Custom") and library
 
 | ID | User does → App does (observable result) | Status | Manual check | Tests |
 |---|---|---|---|---|
-| WGB-03 | User opens More › Widgets while free and past the trial → App opens the Pulse+ screen instead (row tagged "PULSE+") | ✅ | [ ] | — |
+| WGB-03 | User opens More › Widgets while free and past the trial → App opens the Supernova screen instead (row tagged "SUPERNOVA") | ✅ | [ ] | — |
 | WGB-06 | User opens More › Widgets with Plus or trial → Library screen "WIDGETS" with intro text, "MY WIDGETS n", rows (thumbnail, name, "{SIZE} . {n} PIECES . {TODAY/nD AGO/nW AGO}"), "NEW" button, "+ NEW WIDGET", "PREVIEW > Widget gallery" | ✅ | [ ] | — |
 | WGB-09 | System: first visit with an empty library → App seeds 4 presets (Gym glance medium, PR board small, Full board large, Lock glance lock) and saves them | ✅ | [ ] | — |
 | WGB-12 | User long-presses a library row → Context menu "Delete" removes it immediately and saves; no confirmation, no timeline reload | 🟡 | [ ] | — |
@@ -161,11 +161,11 @@ Common to every fixed widget: background = `PumpTheme.canvas` via `containerBack
 | WGB-45 | User taps SAVE → Widget stored in the App Group library (`custom_widget_library`), `reloadAllTimelines()` called, builder closes | ✅ | [ ] | — |
 | WGB-48 | User taps back without saving → Edits are discarded with no confirmation | 🟡 | [ ] | — |
 | WGB-51 | User re-opens a saved widget and adds a piece → New piece id restarts at "n1", colliding with an existing "n1" | 🐞 `WidgetBuilderView.swift:29,426` (`@State seq = 1`); expected unique ids | [ ] | — |
-| WGB-54 | User adds "Pump Custom" on the home screen → Edit Widget lists saved widgets (`CustomWidgetQuery`); default = first; supports small, medium, large and lock rectangular; refreshes every 30 min | ✅ | [ ] | — |
-| WGB-57 | System: the chosen widget was deleted → Provider silently falls back to the first library widget; empty library → "PUMP / Build a widget in More > Widgets" | ✅ | [ ] | — |
+| WGB-54 | User adds "Ore Custom" on the home screen → Edit Widget lists saved widgets (`CustomWidgetQuery`); default = first; supports small, medium, large and lock rectangular; refreshes every 30 min | ✅ | [ ] | — |
+| WGB-57 | System: the chosen widget was deleted → Provider silently falls back to the first library widget; empty library → "ORE / Build a widget in More > Widgets" | ✅ | [ ] | — |
 | WGB-60 | User taps a Next workout (START) or Start button piece in medium/large → Link opens `start-workout` (+ template name exact as stored, so not uppercased). In SMALL, whole widget uses `widgetURL` of the first start/next piece | ✅ | [ ] | — |
-| WGB-63 | System: user has no workouts → Custom pieces render the catalog's fake sample values (streak 12, 4/5, PR 100, etc.) because `metric(for:)` returns the sample when `hasData` is false | 🐞 `PumpWidgetSnapshot.swift` `metric(for:)` guard `hasData`; unlike the fixed widgets, no empty state | [ ] | — |
-| WGB-66 | System: user has data and uses Line chart "Bodyweight, 30 days" → Always draws the hard-coded sample series and "82.4 KG" | 🐞 `PumpWidgetSnapshot.swift:104` (`piece.metric != "bw"`) | [ ] | — |
+| WGB-63 | System: user has no workouts → Custom pieces render the catalog's fake sample values (streak 12, 4/5, PR 100, etc.) because `metric(for:)` returns the sample when `hasData` is false | 🐞 `OreWidgetSnapshot.swift` `metric(for:)` guard `hasData`; unlike the fixed widgets, no empty state | [ ] | — |
+| WGB-66 | System: user has data and uses Line chart "Bodyweight, 30 days" → Always draws the hard-coded sample series and "82.4 KG" | 🐞 `OreWidgetSnapshot.swift:104` (`piece.metric != "bw"`) | [ ] | — |
 | WGB-69 | System: Exercise PR piece for an exercise never logged → Shows `—`; matching is exact then "contains" ignoring incline/decline/dumbbell/close/smith variants (`bestPR`) | ✅ | [ ] | — |
 
 ### WGB edge cases
@@ -183,7 +183,7 @@ Common to every fixed widget: background = `PumpTheme.canvas` via `containerBack
 | ID | User does → App does (observable result) | Status | Manual check | Tests |
 |---|---|---|---|---|
 | WGG-03 | User opens More › Widgets › Widget gallery → Full-screen "WIDGET GALLERY" with LIGHT / DARK / TINTED chips; 17 numbered sections (01 Next workout to 17 Locked preview) with tier (FREE / PLUS / FREE . PLUS) and blurb; each variant drawn at design scale on a wall | ✅ | [ ] | — |
-| WGG-06 | System: gallery draws content → Always uses `PumpWidgetSnapshot.sample` (design numbers, Plus unlocked), never the user's real data | 🟡 header text claims "what WidgetKit draws" but data is sample | [ ] | — |
+| WGG-06 | System: gallery draws content → Always uses `OreWidgetSnapshot.sample` (design numbers, Plus unlocked), never the user's real data | 🟡 header text claims "what WidgetKit draws" but data is sample | [ ] | — |
 | WGG-09 | User taps TINTED → Gallery applies grayscale + brightness + blue colour blend as an approximation (not a real WidgetKit tinted render) | 🟡 | [ ] | — |
 | WGG-12 | DEBUG only: launch with `-debugGallery <section id or all>` → Root view is the gallery (no onboarding); `-debugGalleryTheme` (light, dark or tinted) picks the theme; `-debugGalleryDump 1` renders each section x theme to PNG in tmp; `-debugWidgetEdit <id>` opens the builder on a saved widget. Compiled out of Release | ✅ | [ ] | — |
 | WGG-15 | User views section 08 and 16 → Live Activity / Dynamic Island variants (8A-8H) and lock-screen accessories (circular, rectangular, inline) are drawn as static previews (plain labels, no live clocks) | ✅ | [ ] | — |
@@ -229,7 +229,7 @@ Attributes: `WorkoutActivityAttributes(workoutName, startTime)`; state `ContentS
 | LIV-E09 | Empty template (no exercises) | State has no next set: exercise "Rest", 0/0 sets, ticks show one cell | `max(total, 1)` | 🟡 | [ ] | — |
 | LIV-E10 | Set logged in the app UI while the card is on screen | Card updates within about 1 second (next timer tick) | LOG SET from the card is instant (`pushLiveActivityNow`) | ✅ | [ ] | — |
 | LIV-E11 | Duplicate/unchanged states | Skipped by `isVisiblyUnchanged`, so no more than one ActivityKit call per visible change | Unit-tested in AuditFixesTests | ✅ | [ ] | — |
-| LIV-E12 | `WorkoutActivityAttributes` defined in app and extension | Now a single shared definition in `PumpShared`; CLAUDE.md says "defined in both... keep in sync" | CLAUDE.md stale | 🐞 doc only | [ ] | — |
+| LIV-E12 | `WorkoutActivityAttributes` defined in app and extension | Now a single shared definition in `OreShared`; CLAUDE.md says "defined in both... keep in sync" | CLAUDE.md stale | 🐞 doc only | [ ] | — |
 
 ## Open decisions for the owner (11)
 
@@ -237,7 +237,7 @@ Attributes: `WorkoutActivityAttributes(workoutName, startTime)`; state `ContentS
 - WGT-24, WGT-E01, WGT-87, WGT-132, WGT-138 (proposed default): add a dedicated empty state per widget ("Log your first workout", "Add your weight", "No friends yet") rather than zeros/blank.
 - WGT-66 (🧭): when last week's total is 0, hide the delta or show "NEW" instead of "+0.0%".
 - WGT-99 (🧭): lock-screen PR watch is free; either gate it behind Plus or mark the tier as FREE.
-- WGP-21 (🧭): decide whether built Pump Custom widgets keep working after Plus/trial ends.
+- WGP-21 (🧭): decide whether built Ore Custom widgets keep working after Plus/trial ends.
 - WGT-30 / WGP-09: small-size widgets cannot host Links; decide on `widgetURL` per fixed widget (or accept "opens app").
 - WGT-144: pass the real template name (not the uppercased display name) or match case-insensitively in `ContentView`.
 - LIV-E02 / LIV-E03: decide the policy for orphan Live Activities (reconcile on launch) and for a widget start-link while a session or draft exists (ignore, confirm, or resume).

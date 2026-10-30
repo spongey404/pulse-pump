@@ -1,6 +1,6 @@
-# Audit: views-workout (PulsePump/Views/Workout/** + Views/Utilities/**)
+# Audit: views-workout (Ore/Views/Workout/** + Views/Utilities/**)
 
-Paths are relative to PulsePump/. WVM = ViewModels/WorkoutViewModel.swift (read in full because every number on these screens originates there). AWV = Views/Workout/ActiveWorkoutView.swift. Scratch scripts: scratchpad/views-workout/t.swift.
+Paths are relative to Ore/. WVM = ViewModels/WorkoutViewModel.swift (read in full because every number on these screens originates there). AWV = Views/Workout/ActiveWorkoutView.swift. Scratch scripts: scratchpad/views-workout/t.swift.
 
 ## Summary
 - Counts: 2 CRITICAL, 10 HIGH, 9 MEDIUM, 8 LOW.
@@ -79,7 +79,7 @@ Paths are relative to PulsePump/. WVM = ViewModels/WorkoutViewModel.swift (read 
   - Plates and bar types cannot be edited, and a profile cannot be deleted or renamed.
   - Plate chips hard-code "KG" (:215).
   - `profile.user` is never set on create (:376-380), so profiles are orphaned from `User.equipmentProfiles` (cascade).
-  - `.unlimitedEquipmentProfiles` (PulsePlusService) is never checked, so there is no free-tier limit.
+  - `.unlimitedEquipmentProfiles` (SupernovaService) is never checked, so there is no free-tier limit.
 - Fix: wire the active profile's plates and bar into `InlinePlateCalculatorView`, filter the picker by `availableEquipment`, and implement the editors.
 
 [HIGH] Views/Utilities/PlateCalculatorView.swift, WarmupGeneratorView.swift — Both screens are unreachable

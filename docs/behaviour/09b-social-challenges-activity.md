@@ -1,6 +1,6 @@
-# 09b Social: challenges, scoring, leaderboards, Pulse+ gating, Activity and counters
+# 09b Social: challenges, scoring, leaderboards, Supernova gating, Activity and counters
 
-Scope: the CHALLENGES half of the Social tab, how scores and ranks are produced, the Activity ("bell") screen and the server counters. Sources: `PulsePump/Features/Social/Challenges/*`, `Features/Social/Friends/{ActivityView,InviteFriendsView}.swift`, `Features/Social/Logic/{ChallengeWindow,Leaderboard}.swift`, `Features/Social/SocialViewModel.swift`, `Core/Models/Challenge.swift` (`ChallengeMetric`, `ChallengeWinCondition`), `Core/Models/Firestore/FirestoreModels.swift`, `Core/Services/Firestore/*`, `firebase/firestore.rules`, `firebase/functions/src/{challenges,scoring,ranking,counters,follows,accountDeletion,index}.ts`. People, feed and privacy are in `09a-social-feed-friends.md`.
+Scope: the CHALLENGES half of the Social tab, how scores and ranks are produced, the Activity ("bell") screen and the server counters. Sources: `Ore/Features/Social/Challenges/*`, `Features/Social/Friends/{ActivityView,InviteFriendsView}.swift`, `Features/Social/Logic/{ChallengeWindow,Leaderboard}.swift`, `Features/Social/SocialViewModel.swift`, `Core/Models/Challenge.swift` (`ChallengeMetric`, `ChallengeWinCondition`), `Core/Models/Firestore/FirestoreModels.swift`, `Core/Services/Firestore/*`, `firebase/firestore.rules`, `firebase/functions/src/{challenges,scoring,ranking,counters,follows,accountDeletion,index}.ts`. People, feed and privacy are in `09a-social-feed-friends.md`.
 
 Model in one paragraph: a challenge is a Firestore document with a metric and a window (`startAt` to `endAt`). People join by writing a `members/{uid}` document. **The client never computes or writes a score**: Cloud Functions rescore a member from their synced workouts (`users/{uid}/workouts`, see 12 SYN) whenever a workout changes and write `entries/{uid}` with score, rank, previous rank and `scoreAt`. The app only orders and displays those entries. Clients can create only private (invite-only) challenges; global challenges are created with the Admin SDK (no in-app admin screen). Status flips to `ended` in a daily job; the app also treats a challenge as ended as soon as `endAt` has passed.
 
@@ -79,7 +79,7 @@ The old `Challenge` / `LeaderboardEntry` SwiftData models in `Core/Models/Challe
 | CHC-36 | User reaches step 2 → App shows "INVITE FRIENDS" with SKIP, the line "NAME · METRIC · ENDS 28 OCT", a "Search your friends" field (matches name or handle), "Your Friends" (count) and rows: name, @handle, "ND STREAK", INVITE | ✅ `InviteFriendsView` | [ ] | — |
 | CHC-39 | User taps INVITE → App writes `invites/{challengeId}_{uid}` (status pending) and the pill becomes a disabled "INVITED"; the bottom bar counts "N INVITED" | ✅ | [ ] | — |
 | CHC-42 | Invite write fails → App alerts "Couldn't send the invite. Try again." and the pill stays INVITE | ✅ | [ ] | — |
-| CHC-45 | User taps "Share Invite" → App opens the share sheet with "I started a challenge on Pump: <name>. Get the app and add me (@handle) to join." (a text hint only; no join link) | ✅ | [ ] | — |
+| CHC-45 | User taps "Share Invite" → App opens the share sheet with "I started a challenge on Ore: <name>. Get the app and add me (@handle) to join." (a text hint only; no join link) | ✅ | [ ] | — |
 | CHC-48 | User taps SKIP or "DONE ›" → App dismisses step 2; the challenge already exists | ✅ | [ ] | — |
 | CHC-51 | Invitee opens the Challenges tab or Activity → App shows the invite (see CHL-24 and ACT-15) | ✅ | [ ] | — |
 | CHC-54 | Invitee taps JOIN / ACCEPT → App writes the member document first (the rules require the invite), then marks the invite accepted, removes it from the inbox and reloads challenges | ✅ `respond(accept: true)` | [ ] | — |
@@ -186,14 +186,14 @@ The old `Challenge` / `LeaderboardEntry` SwiftData models in `Core/Models/Challe
 
 ---
 
-## CHP  Pulse+ gating of challenges
+## CHP  Supernova gating of challenges
 
 | ID | User does → App does (observable result) | Status | Manual check | Tests |
 |---|---|---|---|---|
-| CHP-03 | Free user taps "Create Challenge" → App lets them create (no subscription check anywhere in Social) | ❌ spec `docs/pulse-pump-spec.md:255` says "Challenges (Pulse+ only): Any Pulse+ user can create"; known gap at spec line 424 | [ ] | — |
-| CHP-06 | Free user joins a global challenge or accepts an invite → App allows it | 🧭 PROPOSED: joining stays free; only creation requires Pulse+ (matches the spec sentence) | [ ] | — |
-| CHP-09 | Free user taps "Create Challenge" (once gated) → 🧭 PROPOSED: open the Pulse+ paywall (see 10 PLS / 13 GAT); existing challenges remain usable after a lapse | 🧭 | [ ] | — |
-| CHP-12 | Developer launches a DEBUG build with `-devDataPlus 1` → App treats the user as Pulse+ for gated features (no effect on challenges today) | 🟡 | [ ] | — |
+| CHP-03 | Free user taps "Create Challenge" → App lets them create (no subscription check anywhere in Social) | ❌ spec `docs/pulse-pump-spec.md:255` says "Challenges (Supernova only): Any Supernova user can create"; known gap at spec line 424 | [ ] | — |
+| CHP-06 | Free user joins a global challenge or accepts an invite → App allows it | 🧭 PROPOSED: joining stays free; only creation requires Supernova (matches the spec sentence) | [ ] | — |
+| CHP-09 | Free user taps "Create Challenge" (once gated) → 🧭 PROPOSED: open the Supernova paywall (see 10 PLS / 13 GAT); existing challenges remain usable after a lapse | 🧭 | [ ] | — |
+| CHP-12 | Developer launches a DEBUG build with `-devDataPlus 1` → App treats the user as Supernova for gated features (no effect on challenges today) | 🟡 | [ ] | — |
 
 ---
 
@@ -255,7 +255,7 @@ The old `Challenge` / `LeaderboardEntry` SwiftData models in `Core/Models/Challe
 ## Open decisions for the owner (09b)
 
 - CHC-66 (bug/decision): copy says late joiners are scored from the day they join; the backend scores from challenge start. Design README lists this as an open question. Proposed default: keep scoring from start (simplest, honest total) and change the copy to "ALL WORKOUTS SINCE THE START COUNT".
-- CHP-03 / CHP-06 / CHP-09: Pulse+ gating of challenge creation is in the spec but not built. Proposed default: gate creation only, joining stays free.
+- CHP-03 / CHP-06 / CHP-09: Supernova gating of challenge creation is in the spec but not built. Proposed default: gate creation only, joining stays free.
 - CHS-27: Custom metric has no way to enter scores and is hidden from creation. Proposed default: remove Custom from the product, or add a callable function to submit a score.
 - CHS-30: win conditions "lowest" and "First to Reach Goal" have no UI (first has no goal field). Proposed default: drop them from the enum or build a goal field.
 - CHS-21: Longest hold shows seconds as a plain number. Proposed default: format as m:ss.

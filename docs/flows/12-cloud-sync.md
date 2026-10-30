@@ -1,14 +1,14 @@
 # 12 Cloud sync and your data
 
 ## What it's for
-Pump saves everything on the phone first, so it works offline, and then quietly backs it up to your account. That means a new phone, a reinstall or a second device gets your workouts, programs and settings back.
+Ore saves everything on the phone first, so it works offline, and then quietly backs it up to your account. That means a new phone, a reinstall or a second device gets your workouts, programs and settings back.
 
 ## The flow
 1. Finish a workout → about 5 seconds later it's backed up. You don't do anything.
 2. Open More › Settings › Cloud Sync → Status reads UP TO DATE, and Last Synced reads NOW or "5 MINUTES AGO".
 3. Turn on airplane mode and log a workout → Status reads "1 CHANGE WAITING", then OFFLINE · WILL SYNC WHEN CONNECTED.
 4. Turn airplane mode off and reopen the app → it syncs and returns to UP TO DATE.
-5. Install Pump on a second phone (or reinstall) → sign in → "Restoring your data…" → your workouts, programs, splits, equipment, custom exercises and bodyweight are back.
+5. Install Ore on a second phone (or reinstall) → sign in → "Restoring your data…" → your workouts, programs, splits, equipment, custom exercises and bodyweight are back.
 
 **Alternate paths**
 - **Sync now:** Settings › Cloud Sync › Sync Now → SYNCING… then UP TO DATE.

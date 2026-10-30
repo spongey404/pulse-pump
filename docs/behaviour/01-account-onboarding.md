@@ -1,7 +1,7 @@
 # 01 Account and onboarding
 
 Scope: sign-up/sign-in (Apple, Google, Email), the root gate that routes signed-in users (splash, onboarding, restore, offline retry, app), username (handle) claim/rename, the 9-step onboarding, sign-out and account deletion. Accounts are required: there is no guest mode.
-Key sources: `PulsePump/App/RootView.swift`, `PulsePump/App/PulsePumpApp.swift`, `PulsePump/Core/Services/Auth/*` (`AccountGate`, `AuthSession`, `FirebaseAuthProvider`, `HandleValidator`, `HandleInput`, `ProfileRemote`, `SyncLifecycle`), `PulsePump/Features/Auth/*`, `PulsePump/Features/Onboarding/*`, `PulsePump/Core/Sync/SyncServiceLifecycle.swift`, `firebase/functions/src/accountDeletion.ts` + `index.ts` (`deleteAccount`).
+Key sources: `Ore/App/RootView.swift`, `Ore/App/OreApp.swift`, `Ore/Core/Services/Auth/*` (`AccountGate`, `AuthSession`, `FirebaseAuthProvider`, `HandleValidator`, `HandleInput`, `ProfileRemote`, `SyncLifecycle`), `Ore/Features/Auth/*`, `Ore/Features/Onboarding/*`, `Ore/Core/Sync/SyncServiceLifecycle.swift`, `firebase/functions/src/accountDeletion.ts` + `index.ts` (`deleteAccount`).
 
 Routing matrix (`RootGate.route`, `AccountGate.swift:27`): auth unknown -> splash; signed out -> sign-in; signed in as a different uid than the local store owner -> wipe (splash) then re-evaluate; signed in with a local `User` -> app; otherwise by cloud check: unknown -> splash, `users/{uid}` absent -> onboarding, unreachable -> "You're offline", exists -> "Restoring your data" (or "Couldn't restore" if the pull finished with no local user).
 
@@ -9,8 +9,8 @@ Routing matrix (`RootGate.route`, `AccountGate.swift:27`): auth unknown -> splas
 
 | ID | User does → App does (observable result) | Status | Manual check | Tests |
 |---|---|---|---|---|
-| AUTH-03 | User cold-launches the app while signed out → App shows the splash (logo, "PULSE/PUMP", spinner) until Firebase Auth reports, then the sign-in screen (`RootView.swift:29`, `SplashView`) | ✅ | [ ] | — |
-| AUTH-06 | User views sign-in screen → App shows logo lockup "PULSE/PUMP" + "TRAIN SMARTER", headline "Your training, quantified.", blurb, three buttons "Continue with Apple", "Continue with Google", "Use email instead", and footer "By continuing you agree to our Terms of Service and Privacy Policy." (`SignInView.swift:665-772`) | ✅ | [ ] | — |
+| AUTH-03 | User cold-launches the app while signed out → App shows the splash (logo, "ORE", spinner) until Firebase Auth reports, then the sign-in screen (`RootView.swift:29`, `SplashView`) | ✅ | [ ] | — |
+| AUTH-06 | User views sign-in screen → App shows logo lockup "ORE" + "TRAIN SMARTER", headline "Your training, quantified.", blurb, three buttons "Continue with Apple", "Continue with Google", "Use email instead", and footer "By continuing you agree to our Terms of Service and Privacy Policy." (`SignInView.swift:665-772`) | ✅ | [ ] | — |
 | AUTH-09 | User taps Terms of Service / Privacy Policy in footer → App does nothing: both are plain text because `LegalLinks.terms/privacy` are `nil` (`SignInView.swift:638`) | 🟡 links not built; hosted legal URLs do not exist yet | [ ] | — |
 | AUTH-12 | User taps "Continue with Apple" → App shows the system Apple sheet requesting full name + email, with a SHA-256 hashed random 32-char nonce (`AppleSignInFlow.swift:13-21`) | ✅ | [ ] | — |
 | AUTH-15 | User completes Apple sheet → App signs into Firebase with the Apple credential, and (first authorisation only) copies Apple's full name to the Firebase displayName if it was empty (`FirebaseAuthProvider.swift:37,153`) | ✅ | [ ] | — |
@@ -213,7 +213,7 @@ Reached only when signed in, `users/{uid}` absent in the cloud and no local `Use
 | DEL-E05 | Auth user already gone server-side (`auth/user-not-found`) | Function treats it as success | | ✅ | [ ] | — |
 | DEL-E06 | Challenges the user created that still have other members | Kept for the others (creator uid remains); no ownership transfer | Orphaned challenge shows a deleted creator | 🧭 PROPOSED: keep as is | [ ] | — |
 | DEL-E07 | Apple "Sign in with Apple" token revocation | App does not call Apple's revoke-token API on deletion (the authorization code is captured but unused) | App Store guideline 5.1.1(v) for Apple accounts | 🧭 PROPOSED: revoke the Apple token in the function | [ ] | — |
-| DEL-E08 | Active Pulse+ subscription | Account deletion does not cancel the App Store subscription and shows no warning | | 🧭 PROPOSED: add a line "Cancel your subscription in Settings › Apple ID" | [ ] | — |
+| DEL-E08 | Active Supernova subscription | Account deletion does not cancel the App Store subscription and shows no warning | | 🧭 PROPOSED: add a line "Cancel your subscription in Settings › Apple ID" | [ ] | — |
 | DEL-E09 | Function invoker is public | Anyone can call it but the handler rejects callers without a Firebase ID token | Fixed in commit 60a440c | ✅ | [ ] | — |
 | DEL-E10 | Local wipe vs cloud data of other users | Posts by others that contain this user's comments/likes are removed by collection-group queries; reports about the user are not mentioned in the deletion list | | 🟡 reports collection not verified | [ ] | — |
 

@@ -1,15 +1,15 @@
-# PULSE PUMP — Design Reference for Claude Code
+# PULSE ORE — Design Reference for Claude Code
 *Complete design system, component spec, and screen-by-screen guide for implementing backend functionality.*
 
 ---
 
 ## 1. WHAT THIS APP IS
 
-Pulse Pump is an iOS workout logging app. It is one of three apps in the Pulse ecosystem (Pump, Fuel, Stride). The design aesthetic is **"Bloomberg Terminal meets workshop manual"** — analog, dense, data-confident, warm. It sits between Apple Health (clinical) and Hevy/Strong (bro-coded).
+Ore is an iOS workout logging app. It is one of three apps in the Pulse ecosystem (Ore, Fuel, Stride). The design aesthetic is **"Bloomberg Terminal meets workshop manual"** — analog, dense, data-confident, warm. It sits between Apple Health (clinical) and Hevy/Strong (bro-coded).
 
 **The core promise:** log your workouts, let the app learn your patterns, predict what you should do next, and track progress with financial-dashboard clarity.
 
-**Backend:** Supabase (PostgreSQL). Local-first architecture — all writes go to SwiftData first, then sync to Supabase for Pulse+ users.
+**Backend:** Supabase (PostgreSQL). Local-first architecture — all writes go to SwiftData first, then sync to Supabase for Supernova users.
 
 ---
 
@@ -68,7 +68,7 @@ Level 4 — METADATA / LABELS    Space Mono 400 · 8-10px · all-caps · letter-
 
 ## 3. COLOR TOKENS
 
-Pump's accent moved from terracotta to blue (`#0A6FC0`) so it no longer shares a hue
+Ore's accent moved from terracotta to blue (`#0A6FC0`) so it no longer shares a hue
 family with the negative-delta signal. Two accent tiers, not four tokens: `accent` for
 filled surfaces (CTA, tab-bar fill, chip fill — carries white `onAccent` text), `accentInk`
 for accent text/glyphs/borders, which lifts to a brighter blue on the dark canvas so it
@@ -88,7 +88,7 @@ text/secondary:   rgba(28,27,24,0.5)    warm grey labels
 text/faint:       rgba(28,27,24,0.13)   ghost/placeholder
 rule/default:     rgba(28,27,24,0.08)   dividers
 
-accent:           #0a6fc0   blue — Pump primary, FILLED surfaces only
+accent:           #0a6fc0   blue — Ore primary, FILLED surfaces only
 accent/ink:       #0a6fc0   accent TEXT, glyphs, borders (= accent in light mode)
 accent/soft:      rgba(10,111,192,0.08)
 on-accent:        #ffffff
@@ -119,7 +119,7 @@ signal/down:      #ff3b30   unchanged
 ticker/bg:        #1a1816   unchanged — ticker is identical in both modes
 ```
 
-Amber (`#c9892e`) is reserved app-wide for Fuel's "over target" signal. Nothing in Pump
+Amber (`#c9892e`) is reserved app-wide for Fuel's "over target" signal. Nothing in Ore
 uses it — PR badges now use the `signal/pr` treatment above instead.
 
 ### Anti-patterns
@@ -257,7 +257,7 @@ Ghost           bgCanvas                          inkFaint     1.5px inkPrimary 
 **Layout top to bottom:**
 1. Status bar
 2. Ticker strip (weekly muscle group deltas)
-3. Masthead: PULSE/PUMP wordmark + search icon + avatar
+3. Masthead: ORE wordmark + search icon + avatar
 4. **Prediction block** (bg/elevated): predicted workout name (Archivo 900 36px), program tag, last done, est. duration, confidence dots (5 squares = NN% confidence), exercise chip list, "Not today?" link
 5. 4-up KPI row: STREAK / IMPROVED / PRs / SETS — Space Mono numbers
 6. Weekly volume sparkbar: 7 bars Mon-Sun, today in accent, done in green, rest in faint
@@ -321,7 +321,7 @@ Ghost           bgCanvas                          inkFaint     1.5px inkPrimary 
     reserved for Fuel's over-target signal
   - Exercise breakdown table: sorted PRs first → improved → unimproved
   - "+X MORE EXERCISES" if > 6 exercises
-  - PULSE/PUMP watermark
+  - ORE watermark
 - **Caption composer:**
   - Avatar + text input
   - TAG FRIENDS pills + + ADD
@@ -340,7 +340,7 @@ Ghost           bgCanvas                          inkFaint     1.5px inkPrimary 
 
 ### 6.5 Muscle Map (Body Tab)
 **Layout:**
-- Masthead with PULSE/PUMP + BODY · LIVE label
+- Masthead with ORE + BODY · LIVE label
 - Ticker strip (muscle group weekly deltas)
 - Big stat block: total sets / target, vs last % change
 - Day scrubber: WEEK pill + 7 day buttons. Accent dot under days with logged workouts.
@@ -424,7 +424,7 @@ Ghost           bgCanvas                          inkFaint     1.5px inkPrimary 
 ### 6.8 More Tab
 **Hub:**
 - Profile card (tap → Profile screen)
-- Pulse+ upgrade banner (only for free users)
+- Supernova upgrade banner (only for free users)
 - Nav sections: TRAINING / ACCOUNT / HELP
 - Rows use: 32px icon container + label + optional sub-label + chevron
 
@@ -456,11 +456,11 @@ Ghost           bgCanvas                          inkFaint     1.5px inkPrimary 
 - Plate chips: color-coded by weight
 - ADD EQUIPMENT dashed button
 
-**Pulse+ Paywall:**
-- Lightning bolt icon + "UNLOCK PULSE+" hero
+**Supernova Paywall:**
+- Lightning bolt icon + "UNLOCK SUPERNOVA" hero
 - 14-day free trial badge
 - Monthly/Yearly billing toggle (yearly saves ~25%)
-- 3-tier selector: Pump Only ($5/mo) / 2 Apps ($8/mo) / All 3 ($9/mo)
+- 3-tier selector: Ore Only ($5/mo) / 2 Apps ($8/mo) / All 3 ($9/mo)
 - 11 features checklist with green checkmarks
 - START FREE TRIAL full-width CTA
 - No aggressive colors, no countdown timers, no interstitials
@@ -584,14 +584,14 @@ The smart workout prediction on the Home screen works as follows:
 
 ---
 
-## 12. PULSE+ GATING
+## 12. SUPERNOVA GATING
 
 Free tier includes: core logging, rest timer, exercise library, all templates, body map (basic), social feed, plate calculator, warmup generator, equipment profiles, basic analytics.
 
-Pulse+ gates: cloud sync, smart weight suggestions, advanced exercise substitutions, challenges, personalized calorie burn, muscle balance analysis, deload tracking, detailed analytics, advanced body map sub-regions, additional widgets.
+Supernova gates: cloud sync, smart weight suggestions, advanced exercise substitutions, challenges, personalized calorie burn, muscle balance analysis, deload tracking, detailed analytics, advanced body map sub-regions, additional widgets.
 
-Show Pulse+ upsell as: inline blurred section with small pill "UNLOCK WITH PULSE+" overlay. Never as popup during core flows.
+Show Supernova upsell as: inline blurred section with small pill "UNLOCK WITH SUPERNOVA" overlay. Never as popup during core flows.
 
 ---
 
-*This document represents the complete design specification for Pulse Pump. All component dimensions, colors, typography, and interaction patterns described here are final and should be implemented exactly as specified.*
+*This document represents the complete design specification for Ore. All component dimensions, colors, typography, and interaction patterns described here are final and should be implemented exactly as specified.*

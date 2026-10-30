@@ -1,7 +1,7 @@
 #!/bin/bash -e
 # End-to-end UI tests: XCUITest taps through the real app against the local Firebase emulators.
 #
-#   bin/test-ui.sh                                   everything in PulsePumpUITests on the first available iPhone simulator
+#   bin/test-ui.sh                                   everything in OreUITests on the first available iPhone simulator
 #   bin/test-ui.sh --device "iPhone 17e"             pick the simulator
 #   bin/test-ui.sh --only WorkoutUITests             one class (repeatable), or Class/testName for a single test
 #   bin/test-ui.sh --result build/ui.xcresult        where the result bundle goes
@@ -26,7 +26,7 @@ while [ $# -gt 0 ]; do
 	case "$1" in
 		--device) device="$2"; shift ;;
 		--result) result="$2"; shift ;;
-		--only) only+=("-only-testing:PulsePumpUITests/$2"); shift ;;
+		--only) only+=("-only-testing:OreUITests/$2"); shift ;;
 		--no-seed) seed=false ;;
 		--run-tests) inner=true ;;          # internal: executed inside `firebase emulators:exec`
 		--help|-h) sed -n '2,16p' "$0"; exit 0 ;;
@@ -34,7 +34,7 @@ while [ $# -gt 0 ]; do
 	esac
 	shift
 done
-[ ${#only[@]} -gt 0 ] || only=("-only-testing:PulsePumpUITests")
+[ ${#only[@]} -gt 0 ] || only=("-only-testing:OreUITests")
 
 [ -n "$device" ] || device=$(pick_device)
 [ -n "$device" ] || { echo "No iPhone simulator available" >&2; exit 1; }
@@ -54,7 +54,7 @@ if [ "$inner" = true ]; then
 	xcrun simctl uninstall booted com.pulse.PulsePump 2>/dev/null || true
 	xcrun simctl keychain booted reset 2>/dev/null || true
 	xcodebuild test-without-building \
-		-scheme PulsePump -destination "$dest" -derivedDataPath "$dd" \
+		-scheme Ore -destination "$dest" -derivedDataPath "$dd" \
 		-parallel-testing-enabled NO "${only[@]}" -resultBundlePath "$result" "${sign[@]}" \
 		| (command -v xcpretty >/dev/null && xcpretty || cat) | grep -E "error:|Test case .* (passed|failed)|\*\* TEST" || true
 	exit 0
@@ -66,14 +66,14 @@ echo "==> Build Cloud Functions"
 npm --prefix firebase/functions run build >/dev/null
 
 echo "==> Build app + UI tests"
-xcodebuild build-for-testing -scheme PulsePump -destination "$dest" \
+xcodebuild build-for-testing -scheme Ore -destination "$dest" \
 	-derivedDataPath "$dd" -clonedSourcePackagesDirPath "$spm_dir" "${sign[@]}" \
 	| (command -v xcpretty >/dev/null && xcpretty || cat) | grep -E "error:|BUILD|\*\* TEST BUILD" || true
 
 echo "==> UI tests against the emulators"
 rm -rf "$result" build/emulator-logs; mkdir -p build/emulator-logs
-args=(); for a in "${only[@]}"; do args+=("--only" "${a#-only-testing:PulsePumpUITests/}"); done
-[ "${only[0]}" = "-only-testing:PulsePumpUITests" ] && args=()
+args=(); for a in "${only[@]}"; do args+=("--only" "${a#-only-testing:OreUITests/}"); done
+[ "${only[0]}" = "-only-testing:OreUITests" ] && args=()
 [ "$seed" = true ] || args+=("--no-seed")
 status=0
 firebase emulators:exec --only auth,firestore,functions --project demo-pump \

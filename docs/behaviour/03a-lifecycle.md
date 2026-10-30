@@ -1,7 +1,7 @@
 # 03a Workout logging: lifecycle (start, exercises, discard, drafts)
 
 Scope: how a session starts (template, predicted, blank, widget link), the active-session shell, adding and changing exercises, discarding, saving a draft and recovering after a crash. Sets, tools and timers are in `03b-sets-tools.md`; finishing and posting are in `03c-finish-share.md`.
-Key sources: `PulsePump/Features/Workout/WorkoutViewModel.swift`, `WorkoutViewModel+Draft.swift`, `Views/ActiveWorkoutView.swift`, `Views/ExercisePickerView.swift`, `Views/Logger/ExerciseCardView.swift`, `Features/Home/StartWorkoutDock.swift`, `App/ContentView.swift`, `App/PulsePumpApp.swift`.
+Key sources: `Ore/Features/Workout/WorkoutViewModel.swift`, `WorkoutViewModel+Draft.swift`, `Views/ActiveWorkoutView.swift`, `Views/ExercisePickerView.swift`, `Views/Logger/ExerciseCardView.swift`, `Features/Home/StartWorkoutDock.swift`, `App/ContentView.swift`, `App/OreApp.swift`.
 
 Status legend: ✅ implemented and verified in code | 🟡 partial | ❌ not built | 🐞 known bug | 🧭 proposed (owner decides).
 
@@ -41,7 +41,7 @@ Status legend: ✅ implemented and verified in code | 🟡 partial | ❌ not bui
 | WK-E05 | Device clock changed during the session | Elapsed uses `Date()` minus `startTime`, so a backwards jump gives a negative value shown as a malformed clock | Not clamped | 🟡 | [ ] | — |
 | WK-E06 | Signed out or no local `User` row | The dock renders nothing (needs a `User`), so a session cannot start from Home | `StartWorkoutDock.swift:33-39` | ✅ | [ ] | — |
 | WK-E07 | Widget link arrives while another session is active | Posts the same notification and calls `startWorkout` again (resets in-memory entries of the live session) | Same missing guard as WK-60 | 🐞 `ContentView.swift:63-70` | [ ] | — |
-| WK-E08 | Free user vs Pulse+ | Logging, templates and timers are identical | Nothing in this flow is gated | ✅ | [ ] | — |
+| WK-E08 | Free user vs Supernova | Logging, templates and timers are identical | Nothing in this flow is gated | ✅ | [ ] | — |
 
 ## EXA  Adding, replacing, removing and reordering exercises
 
@@ -61,7 +61,7 @@ Status legend: ✅ implemented and verified in code | 🟡 partial | ❌ not bui
 | EXA-36 | User taps "Remove Exercise" → App removes the card at once with no confirmation, including any logged sets, and persists the draft | ✅ `ActiveWorkoutView.swift:457-460` | [ ] | — |
 | EXA-39 | User drags the three-line handle on a card → App follows the finger, snaps to a new slot by 190 pt per step, reorders, and persists the draft | 🟡 uses a fixed 190 pt card height estimate, so tall or collapsed cards land in the wrong slot `ActiveWorkoutView.swift:44-56,88` | [ ] | — |
 | EXA-42 | User opens "Rest Timer Override" → See RTM-42 in `03b-sets-tools.md` | ✅ | [ ] | — |
-| EXA-45 | User wants smart alternative suggestions when replacing (Pulse+) → App offers the same plain picker for everyone | ❌ spec Phase 4 promises Pulse+ suggestions filtered by muscle and equipment; `ExerciseSubstitutionView` exists but is not used anywhere | [ ] | — |
+| EXA-45 | User wants smart alternative suggestions when replacing (Supernova) → App offers the same plain picker for everyone | ❌ spec Phase 4 promises Supernova suggestions filtered by muscle and equipment; `ExerciseSubstitutionView` exists but is not used anywhere | [ ] | — |
 
 ### EXA edge cases
 
@@ -141,6 +141,6 @@ Status legend: ✅ implemented and verified in code | 🟡 partial | ❌ not bui
 - WK-E04 (🧭): keep the workout date at session start (current behaviour) versus finish time.
 - CRS-E06 (🧭): rest timer is not restored after a crash (current behaviour).
 - EXA-E02 (🧭): allow adding the same exercise twice.
-- EXA-45: smart (Pulse+) substitutions are promised by the spec and `ExerciseSubstitutionView` is dead code; build or remove.
+- EXA-45: smart (Supernova) substitutions are promised by the spec and `ExerciseSubstitutionView` is dead code; build or remove.
 - EXA-18: multi-select in the picker is not offered; decide if wanted.
 - EXA-39: reorder uses a fixed 190 pt card height; replace with measured heights or a list reorder.

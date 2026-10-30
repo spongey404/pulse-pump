@@ -1,12 +1,12 @@
-# Pulse Pump — Build Specification
+# Ore — Build Specification
 
-You are building **Pulse Pump**, an iOS workout logging app. Read this entire document before writing any code. This is your single source of truth for what to build and how to build it.
+You are building **Ore**, an iOS workout logging app. Read this entire document before writing any code. This is your single source of truth for what to build and how to build it.
 
 ---
 
 ## Project Setup
 
-Create an Xcode project called `PulsePump` targeting iOS 17.0+, built natively in **Swift** with **SwiftUI**. Use Swift Package Manager for dependency management. Do not use Storyboards or Interface Builder.
+Create an Xcode project called `Ore` targeting iOS 17.0+, built natively in **Swift** with **SwiftUI**. Use Swift Package Manager for dependency management. Do not use Storyboards or Interface Builder.
 
 Create a `CLAUDE.md` file at the project root and keep it updated as the architecture evolves. It should document the file structure, conventions, and any decisions made during development.
 
@@ -36,7 +36,7 @@ Apply these rules to every screen and component you build:
 
 - Minimal and clean aesthetic inspired by Apple Health. No visual clutter.
 - Support both light and dark mode via a user toggle.
-- Use a unified Pulse brand color palette. Pump has its own unique primary accent color within that palette.
+- Use a unified Pulse brand color palette. Ore has its own unique primary accent color within that palette.
 - No haptic feedback anywhere in the app.
 - No exercise demo videos or GIFs.
 - PR indicators must be subtle — a small highlight on the number only. No confetti, no animations, no badges, no gamification.
@@ -55,7 +55,7 @@ Apply these rules to every screen and component you build:
 | 2 | **Social** | Activity feed, friends list, challenges |
 | 3 (center) | **Home** | Start workout button, quick analytics, configurable widgets, global search |
 | 4 | **Body Map** | Interactive body model, exercise browser per muscle, charts/analytics |
-| 5 | **More** | History, Profile, Settings, Equipment Profiles, Tutorial/Help, Pulse+ subscription |
+| 5 | **More** | History, Profile, Settings, Equipment Profiles, Tutorial/Help, Supernova subscription |
 
 Home must be the center tab for thumb accessibility.
 
@@ -67,14 +67,14 @@ Build the app in this order. Complete each phase before moving to the next. Comm
 
 ### Phase 1: Core Data Models & Local Storage
 
-Build all data models first. The app is local-first — all data lives on-device by default. Design the models so cloud sync can be added later as a Pulse+ feature.
+Build all data models first. The app is local-first — all data lives on-device by default. Design the models so cloud sync can be added later as a Supernova feature.
 
 **Models to create:**
 
 - `User` — name, weight, height, age, gender, unit preference (kg/lbs), experience level (beginner/experienced), selected split, avatar, username
 - `Exercise` — name, primary muscle groups, secondary muscle groups, equipment type, movement pattern (push/pull/hinge/squat), exercise type (weighted/bodyweight/time-based/distance-based), isCustom flag, isApproved flag (for community submissions)
 - `WorkoutTemplate` — name, ordered list of exercises with sets, reps, and optional RIR targets. No target weights in V1.
-- `Workout` — date, duration, exercises performed, associated template (optional), notes, calorie burn estimate, isDraft flag, isDeload flag (Pulse+ only)
+- `Workout` — date, duration, exercises performed, associated template (optional), notes, calorie burn estimate, isDraft flag, isDeload flag (Supernova only)
 - `ExerciseLog` — exercise reference, ordered sets, notes for this exercise in this workout
 - `SetLog` — weight, reps, RIR (optional), set type (standard/superset/dropset/restpause/AMRAP), side (left/right/both for unilateral), timestamp
 - `Split` — type (preset name or custom), days and assigned workout types
@@ -154,7 +154,7 @@ This is the most important feature. Build it to be fast and frictionless.
 - Drag handle to reorder exercises mid-workout
 - Swipe to delete sets
 - Add exercises on the fly
-- Exercise substitution: free users browse and pick any replacement manually. Pulse+ users get smart alternative suggestions filtered by same muscle group + equipment from their equipment profile.
+- Exercise substitution: free users browse and pick any replacement manually. Supernova users get smart alternative suggestions filtered by same muscle group + equipment from their equipment profile.
 - Notes per exercise and per workout
 - Calorie burn estimate displayed live, updating as sets are logged
 - Phone handles screen sleep normally — do not force screen awake
@@ -174,13 +174,13 @@ Sharing: auto-post to social feed by default (user can disable in Settings). Opt
 
 **Creating programs:** Both blank canvas (build from scratch) and pre-made templates for common programs (PPL, Upper/Lower, Full Body, etc.). All templates are free — no paywall.
 
-**Sharing:** Users share templates via a link that opens in Pulse Pump. Recipients must have Pump installed.
+**Sharing:** Users share templates via a link that opens in Ore. Recipients must have Ore installed.
 
 Multi-week progression is NOT in V1 — note for future.
 
 ### Phase 6: Body Map Tab
 
-**Interactive body model:** A customizable human body with individually separated, tappable muscle groups. Free users get basic customization (skin tone, body type). Pulse+ users get advanced customization options (specifics TBD — design placeholders for now).
+**Interactive body model:** A customizable human body with individually separated, tappable muscle groups. Free users get basic customization (skin tone, body type). Supernova users get advanced customization options (specifics TBD — design placeholders for now).
 
 **Heatmap:** Muscle groups are color-coded. Two toggleable views:
 - Volume view: intensity based on how many sets (more = brighter). Primary muscles get full intensity, secondary muscles get reduced intensity.
@@ -188,14 +188,14 @@ Multi-week progression is NOT in V1 — note for future.
 
 Color scheme is multi-colored, user-selectable. Include a legend mapping each color to its meaning.
 
-**Neglected muscle group nudges (Pulse+ only):** Quiet badge indicator (not a push notification) when a muscle group hasn't been trained in a while.
+**Neglected muscle group nudges (Supernova only):** Quiet badge indicator (not a push notification) when a muscle group hasn't been trained in a while.
 
-**Detailed muscle sub-regions (Pulse+ only):** Free users see general muscle groups on the body map (e.g., "Chest", "Triceps"). Pulse+ users see anatomical sub-regions:
+**Detailed muscle sub-regions (Supernova only):** Free users see general muscle groups on the body map (e.g., "Chest", "Triceps"). Supernova users see anatomical sub-regions:
 - Large muscle groups (chest, quads, hamstrings, glutes, abs) get separate tappable sub-region zones on the silhouette (e.g., upper/lower chest, rectus femoris/vastus lateralis/vastus medialis).
 - Small muscle groups (biceps, triceps, forearms, traps, calves) keep their single zone on the map, but tapping opens a detail sheet with sub-region breakdown (e.g., long/lateral/medial head for triceps).
 - Sub-region tagging on exercises is available to ALL users when creating/editing exercises (optional — leaving empty means "general/all").
 - All 84 seeded exercises are pre-populated with sub-region tags.
-- Free users who don't want to see the Pulse+ upsell can enable "Simple Body Map" in Settings → Appearance.
+- Free users who don't want to see the Supernova upsell can enable "Simple Body Map" in Settings → Appearance.
 
 **Tapping a muscle group shows:**
 - Trend graphs at the top
@@ -210,7 +210,7 @@ Analytics levels:
 
 Free analytics: exercise trends, PR history, workout streak/consistency, per-workout improvement score.
 
-Pulse+ analytics: muscle group balance analysis (push vs pull ratio), imbalance detection with quiet badge nudges, detailed analytics with tips.
+Supernova analytics: muscle group balance analysis (push vs pull ratio), imbalance detection with quiet badge nudges, detailed analytics with tips.
 
 Visualization: quick glance = numbers with up/down arrows and weekly/monthly percentages (stock-broker style, shown on Home screen). Deep dive = line charts and bar charts (in this analytics sub-section).
 
@@ -250,9 +250,9 @@ Lives inside the More tab.
 
 **Reactions:** Like and comments only.
 
-**Template sharing (free):** Via link that opens in Pump.
+**Template sharing (free):** Via link that opens in Ore.
 
-**Challenges (Pulse+ only):** Any Pulse+ user can create. Anyone in a challenge can invite others. Rules are fully creator-defined. Support both pre-built challenge types (e.g., "most bench volume this week") and fully custom. Real-time leaderboard.
+**Challenges (Supernova only):** Any Supernova user can create. Anyone in a challenge can invite others. Rules are fully creator-defined. Support both pre-built challenge types (e.g., "most bench volume this week") and fully custom. Real-time leaderboard.
 
 **Notifications:** Fully configurable — user decides exactly what triggers notifications. Options: social activity (likes, comments, friend requests), challenge updates, workout reminders (configurable triggers — can be based on split schedule, custom times, etc.).
 
@@ -262,11 +262,11 @@ Lives inside the More tab.
 
 **Warmup set generator (free):** Auto-generates warmup ramp (e.g., bar → 60 → 80 → 90 → working set 100kg). Users can customize their warmup pattern.
 
-**Smart weight suggestions (Pulse+ only, double progression):** Per exercise the user can set an optional rep threshold (chip on the exercise card; off by default). It applies to the highest working weight logged so far in the session: when the latest completed set at that weight reaches the threshold, the next set row shows a ghost (grey, not auto-filled) weight of that weight plus the user's increment (Settings; stored in kg; kg steps 1/1.25/2.5/5, lb steps 2.5/5/10; default 2.5 kg / 5 lb), so only reps need typing. If the threshold is missed, the usual previous-session ghost remains. Warm-up, drop, rest-pause and failure sets are ignored entirely; unilateral sets need both sides at the threshold. Thresholds are keyed by normalised exercise name, stored on the User and synced (`progression`). Master toggle in Settings.
+**Smart weight suggestions (Supernova only, double progression):** Per exercise the user can set an optional rep threshold (chip on the exercise card; off by default). It applies to the highest working weight logged so far in the session: when the latest completed set at that weight reaches the threshold, the next set row shows a ghost (grey, not auto-filled) weight of that weight plus the user's increment (Settings; stored in kg; kg steps 1/1.25/2.5/5, lb steps 2.5/5/10; default 2.5 kg / 5 lb), so only reps need typing. If the threshold is missed, the usual previous-session ghost remains. Warm-up, drop, rest-pause and failure sets are ignored entirely; unilateral sets need both sides at the threshold. Thresholds are keyed by normalised exercise name, stored on the User and synced (`progression`). Master toggle in Settings.
 
 **Equipment profiles:** Users configure available equipment. App remembers and uses it for substitution suggestions. Supports multiple profiles (e.g., "Home Gym" vs "Commercial Gym").
 
-**Deload marking (Pulse+ only):** Users manually mark a week as a deload week.
+**Deload marking (Supernova only):** Users manually mark a week as a deload week.
 
 ### Phase 11: Shareable Summary Cards
 
@@ -288,24 +288,24 @@ Build all settings inside the More tab:
 - Rest timer behavior (auto-start / manual / auto-start with dismiss)
 - Rest timer alert type (sound / vibration / both / silent)
 - Default rest times (compound vs isolation, per-exercise overrides)
-- Smart suggestions toggle (on/off) — Pulse+ only
+- Smart suggestions toggle (on/off) — Supernova only
 - Post-workout auto-share toggle (on/off)
 - Post-workout summary customization
 - Notification preferences (granular control over every notification type)
 - Equipment profiles management
 - Split configuration
-- Pulse+ subscription management
+- Supernova subscription management
 - Tutorial / Help (re-watch onboarding)
 
 ### Phase 13: Calorie Burn & Ecosystem Integration
 
 **Free tier:** Basic calorie burn estimate based on exercise type and volume only.
 
-**Pulse+ tier:** More personalized formula factoring in bodyweight, height, age, gender. Exact formula TBD — build the architecture so different formulas can be swapped in. Note: the difference between free and paid estimates may be marginal; this needs research.
+**Supernova tier:** More personalized formula factoring in bodyweight, height, age, gender. Exact formula TBD — build the architecture so different formulas can be swapped in. Note: the difference between free and paid estimates may be marginal; this needs research.
 
 Calorie burn is displayed live during workouts and on the post-workout summary. Data is sent to Pulse Fuel automatically (build the data export interface; Fuel integration will be connected later).
 
-### Phase 14: Pulse+ Subscription System
+### Phase 14: Supernova Subscription System
 
 Build the paywall and subscription management.
 
@@ -316,13 +316,13 @@ Build the paywall and subscription management.
 | Monthly | $5 | $8 | $9 |
 | Yearly | $45 | ~$76 | ~$86 |
 
-Pulse+ is a unified subscription across the Pulse ecosystem. Users choose how many apps to unlock.
+Supernova is a unified subscription across the Pulse ecosystem. Users choose how many apps to unlock.
 
-**Free trial:** 14 days of all Pulse+ features for new users.
+**Free trial:** 14 days of all Supernova features for new users.
 
-**Upselling:** Subtle inline banners (e.g., blurred analytics with "Unlock with Pulse+" overlay) AND a dedicated Pulse+ benefits page in the More tab.
+**Upselling:** Subtle inline banners (e.g., blurred analytics with "Unlock with Supernova" overlay) AND a dedicated Supernova benefits page in the More tab.
 
-**Pulse+ features in Pump (gate these behind the subscription):**
+**Supernova features in Ore (gate these behind the subscription):**
 1. Cloud sync across devices
 2. Smart weight suggestions (subtle, toggleable)
 3. Advanced exercise substitutions (smart alternatives based on muscle group + equipment profile)
@@ -339,13 +339,13 @@ Pulse+ is a unified subscription across the Pulse ecosystem. Users choose how ma
 
 ### Phase 15: iOS Platform Features
 
-**Widgets:** Free users get a basic set. Pulse+ users get additional options. Examples: next predicted workout, current streak, weekly volume.
+**Widgets:** Free users get a basic set. Supernova users get additional options. Examples: next predicted workout, current streak, weekly volume.
 
 **Live Activity & Dynamic Island:** Rest timer countdown on lock screen and Dynamic Island during active workouts.
 
 **Data import:** Build import functionality for workout history from Strong, Hevy, and other major competitors.
 
-**Offline support:** Workout logging works fully offline. Social features require internet. Data syncs when connection is restored (Pulse+ only).
+**Offline support:** Workout logging works fully offline. Social features require internet. Data syncs when connection is restored (Supernova only).
 
 ---
 
@@ -377,7 +377,7 @@ These were built after the initial 15-phase spec was complete.
 
 **Social Feed**
 - Caption field on the post-workout completion screen; caption shown in feed posts
-- `FeedBodyMapView` — compact front/back silhouette in feed posts and detail sheet, worked muscles highlighted with `pumpPrimary.opacity(0.55)`
+- `FeedBodyMapView` — compact front/back silhouette in feed posts and detail sheet, worked muscles highlighted with `orePrimary.opacity(0.55)`
 - Feed cached for 5 minutes; cached items shown immediately on revisit; pull-to-refresh forces a network fetch
 
 ### Visual Polish
@@ -421,7 +421,7 @@ These items have been audited against the codebase and are confirmed incomplete.
 
 **Social (Phase 9)**
 - Push notifications: remote social notifications (likes, comments, friend requests) require Firebase Cloud Functions + FCM — not yet set up. Local workout reminder notifications can be wired up independently. Mark as deferred until FCM is configured.
-- Challenges not gated behind Pulse+ — add subscription check to challenge creation.
+- Challenges not gated behind Supernova — add subscription check to challenge creation.
 - No friend profile tap destination — friend list items go nowhere. Profile should show: username, avatar, stats (total workouts, streak), latest body heatmap, current split, and past workouts. Users control visibility via a privacy toggle: private mode shows only username, avatar, and streak to others.
 
 **Share Cards (Phase 11)**
@@ -458,10 +458,10 @@ These items have been audited against the codebase and are confirmed incomplete.
 - Equipment profiles are stored but not used to filter exercise substitution suggestions during a workout.
 
 **iOS Platform (Phase 15)**
-- Widget extension only shows streak — missing "next predicted workout" and "weekly volume" widgets (free and Pulse+ tiers).
+- Widget extension only shows streak — missing "next predicted workout" and "weekly volume" widgets (free and Supernova tiers).
 - No network reachability handling — social writes (likes, comments, feed posts) fail silently when offline. Need an offline queue or reachability guard.
 
-**Pulse+ (Phase 14)**
+**Supernova (Phase 14)**
 - Free trial uses `UserDefaults` install date instead of StoreKit's native introductory offer — resets on reinstall and is not tied to the App Store account.
 - Multi-app pricing tiers (1 app / 2 apps / all 3 apps) are not represented in the StoreKit products or paywall UI.
 
@@ -492,7 +492,7 @@ When you encounter these during development, make your best judgment call, leave
 
 1. Exact body model customization options (free vs paid tiers)
 2. Color scheme presets for the body map heatmap
-3. Specific calorie burn formula details (free vs Pulse+)
+3. Specific calorie burn formula details (free vs Supernova)
 4. Body map tab sub-navigation pattern (swipe vs toggle vs segmented control — build one, note alternatives)
 5. Community exercise submission review tooling
 6. Exact share card visual designs per time period

@@ -1,7 +1,7 @@
 # 14 Notifications and reminders
 
 ## What it's for
-Pump can remind you to train on your split's training days, nudge you on rest days, and tell you when a rest timer ends while the phone is locked.
+Ore can remind you to train on your split's training days, nudge you on rest days, and tell you when a rest timer ends while the phone is locked.
 
 ## The flow
 1. Finish onboarding → iOS asks to allow notifications (straight away, before you've turned anything on) → Allow.
@@ -9,7 +9,7 @@ Pump can remind you to train on your split's training days, nudge you on rest da
 3. Turn on Rest Day Alerts → you'll get "Rest day" with a short recovery message at 10:00 on non-training days.
 4. Change your split (Settings › Training Split) → reminders move to the new days.
 5. In a workout, tick a set → lock the phone → when rest ends you get "Rest done · Log your next set".
-6. Tap any notification → Pump opens.
+6. Tap any notification → Ore opens.
 
 **Alternate paths**
 - **Turn off:** switch either toggle off → those notifications stop.

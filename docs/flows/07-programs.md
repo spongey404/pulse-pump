@@ -16,7 +16,7 @@ Programs are your saved workout plans (for example Push, Pull and Legs days). Yo
 - **Quick start:** under QUICK START, tap START next to one of your last 3 workouts to repeat it.
 - **Delete:** swipe a program left → tap the trash → DELETE. Past workouts stay in History.
 - **Training split:** More › Settings › Training Split → pick one → Save Split. This sets your weekly schedule for predictions and reminders; it doesn't change your programs.
-- **Open a shared program link:** tapping a Pump template link while the app is open adds the program and says "Added".
+- **Open a shared program link:** tapping a Ore template link while the app is open adds the program and says "Added".
 
 ## Not working / not built yet
 - There's no Share button, so programs can't be shared from the app. (not built)
@@ -34,7 +34,7 @@ Programs are your saved workout plans (for example Push, Pull and Legs days). Yo
 - Adding a preset you already have creates a duplicate with no warning.
 
 ## Decide
-- **Template sharing:** add a Share button that sends a web link which opens the program in Pump, or the App Store if Pump isn't installed. *Recommended: yes.*
+- **Template sharing:** add a Share button that sends a web link which opens the program in Ore, or the App Store if Ore isn't installed. *Recommended: yes.*
 - **Program editing:** add rename, remove and reorder exercises, and change days; show program notes during the workout; drop the per-set type chips. *Recommended: yes.*
 
 ## Rules I'll apply

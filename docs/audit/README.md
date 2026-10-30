@@ -1,6 +1,6 @@
-# Pump — full codebase logic audit (2026-10-08)
+# Ore — full codebase logic audit (2026-10-08)
 
-Nine parallel read-only audits covered every Swift file (~33k lines: models, services, view models, every view, PumpShared, widget extension, tests). Each finding below was verified by reading the code or running a standalone script; the detailed per-area reports (file:line, failing scenario, evidence, suggested fix, and a "Verified OK" list of what was actually traced and confirmed) sit next to this file.
+Nine parallel read-only audits covered every Swift file (~33k lines: models, services, view models, every view, OreShared, widget extension, tests). Each finding below was verified by reading the code or running a standalone script; the detailed per-area reports (file:line, failing scenario, evidence, suggested fix, and a "Verified OK" list of what was actually traced and confirmed) sit next to this file.
 
 | Area | CRIT | HIGH | MED | LOW | Report |
 |---|---|---|---|---|---|
@@ -12,7 +12,7 @@ Nine parallel read-only audits covered every Swift file (~33k lines: models, ser
 | Body map, Home, ContentView | 1 | 7 | 17 | 9 | views-body-home.md |
 | More, Settings, Onboarding, widget builder | 3 | 8 | 16 | 7 | views-more-settings-onboarding.md |
 | Exercise library, programs, shared, tutorial | 2 | 10 | 12 | 6 | views-library-programs.md |
-| PumpShared widgets, extension, tests | 2 | 8 | 13 | – | widgets-tests.md |
+| OreShared widgets, extension, tests | 2 | 8 | 13 | – | widgets-tests.md |
 
 (Totals count repeats: the same root cause is reported by several agents. Unique CRITICAL issues: 6.)
 
@@ -51,8 +51,8 @@ Nine parallel read-only audits covered every Swift file (~33k lines: models, ser
 - **Import**: Strong/Hevy CSV importer duplicates on re-import, ignores units/warm-ups, mostly fails to link exercises, turns unparseable dates into "now".
 - **Share-via-link** import is never handled (`.importTemplate` has no listener); template sharing payload is lossy.
 - **Live Activity**: updated every second (dedupe defeated), not restarted on draft resume, lingering end state.
-- **Pulse+ gating** is inconsistent (challenges ungated per the known gap; others gated only in UI).
-- **Tests**: PulsePumpUITests is entirely stale; no tests for streak, prediction, PR detection, calories (one failing), plate/warm-up maths, import/export, snapshot builder (the new `WidgetFixedDataTests` cover widget maths but encode the PR-watch bug).
+- **Supernova gating** is inconsistent (challenges ungated per the known gap; others gated only in UI).
+- **Tests**: OreUITests is entirely stale; no tests for streak, prediction, PR detection, calories (one failing), plate/warm-up maths, import/export, snapshot builder (the new `WidgetFixedDataTests` cover widget maths but encode the PR-watch bug).
 
 ## Suggested fix order
 1. Gate/delete `injectTestData` and `WorkoutDemoDataService` (`#if DEBUG` or remove) — one change removes the biggest source of wrong numbers; then re-verify Home/Body/widgets on a clean store.
