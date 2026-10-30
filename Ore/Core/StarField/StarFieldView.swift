@@ -46,6 +46,9 @@ struct StarFieldView: View {
 
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// While the paywall closes into the More banner: the banner's own background, drawn over the paywall's inside the
+    /// shrinking rect (under the particles), so the last frame is the banner and the glitter never freezes.
+    @Environment(\.starFieldMorph) private var morph
     @State private var runner: StarFieldRunner
     @State private var start = Date()
     @State private var visible = false
@@ -112,6 +115,30 @@ struct StarFieldView: View {
 
     private static let levels = 12
 
+    /// The banner's compact background inside `rect`: the same gradient (from the rect's top left toward 40 % of its height),
+    /// the two drifting glows positioned inside the rect, and the veil, at `alpha`.
+    private func drawBannerMorph(ctx: inout GraphicsContext, rect: CGRect, alpha: Double, t: Double, palette pal: StarPalette) {
+        func color(_ c: StarRGBA, _ a: Double? = nil) -> Color {
+            Color(.sRGB, red: c.r / 255, green: c.g / 255, blue: c.b / 255, opacity: a ?? c.a)
+        }
+        var layer = ctx
+        layer.opacity = alpha
+        let path = Path(rect)
+        let stops: [Gradient.Stop] = [.init(color: color(pal.deep, 1), location: 0), .init(color: color(pal.accent, 1), location: 0.75),
+                                      .init(color: color(pal.accent, 1), location: 1)]
+        layer.fill(path, with: .linearGradient(Gradient(stops: stops), startPoint: CGPoint(x: rect.minX, y: rect.minY),
+                                               endPoint: CGPoint(x: rect.maxX, y: rect.minY + rect.height * 0.4)))
+        let r = max(rect.width, rect.height) * 0.55
+        let glows: [(CGPoint, StarRGBA)] = [
+            (CGPoint(x: rect.minX + rect.width * (0.3 + 0.1 * sin(t * 0.0003)), y: rect.minY + rect.height * 0.35), pal.blob),
+            (CGPoint(x: rect.minX + rect.width * 0.75, y: rect.minY + rect.height * (0.65 + 0.06 * cos(t * 0.00025))), StarRGBA(r: 190, g: 215, b: 240, a: 0.2)),
+        ]
+        for (centre, c) in glows {
+            layer.fill(path, with: .radialGradient(Gradient(colors: [color(c), color(c, 0)]), center: centre, startRadius: 0, endRadius: r))
+        }
+        layer.fill(path, with: .color(color(pal.veil)))
+    }
+
     private func draw(ctx: inout GraphicsContext, size: CGSize, t: Double) {
         let p = runner.params
         let W = size.width, H = size.height
@@ -146,6 +173,10 @@ struct StarFieldView: View {
             for (centre, c) in glows {
                 ctx.fill(full, with: .radialGradient(Gradient(colors: [color(c), color(c, 0)]), center: centre, startRadius: 0, endRadius: r))
             }
+        }
+
+        if let m = morph, !p.mini, m.alpha > 0.001 {
+            drawBannerMorph(ctx: &ctx, rect: m.rect.offsetBy(dx: -runner.origin.x, dy: -runner.origin.y), alpha: m.alpha, t: t, palette: pal)
         }
 
         let (dots, flares) = runner.frame(size: size, t: t)

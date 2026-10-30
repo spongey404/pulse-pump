@@ -1,0 +1,68 @@
+{
+  "close" : {
+    "contentFadeMs" : 180,
+    "curve" : [
+      0.45,
+      0,
+      0.15,
+      1
+    ],
+    "handoffMs" : 590,
+    "morphAlphaExponent" : 2.2,
+    "ms" : 560
+  },
+  "content" : {
+    "bannerItems" : 4,
+    "bannerOffsetPt" : 10,
+    "fadeMs" : 520,
+    "groups" : 6,
+    "moveCurve" : [
+      0.2,
+      0.8,
+      0.2,
+      1
+    ],
+    "moveMs" : 720,
+    "offsetPt" : 14,
+    "staggerMs" : 90,
+    "startMs" : 380
+  },
+  "flyer" : {
+    "colorHex" : "#FFC83D",
+    "glowAlpha" : 0.85,
+    "glowRadius" : 14,
+    "glyphSize" : 44,
+    "startScale" : 0.4090909090909091
+  },
+  "hubCornerRadius" : 44,
+  "hubOpacity" : 0.35,
+  "hubScale" : 0.94,
+  "maskRadiusEnd" : 44,
+  "maskRadiusStart" : 12,
+  "open" : {
+    "bannerTextFadeMs" : 120,
+    "flyerCurve" : [
+      0.45,
+      0,
+      0.15,
+      1
+    ],
+    "flyerMs" : 760,
+    "handoffMs" : 800,
+    "hubCurve" : [
+      0.32,
+      0.72,
+      0,
+      1
+    ],
+    "hubMs" : 600,
+    "maskCurve" : [
+      0.32,
+      0.72,
+      0,
+      1
+    ],
+    "maskMs" : 560
+  },
+  "reduceMotionFadeMs" : 200
+}

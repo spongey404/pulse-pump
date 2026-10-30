@@ -36,6 +36,12 @@ struct SupernovaWordmark: View {
     var uppercase = true
     /// Gap before the asterisk in em.
     var gapEm: CGFloat = SupernovaAsterisk.gapEm
+    /// The name's opacity and downward offset, for the banner's staggered entrance. The asterisk is excluded: it is never
+    /// faded or moved by them.
+    var nameOpacity: Double = 1
+    var nameOffsetY: CGFloat = 0
+    /// The asterisk is swapped for the transition's flyer (hidden in one frame, never faded).
+    var asteriskHidden = false
 
     private var fontName: String {
         switch face {
@@ -60,11 +66,15 @@ struct SupernovaWordmark: View {
                 .foregroundStyle(color)
                 .lineLimit(1)
                 .fixedSize()
+                .opacity(nameOpacity)
+                .offset(y: nameOffsetY)
             if SupernovaAsterisk.isShown {
                 Text(SupernovaAsterisk.glyph)
                     .font(font)
                     .foregroundStyle(SupernovaAsterisk.color)
                     .fixedSize()
+                    .opacity(asteriskHidden ? 0 : 1)
+                    .transaction { $0.animation = nil }
                     .background(GeometryReader { proxy in
                         Color.clear.preference(key: SupernovaAsteriskFrameKey.self, value: proxy.frame(in: .global))
                     })

@@ -21,9 +21,13 @@ struct EasedEdgeFade: View {
 }
 
 /// The free plan's banner. The glitter is the compact StarField, pulled toward the asterisk after "GO SUPERNOVA".
+/// Tapping it opens the paywall with the shared-element transition (`SupernovaTransition`): this view reports its frame
+/// and its asterisk's centre while the screen is at rest, hides the asterisk while the flyer stands in for it, and brings
+/// its text back after the close.
 struct SupernovaBanner: View {
-    var action: () -> Void
     @State private var anchor: CGRect?
+    @State private var frame: CGRect = .zero
+    @State private var transition = SupernovaTransition.shared
 
     /// The banner's own colour (the palette's accent stop), shown until the first frame.
     private var base: Color {
@@ -33,23 +37,30 @@ struct SupernovaBanner: View {
     }
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(.white.opacity(0.18))
-                    .frame(width: 36, height: 36)
-                    .overlay { Image(systemName: "bolt").font(.system(size: 18, weight: .regular)).foregroundStyle(.white) }
-                VStack(alignment: .leading, spacing: 2) {
-                    SupernovaWordmark(size: 18, tracking: 0.6, prefix: "GO ")
-                    Text("SMART SUGGESTIONS · CLOUD SYNC · ANALYTICS")
-                        .font(.spaceMono(9))
-                        .tracking(0.5)
-                        .foregroundStyle(.white.opacity(0.9))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+        Button { transition.open(fromBanner: true) } label: {
+            TimelineView(.animation(minimumInterval: nil, paused: !transition.isAnimating)) { tl in
+                let text = transition.frame(at: tl.date).bannerText
+                HStack(spacing: 12) {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(.white.opacity(0.18))
+                        .frame(width: 36, height: 36)
+                        .overlay { Image(systemName: "bolt").font(.system(size: 18, weight: .regular)).foregroundStyle(.white) }
+                        .opacity(text[0].opacity).offset(y: text[0].offset)
+                    VStack(alignment: .leading, spacing: 2) {
+                        SupernovaWordmark(size: 18, tracking: 0.6, prefix: "GO ", nameOpacity: text[1].opacity,
+                                          nameOffsetY: text[1].offset, asteriskHidden: transition.bannerAsteriskHidden)
+                        Text("SMART SUGGESTIONS · CLOUD SYNC · ANALYTICS")
+                            .font(.spaceMono(9))
+                            .tracking(0.5)
+                            .foregroundStyle(.white.opacity(0.9))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .opacity(text[2].opacity).offset(y: text[2].offset)
+                    }
+                    Spacer(minLength: 0)
+                    Text("›").font(.spaceMono(16, weight: .bold)).foregroundStyle(.white)
+                        .opacity(text[3].opacity).offset(y: text[3].offset)
                 }
-                Spacer(minLength: 0)
-                Text("›").font(.spaceMono(16, weight: .bold)).foregroundStyle(.white)
             }
             .padding(.horizontal, 16).padding(.vertical, 14)
             .background {
@@ -59,7 +70,10 @@ struct SupernovaBanner: View {
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 12))
-            .onPreferenceChange(SupernovaAsteriskFrameKey.self) { anchor = $0 }
+            .background(GeometryReader { p in
+                Color.clear.onChange(of: p.frame(in: .global), initial: true) { _, f in frame = f; report() }
+            })
+            .onPreferenceChange(SupernovaAsteriskFrameKey.self) { anchor = $0; report() }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -67,6 +81,11 @@ struct SupernovaBanner: View {
         .padding(.horizontal, 16)
         .padding(.top, 14)
         .padding(.bottom, 4)
+    }
+
+    private func report() {
+        guard frame != .zero else { return }
+        transition.reportBanner(rect: frame, asterisk: anchor.map { CGPoint(x: $0.midX, y: $0.midY) })
     }
 }
 

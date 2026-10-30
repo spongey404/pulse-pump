@@ -47,18 +47,25 @@ struct MoreTabView: View {
             }
         }
         .animation(.easeInOut(duration: 0.22), value: screen)
-        .onAppear { consumeRouter() }
+        .onAppear {
+            consumeRouter()
+            #if DEBUG
+            SupernovaTransition.shared.runDebugRequest()
+            #endif
+        }
         .onChange(of: MoreRouter.shared.pendingSupernova) { _, _ in consumeRouter() }
-        // Supernova is presented full-screen over the tab bar and closed with its ✕.
+        // Members' Supernova screen is presented full-screen over the tab bar and closed with its ✕. A free user's paywall is
+        // `SupernovaTransitionHost`'s (it grows out of the banner); any other way in (a row, a locked widget's link) lands on it too.
         .fullScreenCover(isPresented: Binding(
-            get: { screen == .supernova },
+            get: { screen == .supernova && !isFree },
             set: { if !$0 { screen = .hub } }
         )) {
-            if isFree {
-                SupernovaPaywallView(context: .more, onSubscribed: { screen = .hub }, onTrainFree: { screen = .hub })
-            } else {
-                SupernovaView(onBack: { screen = .hub })
-            }
+            SupernovaView(onBack: { screen = .hub })
+        }
+        .onChange(of: screen) { _, new in
+            guard new == .supernova, isFree else { return }
+            screen = .hub
+            SupernovaTransition.shared.open(fromBanner: false)
         }
         .sheet(isPresented: $showAccentPicker) { AccentPickerView() }
         #if DEBUG
@@ -99,7 +106,7 @@ struct MoreTabView: View {
                     userHeader
                     statsRow
                     if isFree {
-                        SupernovaBanner { screen = .supernova }
+                        SupernovaBanner()
                     } else {
                         MemberRecapCard(stats: recapStats) { screen = .weeklyRecap }
                     }

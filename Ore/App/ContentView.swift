@@ -20,6 +20,11 @@ struct ContentView: View {
     private var user: User? { users.first }
 
     var body: some View {
+        // The More tab's Supernova paywall grows out of the banner above the whole shell (tab bar included).
+        SupernovaTransitionHost(onSubscribed: { selectedTab = 2 }) { shell }
+    }
+
+    private var shell: some View {
         ZStack {
             TabView(selection: $selectedTab) {
                 NavigationStack {

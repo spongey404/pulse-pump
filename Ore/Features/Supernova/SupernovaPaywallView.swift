@@ -17,6 +17,10 @@ struct SupernovaPaywallView: View {
 
     @State private var service = SupernovaService()
     @State private var anchor: CGRect?
+    /// The transition's clock: what each of the six content groups shows (empty = all shown) and whether the real asterisk
+    /// is swapped for the flyer.
+    @Environment(\.paywallReveal) private var reveal
+    @State private var transition = SupernovaTransition.shared
     @State private var isPurchasing = false
     @State private var errorMessage: String?
 
@@ -53,10 +57,13 @@ struct SupernovaPaywallView: View {
 
             VStack(spacing: 0) {
                 pitch
-                freeStrip
+                freeStrip.paywallGroup(5, reveal)
             }
         }
-        .onPreferenceChange(SupernovaAsteriskFrameKey.self) { anchor = $0 }
+        .onPreferenceChange(SupernovaAsteriskFrameKey.self) {
+            anchor = $0
+            if context == .more, let f = $0 { transition.wordmarkMeasured(f) }
+        }
         .environment(\.colorScheme, .dark)
         .preferredColorScheme(.dark)
         .task {
@@ -81,10 +88,13 @@ struct SupernovaPaywallView: View {
                     .foregroundStyle(.white)
             }
             .padding(.top, 18)
+            .paywallGroup(0, reveal)
 
-            SupernovaWordmark(size: 44, tracking: -0.5, gapEm: SupernovaAsterisk.paywallGapEm)
+            SupernovaWordmark(size: 44, tracking: -0.5, gapEm: SupernovaAsterisk.paywallGapEm,
+                              asteriskHidden: context == .more && transition.wordmarkAsteriskHidden)
                 .frame(height: 44 * 0.95, alignment: .bottom)
                 .padding(.top, 18)
+                .paywallGroup(1, reveal)
 
             Text(SupernovaTrial.headline(months: SupernovaTrial.months, apps: "\(Brand.appName), \(Brand.tareName) and \(Brand.driftName)"))
                 .font(.archivoMedium(17))
@@ -92,6 +102,7 @@ struct SupernovaPaywallView: View {
                 .foregroundStyle(.white)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 10)
+                .paywallGroup(2, reveal)
 
             VStack(spacing: 0) {
                 ForEach(features, id: \.name) { f in
@@ -119,9 +130,21 @@ struct SupernovaPaywallView: View {
             }
             .overlay(alignment: .top) { Rectangle().fill(.white.opacity(0.3)).frame(height: 1) }
             .padding(.top, 18)
+            .paywallGroup(3, reveal)
 
             Spacer(minLength: 12)
 
+            ctaBlock
+                .paywallGroup(4, reveal)
+        }
+        .padding(.horizontal, 24)
+        .padding(.bottom, 22)
+        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    /// Group 4: the CTA, the small print and Restore.
+    private var ctaBlock: some View {
+        VStack(spacing: 0) {
             Button(action: start) {
                 Text(isPurchasing ? "…" : SupernovaTrial.ctaTitle(months: SupernovaTrial.months))
                     .font(.archivo(15, weight: .black))
@@ -155,9 +178,6 @@ struct SupernovaPaywallView: View {
             .buttonStyle(.plain)
             .accessibilityIdentifier(AX.supernova.restore)
         }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 22)
-        .frame(maxHeight: .infinity, alignment: .top)
     }
 
     // MARK: Free strip
@@ -165,7 +185,7 @@ struct SupernovaPaywallView: View {
     private var freeStrip: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(context == .firstRun ? "FREE · TUTORIAL DONE ✓" : "FREE · YOUR PLAN")
+                Text(context == .firstRun ? "FREE · TUTORIAL DONE ✓" : "FREE · LOGGING STAYS FREE")
                     .font(.spaceMono(9))
                     .tracking(1.5)
                     .foregroundStyle(.white.opacity(0.75))
@@ -177,7 +197,7 @@ struct SupernovaPaywallView: View {
             .layoutPriority(1)
             Spacer(minLength: 0)
             Button(action: onTrainFree) {
-                Text(context == .firstRun ? "TRAIN FREE →" : "NOT NOW →")
+                Text("TRAIN FREE →")
                     .font(.spaceMono(10, weight: .bold))
                     .tracking(1.5)
                     .foregroundStyle(.white)
