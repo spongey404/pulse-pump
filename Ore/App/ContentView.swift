@@ -5,6 +5,7 @@ import FirebaseAuth
 struct ContentView: View {
     @State private var workoutViewModel = WorkoutViewModel()
     @State private var tutorialViewModel = TutorialViewModel()
+    @State private var showSupernovaPaywall = false
     #if DEBUG
     // `-debugStartTab <n>` launch argument jumps straight to a tab for visual checks.
     @State private var selectedTab = Int(UserDefaults.standard.string(forKey: "debugStartTab") ?? "") ?? 2
@@ -46,6 +47,14 @@ struct ContentView: View {
             }
             .fullScreenCover(isPresented: $workoutViewModel.isActive) {
                 ActiveWorkoutView(viewModel: workoutViewModel)
+            }
+            .fullScreenCover(isPresented: $showSupernovaPaywall) {
+                SupernovaPaywallView(
+                    onSubscribed: { showSupernovaPaywall = false; selectedTab = 2 },
+                    onTrainFree: { showSupernovaPaywall = false; selectedTab = 2 })
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .showSupernovaPaywall)) { _ in
+                presentSupernovaPaywall(after: .milliseconds(600))   // after the tutorial's overlay and practice workout are gone
             }
             .fullScreenCover(isPresented: $workoutViewModel.showCompletionSummary) {
                 if let data = workoutViewModel.completionData {
@@ -112,14 +121,30 @@ struct ContentView: View {
             }
             ExerciseSeedService.seedIfNeeded(modelContext: modelContext)
             TemplateSeedService.seedIfNeeded(modelContext: modelContext)   // links presets to the catalogue by name
+            // Onboarding without the tutorial: the paywall comes straight after onboarding.
+            if !UserDefaults.standard.bool(forKey: "wantsTutorial") { presentSupernovaPaywall(after: .milliseconds(900)) }
             if UserDefaults.standard.bool(forKey: "wantsTutorial") {
-                tutorialViewModel.start()
+                tutorialViewModel.start(firstRun: true)
                 #if DEBUG
                 // `-debugTutorialStep <n>` starts the walkthrough on step n (0-based).
                 if let n = Int(UserDefaults.standard.string(forKey: "debugTutorialStep") ?? ""),
                    let step = TutorialStep(rawValue: n) { tutorialViewModel.currentStep = step }
                 #endif
             }
+        }
+    }
+
+    /// Shows the Supernova paywall if it is due (once, never for a member). A subscription bought on another device is
+    /// picked up first, so a returning member isn't shown it.
+    private func presentSupernovaPaywall(after delay: Duration) {
+        Task {
+            try? await Task.sleep(for: delay)
+            guard SupernovaPaywallGate.shouldShowNow() else { return }
+            await SupernovaService().refreshSubscriptionStatus()
+            guard SupernovaPaywallGate.shouldShowNow(), !showSupernovaPaywall,
+                  !workoutViewModel.isActive, !workoutViewModel.showCompletionSummary else { return }
+            SupernovaPaywallGate.markShown()
+            showSupernovaPaywall = true
         }
     }
 

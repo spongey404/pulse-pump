@@ -206,6 +206,7 @@ class OnboardingViewModel {
         modelContext.insert(user)
         BodyweightLog.record(kg: user.weight)
         UserDefaults.standard.set(wantsTutorial, forKey: "wantsTutorial")
+        SupernovaPaywallGate.markPending()   // the paywall follows the tutorial, or onboarding if it was declined
         return user
     }
 }

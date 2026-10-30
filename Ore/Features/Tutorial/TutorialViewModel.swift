@@ -323,7 +323,12 @@ class TutorialViewModel {
         Double(currentStep.rawValue) / Double(TutorialStep.allCases.count - 1)
     }
 
-    func start() {
+    /// This run is the first-run tutorial (started by onboarding), whose end leads to the Supernova paywall. A
+    /// replay from More › Tutorial ends on the normal done screen instead.
+    private(set) var isFirstRun = false
+
+    func start(firstRun: Bool = false) {
+        isFirstRun = firstRun
         typingTask?.cancel()
         isTransitioning = false
         currentStep = .startWorkout
@@ -339,7 +344,12 @@ class TutorialViewModel {
         let all = TutorialStep.allCases
         if currentStep == .startWorkout { startedPracticeWorkout = true }
         guard let i = all.firstIndex(of: currentStep), i + 1 < all.count else {
-            withAnimation(.easeInOut(duration: 0.2)) { isFinished = true }
+            if isFirstRun, SupernovaPaywallGate.shouldShowNow() {
+                // The old "You're all set" screen is replaced by the paywall, presented by ContentView.
+                complete()
+            } else {
+                withAnimation(.easeInOut(duration: 0.2)) { isFinished = true }
+            }
             return
         }
         go(to: all[i + 1])
@@ -358,6 +368,13 @@ class TutorialViewModel {
         }
         UserDefaults.standard.set(false, forKey: "wantsTutorial")
         UserDefaults.standard.set(true, forKey: "tutorialCompleted")
+        // The end of the first-run tutorial (finished or skipped) leads to the Supernova paywall, once.
+        if isFirstRun {
+            isFirstRun = false
+            if SupernovaPaywallGate.shouldShowNow() {
+                NotificationCenter.default.post(name: .showSupernovaPaywall, object: nil)
+            }
+        }
     }
 
     // MARK: Input from the overlay window

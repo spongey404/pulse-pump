@@ -47,6 +47,8 @@ enum DevDataService {
         d.set(config.socialFixtures, forKey: "devDataSocialFixtures")
         d.set(true, forKey: "tutorialCompleted")
         d.set(false, forKey: "wantsTutorial")
+        d.set(true, forKey: SupernovaPaywallGate.shownKey)   // seeded accounts have long since been through first-run
+        d.set(false, forKey: SupernovaPaywallGate.pendingKey)
         // Home search shows RECENT terms when opened: a lived-in history has some, a new user has none.
         if config.scenario == .newUser {
             d.removeObject(forKey: SearchRecents.defaultsKey)
