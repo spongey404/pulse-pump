@@ -79,6 +79,15 @@ final class SignupFlowModel {
         if let user = session.user { resume(with: user) }
         #if DEBUG
         // `-debugSignupStep password` opens the email path at the password question with a typed password (screenshots).
+        if session.user == nil, UserDefaults.standard.string(forKey: "debugSignupStep") == "setup" {
+            // The setup lines, as they look when all four are in.
+            beginEmail()
+            answers = ["email": "casey@ore.app", "password": "••••••••••••", "name": "Casey", "username": "casey.lifts", "weight": "82",
+                       "height": "180", "age": "31", "gender": "preferNotToSay", "exp": "intermediate", "split": "ppl"]
+            stepIndex = steps.count
+            stage = .setup
+            setupLines = 4
+        }
         if session.user == nil, UserDefaults.standard.string(forKey: "debugSignupStep") == "password" {
             beginEmail()
             answers["email"] = "casey@ore.app"
