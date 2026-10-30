@@ -92,11 +92,14 @@ struct SetTypeSheetView: View {
                         }
                         .padding(.vertical, 10)
                         .padding(.horizontal, 14)
+                        .contentShape(Rectangle())   // the whole row takes the tap, not just its text
                         .overlay(alignment: .bottom) {
                             Rectangle().fill(Color.dsHairLine).frame(height: 1)
                         }
                     }
                     .buttonStyle(PressScaleButtonStyle())
+                    .accessibilityIdentifier(AX.workout.setTypeRow(row.name))
+                    .tutorialTarget("tutorial.set-type-warmup", enabled: row.type == .warmup)
                 }
 
                 Color.clear.frame(height: 28)

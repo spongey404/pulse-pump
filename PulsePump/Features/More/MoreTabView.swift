@@ -18,6 +18,8 @@ struct MoreTabView: View {
     @State private var screen: MoreScreen = .hub
     #endif
     @State private var showSignOutAlert = false
+    @State private var showTutorialDraftAlert = false
+    @Query(filter: #Predicate<Workout> { $0.isDraft && $0.deletedAt == nil }) private var drafts: [Workout]
     @State private var pulsePlusService = PulsePlusService()
     @State private var social = SocialViewModel.shared
 
@@ -40,10 +42,8 @@ struct MoreTabView: View {
             }
         }
         .animation(.easeInOut(duration: 0.22), value: screen)
-        .onAppear { syncTutorialScreen(); consumeRouter() }
+        .onAppear { consumeRouter() }
         .onChange(of: MoreRouter.shared.pendingPulsePlus) { _, _ in consumeRouter() }
-        .onChange(of: tutorialViewModel.currentStep) { _, _ in syncTutorialScreen() }
-        .onChange(of: tutorialViewModel.isActive) { _, _ in syncTutorialScreen() }
         // Pulse+ is presented full-screen over the tab bar and closed with its ✕.
         .fullScreenCover(isPresented: Binding(
             get: { screen == .pulsePlus },
@@ -57,16 +57,6 @@ struct MoreTabView: View {
         if MoreRouter.shared.pendingPulsePlus {
             MoreRouter.shared.pendingPulsePlus = false
             screen = .pulsePlus
-        }
-    }
-
-    /// While the tutorial runs, the More tab shows the screen the current step points at.
-    private func syncTutorialScreen() {
-        guard tutorialViewModel.isActive, tutorialViewModel.currentStep.requiredTab == 4 else { return }
-        switch tutorialViewModel.currentStep.moreScreen {
-        case "equipment": screen = .equipment
-        case "settings": screen = .settings
-        default: screen = .hub
         }
     }
 
@@ -112,7 +102,8 @@ struct MoreTabView: View {
 
                     MoreSectionLabel(title: "HELP", top: 16, bottom: 6)
                     MoreRow(icon: "questionmark.circle", label: "Tutorial", minHeight: 48) {
-                        tutorialViewModel.start()
+                        // The tutorial runs a practice workout, so it can't start over a real one.
+                        if drafts.isEmpty { tutorialViewModel.start() } else { showTutorialDraftAlert = true }
                     }
                     MoreRow(icon: "square.and.arrow.down", label: "Data Import",
                             value: "STRONG · HEVY", minHeight: 48) { screen = .dataImport }
@@ -125,6 +116,11 @@ struct MoreTabView: View {
             }
         }
         .background(Color.canvasBg.ignoresSafeArea())
+        .alert("Finish your workout first", isPresented: $showTutorialDraftAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("The tutorial uses a practice workout. Finish or discard your current one, then replay it.")
+        }
         .alert("Sign Out", isPresented: $showSignOutAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Sign Out", role: .destructive) {

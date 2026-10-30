@@ -135,7 +135,6 @@ struct SettingsView: View {
                     title: { $0.displayName })
         MoreMenuRow(icon: "timer", label: "Rest Timer Mode", selection: restTimerModeBinding,
                     options: Array(RestTimerMode.allCases), title: { $0.displayName })
-            .tutorialTarget("rest-movement-defaults")
         MoreMenuRow(icon: "bell", label: "Timer Alert", selection: alertTypeBinding,
                     options: Array(AlertType.allCases), title: { $0.displayName })
         smartSuggestionRows(user: user)

@@ -18,12 +18,6 @@ struct ContentView: View {
 
     private var user: User? { users.first }
 
-    private static var windowSafeTop: CGFloat {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }.flatMap(\.windows)
-            .first(where: \.isKeyWindow)?.safeAreaInsets.top ?? 47
-    }
-
     var body: some View {
         ZStack {
             TabView(selection: $selectedTab) {
@@ -87,23 +81,35 @@ struct ContentView: View {
                 MoreRouter.shared.pendingPulsePlus = true
                 selectedTab = 4
             }
-            .overlayPreferenceValue(TutorialTargetKey.self) { anchors in
-                GeometryReader { proxy in
-                    if tutorialViewModel.isActive {
-                        CoachMarkOverlay(
-                            viewModel: tutorialViewModel,
-                            selectedTab: $selectedTab,
-                            targetRect: tutorialViewModel.currentStep.target
-                                .flatMap { anchors[$0] }.map { proxy[$0] },
-                            size: proxy.size,
-                            safeTop: Self.windowSafeTop
-                        )
-                    }
+            .onReceive(NotificationCenter.default.publisher(for: .tutorialExerciseAdded)) { _ in
+                tutorialViewModel.handle(.exerciseAdded)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .loggerScrolledToTop)) { _ in
+                tutorialViewModel.handle(.scrolledToTop)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .tutorialSetCompleted)) { _ in
+                tutorialViewModel.handle(.setCompleted)
+            }
+            .onChange(of: tutorialViewModel.isActive) { _, active in
+                if active {
+                    selectedTab = 2   // the walkthrough starts on Home
+                } else if tutorialViewModel.startedPracticeWorkout, workoutViewModel.isActive {
+                    // Skipped mid-way: the practice workout must not linger as a draft.
+                    workoutViewModel.cancelWorkout(modelContext: modelContext)
                 }
-                .ignoresSafeArea()
+                tutorialViewModel.presenter.sync()
             }
         }
         .onAppear {
+            // The tutorial types into the practice set so the user only has to tap log.
+            tutorialViewModel.fillSet = { exercise, weight, reps, rir in
+                guard let i = workoutViewModel.exerciseEntries.firstIndex(where: { $0.exerciseName == exercise })
+                        ?? workoutViewModel.exerciseEntries.indices.last,
+                      !workoutViewModel.exerciseEntries[i].sets.isEmpty else { return }
+                if let weight { workoutViewModel.exerciseEntries[i].sets[0].weight = weight }
+                if let reps { workoutViewModel.exerciseEntries[i].sets[0].reps = reps }
+                if let rir { workoutViewModel.exerciseEntries[i].sets[0].rir = rir }
+            }
             ExerciseSeedService.seedIfNeeded(modelContext: modelContext)
             TemplateSeedService.seedIfNeeded(modelContext: modelContext)   // links presets to the catalogue by name
             if UserDefaults.standard.bool(forKey: "wantsTutorial") {

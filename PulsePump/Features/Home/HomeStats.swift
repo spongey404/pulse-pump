@@ -55,6 +55,8 @@ struct HomeStats {
         var thisWeekBest: [UUID: Double] = [:]
         var prevWeekBest: [UUID: Double] = [:]
         for workout in workouts {
+            // Only this week and last week matter: don't open the logs of older workouts at all.
+            guard workout.date >= prevWeekStart else { continue }
             let isThisWeek = workout.date >= weekStart
             let isPrevWeek = workout.date >= prevWeekStart && workout.date < weekStart
             for log in workout.exerciseLogs {
@@ -127,18 +129,21 @@ struct HomeStats {
         return "▲ 0%"
     }
 
+    /// How many of the workout's exercises beat their best set volume from every earlier session. One pass over
+    /// the earlier history, not one pass per exercise.
     func improvedExercises(in workout: Workout) -> Int {
-        workout.exerciseLogs.filter { log in
+        var prevBest: [UUID: Double] = [:]
+        for earlier in workouts where earlier.date < workout.date {
+            for log in earlier.exerciseLogs {
+                guard let id = log.exercise?.id else { continue }
+                let best = log.workingSets.map { $0.weight * Double($0.reps) }.max() ?? 0
+                if best > (prevBest[id] ?? 0) { prevBest[id] = best }
+            }
+        }
+        return workout.exerciseLogs.filter { log in
             guard let exercise = log.exercise else { return false }
             let thisVol = log.workingSets.map { $0.weight * Double($0.reps) }.max() ?? 0
-            let prevBest = workouts
-                .filter { $0.date < workout.date }
-                .flatMap(\.exerciseLogs)
-                .filter { $0.exercise?.id == exercise.id }
-                .flatMap(\.workingSets)
-                .map { $0.weight * Double($0.reps) }
-                .max() ?? 0
-            return thisVol > prevBest && thisVol > 0
+            return thisVol > (prevBest[exercise.id] ?? 0) && thisVol > 0
         }.count
     }
 
@@ -158,6 +163,7 @@ struct HomeStats {
 
         var prevVolume: [MuscleGroup: Int] = [:]
         for workout in workouts {
+            guard workout.date >= prevWeekStart else { continue }   // older workouts don't count: skip their logs
             let isThisWeek = workout.date >= weekAgo
             let isPrevWeek = workout.date >= prevWeekStart && workout.date < weekAgo
             for log in workout.exerciseLogs {
@@ -180,6 +186,147 @@ struct HomeStats {
                 let pct = Int(((Double(cur) - Double(prev)) / Double(prev)) * 100)
                 return TickerRow(label: label, value: "\(abs(pct))%", up: pct >= 0)
             }
+        }
+    }
+}
+
+/// The Home tab's numbers worked out once, not on every redraw.
+///
+/// They read the whole history (the PR count compares this week with everything before it), and SwiftData
+/// loads each record as it is touched, so recomputing them inside the view body kept Home busy and made
+/// everything drawn on top of it slow. Two parts to the fix:
+/// - `HomeTabView` keeps one of these in state and rebuilds it only when the workouts change;
+/// - `init(onePassOver:)` answers every question in a single walk over the history, reading each exercise
+///   log's sets once, where the individual `HomeStats` properties each walk it again (the PR count, the
+///   "improved" count, the ticker, and one more walk for each of the three RECENT rows).
+///
+/// Both ways give the same numbers; `HomeKPIsTests` holds them to that. The individual `HomeStats`
+/// properties stay as the plain, readable definition of each number.
+struct HomeKPIs: Equatable {
+    var currentStreak = 0
+    var weekSets = 0
+    var weekPRs = 0
+    var weekImproved = 0
+    var weekDayBars = [Int](repeating: 0, count: 7)
+    var todayDayIndex = 0
+    var tickerRows: [HomeStats.TickerRow] = []
+    /// The three RECENT rows, in the order of `HomeStats.recentWorkouts`.
+    var recentRows: [HomeStats.RecentRow] = []
+
+    static let empty = HomeKPIs()
+
+    init() {}
+
+    /// The reference way: each number from its own `HomeStats` property.
+    init(_ stats: HomeStats) {
+        currentStreak = stats.currentStreak
+        weekSets = stats.weekSets
+        weekPRs = stats.weekPRs
+        weekImproved = stats.weekImproved
+        weekDayBars = stats.weekDayBars
+        todayDayIndex = stats.todayDayIndex
+        tickerRows = stats.tickerRows
+        recentRows = stats.recentRows
+    }
+
+    /// What one exercise log contributed, read once.
+    private struct LogFacts {
+        let exerciseId: UUID?
+        let muscles: [MuscleGroup]
+        let maxWeight: Double
+        let maxVolume: Double
+        let workingSets: Int
+    }
+
+    private static func facts(_ log: ExerciseLog) -> LogFacts {
+        let sets = log.workingSets   // loads each set's fields: do it once per log
+        return LogFacts(exerciseId: log.exercise?.id, muscles: log.exercise?.primaryMuscleGroups ?? [],
+                        maxWeight: sets.map(\.weight).max() ?? 0,
+                        maxVolume: sets.map { $0.weight * Double($0.reps) }.max() ?? 0,
+                        workingSets: sets.count)
+    }
+
+    /// The same numbers as `init(_:)`, from one oldest-to-newest walk over the history.
+    init(onePassOver stats: HomeStats) {
+        let calendar = stats.calendar, now = stats.now
+        currentStreak = stats.currentStreak
+        todayDayIndex = stats.todayDayIndex
+
+        let weekStart = stats.weekStart
+        let prevWeekStart = calendar.date(byAdding: .weekOfYear, value: -1, to: weekStart) ?? now
+        let weekAgo = calendar.date(byAdding: .day, value: -7, to: now) ?? now
+        let twoWeeksAgo = calendar.date(byAdding: .day, value: -14, to: now) ?? now
+        let recent = stats.recentWorkouts
+        let recentIDs = Set(recent.map(\.id))
+
+        var bars = [Int](repeating: 0, count: 7)
+        var sets = 0
+        var weekMaxWeight: [UUID: Double] = [:], beforeWeekMaxWeight: [UUID: Double] = [:]
+        var thisWeekBestVol: [UUID: Double] = [:], prevWeekBestVol: [UUID: Double] = [:]
+        var tickerThis: [MuscleGroup: Int] = [:], tickerPrev: [MuscleGroup: Int] = [:]
+        var improvedByWorkout: [UUID: Int] = [:]
+
+        // Best set volume per exercise over everything strictly before the current date. Updates for workouts that
+        // share a date wait until the date moves on, so "earlier" means earlier, as in `improvedExercises(in:)`.
+        var bestVolume: [UUID: Double] = [:]
+        var pending: [(UUID, Double)] = []
+        var pendingDate: Date?
+        func flush() { for (id, v) in pending where v > (bestVolume[id] ?? 0) { bestVolume[id] = v }; pending = [] }
+
+        for workout in stats.workouts.reversed() {
+            if let d = pendingDate, workout.date > d { flush() }
+            pendingDate = workout.date
+
+            let isThisWeek = workout.date >= weekStart
+            let isPrevWeek = workout.date >= prevWeekStart && workout.date < weekStart
+            let isTickerThis = workout.date >= weekAgo
+            let isTickerPrev = workout.date >= twoWeeksAgo && workout.date < weekAgo
+            var workoutSets = 0
+            var improved = 0
+
+            for log in workout.exerciseLogs {
+                let f = Self.facts(log)
+                workoutSets += f.workingSets
+                if let id = f.exerciseId {
+                    if isThisWeek {
+                        weekMaxWeight[id] = max(weekMaxWeight[id] ?? 0, f.maxWeight)
+                        thisWeekBestVol[id] = max(thisWeekBestVol[id] ?? 0, f.maxVolume)
+                    } else {
+                        beforeWeekMaxWeight[id] = max(beforeWeekMaxWeight[id] ?? 0, f.maxWeight)
+                    }
+                    if isPrevWeek { prevWeekBestVol[id] = max(prevWeekBestVol[id] ?? 0, f.maxVolume) }
+                    if recentIDs.contains(workout.id), f.maxVolume > (bestVolume[id] ?? 0), f.maxVolume > 0 { improved += 1 }
+                    pending.append((id, f.maxVolume))
+                    for muscle in f.muscles {
+                        if isTickerThis { tickerThis[muscle, default: 0] += f.workingSets }
+                        if isTickerPrev { tickerPrev[muscle, default: 0] += f.workingSets }
+                    }
+                }
+            }
+            if isThisWeek {
+                sets += workoutSets
+                let weekday = calendar.component(.weekday, from: workout.date)
+                bars[(weekday + 5) % 7] += workoutSets
+            }
+            if recentIDs.contains(workout.id) { improvedByWorkout[workout.id] = improved }
+        }
+
+        weekSets = sets
+        weekDayBars = bars
+        weekPRs = weekMaxWeight.filter { id, w in w > (beforeWeekMaxWeight[id] ?? 0) && w > 0 }.count
+        weekImproved = thisWeekBestVol.filter { id, v in v > (prevWeekBestVol[id] ?? 0) && v > 0 }.count
+        tickerRows = MuscleGroup.allCases.compactMap { muscle -> HomeStats.TickerRow? in
+            let cur = tickerThis[muscle] ?? 0, prev = tickerPrev[muscle] ?? 0
+            guard cur > 0 || prev > 0 else { return nil }
+            let label = String(muscle.displayName.uppercased().prefix(6))
+            if prev == 0 { return HomeStats.TickerRow(label: label, value: "\(cur)", up: true) }
+            let pct = Int(((Double(cur) - Double(prev)) / Double(prev)) * 100)
+            return HomeStats.TickerRow(label: label, value: "\(abs(pct))%", up: pct >= 0)
+        }
+        recentRows = recent.map { w in
+            HomeStats.RecentRow(name: (w.template?.name ?? "Workout").uppercased(), sets: w.workingSetCount,
+                                improved: improvedByWorkout[w.id] ?? 0, exerciseCount: max(w.exerciseLogs.count, 1),
+                                volumeDelta: stats.volumeDelta(for: w))
         }
     }
 }

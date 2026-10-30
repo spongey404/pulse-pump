@@ -23,7 +23,7 @@ struct EquipmentProfilesView: View {
             if profiles.isEmpty {
                 emptyState
             } else {
-                profileTabs.tutorialTarget("profile-toggle")
+                profileTabs
                 Rectangle().fill(Color.dsHairLine).frame(height: 1)
 
                 if let profile = selectedProfile {
@@ -31,7 +31,7 @@ struct EquipmentProfilesView: View {
                         VStack(spacing: 0) {
                             activeProfileBadge
                             equipmentSection(profile)
-                            platesSection(profile).tutorialTarget("plate-grid")
+                            platesSection(profile)
                             addEquipmentButton
                             Color.clear.frame(height: 40)
                         }

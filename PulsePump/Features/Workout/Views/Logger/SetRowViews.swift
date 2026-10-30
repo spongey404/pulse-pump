@@ -17,6 +17,8 @@ struct NewSetRowView: View {
     let onLog: () -> Void
     var onUnlog: () -> Void = {}
     let onDelete: () -> Void
+    /// The row the tutorial walks through: its check circle is a spotlight target.
+    var isTutorialRow = false
     @Environment(\.weightUnit) private var unit
 
     /// A previous-session value the user hasn't logged yet this session — dimmer than
@@ -50,13 +52,14 @@ struct NewSetRowView: View {
             HStack(spacing: 0) {
                 // TYPE chip — 36px wide
                 setTypeChipButton
-                    .frame(width: 36, alignment: .leading)
+                    .frame(width: SetTypeChipLabel.column, alignment: .leading)
 
                 // Set number — 22px wide
                 Text(String(format: "%02d", setIndex + 1))
                     .font(.spaceMono(10, weight: .bold))
                     .foregroundStyle(isActive ? Color.accentInk : Color.inkMuted)
                     .frame(width: 22, alignment: .leading)
+                    .accessibilityIdentifier(AX.workout.setNumber(ex: exerciseIndex, setIndex + 1))
 
                 // WEIGHT field (SetEntry.weight is kg; the field shows/accepts the user's unit)
                 Group {
@@ -106,6 +109,8 @@ struct NewSetRowView: View {
                         .font(.spaceMono(11, weight: .bold))
                         .foregroundStyle(setEntry.rir.isEmpty ? Color.inkFaint : Color.inkPrimary)
                         .frame(width: 38)
+                        .transition(.opacity)
+                        .accessibilityIdentifier(AX.workout.setRIR(ex: exerciseIndex, setIndex + 1))
                 }
 
                 // Checkmark / log button — 30px wide
@@ -121,6 +126,7 @@ struct NewSetRowView: View {
                 .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.8))
                 .accessibilityLabel(setEntry.isCompleted ? "Set \(setIndex + 1) done" : "Log set \(setIndex + 1)")
                 .accessibilityIdentifier(AX.workout.setCheck(ex: exerciseIndex, setIndex + 1))
+                .tutorialTarget("tutorial.set-check", enabled: isTutorialRow)
                 .frame(width: 30, alignment: .trailing)
             }
             .padding(.horizontal, 12)
@@ -135,35 +141,11 @@ struct NewSetRowView: View {
 
     private var setTypeChipButton: some View {
         Button(action: onSetTypeTap) {
-            if setEntry.setType == .standard {
-                // Dashed "+" placeholder
-                ZStack {
-                    RoundedRectangle(cornerRadius: 4)
-                        .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [3]))
-                        .foregroundStyle(Color.inkFaint)
-                    Text("+")
-                        .font(.mono(9))
-                        .foregroundStyle(Color.inkFaint)
-                }
-                .frame(width: 28, height: 22)
-            } else {
-                let style = setTypeStyles[setEntry.setType] ?? setTypeStyles[.standard]!
-                ZStack {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(style.bg)
-                    Text(style.label)
-                        .font(.spaceMono(8, weight: .bold))
-                        .foregroundStyle(style.fg)
-                        .tracking(0.6)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-                }
-                .frame(height: 22)
-                .fixedSize(horizontal: true, vertical: false)
-                .padding(.horizontal, 3)
-            }
+            SetTypeChipLabel(type: setEntry.setType)
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(AX.workout.setType(ex: exerciseIndex, setIndex + 1))
+        .tutorialTarget("tutorial.set-type-chip", enabled: isTutorialRow)
     }
 
     // MARK: Weight / Ghost field
@@ -232,6 +214,8 @@ struct NewSetRowView: View {
             }
         }
         .frame(width: 22, height: 22)
+        // A stroked ring is only hit-testable on its stroke; the whole circle must take the tap.
+        .contentShape(Circle())
         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: setEntry.isCompleted)
     }
 }
@@ -284,5 +268,49 @@ struct KgTextField: View {
                 if unit.kgString(displayText: text) != new { text = unit.displayText(kgString: new) }
             }
             .onChange(of: unit) { _, _ in text = unit.displayText(kgString: kgString) }
+    }
+}
+
+// MARK: - Set type chip
+
+/// What sits in a set row's TYPE column: a dashed "+" while the set is standard, a coloured tag
+/// (WU, DROP, AMRAP…) once a type is picked. Both fill the same box, so choosing a type never shifts
+/// the row: the tag is never narrower than the placeholder and never wider than the column.
+struct SetTypeChipLabel: View {
+    let type: SetType
+
+    static let height: CGFloat = 22
+    /// The placeholder's width, and the narrowest a tag gets.
+    static let minWidth: CGFloat = 28
+    /// The TYPE column the row gives it, and the widest a tag gets.
+    static let column: CGFloat = 36
+
+    var body: some View {
+        if type == .standard {
+            ZStack {
+                RoundedRectangle(cornerRadius: 4)
+                    .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [3]))
+                    .foregroundStyle(Color.inkFaint)
+                Text("+")
+                    .font(.mono(9))
+                    .foregroundStyle(Color.inkFaint)
+            }
+            .frame(width: Self.minWidth, height: Self.height)
+        } else {
+            let style = setTypeStyles[type] ?? setTypeStyles[.standard]!
+            ZStack {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(style.bg)
+                Text(style.label)
+                    .font(.spaceMono(8, weight: .bold))
+                    .foregroundStyle(style.fg)
+                    .tracking(0.6)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .padding(.horizontal, 2)
+            }
+            .frame(minWidth: Self.minWidth, maxWidth: Self.column, minHeight: Self.height, maxHeight: Self.height)
+            .fixedSize(horizontal: true, vertical: false)
+        }
     }
 }

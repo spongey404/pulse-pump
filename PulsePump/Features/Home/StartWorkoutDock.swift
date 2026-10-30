@@ -118,10 +118,11 @@ struct StartWorkoutDock: View {
         }
         let splitLbl = detectSplitLabel(modelContext: modelContext)
         let estMins = predictedTemplate.flatMap { t -> Int? in
-            let workoutDescriptor = FetchDescriptor<Workout>(
+            var workoutDescriptor = FetchDescriptor<Workout>(
                 predicate: #Predicate { !$0.isDraft && $0.deletedAt == nil },
                 sortBy: [SortDescriptor(\Workout.date, order: .reverse)]
             )
+            workoutDescriptor.fetchLimit = 60   // the last time you did this program is somewhere recent
             let recentWorkouts = (try? modelContext.fetch(workoutDescriptor)) ?? []
             guard let last = recentWorkouts.first(where: { $0.template?.name == t.name }),
                   last.duration > 60 else { return nil }
@@ -129,7 +130,11 @@ struct StartWorkoutDock: View {
         } ?? 55
 
         return Button {
-            viewModel.startWorkout(modelContext: modelContext, user: user, template: predictedTemplate)
+            if TutorialMode.isRunning {
+                viewModel.startTutorialWorkout(modelContext: modelContext, user: user)
+            } else {
+                viewModel.startWorkout(modelContext: modelContext, user: user, template: predictedTemplate)
+            }
         } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
@@ -163,16 +168,18 @@ struct StartWorkoutDock: View {
         }
         .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.97))
         .accessibilityIdentifier(AX.home.startWorkout)
+        .tutorialTarget("tutorial.start-workout")
         .padding(.horizontal, 16)
         .padding(.top, 12)
         .padding(.bottom, 28)
     }
 
     private func detectSplitLabel(modelContext: ModelContext) -> String {
-        let descriptor = FetchDescriptor<Workout>(
+        var descriptor = FetchDescriptor<Workout>(
             predicate: #Predicate { !$0.isDraft && $0.deletedAt == nil },
             sortBy: [SortDescriptor(\Workout.date, order: .reverse)]
         )
+        descriptor.fetchLimit = 9   // only the latest nine are looked at; don't load the whole history
         let recent = (try? modelContext.fetch(descriptor))?.prefix(9) ?? []
         let names = recent.compactMap { $0.template?.name.lowercased() }
         let hasPush = names.contains { $0.contains("push") }

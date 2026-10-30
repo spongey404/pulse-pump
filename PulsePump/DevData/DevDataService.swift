@@ -47,6 +47,12 @@ enum DevDataService {
         d.set(config.socialFixtures, forKey: "devDataSocialFixtures")
         d.set(true, forKey: "tutorialCompleted")
         d.set(false, forKey: "wantsTutorial")
+        // Home search shows RECENT terms when opened: a lived-in history has some, a new user has none.
+        if config.scenario == .newUser {
+            d.removeObject(forKey: SearchRecents.defaultsKey)
+        } else {
+            SearchRecents(["bench", "romanian deadlift", "pull day", "priya", "row"]).save(d)
+        }
 
         func catalogue() -> [String: Exercise] {
             Dictionary(((try? ctx.fetch(FetchDescriptor<Exercise>(predicate: #Predicate { $0.isApproved }))) ?? []).map { ($0.name, $0) },

@@ -31,6 +31,12 @@ struct ExerciseCardView: View {
     private var isBarbellType: Bool {
         [EquipmentType.barbell, .ezBar, .trapBar, .smithMachine].contains(entry.equipmentType)
     }
+    /// The first set of the exercise the tutorial is working on (it names one at a time).
+    private func isTutorialRow(_ setIdx: Int) -> Bool { setIdx == 0 && isLastExercise }
+    private var isLastExercise: Bool {
+        guard let name = TutorialFocus.shared.exerciseName else { return false }
+        return entry.exerciseName == name
+    }
     private var nextUncompletedSetIdx: Int? {
         entry.sets.indices.first { !entry.sets[$0].isCompleted }
     }
@@ -68,6 +74,9 @@ struct ExerciseCardView: View {
                         ) {
                             setRowView(setIdx: setIdx, set: set, ghost: ghost)
                         }
+                        // Tutorial spotlight: the first set of the exercise added last.
+                        .tutorialTarget("tutorial.set-row",
+                                        enabled: isTutorialRow(setIdx))
 
                         // Plate calculator — only for the next uncompleted set
                         if isBarbellType && setIdx == nextUncompletedSetIdx && weightVal > plateBarWeight {
@@ -94,11 +103,14 @@ struct ExerciseCardView: View {
                                     .background(Color.surf2)
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityIdentifier(AX.workout.platesToggle(ex: exerciseIndex, setIdx + 1))
+                                .tutorialTarget("tutorial.plates-toggle", enabled: isTutorialRow(setIdx))
 
                                 InlinePlateCalculatorView(
                                     targetWeight: weightVal,
                                     barWeight: $plateBarWeight
                                 )
+                                .tutorialTarget("tutorial.plates-view", enabled: isOpen && isTutorialRow(setIdx))
                                 .frame(maxHeight: isOpen ? .infinity : 0, alignment: .top)
                                 .clipped()
                                 .animation(.spring(response: 0.32, dampingFraction: 0.8), value: isOpen)
@@ -138,14 +150,17 @@ struct ExerciseCardView: View {
                     .accessibilityIdentifier(AX.workout.addSet(exerciseIndex))
 
                     Button {
-                        if showRIR {
-                            for i in entry.sets.indices {
-                                entry.sets[i].rir = ""
-                                entry.sets[i].targetRIR = nil
-                            }
-                        } else {
-                            for i in entry.sets.indices {
-                                entry.sets[i].targetRIR = 3
+                        // Animated, so the RIR column eases in and the weight/reps columns glide over to make room.
+                        withAnimation(.easeInOut(duration: 0.28)) {
+                            if showRIR {
+                                for i in entry.sets.indices {
+                                    entry.sets[i].rir = ""
+                                    entry.sets[i].targetRIR = nil
+                                }
+                            } else {
+                                for i in entry.sets.indices {
+                                    entry.sets[i].targetRIR = 3
+                                }
                             }
                         }
                     } label: {
@@ -163,6 +178,8 @@ struct ExerciseCardView: View {
                             )
                     }
                     .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.97))
+                    .accessibilityIdentifier(AX.workout.rirToggle(exerciseIndex))
+                    .tutorialTarget("tutorial.rir-toggle", enabled: isLastExercise)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
@@ -287,12 +304,14 @@ struct ExerciseCardView: View {
 
             // Exercise info — fills remaining space, tappable via outer gesture
             VStack(alignment: .leading, spacing: 3) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                // Centred, not baseline-aligned: a name that wraps to two lines keeps the number beside the middle.
+                HStack(alignment: .center, spacing: 8) {
                     Text(String(format: "%02d", exerciseIndex + 1))
                         .font(.spaceMono(9))
                         .foregroundStyle(Color.inkMuted)
                         .tracking(1)
                         .fixedSize()
+                        .accessibilityIdentifier(AX.workout.exerciseNumber(exerciseIndex))
                     Text(entry.exerciseName.uppercased())
                         .font(.archivo(18, weight: .black))
                         .foregroundStyle(Color.inkPrimary)
@@ -396,7 +415,8 @@ struct ExerciseCardView: View {
             onUnlog: {
                 viewModel.unlogSet(exerciseIndex: exerciseIndex, setIndex: setIdx)
             },
-            onDelete: {}
+            onDelete: {},
+            isTutorialRow: isTutorialRow(setIdx)
         )
     }
 
@@ -419,6 +439,8 @@ struct ExerciseCardView: View {
             if showRIR {
                 Text("RIR")
                     .frame(width: 38, alignment: .center)
+                    .transition(.opacity)
+                    .tutorialTarget("tutorial.rir-header", enabled: isLastExercise)
             }
             Text("✓")
                 .frame(width: 30, alignment: .trailing)

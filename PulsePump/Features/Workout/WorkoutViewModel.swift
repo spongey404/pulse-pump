@@ -107,7 +107,7 @@ class WorkoutViewModel {
 
     // MARK: - Exercise Management
 
-    func addExercise(_ exercise: Exercise) {
+    func addExercise(_ exercise: Exercise, notify: Bool = true) {
         var entry = ExerciseEntry(
             exerciseId: exercise.id,
             exerciseName: exercise.name,
@@ -116,6 +116,18 @@ class WorkoutViewModel {
         entry.apply(exercise)
         exerciseEntries.append(entry)
         persistDraftIfActive()
+        if notify { NotificationCenter.default.post(name: .tutorialExerciseAdded, object: nil) }
+    }
+
+    /// The tutorial's practice workout: a fixed list of exercises (not the weekday's program), so it is long
+    /// enough that the next exercise is far down and every step finds what it expects.
+    func startTutorialWorkout(modelContext: ModelContext, user: User) {
+        startWorkout(modelContext: modelContext, user: user, template: nil)
+        for name in TutorialMode.presetExercises {
+            if let exercise = Self.findExercise(id: UUID(), name: name, modelContext: modelContext) {
+                addExercise(exercise, notify: false)
+            }
+        }
     }
 
     func removeExercise(at index: Int) {
@@ -166,6 +178,7 @@ class WorkoutViewModel {
 
         updateLiveCalories()
         persistDraftIfActive()
+        NotificationCenter.default.post(name: .tutorialSetCompleted, object: nil)
 
         if restTimer.mode == .autoStart || restTimer.mode == .autoStartWithDismiss {
             let entry = exerciseEntries[exerciseIndex]
@@ -523,10 +536,11 @@ class WorkoutViewModel {
     /// Next workout name. Pattern-detected names are only used when they match a real template;
     /// otherwise the split's next day (resolved to a template when possible) is used.
     func predictNextWorkout(user: User, modelContext: ModelContext) -> String? {
-        let descriptor = FetchDescriptor<Workout>(
+        var descriptor = FetchDescriptor<Workout>(
             predicate: #Predicate<Workout> { !$0.isDraft && $0.deletedAt == nil },
             sortBy: [SortDescriptor(\Workout.date, order: .reverse)]
         )
+        descriptor.fetchLimit = 14   // the prediction looks at the last fourteen sessions only
         let recent = (try? modelContext.fetch(descriptor)) ?? []
         let history = recent.prefix(14).compactMap { $0.template?.name }
         let templateNames = ((try? modelContext.fetch(FetchDescriptor<WorkoutTemplate>(predicate: #Predicate { $0.deletedAt == nil }))) ?? []).map(\.name)

@@ -50,7 +50,8 @@ private let exerciseGroupDefinitions: [(name: String, exerciseNames: [String])] 
 // MARK: - Picker Item Model
 
 struct ExerciseGroupEntry: Identifiable, Hashable {
-    let id = UUID()
+    /// Stable across re-renders: a fresh UUID every time rebuilt every row on each pass of the picker.
+    var id: String { groupName }
     let groupName: String
     let exercises: [Exercise]
 
@@ -70,6 +71,8 @@ struct ExercisePickerView: View {
     @State private var searchText = ""
     @State private var movementFilter: MovementPattern? = nil
     @State private var path = NavigationPath()
+    /// The exercise whose page is open. It has an ADD TO WORKOUT button because this list is how you add to a workout.
+    @State private var detailExercise: Exercise?
     @Environment(\.dismiss) private var dismiss
     var title: String = "ADD EXERCISE"
     var excludedIds: Set<UUID> = []
@@ -134,19 +137,31 @@ struct ExercisePickerView: View {
             NavigationStack(path: $path) {
                 pickerContent
                     .navigationDestination(for: ExerciseGroupEntry.self) { group in
-                        VariantsView(group: group) { exercises in
+                        VariantsView(group: group, onAdd: { exercises in
                             onAdd(exercises)
                             dismiss()
-                        }
+                        }, onInfo: { detailExercise = $0 })
+                    }
+                    .navigationDestination(item: $detailExercise) { exercise in
+                        ExerciseDetailView(exercise: exercise, onAddToWorkout: {
+                            onAdd([exercise])
+                            dismiss()
+                        })
                     }
             }
         } else {
             pickerContent
                 .navigationDestination(for: ExerciseGroupEntry.self) { group in
-                    VariantsView(group: group) { exercises in
+                    VariantsView(group: group, onAdd: { exercises in
                         onAdd(exercises)
                         dismiss()
-                    }
+                    }, onInfo: { detailExercise = $0 })
+                }
+                .navigationDestination(item: $detailExercise) { exercise in
+                    ExerciseDetailView(exercise: exercise, onAddToWorkout: {
+                        onAdd([exercise])
+                        dismiss()
+                    })
                 }
         }
     }
@@ -225,13 +240,14 @@ struct ExercisePickerView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        ForEach(displayItems) { item in
+                        ForEach(Array(displayItems.enumerated()), id: \.element.id) { index, item in
                             ExerciseRow(item: item) { exercises in
                                 onAdd(exercises)
                                 dismiss()
                             } onShowVariants: {
                                 path.append(item)
-                            }
+                            } onInfo: { detailExercise = $0 }
+                            .tutorialTarget("tutorial.picker-first-row", enabled: index == 0)
                             Rectangle().fill(Color.dsHairLine).frame(height: 0.5)
                         }
                         Color.clear.frame(height: 30)
@@ -262,6 +278,7 @@ struct ExercisePickerView: View {
 private struct VariantsView: View {
     let group: ExerciseGroupEntry
     let onAdd: ([Exercise]) -> Void
+    let onInfo: (Exercise) -> Void
     @Environment(\.dismiss) private var dismiss
 
     private var movementColor: Color {
@@ -326,6 +343,17 @@ private struct VariantsView: View {
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
 
+                            Button { onInfo(exercise) } label: {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(Color.inkMuted)
+                                    .frame(width: 32, height: 32)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("About \(exercise.name)")
+                            .accessibilityIdentifier(AX.picker.info(exercise.name))
+
                             Button { onAdd([exercise]) } label: {
                                 Text("ADD")
                                     .font(.archivo(13, weight: .bold))
@@ -336,6 +364,7 @@ private struct VariantsView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                             }
                             .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.93))
+                            .tutorialTarget("tutorial.variant-add", enabled: exercise.id == group.exercises.first?.id)
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 14)
@@ -379,6 +408,7 @@ private struct ExerciseRow: View {
     let item: ExerciseGroupEntry
     let onAdd: ([Exercise]) -> Void
     let onShowVariants: () -> Void
+    let onInfo: (Exercise) -> Void
 
     private var movementColor: Color {
         switch item.movementPattern {
@@ -443,5 +473,21 @@ private struct ExerciseRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(AX.picker.row(item.displayName))
+        .overlay(alignment: .trailing) {
+            // A single exercise has a page of its own; a group opens its variants instead.
+            if item.isSingle, let exercise = item.exercises.first {
+                Button { onInfo(exercise) } label: {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Color.inkMuted)
+                        .frame(width: 36, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("About \(exercise.name)")
+                .accessibilityIdentifier(AX.picker.info(exercise.name))
+                .padding(.trailing, 82)   // left of the ADD pill
+            }
+        }
     }
 }

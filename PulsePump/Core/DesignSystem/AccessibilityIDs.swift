@@ -112,12 +112,27 @@ enum AX {
         static let restTime = "workout.restTime"
         static let sessionTitle = "workout.sessionTitle"
         static let addExercise = "workout.addExercise"
+        /// The + in the logger header: opens the full exercise list from anywhere in the workout.
+        static let addExerciseTop = "workout.addExerciseTop"
+        static let searchField = "workout.search.field"
+        static let searchClose = "workout.search.close"
+        /// A match among the exercises already in the workout (tapping it jumps to its card).
+        static func searchInWorkoutRow(_ name: String) -> String { "workout.search.inWorkout." + slug(name) }
         static func exerciseName(_ i: Int) -> String { "workout.exercise.\(i).name" }
         static func addSet(_ i: Int) -> String { "workout.exercise.\(i).addSet" }
         /// `ex` is the 0-based exercise card, `n` the 1-based set number inside it.
         static func setWeight(ex: Int, _ n: Int) -> String { "workout.set.\(ex).\(n).weight" }
         static func setReps(ex: Int, _ n: Int) -> String { "workout.set.\(ex).\(n).reps" }
         static func setCheck(ex: Int, _ n: Int) -> String { "workout.set.\(ex).\(n).check" }
+        static func setType(ex: Int, _ n: Int) -> String { "workout.set.\(ex).\(n).type" }
+        static func setRIR(ex: Int, _ n: Int) -> String { "workout.set.\(ex).\(n).rir" }
+        static func setNumber(ex: Int, _ n: Int) -> String { "workout.set.\(ex).\(n).number" }
+        /// The "01" beside an exercise's name.
+        static func exerciseNumber(_ i: Int) -> String { "workout.exercise.\(i).number" }
+        /// A row in the set-type sheet, by its name ("Warmup", "Dropset", …).
+        static func setTypeRow(_ name: String) -> String { "workout.setTypeRow." + slug(name) }
+        static func rirToggle(_ i: Int) -> String { "workout.exercise.\(i).rirToggle" }
+        static func platesToggle(ex: Int, _ n: Int) -> String { "workout.set.\(ex).\(n).plates" }
         static let restModal = "workout.restModal"
         static let restModalClose = "workout.restModal.close"
     }
@@ -126,6 +141,8 @@ enum AX {
         static let search = "picker.search"
         static let back = "picker.back"
         static func row(_ displayName: String) -> String { "picker.row." + slug(displayName) }
+        /// The (i) that opens an exercise's page, with ADD TO WORKOUT, from inside the add-exercise list.
+        static func info(_ name: String) -> String { "picker.info." + slug(name) }
     }
 
     enum completion {
@@ -158,8 +175,17 @@ enum AX {
 
     enum exercise {
         static let detailProgress = "exerciseDetail.progress"
+        static let detailBack = "exerciseDetail.back"
+        static let detailTabAbout = "exerciseDetail.tab.about"
+        static let detailTabHistory = "exerciseDetail.tab.history"
+        static let detailChart = "exerciseDetail.chart"
+        /// ADD TO WORKOUT: only there when the page was opened from a workout.
+        static let detailAdd = "exerciseDetail.add"
+        static func detailRange(_ label: String) -> String { "exerciseDetail.range." + slug(label) }
+        static func detailMetric(_ label: String) -> String { "exerciseDetail.metric." + slug(label) }
         static let search = "search.field"
         static func searchRow(_ name: String) -> String { "search.row." + slug(name) }
+        static func searchPill(_ label: String) -> String { "search.pill." + slug(label) }
     }
 
     enum programs {

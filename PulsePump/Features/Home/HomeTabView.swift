@@ -22,14 +22,21 @@ struct HomeTabView: View {
 
     // MARK: Computed KPIs (the maths lives in HomeStats so tests can drive it)
     private var stats: HomeStats { HomeStats(workouts: workouts) }
-    private var currentStreak: Int { stats.currentStreak }
-    private var weekWorkouts: [Workout] { stats.weekWorkouts }
-    private var weekSets: Int { stats.weekSets }
-    private var weekPRs: Int { stats.weekPRs }
-    private var weekImproved: Int { stats.weekImproved }
+    /// The whole-history numbers, worked out once per change to the workouts (see `HomeKPIs`), not per redraw.
+    @State private var kpis = HomeKPIs.empty
+    private var kpisKey: Int {
+        var hasher = Hasher()
+        hasher.combine(workouts.count)
+        for w in workouts.prefix(6) { hasher.combine(w.id); hasher.combine(w.updatedAt) }
+        return hasher.finalize()
+    }
+    private var currentStreak: Int { kpis.currentStreak }
+    private var weekSets: Int { kpis.weekSets }
+    private var weekPRs: Int { kpis.weekPRs }
+    private var weekImproved: Int { kpis.weekImproved }
     /// Sets per day for the current week (Mon=0 … Sun=6)
-    private var weekDayBars: [Int] { stats.weekDayBars }
-    private var todayDayIndex: Int { stats.todayDayIndex }
+    private var weekDayBars: [Int] { kpis.weekDayBars }
+    private var todayDayIndex: Int { kpis.todayDayIndex }
 
     private var basePredictedName: String? {
         guard let user else { return nil }
@@ -147,7 +154,17 @@ struct HomeTabView: View {
                 }
             )
         }
-        .sheet(isPresented: $showSearch) {
+        // The numbers on this screen are worked out here, when the workouts change, instead of in the body.
+        .task(id: kpisKey) {
+            // SwiftData loads a record's fields the first time they are read, one database round trip each, so
+            // reading every set of a long history is thousands of them. Load the logs and sets in two bulk fetches
+            // first (and keep them alive while the numbers are worked out): the reads then come from memory.
+            let logs = (try? modelContext.fetch(FetchDescriptor<ExerciseLog>())) ?? []
+            let sets = (try? modelContext.fetch(FetchDescriptor<SetLog>())) ?? []
+            kpis = HomeKPIs(onePassOver: stats)
+            withExtendedLifetime((logs, sets)) {}
+        }
+        .fullScreenCover(isPresented: $showSearch) {
             GlobalSearchView()
         }
         .sheet(isPresented: $showDayPicker) {
@@ -557,9 +574,11 @@ struct HomeTabView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                        let sets = workout.workingSetCount
-                        let improvedCount = improvedExercises(in: workout)
-                        let totalExercises = max(workout.exerciseLogs.count, 1)
+                        // Worked out with the other KPIs, not here: it compares against the whole history.
+                        let row = idx < kpis.recentRows.count ? kpis.recentRows[idx] : nil
+                        let sets = row?.sets ?? 0
+                        let improvedCount = row?.improved ?? 0
+                        let totalExercises = row?.exerciseCount ?? 1
 
                         Text("\(sets)")
                             .font(.spaceMono(11, weight: .bold))
@@ -571,7 +590,7 @@ struct HomeTabView: View {
                             .foregroundStyle(Color.accentInk)
                             .frame(width: 56, alignment: .center)
 
-                        let volDelta = volumeDelta(for: workout)
+                        let volDelta = row?.volumeDelta ?? "—"
                         Text(volDelta)
                             .font(.spaceMono(11, weight: .bold))
                             .foregroundStyle(volDelta.hasPrefix("▲") ? Color.signalUp : (volDelta == "—" ? Color.inkMuted : Color.signalDown))
@@ -603,7 +622,7 @@ struct HomeTabView: View {
     // MARK: - Ticker Data
 
     private func buildTickerItems() -> [TickerItem] {
-        stats.tickerRows.map { TickerItem(label: $0.label, value: $0.value, direction: $0.up ? .up : .down) }
+        kpis.tickerRows.map { TickerItem(label: $0.label, value: $0.value, direction: $0.up ? .up : .down) }
     }
 }
 

@@ -75,6 +75,10 @@ extension WidgetDataService {
 
         let done = workouts.filter { !$0.isDraft && $0.deletedAt == nil }.sorted { $0.date > $1.date }   // newest first
         let allSets = done.map { ($0, fsets($0)) }
+        // When each template was last trained (newest first, so the first sighting wins): one pass, instead of a
+        // scan of the whole history, each step loading a relationship from the database, per template per comparison.
+        var lastUsedAt: [UUID: Date] = [:]
+        for w in done { if let id = w.template?.id, lastUsedAt[id] == nil { lastUsedAt[id] = w.date } }
         let flat = allSets.flatMap { $0.1 }
 
         // --- Subscription
@@ -319,8 +323,8 @@ extension WidgetDataService {
                 }
                 return PWExercise(name: te.exerciseName, target: "\(te.targetSets)×\(reps)", kg: kg)
             }
-            if let lastSame = done.first(where: { $0.template?.id == t.id }) {
-                f.nextLastSameDays = max(0, daysBetween(lastSame.date, today))
+            if let lastSame = lastUsedAt[t.id] {
+                f.nextLastSameDays = max(0, daysBetween(lastSame, today))
             }
         }
         f.nextLastSameName = nextName.split(separator: " ").first.map { $0.uppercased() } ?? ""
@@ -338,7 +342,7 @@ extension WidgetDataService {
         }
 
         // --- 14 Quick start
-        let lastUsed: (WorkoutTemplate) -> Date = { t in done.first(where: { $0.template?.id == t.id })?.date ?? .distantPast }
+        let lastUsed: (WorkoutTemplate) -> Date = { t in lastUsedAt[t.id] ?? .distantPast }
         let ordered = templates.sorted { lastUsed($0) != lastUsed($1) ? lastUsed($0) > lastUsed($1) : $0.name < $1.name }
         let predictedT = ordered.first { $0.name.lowercased() == nextName.lowercased() }
         f.quickStarts = (predictedT.map { [$0] } ?? []).map {

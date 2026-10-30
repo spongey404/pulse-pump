@@ -84,6 +84,7 @@ struct WorkoutModalModifier: ViewModifier {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier(AX.modal.primary)
+                .tutorialTarget("tutorial.modal-primary")
             }
         }
         .padding(14)

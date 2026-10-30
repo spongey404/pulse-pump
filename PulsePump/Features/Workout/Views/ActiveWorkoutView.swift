@@ -7,6 +7,16 @@ struct ActiveWorkoutView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var showExercisePicker = false
+    @State private var showSearch = false
+    /// Tells when the list comes back to its top after being scrolled well down (tapping the status bar does it).
+    @State private var scrollDepth = ScrollDepthTracker()
+    /// Room added under the list once a search has jumped somewhere, so even the last exercise can scroll up
+    /// to the top of the screen (a list normally stops when its end reaches the bottom).
+    @State private var jumpPad: CGFloat = 0
+    /// The card a search just jumped to (outlined briefly).
+    @State private var flashEntryId: UUID?
+    /// Whether this pull already opened the search (a pull opens it once; letting go re-arms it).
+    @State private var pullArmed = true
     @State private var showIncompleteFinishConfirmation = false
     @State private var showRestModal = false
     @State private var draggingIdx: Int? = nil
@@ -63,6 +73,7 @@ struct ActiveWorkoutView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 10) {
+                        Color.clear.frame(height: 0).id("loggerTop")
                         ForEach(Array(viewModel.exerciseEntries.enumerated()), id: \.element.id) { idx, shown in
                             ExerciseCardView(
                                 // Bounds-guarded: while the screen dismisses after Discard / Finish the entries are
@@ -101,6 +112,14 @@ struct ActiveWorkoutView: View {
                                     }
                                 }
                             )
+                            .overlay {
+                                // A brief outline on the card a search just jumped to.
+                                RoundedRectangle(cornerRadius: 14)
+                                    .strokeBorder(Color.accentInk, lineWidth: 2)
+                                    .opacity(flashEntryId == shown.id ? 1 : 0)
+                                    .animation(.easeOut(duration: 0.7), value: flashEntryId)
+                                    .allowsHitTesting(false)
+                            }
                             .offset(y: cardVisualOffset(for: idx))
                             .scaleEffect(draggingIdx == idx ? 1.02 : 1.0)
                             .zIndex(draggingIdx == idx ? 10 : 0)
@@ -129,17 +148,55 @@ struct ActiveWorkoutView: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier(AX.workout.addExercise)
+                        .tutorialTarget("tutorial.add-exercise")
                         .padding(.top, 4)
                         .id("addExerciseButton")
 
                         Color.clear.frame(height: 4)
                     }
+                    // Dragging the list down past its top opens the search.
+                    .background(ScrollPullObserver(onChange: { handlePull($0) }, onDepth: { scrollDepth.note($0) }))
                     .padding(.horizontal, 10)
-                    .padding(.top, 58)    // 48pt masthead + 10pt gap
-                    .padding(.bottom, 118)
+                    .padding(.top, 2)
+                    .padding(.bottom, 118 + jumpPad)
+                    // While the tutorial asks for the pull-down only a drag counts: the cards ignore taps (the
+                    // scroll view underneath still takes the drag).
+                    .allowsHitTesting(!(TutorialMode.isRunning && TutorialFocus.shared.dragOnly))
+                }
+                .scrollBounceBehavior(.always, axes: .vertical)
+                // The pinned masthead (48pt) plus a gap. As an inset rather than padding inside the list, so
+                // scrolling a card "to the top" puts its name just below the masthead, not behind it.
+                .safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: 56) }
+                .onReceive(NotificationCenter.default.publisher(for: .loggerScrollTo)) { note in
+                    // Eases out to a stop (no overshoot), so it lands on the card instead of jolting into it.
+                    withAnimation(.timingCurve(0.25, 0.1, 0.2, 1, duration: 0.6)) {
+                        if let id = note.object as? UUID { proxy.scrollTo(id, anchor: .top) } else { proxy.scrollTo("loggerTop", anchor: .top) }
+                    }
+                    if let id = note.object as? UUID {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+                            flashEntryId = id
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { if flashEntryId == id { flashEntryId = nil } }
+                        }
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .tutorialRevealTarget)) { note in
+                    // Slow and eased, so the user can follow where the list is going.
+                    withAnimation(.easeInOut(duration: 1.0)) {
+                        switch note.object as? String {
+                        case "tutorial.add-exercise": proxy.scrollTo("addExerciseButton", anchor: .center)
+                        case "tutorial.set-row", "tutorial.set-check", "tutorial.rir-toggle", "tutorial.set-type-chip", "tutorial.plates-toggle":
+                            // The exercise the tutorial is working on.
+                            if let name = TutorialFocus.shared.exerciseName,
+                               let entry = viewModel.exerciseEntries.first(where: { $0.exerciseName == name }) {
+                                proxy.scrollTo(entry.id, anchor: .top)
+                            }
+                        default: break
+                        }
+                    }
                 }
                 .onChange(of: viewModel.exerciseEntries.count) { oldCount, newCount in
-                    guard newCount > oldCount else { return }
+                    // (The tutorial keeps the list where it is: its next steps are on the first exercise.)
+                    guard newCount > oldCount, !TutorialMode.isRunning else { return }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         withAnimation(.easeOut(duration: 0.3)) {
                             proxy.scrollTo("addExerciseButton", anchor: .bottom)
@@ -158,6 +215,32 @@ struct ActiveWorkoutView: View {
                 bottomBarView
             }
             .ignoresSafeArea(edges: .bottom)
+
+            // Tutorial spotlight for "pull down to search": the list from under the header to a little above
+            // the middle of the screen, which is where a thumb starts the pull.
+            Color.clear
+                .frame(height: UIScreen.main.bounds.height * 0.44)
+                .padding(.top, 48)
+                .allowsHitTesting(false)
+                .tutorialTarget("tutorial.pull-zone")
+
+            // Find an exercise already in the workout without scrolling to it (pull the list down)
+            if showSearch {
+                LoggerSearchOverlay(
+                    workoutEntries: viewModel.exerciseEntries.map { ($0.id, $0.exerciseId, $0.exerciseName) },
+                    onJump: { entryId in
+                        jumpPad = UIScreen.main.bounds.height * 0.6
+                        closeSearch()
+                        // Let the panel and keyboard clear, then take the list to that exercise.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+                            NotificationCenter.default.post(name: .loggerScrollTo, object: entryId)
+                        }
+                    },
+                    onClose: { closeSearch() }
+                )
+                .transition(.opacity)
+                .zIndex(30)
+            }
 
             // Set Type Sheet overlay
             if let target = setTypeTarget {
@@ -239,6 +322,24 @@ struct ActiveWorkoutView: View {
         }
     }
 
+    // MARK: - Search
+
+    /// `pulled`: how far the list is dragged down past its top, in points.
+    private func handlePull(_ pulled: CGFloat) {
+        if pulled > 80, pullArmed, !showSearch {
+            pullArmed = false
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.easeOut(duration: 0.2)) { showSearch = true }
+        } else if pulled < 10 {
+            pullArmed = true
+        }
+    }
+
+    private func closeSearch() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        withAnimation(.easeOut(duration: 0.2)) { showSearch = false }
+    }
+
     // MARK: - Masthead
 
     private var mastheadView: some View {
@@ -253,6 +354,7 @@ struct ActiveWorkoutView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Close workout")
             .accessibilityIdentifier(AX.workout.cancel)
+            .tutorialTarget("tutorial.logger-back")
 
             // Session label + name·duration
             VStack(alignment: .leading, spacing: 0) {
@@ -269,6 +371,21 @@ struct ActiveWorkoutView: View {
             }
 
             Spacer()
+
+            // Add an exercise from anywhere in the workout, no scrolling to the bottom
+            Button { showExercisePicker = true } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Color.inkPrimary)
+                    .frame(width: 34, height: 34)
+                    .background(Color.surf)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color.inkPrimary.opacity(0.14), lineWidth: 1))
+            }
+            .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.92))
+            .accessibilityLabel("Add exercise")
+            .accessibilityIdentifier(AX.workout.addExerciseTop)
+            .tutorialTarget("tutorial.add-top")
 
             // Rest timer pill
             Button { withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { showRestModal = true } } label: {
@@ -624,3 +741,22 @@ struct ActiveWorkoutView: View {
 }
 
 // MARK: - Exercise Card
+
+extension Notification.Name {
+    /// Scroll the logger's list to an exercise card (object: its entry id), or to the top when the object is nil.
+    static let loggerScrollTo = Notification.Name("loggerScrollTo")
+}
+
+/// Notices the list returning to the top after being scrolled well down, and says so once. A plain reference
+/// type, so the per-frame offset updates don't re-render the logger.
+final class ScrollDepthTracker {
+    private var deepest: CGFloat = 0
+
+    func note(_ depth: CGFloat) {
+        deepest = max(deepest, depth)
+        if depth < 2, deepest > 300 {
+            deepest = 0
+            NotificationCenter.default.post(name: .loggerScrolledToTop, object: nil)
+        }
+    }
+}
