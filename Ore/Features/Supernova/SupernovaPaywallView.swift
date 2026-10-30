@@ -96,9 +96,8 @@ struct SupernovaPaywallView: View {
             VStack(spacing: 0) {
                 ForEach(features, id: \.name) { f in
                     HStack(alignment: .top, spacing: 8) {
-                        FourPointStar()
-                            .fill(SupernovaAsterisk.color)
-                            .frame(width: 14, height: 14)
+                        StarBullet(size: SignupConfigStore.shared.current.bullet.paywallSize,
+                                   delay: -Double(features.firstIndex(where: { $0.name == f.name }) ?? 0) * SignupConfigStore.shared.current.bullet.paywallOffset)
                             .padding(.top, 3)
                             .frame(width: 20, alignment: .leading)
                         VStack(alignment: .leading, spacing: 0) {

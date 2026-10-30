@@ -37,6 +37,7 @@ enum ExperienceLevel: String, Codable, CaseIterable, Identifiable {
 enum Gender: String, Codable, CaseIterable, Identifiable {
     case male
     case female
+    case nonBinary
     case other
     case preferNotToSay
 
@@ -46,7 +47,8 @@ enum Gender: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .male:           "Male"
         case .female:         "Female"
-        case .other:          "Non-binary / Other"
+        case .nonBinary:      "Non-binary"
+        case .other:          "Other"
         case .preferNotToSay: "Prefer not to say"
         }
     }

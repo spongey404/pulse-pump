@@ -53,7 +53,7 @@ Ore/                      app target
 ├── Features/                   one folder per feature: its Views + ViewModel + Services together
 │   ├── Home/  Workout/ (Views/, Views/Logger/, Tools/, WorkoutViewModel, Services/: rest timer, live activity, calories)
 │   ├── Programs/  BodyMap/  Exercises/  Equipment/  Social/ (Feed/, Friends/, Challenges/, SocialViewModel)
-│   ├── More/  Settings/  Supernova/ (paywall, StoreKit service, upsell banner)  Onboarding/  Tutorial/
+│   ├── More/  Settings/  Supernova/ (paywall, StoreKit service, upsell banner)  Signup/ (the sign-up console)  Onboarding/ (profile model only)  Tutorial/
 │   └── Widgets/                widget builder UI, gallery, WidgetDataService (snapshot for the extension), BodyweightLog
 ├── DevData/                    DEBUG-only fake-data seeder (see "Dev data")
 ├── Resources/Fonts/            Archivo + Space Mono
@@ -279,11 +279,25 @@ Built from the Claude Design file `Supernova Final.dc.html` (project 1b1d68d9…
 - **StarField** (`Core/StarField/`): `StarFieldEngine` (pure, seedable particle simulation ported from the design's canvas loop, no SwiftUI types), `StarFieldView` (batched Canvas drawing: stars of one colour and brightness level are one path/fill; paused off-screen, in the background, in Low Power Mode, with Reduce Motion (one still frame), and a `.more` field freezes after `settleAfterMs`; `.paywall` drops to the idle fps after `idleAfterMs`), `StarFieldConfig`. **Every tunable is in `Ore/Resources/starfield.config.json`** (density, speed, gold, sparkle, goldPull, sway, flash, flare, fps, palettes, variants paywall/banner/tag/avatar/rowIcon/recapCard). The JSON is the shared source (an Android build reads the same file); `StarFieldConfig.fallback` must equal it (a test checks). `StarFieldConfigStore.override`/`applyRemote(json:)` is the Remote Config hook (no Firebase dependency added yet). Member glitter palettes are derived from the accent (`StarPalette.derived`). Tests: `StarFieldTests`, `SupernovaPaywallFlowTests`, `AccentStoreTests`, `BrandTests`.
 - DEBUG: `-debugSupernova paywall` opens the paywall on launch.
 
+## Sign-up console (Features/Signup)
+
+Sign-in, sign-up and onboarding are **one continuous console**, built from the Claude Design file `Ore Signup Final.dc.html` (project 1b1d68d9…, read with the DesignSync tool). `RootView` shows `SignupConsoleView` for both the signed-out and the signed-in-without-a-profile routes, so the same view stays up while the account is created. It replaced `SignInView`, the email sheet and the nine onboarding screens (`OnboardingViewModel` stays: it builds the profile and talks to `ProfileRemote`).
+- **Flow:** opening screen (flat Ore blue, no stars; Apple / Google / email) → questions typed out one at a time (email, password, name, username, weight, height, age, gender, experience, program; Apple/Google skip the first two) → setup lines → welcome ("YES, SHOW ME AROUND" → tutorial → paywall, or "SKIP" → paywall). Answered questions collapse into a log; tapping a row reopens it (a password reopens empty), later answers are kept and skipped. Email and password rows lock once the Firebase account exists.
+- **Accounts:** the Firebase account is created at the password step (or signed in to: `AuthSession.emailHasAccount` at the email step when the project reveals it, else `signUp` failing with `emailInUse` switches the question to "Enter your password."). The profile API call (`OnboardingViewModel.submitRemote`) runs when the last answer is in; the setup lines start once it succeeds (a failure shows the error with RETRY, a taken username sends you back to that question). The local `User` is created only at the tour choice (`completeLocal`), so the console isn't torn down before the welcome.
+- **Code:** `SignupFlowModel` (state machine, no views, tested in `SignupFlowModelTests`), `SignupValidation` (rules and hint lines), `SignupConsoleView`, `SignupSky` (backdrop, progress bar), `SignupStarEngine` (pure star simulation), `StarBullet` (`Core/DesignSystem/Components`, also the paywall's bullets).
+- **Sky theme only**, whatever the system appearance; the rest of the app follows the system until a setting says otherwise. The background starts flat `#1AA7FF` and cross-fades into the paywall's sky as `level` (answered / total, eased) rises; stars appear with the level and surge on each answer (`SignupSurge`: faster, streaks).
+- **Config:** every number (typing speed, the step list and copy, validation ranges, star count/mix/motion, background, bar glitter, bullet dance) is in `Resources/signup.config.json` (shared with Android; `SignupConfig.fallback` must equal it, a test checks). Remote Config key `signup_config` replaces it (`SignupConfigStore.applyRemote`). Gender gained `nonBinary` (Firestore stores the raw string).
+- **Tuning:** DEBUG, long-press the ORE mark: `SignupDevPanel` (live sky, level scrubber, SURGE, sliders, Copy JSON).
+- **Reduce Motion:** prompts appear whole, no surge, a still sky at the current level, still bullets. DEBUG `-signupInstant 1` (UI tests) shows prompts whole too.
+- **Notifications** are asked for after the paywall closes (`ContentView`), not over it.
+- UI tests: `SignInPage` / `OnboardingPage` in `OreUITests/Pages/AuthPages.swift` (`AX.signup.*`; the opening buttons keep `AX.auth.apple/google/useEmail`); `SignUpScreenshotsUITests` saves every state.
+
 ## Remote settings (change without a release)
 
 `Core/Services/RemoteSettings.swift` reads **Firebase Remote Config** at launch (background; skipped under tests and the emulators) and caches the result, so a change made in the Firebase console reaches users on their next launch or two. Every value has an in-app default, so the app works offline and before the first fetch; a missing or invalid value is ignored.
 - `supernova_trial_months` (number, 0–12, default **3**): the free trial, counted in calendar months from `appInstallDate` (`SupernovaTrial`). The paywall copy follows it ("START 3 MONTHS FREE"; 0 = no trial and the copy drops the free offer). This is the in-app trial only: the App Store's own introductory offer is set in App Store Connect and must be kept the same.
 - `starfield_config` (JSON string): replaces `starfield.config.json` (`StarFieldConfigStore.applyRemote`); invalid JSON is ignored.
+- `signup_config` (JSON string): replaces `signup.config.json` for the sign-up console (`SignupConfigStore.applyRemote`).
 - Add a setting: a key + default in `RemoteSettings.start()`, a pure apply step in `RemoteSettings.apply`, a unit test. Android reads the same keys.
 
 ## Progression suggestions (Supernova)

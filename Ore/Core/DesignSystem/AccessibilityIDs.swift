@@ -46,6 +46,24 @@ enum AX {
         static let modeSignUp = "emailAuth.modeSignUp"
     }
 
+    /// The sign-up console (`Features/Signup`). The opening buttons keep `auth.apple` / `auth.google` / `auth.useEmail`.
+    enum signup {
+        static let screen = "signup.screen"
+        static let input = "signup.input"
+        static let hint = "signup.hint"
+        static let step = "signup.step"
+        /// "03 / NAME": which question is open.
+        static let number = "signup.number"
+        static let next = "signup.continue"
+        static let forgot = "signup.forgot"
+        static let retry = "signup.retry"
+        static let setupError = "signup.setupError"
+        static let welcome = "signup.welcome"
+        static func unit(_ raw: String) -> String { "signup.unit." + slug(raw) }
+        static func choice(_ raw: String) -> String { "signup.choice." + slug(raw) }
+        static func row(_ key: String) -> String { "signup.row." + key }
+    }
+
     enum onboarding {
         static let next = "onboarding.next"
         static let back = "onboarding.back"

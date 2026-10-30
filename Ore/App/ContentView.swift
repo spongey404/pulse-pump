@@ -54,7 +54,10 @@ struct ContentView: View {
                     onTrainFree: { showSupernovaPaywall = false; selectedTab = 2 })
             }
             .onChange(of: showSupernovaPaywall) { _, isShowing in
-                if !isShowing { SupernovaPaywallGate.markShown() }
+                guard !isShowing else { return }
+                SupernovaPaywallGate.markShown()
+                // Notifications are asked for after the paywall, never over it.
+                Task { _ = await NotificationService.shared.requestPermission() }
             }
             .onReceive(NotificationCenter.default.publisher(for: .showSupernovaPaywall)) { _ in
                 presentSupernovaPaywall(after: .milliseconds(600))   // after the tutorial's overlay and practice workout are gone

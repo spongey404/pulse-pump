@@ -1,112 +1,101 @@
 import XCTest
 
-/// Sign-in screen + the email sheet.
+/// The opening screen of the sign-up console and its email questions.
 struct SignInPage {
     let t: UITestCase
 
-    func openEmailSheet() {
+    func openEmail() {
         t.tapID(AX.auth.useEmail)
-        t.require(t.el(AX.auth.emailField), "email field")
+        t.require(t.el(AX.signup.input), "email question")
     }
 
+    /// Types into the open question and presses CONTINUE.
+    func answer(_ text: String) {
+        t.type(text, into: AX.signup.input)
+        t.tapID(AX.signup.next)
+    }
+
+    /// New account: email, then a password (the account is created there). The caller carries on with the name question.
     func signUp(email: String, password: String) {
-        openEmailSheet()
-        t.tapID(AX.auth.modeSignUp)
-        submit(email: email, password: password)
+        openEmail()
+        answer(email)
+        t.waitForLabel(t.el(AX.signup.number), matching: "CONTAINS[c]", "PASSWORD")
+        answer(password)
     }
 
+    /// Existing account: email, then its password. The console learns the email has an account either at the email step
+    /// or when creating it fails, in which case it asks again, so the password is typed a second time if needed.
     func signIn(email: String, password: String) {
-        openEmailSheet()
-        t.tapID(AX.auth.modeSignIn)
-        submit(email: email, password: password)
-    }
-
-    private func submit(email: String, password: String) {
-        t.type(email, into: AX.auth.emailField)
-        t.dismissKeyboard()          // the password field sits behind the keyboard while the email field is focused
-        // A revealed password is a plain text field: no "Use Strong Password?" sheet covering the form.
-        t.tapID(AX.auth.togglePassword)
-        t.type(password, into: AX.auth.passwordField)
-        t.tapID(AX.auth.submit)
+        openEmail()
+        answer(email)
+        t.waitForLabel(t.el(AX.signup.number), matching: "CONTAINS[c]", "PASSWORD")
+        let knew = t.el(AX.signup.forgot).waitForExistence(timeout: 3)
+        answer(password)
+        if !knew, t.el(AX.signup.forgot).waitForExistence(timeout: 5), !t.el(AX.auth.emailError).exists { answer(password) }
     }
 }
 
-/// The nine onboarding steps. Each helper fills the step and presses CONTINUE.
+/// The sign-up console's questions. Each helper waits for its question, fills it and presses CONTINUE (choices advance on tap).
 struct OnboardingPage {
     let t: UITestCase
 
-    func waitForStep(_ n: Int, of total: Int = 9) {
-        t.waitForLabel(t.el(AX.onboarding.stepCounter), matching: "==", "STEP \(n) OF \(total)")
+    /// Waits for the question whose number line ends with `label` ("NAME", "USERNAME", …).
+    func waitFor(_ label: String) {
+        t.waitForLabel(t.el(AX.signup.number), matching: "CONTAINS[c]", "/ \(label)")
     }
 
-    func next() { t.tapID(AX.onboarding.next) }
+    func next() { t.tapID(AX.signup.next) }
 
     func name(_ name: String) {
-        waitForStep(1)
-        t.type(name, into: AX.onboarding.nameField)
+        waitFor("NAME")
+        t.replaceText(in: AX.signup.input, with: name)   // pre-filled from Apple / Google
         next()
     }
 
     /// Types the handle and returns the availability line (uppercased by the UI).
     @discardableResult
     func typeHandle(_ handle: String, expecting message: String) -> String {
-        waitForStep(2)
-        t.replaceText(in: AX.onboarding.handleField, with: handle)   // the field is pre-filled from the name
-        let status = t.el(AX.onboarding.handleStatus)
+        waitFor("USERNAME")
+        t.replaceText(in: AX.signup.input, with: handle)
+        let status = t.el(AX.signup.hint)
         t.waitForLabel(status, matching: "CONTAINS[c]", message)
         return status.label
     }
 
     func weight(_ text: String, lbs: Bool = false) {
-        waitForStep(3)
-        if lbs { t.tapID(AX.onboarding.unitLbs) }
-        t.type(text, into: AX.onboarding.weightField)
+        waitFor("WEIGHT")
+        if lbs { t.tapID(AX.signup.unit("LB")) }
+        t.type(text, into: AX.signup.input)
         next()
     }
 
     func height(cm: String? = nil, feet: String? = nil, inches: String? = nil) {
-        waitForStep(4)
-        if let cm { t.type(cm, into: AX.onboarding.heightField) }
-        if let feet { t.type(feet, into: AX.onboarding.heightImperial("FT")) }
-        if let inches { t.type(inches, into: AX.onboarding.heightImperial("IN")) }
+        waitFor("HEIGHT")
+        if let cm {
+            t.type(cm, into: AX.signup.input)
+        } else if let feet {
+            t.tapID(AX.signup.unit("FT / IN"))
+            t.type("\(feet)'\(inches ?? "0")", into: AX.signup.input)
+        }
         next()
     }
 
     func age(_ text: String) {
-        waitForStep(5)
-        t.type(text, into: AX.onboarding.ageField)
+        waitFor("AGE")
+        t.type(text, into: AX.signup.input)
         next()
     }
 
-    func gender(_ displayName: String) {
-        waitForStep(6)
-        t.tapID(AX.onboarding.gender(displayName))
-        next()
-    }
+    func gender(_ displayName: String) { waitFor("GENDER"); t.tapID(AX.signup.choice(displayName)) }
+    func experience(_ displayName: String) { waitFor("EXPERIENCE"); t.tapID(AX.signup.choice(displayName)) }
+    func split(_ label: String) { waitFor("PROGRAM"); t.tapID(AX.signup.choice(label)) }
 
-    func experience(_ displayName: String) {
-        waitForStep(7)
-        t.tapID(AX.onboarding.experience(displayName))
-        next()
-    }
-
-    func split(_ label: String) {
-        waitForStep(8)
-        t.tapID(AX.onboarding.split(label))
-        next()
-    }
-
-    /// Last step: `showTutorial` picks "YES, SHOW ME AROUND" over skipping (experienced users get a single START button).
-    /// The Supernova paywall follows onboarding (once): without the tutorial it appears straight after the last step, and
-    /// `dismissPaywall` (the default) takes "TRAIN FREE →" so the test carries on from Home.
+    /// The welcome: `showTutorial` picks "YES, SHOW ME AROUND" over skipping. The Supernova paywall follows (once):
+    /// without the tutorial it appears straight after, and `dismissPaywall` (the default) takes "TRAIN FREE →" so the
+    /// test carries on from Home.
     func finish(showTutorial: Bool = false, dismissPaywall: Bool = true) {
-        waitForStep(9)
-        let yes = t.el(AX.onboarding.tutorialYes)
-        if yes.waitForExistence(timeout: 2) {
-            t.tap(showTutorial ? yes : t.el(AX.onboarding.tutorialSkip))
-        } else {
-            t.tapID(AX.onboarding.tutorialStart)
-        }
+        t.require(t.el(AX.signup.welcome), "welcome", timeout: 60)
+        t.tap(t.el(showTutorial ? AX.onboarding.tutorialYes : AX.onboarding.tutorialSkip))
         if dismissPaywall && !showTutorial { trainFree() }
     }
 

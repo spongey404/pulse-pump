@@ -18,6 +18,10 @@ final class FakeAuthProvider: AuthProviding {
     var resetError: Error?
     /// One entry per `callDeleteAccount` call: nil = succeed, otherwise throw. Empty = succeed.
     var deleteScript: [Error?] = []
+    /// Emails that already have an account: creating one fails with `emailInUse`.
+    var knownEmails: Set<String> = []
+    /// Whether `emailHasAccount` can tell (a project with email enumeration protection can't).
+    var revealsAccounts = false
 
     private(set) var reauthCalls: [(AuthProviderKind, String?)] = []
     private(set) var deleteCalls = 0
@@ -57,8 +61,10 @@ final class FakeAuthProvider: AuthProviding {
     func signIn(email: String, password: String) async throws -> AuthUser {
         try signIn(as: Fixtures.user(email: email, providers: [.password]))
     }
+    func emailHasAccount(_ email: String) async -> Bool? { revealsAccounts && knownEmails.contains(email) ? true : nil }
     func signUp(email: String, password: String) async throws -> AuthUser {
-        try signIn(as: Fixtures.user(email: email, providers: [.password], isNew: true))
+        if knownEmails.contains(email) { throw AuthFailure.emailInUse }
+        return try signIn(as: Fixtures.user(email: email, providers: [.password], isNew: true))
     }
 
     func sendPasswordReset(email: String) async throws {

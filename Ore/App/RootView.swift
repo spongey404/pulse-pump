@@ -33,16 +33,10 @@ struct RootView: View {
             switch route {
             case .splash, .wipeLocalStore:
                 SplashView()
-            case .signIn:
-                SignInView(session: session)
-            case .onboarding:
-                OnboardingContainerView(
-                    uid: session.user?.uid ?? "",
-                    prefilledName: session.user?.displayName ?? "",
-                    remote: gate.remote,
-                    onCreated: { gate.accountCreated(uid: $0) }
-                )
-                .id(session.user?.uid)
+            case .signIn, .onboarding:
+                // One continuous console: sign-in choices, the questions, setup and the welcome. The same view stays
+                // up while the account is created, so the route changing under it doesn't restart anything.
+                SignupConsoleView(session: session, remote: gate.remote, onCreated: { gate.accountCreated(uid: $0) })
             case .restoring:
                 RestoringView()
                     .task { await gate.waitForRestore() }
@@ -102,7 +96,8 @@ struct RootView: View {
             // One-time repair: a split picked before schedules existed gets its default days.
             SplitSchedule.repairMissingDays(modelContext: modelContext)
             WidgetDataService.updateWidgetData(modelContext: modelContext)
-            _ = await NotificationService.shared.requestPermission()
+            // The Supernova paywall comes first for someone who just signed up; ContentView asks once it has closed.
+            if !SupernovaPaywallGate.shouldShowNow() { _ = await NotificationService.shared.requestPermission() }
             await NotificationService.shared.reschedule(split: user?.selectedSplit)
         }
     }

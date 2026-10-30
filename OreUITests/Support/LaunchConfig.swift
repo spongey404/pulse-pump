@@ -33,7 +33,7 @@ struct LaunchConfig {
     }
 
     var arguments: [String] {
-        var a = ["-useFirebaseEmulator", "1", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        var a = ["-useFirebaseEmulator", "1", "-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-signupInstant", "1"]
         if let email { a += ["-debugEmail", email, "-debugPassword", password] }
         if email != nil, autoOnboard { a += ["-debugAutoOnboard", "1"] }
         if let scenario {

@@ -71,6 +71,13 @@ final class FirebaseAuthProvider: AuthProviding {
         } catch { throw Self.map(error) }
     }
 
+    func emailHasAccount(_ email: String) async -> Bool? {
+        // Deprecated, and empty when the project hides which emails exist; both read as "can't tell".
+        let methods = try? await auth.fetchSignInMethods(forEmail: email)
+        guard let methods, !methods.isEmpty else { return nil }
+        return true
+    }
+
     func sendPasswordReset(email: String) async throws {
         do { try await auth.sendPasswordReset(withEmail: email) } catch { throw Self.map(error) }
     }

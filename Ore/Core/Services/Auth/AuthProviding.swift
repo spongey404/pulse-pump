@@ -18,6 +18,10 @@ protocol AuthProviding: AnyObject {
     func signIn(email: String, password: String) async throws -> AuthUser
     func signUp(email: String, password: String) async throws -> AuthUser
     func sendPasswordReset(email: String) async throws
+
+    /// Whether this email already has an account. nil = can't tell (the project hides it, or offline): the sign-up
+    /// screen then finds out when the account is created.
+    func emailHasAccount(_ email: String) async -> Bool?
     func signOut() throws
 
     /// Fresh credential for sensitive operations. `password` is only used for the email provider.
@@ -26,4 +30,8 @@ protocol AuthProviding: AnyObject {
     /// Calls the `deleteAccount` Cloud Function (deletes the user's cloud data and the Auth user).
     /// Throws `AuthFailure.requiresRecentLogin` when a fresh sign-in is needed first.
     func callDeleteAccount() async throws
+}
+
+extension AuthProviding {
+    func emailHasAccount(_ email: String) async -> Bool? { nil }
 }

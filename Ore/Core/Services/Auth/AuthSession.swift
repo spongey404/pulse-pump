@@ -13,6 +13,8 @@ final class AuthSession {
     private(set) var isTearingDown = false
     /// Last user-facing error from sign-in / sign-up / reset (nil = none). Cleared by the next attempt.
     var errorMessage: String?
+    /// What the last failed attempt was, for callers that react to a kind of failure (e.g. "email already in use").
+    private(set) var lastFailure: AuthFailure?
     /// Set after `sendPasswordReset` succeeds, for the email sheet's confirmation.
     private(set) var resetEmailSentTo: String?
 
@@ -55,6 +57,11 @@ final class AuthSession {
         await attempt { try await self.provider.signUp(email: Self.clean(email), password: password) }
     }
 
+    /// True when the email already has an account, false when it is free (never known for sure: nil when unsure).
+    func emailHasAccount(_ email: String) async -> Bool? {
+        await provider.emailHasAccount(Self.clean(email))
+    }
+
     @discardableResult
     func sendPasswordReset(email: String) async -> Bool {
         let address = Self.clean(email)
@@ -81,6 +88,7 @@ final class AuthSession {
     @discardableResult
     private func attempt(_ work: () async throws -> AuthUser) async -> Bool {
         errorMessage = nil
+        lastFailure = nil
         resetEmailSentTo = nil
         isBusy = true
         defer { isBusy = false }
@@ -90,6 +98,7 @@ final class AuthSession {
             if state.user?.uid != user.uid { apply(user) }
             return true
         } catch {
+            lastFailure = AuthErrorMapper.failure(from: error)
             errorMessage = AuthErrorMapper.message(for: error)
             return false
         }

@@ -64,19 +64,19 @@ final class AuthOnboardingUITests: UITestCase {
         let onboarding = OnboardingPage(t: self)
         onboarding.name("Hana")
 
-        let field = AX.onboarding.handleField
-        onboarding.waitForStep(2)
+        let field = AX.signup.input
+        onboarding.waitFor("USERNAME")
         replaceText(in: field, with: "ab")
-        waitForLabel(el(AX.onboarding.handleStatus), matching: "CONTAINS[c]", "3")          // "at least 3 characters"
-        XCTAssertFalse(el(AX.onboarding.next).isEnabled, "CONTINUE must stay disabled for an invalid handle")
+        waitForLabel(el(AX.signup.hint), matching: "CONTAINS[c]", "at least 3")
+        XCTAssertFalse(el(AX.signup.next).isEnabled, "CONTINUE must stay disabled for an invalid handle")
 
         replaceText(in: field, with: "frankie")                                                // seeded by firebase/seed
-        waitForLabel(el(AX.onboarding.handleStatus), matching: "CONTAINS[c]", "taken")
-        XCTAssertFalse(el(AX.onboarding.next).isEnabled, "CONTINUE must stay disabled for a taken handle")
+        waitForLabel(el(AX.signup.hint), matching: "CONTAINS[c]", "taken")
+        XCTAssertFalse(el(AX.signup.next).isEnabled, "CONTINUE must stay disabled for a taken handle")
 
         replaceText(in: field, with: "f" + UUID().uuidString.prefix(6).lowercased())
-        waitForLabel(el(AX.onboarding.handleStatus), matching: "CONTAINS[c]", "Available")
-        XCTAssertTrue(el(AX.onboarding.next).isEnabled, "CONTINUE enables once the handle is available")
+        waitForLabel(el(AX.signup.hint), matching: "CONTAINS[c]", "Available")
+        XCTAssertTrue(el(AX.signup.next).isEnabled, "CONTINUE enables once the handle is available")
     }
 
     func testLbsUserOnboardingUsesImperialHeightAndShowsPoundsInSettings() {
@@ -91,7 +91,7 @@ final class AuthOnboardingUITests: UITestCase {
         onboarding.gender("Male")
         onboarding.experience("Advanced lifter")
         onboarding.split("Full Body")
-        onboarding.finish()                                  // advanced lifters get a single START TRAINING button
+        onboarding.finish()
 
         require(el(AX.tab.home), "Home tab", timeout: 30)
         TabBar(t: self).more()
@@ -115,13 +115,14 @@ final class AuthOnboardingUITests: UITestCase {
 
         // Returning users skip onboarding; their data is pulled from the cloud.
         require(el(AX.tab.home), "Home tab after sign-in", timeout: 60)
-        XCTAssertFalse(el(AX.onboarding.next).exists, "A returning user must not see onboarding")
+        XCTAssertFalse(el(AX.signup.number).exists, "A returning user must not see onboarding")
         require(el(AX.home.kpiStreak), "KPI tiles")
     }
 
-    func testWrongPasswordShowsErrorAndStaysOnSignIn() {
+    func testWrongPasswordForAnExistingAccountShowsAnErrorAndStaysOnTheConsole() {
         launch(LaunchConfig(email: nil))
-        SignInPage(t: self).signIn(email: LaunchConfig.uniqueEmail("nobody"), password: "definitely-wrong-1")
+        // Seeded by firebase/seed; its password is "password", so this one is wrong.
+        SignInPage(t: self).signIn(email: "friend1@example.com", password: "definitely-wrong-1")
         require(el(AX.auth.emailError), "inline sign-in error")
         XCTAssertFalse(el(AX.tab.home).exists)
     }

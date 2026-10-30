@@ -1,24 +1,5 @@
 import SwiftUI
 
-/// Step 2: pick a unique @username. Availability is checked live against `usernames/{handle}`.
-struct HandleStepView: View {
-    @Bindable var viewModel: OnboardingViewModel
-    @FocusState private var isFocused: Bool
-
-    var body: some View {
-        OnboardingStepLayout(
-            label: "02 / USERNAME",
-            title: "Pick your\nusername.",
-            subtitle: "Friends find you by this. 3-20 characters: letters, numbers, dots, underscores.",
-            canContinue: viewModel.canContinue,
-            onContinue: viewModel.advance
-        ) {
-            HandleField(input: viewModel.handleInput, isFocused: $isFocused)
-        }
-        .onAppear { isFocused = true }
-    }
-}
-
 /// Username field with the availability line; shared by onboarding and the rename sheet.
 struct HandleField: View {
     @Bindable var input: HandleInput

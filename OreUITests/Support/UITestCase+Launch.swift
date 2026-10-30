@@ -52,7 +52,7 @@ extension UITestCase {
         while Date() < deadline {
             if el(AX.tab.home).exists { return .main }
             if el(AX.auth.useEmail).exists { return .signIn }
-            if el(AX.onboarding.next).exists { return .onboarding }
+            if el(AX.signup.number).exists { return .onboarding }
             // Cheap poll granularity; XCUITest queries already block until the app is idle.
             _ = el(AX.tab.home).waitForExistence(timeout: 0.5)
         }

@@ -105,9 +105,11 @@ final class MoreSettingsUITests: UITestCase {
 
         require(el(AX.auth.useEmail), "sign-in screen after the account is deleted", timeout: 60)
         Self.signedInEmail = nil
-        // The credentials no longer work.
-        SignInPage(t: self).signIn(email: email, password: LaunchConfig.defaultPassword)
-        require(el(AX.auth.emailError), "sign-in error for a deleted account", timeout: 30)
+        // The account is gone: the same email is free again, so signing up with it starts a brand-new account (the
+        // questions), not the old data.
+        SignInPage(t: self).signUp(email: email, password: LaunchConfig.defaultPassword)
+        OnboardingPage(t: self).waitFor("NAME")
+        XCTAssertFalse(el(AX.tab.home).exists)
     }
 
     func testWidgetGalleryOpensFromTheWidgetsScreen() {

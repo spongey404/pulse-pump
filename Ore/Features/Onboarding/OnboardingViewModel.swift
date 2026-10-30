@@ -156,6 +156,15 @@ class OnboardingViewModel {
     /// Nothing local is created if the remote write fails. Returns true on success.
     @discardableResult
     func submit(modelContext: ModelContext) async -> Bool {
+        guard await submitRemote() else { return false }
+        completeLocal(modelContext: modelContext)
+        return true
+    }
+
+    /// The cloud half: the profile API call. Fails (and returns false) with `submitError` set; a taken handle also
+    /// marks the handle taken and returns to the handle step. The sign-up console shows the setup lines in between.
+    @discardableResult
+    func submitRemote() async -> Bool {
         guard !isSubmitting else { return false }
         if let problem = HandleValidator.validate(handleInput.handle) {
             submitError = problem.message
@@ -178,9 +187,15 @@ class OnboardingViewModel {
             submitError = "Couldn't create your account. Please try again."
             return false
         }
+        // From here the account exists: even if the app is closed before the tour choice, the paywall is still due.
+        SupernovaPaywallGate.markPending()
+        return true
+    }
+
+    /// The local half: the `User`, and the gate claims the store.
+    func completeLocal(modelContext: ModelContext) {
         createLocalUser(modelContext: modelContext)
         onAccountCreated?(uid)
-        return true
     }
 
     /// Local half of onboarding: `User` (+ split, bodyweight entry, tutorial flag).
