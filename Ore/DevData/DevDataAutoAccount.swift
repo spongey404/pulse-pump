@@ -27,6 +27,8 @@ enum DevDataAutoAccount {
         guard UserDefaults.standard.bool(forKey: "debugFreshSession") else { return }
         try? Auth.auth().signOut()
         for key in SwiftDataSyncLifecycle.userDefaultsKeysToClear { UserDefaults.standard.removeObject(forKey: key) }   // first-run flags belong to the account
+        UserDefaults.standard.removeObject(forKey: "devDataPlus")   // a seeded run's "pretend member" flag, persisted by DevDataService
+        UserDefaults.standard.removeObject(forKey: SupernovaService.subscribedMirrorKey)   // …and the entitlement mirror it fed
         let fm = FileManager.default
         // SwiftData's default store lives in the App Group container (shared with the widget extension).
         var roots = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)

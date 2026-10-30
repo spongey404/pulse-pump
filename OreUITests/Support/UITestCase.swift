@@ -153,7 +153,7 @@ class UITestCase: XCTestCase {
             if el(AX.supernova.start).exists { return }
             RunLoop.current.run(until: Date().addingTimeInterval(0.5))
         }
-        XCTFail("the Supernova paywall did not appear within \(Int(timeout))s", file: file, line: line)
+        XCTFail("the Supernova paywall did not appear within \(Int(timeout))s\n\(app.debugDescription.prefix(3500))", file: file, line: line)
     }
 
     /// iOS offers to save a password after a password field was used ("Save Password?"); decline it if shown.

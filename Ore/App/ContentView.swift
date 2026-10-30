@@ -53,6 +53,9 @@ struct ContentView: View {
                     onSubscribed: { showSupernovaPaywall = false; selectedTab = 2 },
                     onTrainFree: { showSupernovaPaywall = false; selectedTab = 2 })
             }
+            .onChange(of: showSupernovaPaywall) { _, isShowing in
+                if !isShowing { SupernovaPaywallGate.markShown() }
+            }
             .onReceive(NotificationCenter.default.publisher(for: .showSupernovaPaywall)) { _ in
                 presentSupernovaPaywall(after: .milliseconds(600))   // after the tutorial's overlay and practice workout are gone
             }
@@ -143,8 +146,7 @@ struct ContentView: View {
             await SupernovaService().refreshSubscriptionStatus()
             guard SupernovaPaywallGate.shouldShowNow(), !showSupernovaPaywall,
                   !workoutViewModel.isActive, !workoutViewModel.showCompletionSummary else { return }
-            SupernovaPaywallGate.markShown()
-            showSupernovaPaywall = true
+            showSupernovaPaywall = true   // used up when it is dismissed (below), so a rebuilt ContentView shows it again
         }
     }
 
