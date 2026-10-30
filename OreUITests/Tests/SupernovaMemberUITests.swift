@@ -28,6 +28,23 @@ final class SupernovaMemberUITests: UITestCase {
         }
     }
 
+    func testGlitterScrollsAwayWithThePage() {
+        launch(LaunchConfig(email: LaunchConfig.uniqueEmail("scr"), scenario: .newUser, plus: true))
+        TabBar(t: self).more()
+        el(AX.supernova.memberCard).tap()
+        require(el(AX.supernova.memberBack), "the membership page", timeout: 10)
+        RunLoop.current.run(until: Date().addingTimeInterval(1.8))
+        let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "member-top"; shot.lifetime = .keepAlways; add(shot)
+        if let dir = ProcessInfo.processInfo.environment["MEMBER_SHOTS"] {
+            try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: dir + "/member-top.png"))
+        }
+        for _ in 0..<3 { app.swipeUp(velocity: .fast) }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        if let dir = ProcessInfo.processInfo.environment["MEMBER_SHOTS"] {
+            try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: dir + "/member-scrolled.png"))
+        }
+    }
+
     func testPickingAnAccentRecoloursTheSelection() {
         launch(LaunchConfig(email: LaunchConfig.uniqueEmail("acc"), scenario: .newUser, plus: true))
         TabBar(t: self).more()

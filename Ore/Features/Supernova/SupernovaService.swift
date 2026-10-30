@@ -70,7 +70,7 @@ class SupernovaService {
 
     /// Supernova access as the rest of the app defines it: subscribed or inside the free trial.
     static var hasAccess: Bool {
-        UserDefaults.standard.bool(forKey: subscribedMirrorKey) || DevFlags.plusOverride || SupernovaService().isInFreeTrial
+        PreviewMembership.forced ?? (UserDefaults.standard.bool(forKey: subscribedMirrorKey) || SupernovaService().isInFreeTrial)
     }
 
     private var updateListenerTask: Task<Void, Never>?
@@ -144,16 +144,14 @@ class SupernovaService {
         }
         renewalDate = renewal
         memberSince = since
-        #if DEBUG
-        if DevFlags.plusOverride, since == nil {   // a seeded member has no purchase: pretend one began at install
+        if PreviewMembership.forced == true, since == nil {   // a pretend member has no purchase: say one began at install
             memberSince = UserDefaults.standard.object(forKey: "appInstallDate") as? Date
             renewalDate = renewalDate ?? Calendar.current.date(byAdding: .month, value: 5, to: Date())
         }
-        #endif
-        isSubscribed = foundActive || DevFlags.plusOverride   // plusOverride is DEBUG-only
+        isSubscribed = PreviewMembership.forced ?? foundActive   // forced is nil outside DEBUG and preview builds
         UserDefaults.standard.set(isSubscribed, forKey: Self.subscribedMirrorKey)
         AccentStore.shared.refreshMembership()
-        WidgetDataService.setSubscribed(foundActive)
+        WidgetDataService.setSubscribed(PreviewMembership.forced ?? foundActive)
     }
 
     var isInFreeTrial: Bool {

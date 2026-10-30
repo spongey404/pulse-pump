@@ -134,6 +134,9 @@ struct MoreTabView: View {
                     MoreRow(icon: "rectangle.portrait.and.arrow.right", label: "Sign Out",
                             destructive: true, chevron: false, minHeight: 48) { showSignOutAlert = true }
 
+                    PreviewMembershipToggle(isMember: supernovaService.isSubscribed) {
+                        Task { await supernovaService.refreshSubscriptionStatus() }
+                    }
                     Spacer().frame(height: 32)
                 }
             }

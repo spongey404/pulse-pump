@@ -8,7 +8,7 @@
   "sway": { "base": 6, "perSize": 5 },
   "flash": { "prob": 0.0015, "decay": 0.04 },
   "flare": { "minSize": 1.1, "length": 4, "flashLength": 5, "width": 0.7 },
-  "fps": { "paywall": 60, "paywallIdle": 30, "more": 30 },
+  "fps": { "paywall": 30, "paywallIdle": 30, "more": 30 },
   "idleAfterMs": 10000,
   "settleAfterMs": 0,
   "palettes": {

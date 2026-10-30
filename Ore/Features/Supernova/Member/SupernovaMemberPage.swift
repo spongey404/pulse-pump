@@ -22,6 +22,8 @@ struct SupernovaMemberPage: View {
         #endif
     }()
     @State private var anchor: CGRect?
+    /// How far the scroll view has moved up; the glitter travels with the content and leaves plain charcoal behind.
+    @State private var scrolled: CGFloat = 0
     private var config: SupernovaMemberConfig { SupernovaMemberConfigStore.shared.current }
     private var accent: AccentChoice { AccentStore.shared.picked }
     private var user: User? { users.first }
@@ -42,6 +44,7 @@ struct SupernovaMemberPage: View {
                 .ignoresSafeArea()
                 .mask(LinearGradient(stops: config.page.maskStops.map { .init(color: .black.opacity($0[1]), location: $0[0]) },
                                      startPoint: .top, endPoint: .bottom).ignoresSafeArea())
+                .offset(y: -scrolled)
                 .allowsHitTesting(false)
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
@@ -52,6 +55,9 @@ struct SupernovaMemberPage: View {
                     }
                     .padding(.horizontal, 24)
                     .padding(.bottom, 22)
+                    .background(GeometryReader { g in
+                        Color.clear.onChange(of: g.frame(in: .named("memberScroll")).minY) { _, y in scrolled = max(0, -y) }
+                    })
                     Section {
                         Group {
                             switch tab {
@@ -66,6 +72,7 @@ struct SupernovaMemberPage: View {
                     }
                 }
             }
+            .coordinateSpace(name: "memberScroll")
         }
         .foregroundStyle(.white)
         .environment(\.colorScheme, .dark)
@@ -173,7 +180,8 @@ struct SupernovaMemberPage: View {
         .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 10)
         .frame(maxWidth: .infinity)
         .background {
-            ZStack { Rectangle().fill(.ultraThinMaterial); Color.white.opacity(0.08) }.ignoresSafeArea(edges: .top)
+            // No blur and no band: the page glitter stays sharp behind the pinned tabs, with no hard edge.
+            Color.clear
         }
     }
 
