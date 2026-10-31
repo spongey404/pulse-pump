@@ -7,6 +7,7 @@ import SwiftUI
 /// - deleted account: a plain "no longer available" state.
 struct FriendProfileView: View {
     @Environment(\.weightUnit) private var unit
+    @Environment(\.colorScheme) private var scheme
     let uid: String
     let handle: String
     let name: String
@@ -15,7 +16,6 @@ struct FriendProfileView: View {
 
     @State private var page: ProfilePage?
     @State private var openedPost: WorkoutFeedItem?
-    @State private var confirmUnfollow = false
     @State private var confirmBlock = false
     @State private var menuOpen = false
     @State private var message: String?
@@ -24,17 +24,19 @@ struct FriendProfileView: View {
     private var profile: FirestoreUserProfile? { page?.profile }
     private var shownName: String { profile?.shownName ?? name }
     private var shownHandle: String { (profile?.username.isEmpty == false ? profile?.username : nil) ?? handle }
+    /// Posts name muscles by display name ("Chest"); match case-insensitively so a differently-cased key still colours its region.
+    private var muscleSets: [String: Int] {
+        stats.muscleSets30d.reduce(into: [:]) { $0[$1.key.capitalized, default: 0] += $1.value }
+    }
     private var stats: ProfileStats { ProfileStats(posts: page?.posts ?? []) }
 
     var body: some View {
         VStack(spacing: 0) {
-            SocialScreenHeader(title: "", onBack: { dismiss() }) {
+            SocialProfileHeader(overline: shownHandle.isEmpty ? "" : "@\(shownHandle.uppercased())", title: "", onBack: { dismiss() }) {
                 if relationship != .me && page?.access != .unavailable {
-                    Button { menuOpen = true } label: {
-                        Image(systemName: "ellipsis").font(.system(size: 18)).foregroundStyle(Color.inkMuted).frame(width: 44, height: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Profile options")
+                    Button { menuOpen = true } label: { HeaderSquareLabel(text: "···") }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Profile options")
                 }
             }
 
@@ -57,7 +59,6 @@ struct FriendProfileView: View {
                         visibleContent
                     }
                 }
-                .padding(.horizontal, 16)
                 .padding(.bottom, 24)
             }
         }
@@ -77,11 +78,6 @@ struct FriendProfileView: View {
                 Button("Block @\(shownHandle)", role: .destructive) { confirmBlock = true }
             }
         }
-        .confirmationDialog("Unfollow \(shownName)?", isPresented: $confirmUnfollow, titleVisibility: .visible) {
-            Button("Unfollow", role: .destructive) { Task { await viewModel.unfollow(uid) } }
-        } message: {
-            Text(relationship == .friends ? "You'll stop being friends. They stay your fan." : "You'll stop following them.")
-        }
         .alert("Block @\(shownHandle)?", isPresented: $confirmBlock) {
             Button("Block", role: .destructive) {
                 Task {
@@ -99,24 +95,22 @@ struct FriendProfileView: View {
 
     // MARK: Identity + relationship
 
+    /// The accent of this person when they are a Supernova member (nil until the profile carries it: see `FriendMembership`).
+    private var memberHex: String? { FriendMembership.accentHex(forUid: uid) }
+
     private var identityRow: some View {
         HStack(alignment: .center, spacing: 14) {
-            Avatar(initial: shownName, size: 60)
-            VStack(alignment: .leading, spacing: 3) {
-                if !shownHandle.isEmpty {
-                    Text("@\(shownHandle)").font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted)
-                }
+            PersonTile(name: shownName, size: 64, accentHex: memberHex)
+            VStack(alignment: .leading, spacing: 4) {
                 Text(page?.access == .restricted ? "Private profile" : shownName)
-                    .font(.archivo(20, weight: .bold)).foregroundStyle(Color.inkPrimary)
-                if let profile, page?.access == .visible {
-                    Text("\(profile.friendCount) FRIENDS · \(profile.fanCount) FANS")
-                        .font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
-                }
+                    .font(.archivo(26, weight: .black)).foregroundStyle(Color.inkPrimary)
+                    .lineLimit(1).minimumScaleFactor(0.6)
+                if memberHex != nil { SupernovaTag() }
             }
-            Spacer()
+            Spacer(minLength: 0)
             relationshipButton
         }
-        .padding(.top, 16).padding(.bottom, 14)
+        .padding(16)
     }
 
     @ViewBuilder
@@ -128,13 +122,13 @@ struct FriendProfileView: View {
             case .me, .blocked:
                 EmptyView()
             case .friends:
-                SocialPill(title: "FRIENDS", style: .outlined) { confirmUnfollow = true }
+                SocialSmallButton(title: "FRIENDS", style: .outlined, isStatic: true) {}
             case .following:
-                SocialPill(title: "FOLLOWING", style: .outlined) { confirmUnfollow = true }
+                SocialSmallButton(title: "FOLLOWING", style: .outlined, isStatic: true) {}
             case .fan:
-                SocialPill(title: "FOLLOW BACK", style: .filled) { Task { await viewModel.follow(uid) } }
+                SocialSmallButton(title: "FOLLOW BACK", style: .filled) { Task { await viewModel.follow(uid) } }
             case .stranger:
-                SocialPill(title: "FOLLOW", style: .filled) { Task { await viewModel.follow(uid) } }
+                SocialSmallButton(title: "FOLLOW", style: .filled) { Task { await viewModel.follow(uid) } }
             }
         }
     }
@@ -155,7 +149,7 @@ struct FriendProfileView: View {
     private var blockedNotice: some View {
         VStack(spacing: 14) {
             notice("You blocked @\(shownHandle)", detail: "Their posts and profile are hidden from you.", icon: "hand.raised")
-            SocialPill(title: "UNBLOCK", style: .outlined) { Task { await viewModel.unblock(uid: uid) } }
+            SocialSmallButton(title: "UNBLOCK", style: .outlined) { Task { await viewModel.unblock(uid: uid) } }
         }
     }
 
@@ -164,36 +158,38 @@ struct FriendProfileView: View {
     @ViewBuilder
     private var visibleContent: some View {
         HStack(spacing: 6) {
-            KPIBlock(label: "Streak", value: "\(profile?.currentStreak ?? 0)D").frame(maxWidth: .infinity, alignment: .leading)
-            KPIBlock(label: "This Wk", value: "\(stats.trainedDaysThisWeek)").frame(maxWidth: .infinity, alignment: .leading)
-            KPIBlock(label: "Volume · 30D", value: unit.compactVolume(stats.volumeKg30d)).frame(maxWidth: .infinity, alignment: .leading)   // posted weights are kg
-            KPIBlock(label: "PRs · 30D", value: "\(stats.prs30d)", valueColor: .prGold)
-                .shadow(color: Color.prGold.opacity(0.4), radius: 4)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            ProfileFigure(label: "STREAK", value: "\(profile?.currentStreak ?? 0)D")
+            ProfileFigure(label: "THIS WK", value: "\(stats.trainedDaysThisWeek)")
+            ProfileFigure(label: "VOLUME", value: unit.compactVolume(stats.volumeKg30d))   // posted weights are kg
+            ProfileFigure(label: "PRS", value: "\(stats.prs30d)", isPR: true)
         }
-        .padding(.bottom, 14)
+        .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 17)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
 
-        if !stats.muscleSets30d.isEmpty {
-            HStack(alignment: .top, spacing: 16) {
-                BodyHeat(intensities: BodyHeat.Intensities(muscleSets: stats.muscleSets30d))
-                    .frame(width: 75, height: 120)
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(MuscleSetsFormat.top(stats.muscleSets30d, count: 6, abbreviated: false), id: \.label) { m in
+        if !muscleSets.isEmpty {
+            SocialSectionLabel(title: "LAST 30 DAYS", ruled: false)
+            HStack(spacing: 20) {
+                bodyMap
+                VStack(spacing: 8) {
+                    ForEach(MuscleSetsFormat.top(muscleSets, count: 5, abbreviated: false), id: \.label) { m in
                         HStack {
-                            Text(m.label).font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted)
+                            Text(m.label.capitalized).font(.archivo(14, weight: .semibold)).foregroundStyle(Color.inkPrimary)
                             Spacer()
-                            Text("\(m.count)").font(Font.spaceMono(11, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                            HStack(spacing: 0) {
+                                Text("\(m.count)").font(.spaceMono(13, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                                Text(" SETS").font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
+                            }
                         }
+                        .frame(height: 19.3)
+                        .padding(.bottom, 7)
+                        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
                     }
                 }
             }
-            .padding(.vertical, 16)
-            .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+            .padding(.horizontal, 16).padding(.bottom, 8)
         }
 
-        SectionLabel(title: "This Week", meta: "\(stats.trainedDaysThisWeek) Of 7 Days")
-            .padding(.top, 16).padding(.bottom, 6)
+        SocialSectionLabel(title: "THIS WEEK", meta: "\(stats.trainedDaysThisWeek) OF 7 DAYS")
 
         ForEach(stats.week, id: \.day) { day in
             dayRow(day)
@@ -201,34 +197,55 @@ struct FriendProfileView: View {
 
         if relationship != .friends && relationship != .me {
             Text("YOU SEE THEIR PUBLIC SESSIONS · FRIENDS SEE MORE")
-                .font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted).padding(.top, 14)
+                .font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted).padding(16)
         } else if (page?.posts ?? []).isEmpty {
-            Text("NO POSTED SESSIONS YET").font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted).padding(.top, 14)
+            Text("NO POSTED SESSIONS YET").font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted).padding(16)
         }
+    }
+
+    /// The 30-day body map. A Supernova member's worked muscles are filled with Stardust in their accent; a free friend has none.
+    private var bodyMap: some View {
+        let heat = BodyHeat.Intensities(muscleSets: muscleSets)
+        return ZStack {
+            if scheme == .dark { BodyHeat.darkSurface(heat) } else { BodyHeat(intensities: heat) }
+            if let hex = memberHex, let palette = FriendMembership.palette(hex: hex) {
+                StardustMuscleOverlay(intensities: heat, palette: palette)
+            }
+        }
+        .frame(width: 94, height: 150)
     }
 
     @ViewBuilder
     private func dayRow(_ day: (day: Date, post: WorkoutFeedItem?)) -> some View {
-        let content = HStack {
-            Text(day.day.formatted(.dateTime.weekday(.wide)))
-                .font(.archivo(15, weight: .medium))
-                .foregroundStyle(day.post == nil ? Color.inkMuted : Color.inkPrimary)
-            Spacer()
-            if let post = day.post {
-                Text("\(post.workingSetCount) SETS").font(Font.spaceMono(10)).foregroundStyle(Color.inkMuted)
-                Text("›").font(Font.spaceMono(12)).foregroundStyle(Color.inkMuted)
-            } else {
-                Text("—").font(Font.spaceMono(10)).foregroundStyle(Color.inkFaint)
-            }
-        }
-        .frame(minHeight: 44)
-        .contentShape(Rectangle())
-        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
-
+        let name = day.day.formatted(.dateTime.weekday(.abbreviated))
         if let post = day.post {
-            Button { openedPost = post } label: { content }.buttonStyle(.plain)
+            Button { openedPost = post } label: {
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack {
+                        Text(name).font(.archivo(16, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                            .cssLineHeight(fontName: "Archivo-Bold", size: 16, multiple: 1.2)
+                        Spacer()
+                        Text("›").font(.spaceMono(16)).foregroundStyle(Color.inkGhost)
+                    }
+                    Text([post.templateName, "\(post.workingSetCount) sets"].compactMap { $0 }.joined(separator: " · "))
+                        .font(.archivo(12)).foregroundStyle(Color.inkMuted)
+                        .cssLineHeight(fontName: "Archivo-Regular", size: 12, multiple: 1.4)
+                }
+                .padding(.vertical, 12).padding(.horizontal, 16)
+                .frame(minHeight: 64)
+                .contentShape(Rectangle())
+                .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+            }
+            .buttonStyle(.plain)
         } else {
-            content
+            HStack {
+                Text(name).font(.archivo(16, weight: .bold)).foregroundStyle(Color.inkGhost)
+                Spacer()
+                Text("REST").font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkGhost)
+            }
+            .padding(.vertical, 12).padding(.horizontal, 16)
+            .frame(minHeight: 44)
+            .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
         }
     }
 }

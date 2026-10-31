@@ -1,83 +1,80 @@
 import SwiftUI
 
-/// 6a — Add friends: find by handle, friend requests (fans waiting for a follow back), invite.
-///
-/// Friends are people who follow each other. A person who follows you but whom you don't follow is a
-/// fan, and shows up here as a request: ACCEPT follows them back (you become friends), IGNORE
-/// dismisses the request (they stay a fan).
+/// 5c — Add friends: search by handle, requests first (people who follow you; ACCEPT follows back and you become friends, IGNORE
+/// dismisses the request), then an invite link. Suggestions with mutual friends are not shown: the app has no source for them
+/// (a user's friend list is private, and there is no contacts import).
 struct FriendsListView: View {
     @Bindable var viewModel: SocialViewModel
     @State private var searchText = ""
     @State private var searchTask: Task<Void, Never>?
+    @State private var openedPerson: FirestoreUserProfile?
+    @State private var showPerson = false
     @Environment(\.dismiss) private var dismiss
 
     private var typedHandle: String { HandleRules.normalize(searchText) }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 10) {
-                    Image(systemName: "magnifyingglass").font(.system(size: 16)).foregroundStyle(Color.inkMuted)
-                    TextField("Find someone by their @handle", text: $searchText)
-                        .font(.archivo(15))
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .submitLabel(.search)
-                }
-                .padding(.bottom, 8)
-                .overlay(alignment: .bottom) { Rectangle().fill(Color.ruleStrong).frame(height: 1) }
-                .padding(.top, 14)
+        VStack(spacing: 0) {
+            SocialProfileHeader(overline: "SOCIAL", title: "ADD FRIENDS", onBack: { dismiss() }) { EmptyView() }
 
-                if !searchText.isEmpty {
-                    SectionLabel(title: "Results").padding(.top, 22).padding(.bottom, 6)
-                    if !HandleRules.isValid(typedHandle) {
-                        hint("TYPE THE FULL HANDLE · 3 TO 20 LETTERS, NUMBERS, . OR _")
-                    } else if viewModel.isSearching && viewModel.searchResults.isEmpty {
-                        SkeletonRows(count: 1, rowHeight: 60)
-                    } else if viewModel.searchResults.isEmpty {
-                        hint("NO ONE WITH THE HANDLE @\(typedHandle.uppercased())")
-                    } else {
-                        ForEach(viewModel.searchResults, id: \.uid) { found in
-                            resultRow(found)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(spacing: 8) {
+                        TextField("", text: $searchText, prompt: Text("Search by @username").foregroundStyle(Color.inkMuted))
+                            .font(.archivo(15))
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .submitLabel(.search)
+                    }
+                    .padding(.horizontal, 12)
+                    .frame(height: 44)
+                    .background(Color.surf2)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .padding(.horizontal, 16).padding(.top, 14)
+
+                    if !searchText.isEmpty {
+                        SocialSectionLabel(title: "RESULTS")
+                        if !HandleRules.isValid(typedHandle) {
+                            hint("TYPE THE FULL HANDLE · 3 TO 20 LETTERS, NUMBERS, . OR _")
+                        } else if viewModel.isSearching && viewModel.searchResults.isEmpty {
+                            SkeletonRows(count: 1, rowHeight: 60).padding(.horizontal, 16)
+                        } else if viewModel.searchResults.isEmpty {
+                            hint("NO ONE WITH THE HANDLE @\(typedHandle.uppercased())")
+                        } else {
+                            ForEach(viewModel.searchResults, id: \.uid) { found in
+                                resultRow(found)
+                            }
                         }
                     }
-                }
 
-                if !viewModel.fanRequests.isEmpty {
-                    SectionLabel(title: "Friend Requests", meta: "\(viewModel.fanRequests.count) Waiting").padding(.top, 22).padding(.bottom, 6)
-                    ForEach(viewModel.fanRequests) { fan in
-                        requestRow(fan)
-                    }
-                }
-
-                if !viewModel.followingOnly.isEmpty {
-                    SectionLabel(title: "Waiting For Follow Back", meta: "\(viewModel.followingOnly.count)").padding(.top, 22).padding(.bottom, 6)
-                    ForEach(viewModel.followingOnly) { person in
-                        personRow(person) {
-                            SocialPill(title: "UNFOLLOW", style: .outlined) { Task { await viewModel.unfollow(person.uid) } }
+                    if !viewModel.fanRequests.isEmpty {
+                        SocialSectionLabel(title: "REQUESTS", meta: "\(viewModel.fanRequests.count)")
+                        ForEach(viewModel.fanRequests) { fan in
+                            requestRow(fan)
                         }
                     }
-                }
 
-                SectionLabel(title: "Invite").padding(.top, 22).padding(.bottom, 8)
-                if !viewModel.myHandle.isEmpty {
-                    ShareLink(item: "Train with me on Ore. Find me by my handle: @\(viewModel.myHandle)") {
-                        DashedAdd(title: "Share Your Handle", action: {})
-                            .allowsHitTesting(false)
+                    SocialSectionLabel(title: "NOT ON ORE")
+                    if !viewModel.myHandle.isEmpty {
+                        ShareLink(item: "Train with me on Ore. Find me by my handle: @\(viewModel.myHandle)") {
+                            SocialDashedLabel(title: "SHARE INVITE LINK")
+                        }
+                        .padding(.horizontal, 16).padding(.vertical, 14)
+                        Text("FRIENDS FIND YOU BY TYPING YOUR EXACT HANDLE · @\(viewModel.myHandle.uppercased())")
+                            .font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted)
+                            .padding(.horizontal, 16)
                     }
-                    Text("FRIENDS FIND YOU BY TYPING YOUR EXACT HANDLE · @\(viewModel.myHandle.uppercased())")
-                        .font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted)
-                        .padding(.top, 10)
                 }
+                .padding(.bottom, 24)
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 24)
         }
         .background(Color.canvasBg)
-        .navigationTitle("Find Friends")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
+        .navigationDestination(isPresented: $showPerson) {
+            if let p = openedPerson {
+                FriendProfileView(uid: p.uid, handle: p.username, name: p.shownName, viewModel: viewModel)
+            }
         }
         .onChange(of: searchText) { _, newValue in
             // Debounce, and let the view model drop out-of-order answers.
@@ -95,38 +92,24 @@ struct FriendsListView: View {
     }
 
     private func hint(_ text: String) -> some View {
-        Text(text).font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted).frame(minHeight: 44, alignment: .leading)
+        Text(text).font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted)
+            .padding(.horizontal, 16).frame(minHeight: 44, alignment: .leading)
     }
 
-    private func personRow<Trailing: View>(_ person: FirestoreUserProfile, @ViewBuilder trailing: () -> Trailing) -> some View {
-        HStack(spacing: 12) {
-            NavigationLink {
-                FriendProfileView(uid: person.uid, handle: person.username, name: person.shownName, viewModel: viewModel)
-            } label: {
-                HStack(spacing: 12) {
-                    Avatar(initial: person.shownName, size: 36)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(person.shownName).font(.archivo(16, weight: .semibold)).foregroundStyle(Color.inkPrimary)
-                        if !person.username.isEmpty {
-                            Text("@\(person.username)").font(Font.spaceMono(9)).foregroundStyle(Color.inkMuted)
-                        }
-                    }
-                    Spacer(minLength: 0)
-                }
-            }
-            .buttonStyle(.plain)
-            trailing()
-        }
-        .frame(minHeight: 60)
-        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+    private func personRow<Trailing: View>(_ person: FirestoreUserProfile, @ViewBuilder trailing: @escaping () -> Trailing) -> some View {
+        PersonListRow(
+            name: person.shownName,
+            description: person.username.isEmpty ? nil : "@\(person.username)",
+            accentHex: FriendMembership.accentHex(forUid: person.uid),
+            onTap: { openedPerson = person; showPerson = true },
+            actions: trailing
+        )
     }
 
     private func requestRow(_ fan: FirestoreUserProfile) -> some View {
         personRow(fan) {
-            HStack(spacing: 8) {
-                SocialPill(title: "ACCEPT", style: .filled) { Task { await viewModel.accept(fan.uid) } }
-                SocialPill(title: "IGNORE", style: .outlined) { viewModel.ignore(fan.uid) }
-            }
+            SocialSmallButton(title: "IGNORE", style: .outlined) { viewModel.ignore(fan.uid) }
+            SocialSmallButton(title: "ACCEPT", style: .filled) { Task { await viewModel.accept(fan.uid) } }
         }
     }
 
@@ -136,13 +119,13 @@ struct FriendsListView: View {
         return personRow(person) {
             switch relation {
             case .friends:
-                Text("FRIENDS").font(Font.spaceMono(9, weight: .bold)).tracking(1.2).foregroundStyle(Color.inkMuted)
+                SocialSmallButton(title: "FRIENDS", style: .outlined, isStatic: true) {}
             case .following:
-                SocialPill(title: "FOLLOWING", style: .outlined) { Task { await viewModel.unfollow(found.uid) } }
+                SocialSmallButton(title: "FOLLOWING", style: .outlined, isStatic: true) {}
             case .fan:
-                SocialPill(title: "FOLLOW BACK", style: .filled) { Task { await viewModel.follow(found.uid) } }
+                SocialSmallButton(title: "FOLLOW BACK", style: .filled) { Task { await viewModel.follow(found.uid) } }
             default:
-                SocialPill(title: "FOLLOW", style: .filled) { Task { await viewModel.follow(found.uid) } }
+                SocialSmallButton(title: "FOLLOW", style: .outlined) { Task { await viewModel.follow(found.uid) } }
             }
         }
     }
