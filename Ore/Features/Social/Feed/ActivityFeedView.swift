@@ -47,7 +47,7 @@ struct ActivityFeedView: View {
                             Circle().fill(Color.oreAccent).frame(width: 8, height: 8)
                         }
                     }
-                    .frame(minWidth: 44, minHeight: 44)
+                    .frame(width: 44, height: 32)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Activity")
@@ -62,7 +62,7 @@ struct ActivityFeedView: View {
                 .accessibilityIdentifier(AX.social.profile)
             }
             .padding(.horizontal, 16)
-            .padding(.top, 6)
+            .padding(.top, 5)
             .padding(.bottom, 10)
 
             HStack(spacing: 20) {
@@ -77,6 +77,7 @@ struct ActivityFeedView: View {
                             .tracking(1)
                             .foregroundStyle(isActive ? Color.inkPrimary : Color.inkMuted)
                             .padding(.vertical, 10)
+                            .padding(.bottom, 2)
                             .overlay(alignment: .bottom) {
                                 Rectangle().fill(isActive ? Color.oreAccent : Color.clear).frame(height: 2)
                             }
@@ -87,6 +88,7 @@ struct ActivityFeedView: View {
                 Spacer()
             }
             .padding(.horizontal, 16)
+            .padding(.bottom, 1)
             .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
 
             if selectedTab == 0 {
@@ -295,7 +297,7 @@ struct FeedPostCard: View {
     }
 
     private func heroText(tall: Bool) -> some View {
-        VStack(alignment: .leading, spacing: tall ? 6 : 4) {
+        VStack(alignment: .leading, spacing: 0) {
             Button { if !isMine { showProfile = true } } label: {
                 HStack(spacing: 10) {
                     Group {
@@ -326,10 +328,11 @@ struct FeedPostCard: View {
                 .foregroundStyle(Color.inkPrimary)
                 .cssLineHeight(fontName: "Archivo-Black", size: 30, multiple: 0.95)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, tall ? 8 : 4)
+                .padding(.top, tall ? 20 : 14)
 
             Text("\(durationLabel) · \(relativeLabel)")
                 .font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkMuted)
+                .padding(.top, tall ? 6 : 4)
 
             if item.prCount > 0 {
                 HStack(spacing: 6) {
@@ -339,7 +342,7 @@ struct FeedPostCard: View {
                 }
                 .padding(.horizontal, 10).padding(.vertical, 6)
                 .background(Color.surf, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .padding(.top, 4)
+                .padding(.top, 16)
             }
         }
     }
@@ -384,8 +387,8 @@ struct FeedPostCard: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label).font(.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
             HStack(alignment: .lastTextBaseline, spacing: 0) {
-                Text(value).font(.spaceMono(18, weight: .bold)).foregroundStyle(color)
-                if let suffix { Text(suffix).font(.spaceMono(12, weight: .bold)).foregroundStyle(Color.inkMuted) }
+                Text(value).font(.spaceMono(18, weight: .bold)).foregroundStyle(color).frame(height: 18)
+                if let suffix { Text(suffix).font(.spaceMono(12, weight: .bold)).foregroundStyle(Color.inkMuted).frame(height: 18) }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -565,8 +568,8 @@ struct FeedSessionSheet: View {
             HStack(spacing: 5) {
                 if star { PRStar(size: 14) }
                 HStack(alignment: .lastTextBaseline, spacing: 0) {
-                    Text(value).font(.spaceMono(22, weight: .bold)).foregroundStyle(valueColor)
-                    if let delta { Text(delta).font(.spaceMono(22, weight: .bold)).foregroundStyle(Color.inkMuted) }
+                    Text(value).font(.spaceMono(22, weight: .bold)).foregroundStyle(valueColor).frame(height: 22)
+                    if let delta { Text(delta).font(.spaceMono(22, weight: .bold)).foregroundStyle(Color.inkMuted).frame(height: 22) }
                 }
             }
         }
@@ -576,7 +579,10 @@ struct FeedSessionSheet: View {
     /// A settings-style row: name (16 bold) with its sets line under it, the best set and vs-last on the right; a gold star on PRs.
     private func exerciseRow(_ exercise: FeedExercise, isPR: Bool, starDelay: Double) -> some View {
         let improved = exercise.weightDelta > 0 || exercise.repsDelta > 0
-        let bestSetIndex = exercise.sets.indices.max(by: { exercise.sets[$0].weight * Double(exercise.sets[$0].reps) < exercise.sets[$1].weight * Double(exercise.sets[$1].reps) })
+        // The best set is the working set with the highest estimated 1RM (Epley), so 105×3 beats 60×8.
+        let bestSetIndex = exercise.sets.indices.filter { exercise.sets[$0].isWorking }.max(by: {
+            exercise.sets[$0].weight * (1 + Double(exercise.sets[$0].reps) / 30) < exercise.sets[$1].weight * (1 + Double(exercise.sets[$1].reps) / 30)
+        })
         let vsLast = vsLastLabel(for: exercise)
 
         return HStack(alignment: .center, spacing: 10) {
@@ -604,6 +610,7 @@ struct FeedSessionSheet: View {
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 12)
+        .padding(.bottom, 1)   // a CSS border takes space; the hairline sits in it
         .frame(maxWidth: .infinity, alignment: .leading)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
         .contentShape(Rectangle())

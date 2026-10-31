@@ -146,6 +146,7 @@ struct ActivityView: View {
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 12)
+        .padding(.bottom, 1)   // a CSS border takes space; the hairline sits in it
         .frame(minHeight: 44)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
     }
@@ -160,12 +161,33 @@ private struct PrivacyRowView: View {
     private var level: PrivacyLevel { viewModel.privacy[row] }
 
     var body: some View {
-        MoreRow(label: row.title, description: Self.sentence(row, level), value: row.label(for: level).uppercased()) { showPicker = true }
-            .confirmationDialog(row.title, isPresented: $showPicker) {
-                ForEach(row.options) { option in
-                    Button(row.label(for: option)) { Task { await viewModel.setPrivacy(row, option) } }
+        Button { showPicker = true } label: {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(row.title).font(.archivo(16, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                        .cssLineHeight(fontName: "Archivo-Bold", size: 16, multiple: 1.2)
+                    Text(Self.sentence(row, level)).font(.archivo(12)).foregroundStyle(Color.inkMuted)
+                        .cssLineHeight(fontName: "Archivo-Regular", size: 12, multiple: 1.4)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 10) {
+                    Text(row.label(for: level).uppercased()).font(.spaceMono(9)).tracking(0.8).foregroundStyle(Color.inkMuted)
+                    Text("›").font(.spaceMono(16)).foregroundStyle(Color.inkGhost)
                 }
             }
+            .padding(.horizontal, 16).padding(.vertical, 12).padding(.bottom, 1)
+            .frame(minHeight: 44)
+            .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(OreRowPressStyle())
+        .accessibilityIdentifier(AX.row(row.title))
+        .confirmationDialog(row.title, isPresented: $showPicker) {
+            ForEach(row.options) { option in
+                Button(row.label(for: option)) { Task { await viewModel.setPrivacy(row, option) } }
+            }
+        }
     }
 
     /// What the current level means, as a sentence (the model's `note` is the older all-caps label).
