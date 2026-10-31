@@ -114,6 +114,9 @@ struct StarFieldView: View {
     // MARK: Drawing
 
     private static let levels = 12
+    #if DEBUG
+    private static let debugNoStars = UserDefaults.standard.bool(forKey: "debugSignupNoStars")   // read once, not per frame
+    #endif
 
     /// The banner's compact background inside `rect`: the same gradient (from the rect's top left toward 40 % of its height),
     /// the two drifting glows positioned inside the rect, and the veil, at `alpha`.
@@ -190,7 +193,7 @@ struct StarFieldView: View {
         }
 
         #if DEBUG
-        if UserDefaults.standard.bool(forKey: "debugSignupNoStars") { ctx.fill(full, with: .color(color(pal.veil))); return }   // clean frames for measuring against the design
+        if Self.debugNoStars { ctx.fill(full, with: .color(color(pal.veil))); return }   // clean frames for measuring against the design
         #endif
 
         let (dots, flares) = runner.frame(size: size, t: t)

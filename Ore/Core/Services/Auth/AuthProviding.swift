@@ -30,8 +30,14 @@ protocol AuthProviding: AnyObject {
     /// Calls the `deleteAccount` Cloud Function (deletes the user's cloud data and the Auth user).
     /// Throws `AuthFailure.requiresRecentLogin` when a fresh sign-in is needed first.
     func callDeleteAccount() async throws
+
+    /// Revokes the Sign in with Apple token for the signed-in user (a fresh Apple sign-in supplies the code). Run before
+    /// `callDeleteAccount` for Apple accounts: App Review guideline 5.1.1(v).
+    func revokeAppleToken() async throws
 }
 
 extension AuthProviding {
     func emailHasAccount(_ email: String) async -> Bool? { nil }
+
+    func revokeAppleToken() async throws {}   // a provider with no Apple token has nothing to revoke
 }

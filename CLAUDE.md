@@ -25,7 +25,7 @@ xcodebuild -scheme Ore -destination 'platform=iOS Simulator,name=iPhone 17 Pro' 
 xcodebuild -scheme OreWidgetExtension -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
 ```
 
-Xcode version: 26.4. Target: iOS 17+. CI: `.github/workflows/ci.yml` runs `bin/test.sh --release` on every PR and on pushes to `main`/`develop`. UI tests (`OreUITests`) run through `bin/test-ui.sh` (CI job `ios-ui`, non-blocking until stable); `bin/test.sh` skips them.
+Xcode version: 26.4. The project's deployment target is currently **iOS 26.4** (`IPHONEOS_DEPLOYMENT_TARGET`); lowering it (the app was written for iOS 17+) means checking the iOS 26 APIs the sign-up and member screens use. CI: `.github/workflows/ci.yml` runs `bin/test.sh --release` on every PR and on pushes to `main`/`develop`. UI tests (`OreUITests`) run through `bin/test-ui.sh` (CI job `ios-ui`, non-blocking until stable); `bin/test.sh` skips them.
 
 ## Tech Stack
 
@@ -304,7 +304,7 @@ Things this found: SwiftUI's `lineSpacing` doesn't give CSS line boxes (use `css
 
 ## Remote settings (change without a release)
 
-`Core/Services/RemoteSettings.swift` reads **Firebase Remote Config** at launch (background; skipped under tests and the emulators) and caches the result, so a change made in the Firebase console reaches users on their next launch or two. Every value has an in-app default, so the app works offline and before the first fetch; a missing or invalid value is ignored.
+`Core/Services/RemoteSettings.swift` reads **Firebase Remote Config** at launch (background; skipped under tests and the emulators), so a change made in the Firebase console reaches users on their next launch or two. Only the trial length (`supernova_trial_months`) is persisted between launches; the JSON overrides (StarField, sign-up, transition, member) are held in memory and apply once the fetch finishes. Every remote JSON is validated (`isUsable`: finite numbers, sane ranges) and ignored if it fails, so a bad console value can't crash the app. Every value has an in-app default, so the app works offline and before the first fetch; a missing or invalid value is ignored.
 - `supernova_trial_months` (number, 0–12, default **3**): the free trial, counted in calendar months from `appInstallDate` (`SupernovaTrial`). The paywall copy follows it ("START 3 MONTHS FREE"; 0 = no trial and the copy drops the free offer). This is the in-app trial only: the App Store's own introductory offer is set in App Store Connect and must be kept the same.
 - `starfield_config` (JSON string): replaces `starfield.config.json` (`StarFieldConfigStore.applyRemote`); invalid JSON is ignored.
 - `signup_config` (JSON string): replaces `signup.config.json` for the sign-up console (`SignupConfigStore.applyRemote`).
@@ -365,4 +365,7 @@ See `docs/pulse-pump-spec.md` §"Known Gaps & Backlog" for the full list. High-p
 - Friend profile tap destination missing
 - Post-workout share card missing body map silhouette
 - Widget extension shows streak only — missing predicted workout and weekly volume widgets
-- Free trial uses `UserDefaults` install date instead of StoreKit introductory offer (length is remote: see "Remote settings")
+- Free trial is an in-app date (`TrialAnchor`: start and latest-seen date kept in the Keychain so a reinstall or a clock set back doesn't extend it; `UserDefaults` is the fallback), not the StoreKit introductory offer (length is remote: see "Remote settings"). It still needs the App Store's own offer to match, and it is client-side only.
+- Entitlements are refreshed by one app-lifetime monitor (`SupernovaService.startAppMonitor()`, from `OreApp`), not only by the screens that show Supernova.
+- Sign-up/profile rules: `profiles/{uid}.username` must be a handle the same user owns (`ownsHandle`, `getAfter`), and a handle is only claimed in the same batch as the profile that uses it. `usernames/{handle}` is still readable by anyone (the sign-up check) and so reveals a handle's uid; making that private needs the availability check to move behind a callable function.
+- Deleting a Sign in with Apple account asks for a fresh Apple sign-in and revokes the token first (`AuthProviding.revokeAppleToken`).

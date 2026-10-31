@@ -383,6 +383,17 @@ final class SignupFlowModel {
 
     func retrySetup() { guard stage == .setup else { return }; setupError = nil; runSetup() }
 
+    /// From a setup error that retrying can't fix: back to the last question, with every answer still editable, so the user is
+    /// never stuck on RETRY. Answering it again runs the setup again (the account, if made, is reused).
+    func backToQuestions() {
+        guard stage == .setup, setupError != nil, let last = steps.last else { return }
+        setup?.cancel()
+        setupError = nil
+        setupLines = 0
+        stage = .console
+        edit(last.key)
+    }
+
     private func runSetup() {
         setup?.cancel()
         setup = Task { [weak self] in

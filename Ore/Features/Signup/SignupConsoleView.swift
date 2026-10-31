@@ -363,6 +363,12 @@ struct SignupConsoleView: View {
                     }
                     .buttonStyle(PressOpacityStyle())
                     .accessibilityIdentifier(AX.signup.retry)
+                    Button { model.backToQuestions() } label: {
+                        Text("CHANGE AN ANSWER").font(.spaceMono(10, weight: .bold)).tracking(1.5).foregroundStyle(SignupSkyColors.ink2)
+                            .frame(height: 32)
+                    }
+                    .buttonStyle(PressOpacityStyle())
+                    .accessibilityIdentifier(AX.signup.changeAnswer)
                 }
             }
         }

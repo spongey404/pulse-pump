@@ -14,6 +14,7 @@ final class SupernovaMemberUITests: UITestCase {
             card.tap()
             require(el(AX.supernova.memberBack), "the membership page, round \(round)", timeout: 10)
             RunLoop.current.run(until: Date().addingTimeInterval(1.8))   // the flight is done by about 0.8 s, the content by 1.6 s
+            require(el(AX.supernova.memberEmptyHeadline), "a brand-new member sees the prompt, never a 0")
             for tab in ["PERKS", "ACCOUNT", "OVERVIEW"] {
                 tapID(AX.supernova.memberTab(tab))
                 RunLoop.current.run(until: Date().addingTimeInterval(0.3))

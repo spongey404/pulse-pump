@@ -26,7 +26,7 @@ enum ProfileRemoteError: Error, Equatable {
         switch self {
         case .handleTaken: "That username was just taken. Try another."
         case .offline: "Can't reach the server. Check your connection and try again."
-        case .permissionDenied: "Couldn't save your profile (permission denied). Sign out and back in, then try again."
+        case .permissionDenied: "Couldn't save your profile (permission denied). Try again, or go back and change an answer."
         case .other(let text): text.isEmpty ? "Couldn't save your profile. Please try again." : text
         }
     }

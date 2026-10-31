@@ -147,8 +147,20 @@ struct AuthSessionTests {
         #expect(provider.reauthCalls.first?.0 == .apple)
         #expect(provider.deleteCalls == 2)
         #expect(lifecycle.wipeCount == 1)
-        #expect(log.events.prefix(3) == ["callDeleteAccount", "reauth", "callDeleteAccount"])
+        #expect(log.events.prefix(4) == ["revokeAppleToken", "callDeleteAccount", "reauth", "callDeleteAccount"])
         #expect(session.state == .signedOut)
+    }
+
+    @Test func deletingAnAppleAccountRevokesTheAppleTokenFirstAndOtherAccountsDoNot() async throws {
+        let (apple, appleProvider, _, _) = make(current: Fixtures.user(providers: [.apple]))
+        apple.start()
+        try await apple.deleteAccount()
+        #expect(appleProvider.revokeCalls == 1)
+
+        let (google, googleProvider, _, _) = make(current: Fixtures.user(providers: [.google]))
+        google.start()
+        try await google.deleteAccount()
+        #expect(googleProvider.revokeCalls == 0)
     }
 
     @Test func deleteAccountUsesPasswordForEmailReauth() async throws {

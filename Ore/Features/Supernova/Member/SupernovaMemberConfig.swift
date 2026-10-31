@@ -56,6 +56,9 @@ struct SupernovaMemberConfig: Codable, Equatable {
         !accents.isEmpty && accents.allSatisfy { $0.stops.count == 3 && StarRGBA(css: $0.hex) != nil }
             && accents.contains { $0.id == defaultAccent } && page.maskStops.allSatisfy { $0.count == 2 } && !page.maskStops.isEmpty
             && transition.isUsable
+            && (1...6000).contains(page.count) && (0...10).contains(page.speed) && (0...1).contains(page.gold) && (0...1).contains(page.sparkle)
+            && (0...2000).contains(page.pull) && [page.coverage, page.starBullet, page.perkOffset].allSatisfy(\.isFinite)
+            && page.maskStops.allSatisfy { $0.allSatisfy(\.isFinite) }
     }
 
     func accent(id: String?) -> Accent { accents.first { $0.id == id } ?? accents.first { $0.id == defaultAccent } ?? accents[0] }

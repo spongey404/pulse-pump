@@ -20,11 +20,11 @@ struct WeeklyRecapStats {
     }
 
     var weekStart: Date {
-        let thisWeek = calendar.dateInterval(of: .weekOfYear, for: now)!.start
-        return calendar.date(byAdding: .weekOfYear, value: -weeksBack, to: thisWeek)!
+        let thisWeek = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? now
+        return calendar.date(byAdding: .weekOfYear, value: -weeksBack, to: thisWeek) ?? thisWeek
     }
-    var weekEnd: Date { calendar.date(byAdding: .day, value: 7, to: weekStart)! }
-    var prevStart: Date { calendar.date(byAdding: .day, value: -7, to: weekStart)! }
+    var weekEnd: Date { calendar.date(byAdding: .day, value: 7, to: weekStart) ?? weekStart }
+    var prevStart: Date { calendar.date(byAdding: .day, value: -7, to: weekStart) ?? weekStart }
 
     func inRange(_ from: Date, _ to: Date) -> [Workout] {
         workouts.filter { $0.date >= from && $0.date < to }

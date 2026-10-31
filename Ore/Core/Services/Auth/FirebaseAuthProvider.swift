@@ -106,6 +106,17 @@ final class FirebaseAuthProvider: AuthProviding {
         do { try await user.reauthenticate(with: credential) } catch { throw Self.map(error) }
     }
 
+    /// A fresh Apple sign-in gives a one-time authorization code; Firebase uses it to have Apple revoke the app's token.
+    func revokeAppleToken() async throws {
+        guard let user = auth.currentUser else { throw AuthFailure.notSignedIn }
+        let apple = try await runAppleFlow()
+        guard let code = apple.authorizationCode else { throw AuthFailure.unknown("Apple didn't confirm the sign-in. Try again.") }
+        do {
+            try await user.reauthenticate(with: Self.appleCredential(apple))
+            try await auth.revokeToken(withAuthorizationCode: code)
+        } catch { throw Self.map(error) }
+    }
+
     func callDeleteAccount() async throws {
         guard auth.currentUser != nil else { throw AuthFailure.notSignedIn }
         do {

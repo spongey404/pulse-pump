@@ -162,6 +162,32 @@ struct SupernovaTransitionTests {
         #expect(t.phase == .closed && done)
     }
 
+    @Test func aCompletionIsNeverDroppedWhateverPhaseTheCloseArrivesIn() async {
+        // Already closed: nothing to wait for, so it runs at once.
+        let closed = SupernovaTransition()
+        var ranWhenClosed = false
+        closed.close { ranWhenClosed = true }
+        #expect(ranWhenClosed)
+
+        // Asked while opening: closes as soon as it has opened, then runs.
+        let opening = SupernovaTransition()
+        opening.open(fromBanner: true)
+        var ranAfterOpening = false
+        opening.close(crossfade: true) { ranAfterOpening = true }
+        await wait(opening, for: .closed)
+        #expect(opening.phase == .closed && ranAfterOpening)
+
+        // Asked while already closing (TRAIN FREE, then the purchase lands): both run.
+        let closing = SupernovaTransition()
+        closing.open(fromBanner: true)
+        await wait(closing, for: .open)
+        var order: [String] = []
+        closing.close { order.append("first") }
+        closing.close { order.append("second") }
+        await wait(closing, for: .closed)
+        #expect(order == ["first", "second"])
+    }
+
     @Test func theFlyerVersionWaitsForTheWordmarkThenRunsAndHandsOff() async {
         let t = SupernovaTransition()
         t.reportBanner(rect: g.bannerRect, asterisk: g.bannerAsterisk)

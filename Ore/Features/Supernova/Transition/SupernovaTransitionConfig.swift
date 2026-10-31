@@ -57,6 +57,9 @@ struct SupernovaTransitionConfig: Codable, Equatable {
     var isUsable: Bool {
         [open.maskCurve, open.hubCurve, open.flyerCurve, close.curve, content.moveCurve].allSatisfy { $0.count == 4 }
             && open.maskMs > 0 && open.flyerMs > 0 && close.ms > 0 && content.groups > 0
+            && [open.maskCurve, open.hubCurve, open.flyerCurve, close.curve, content.moveCurve].allSatisfy { $0.allSatisfy(\.isFinite) }
+            && [open.maskMs, open.hubMs, open.flyerMs, open.handoffMs, close.ms, close.handoffMs, content.fadeMs, content.moveMs, content.staggerMs, content.startMs]
+                .allSatisfy { $0.isFinite && $0 >= 0 && $0 <= 10_000 }
     }
 
     static let fallback = SupernovaTransitionConfig(

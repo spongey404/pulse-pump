@@ -66,7 +66,25 @@ struct StarFieldConfig: Codable, Equatable {
             "recapCard": .init(mini: true, speedScale: 0.6, sizeScale: 0.9, min: 120, pull: 0),
         ])
 
-    static func load(from data: Data) -> StarFieldConfig? { try? JSONDecoder().decode(StarFieldConfig.self, from: data) }
+    static func load(from data: Data) -> StarFieldConfig? {
+        guard let c = try? JSONDecoder().decode(StarFieldConfig.self, from: data), c.isUsable else { return nil }
+        return c
+    }
+
+    /// Remote JSON is untrusted: a non-finite or absurd number must not reach the engine (`Int(.infinity)` traps; a huge density
+    /// allocates millions of particles). Anything outside these bounds rejects the whole file and the last good config stays.
+    var isUsable: Bool {
+        func ok(_ v: Double, _ r: ClosedRange<Double>) -> Bool { v.isFinite && r.contains(v) }
+        return ok(density, 1...6000) && (0...2000).contains(minParticles) && ok(speed, 0...10) && ok(gold, 0...1) && ok(sparkle, 0...1)
+            && ok(goldPull, 0...2000) && ok(sway.base, 0...100) && ok(sway.perSize, 0...100) && ok(flash.prob, 0...1) && ok(flash.decay, 0...1)
+            && ok(flare.minSize, 0...100) && ok(flare.length, 0...100) && ok(flare.flashLength, 0...100) && ok(flare.width, 0...20)
+            && [fps.paywall, fps.paywallIdle, fps.more].allSatisfy { (1...120).contains($0) }
+            && ok(idleAfterMs, 0...3_600_000) && ok(settleAfterMs, 0...3_600_000)
+            && !palettes.isEmpty && palettes[defaultPalette] != nil && palettes.values.allSatisfy { $0.stops.count == 3 }
+            && variants.values.allSatisfy { v in
+                ok(v.speedScale ?? 1, 0...10) && ok(v.sizeScale ?? 1, 0...10) && ok(v.pull ?? 0, 0...2000) && ok(v.pullScale ?? 0, 0...10) && (0...2000).contains(v.min ?? 0)
+            }
+    }
 }
 
 /// Where the live config comes from: the bundled JSON, then an override.

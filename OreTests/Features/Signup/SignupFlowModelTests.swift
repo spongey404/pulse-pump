@@ -333,4 +333,15 @@ struct SignupFlowModelTests {
         #expect(r.model.stage == .welcome)
         #expect(r.model.setupError == nil)
     }
+
+    @Test func aSetupErrorCanGoBackToTheQuestionsSoItNeverDeadEnds() async {
+        let r = rig(current: Fixtures.user())
+        r.remote.createError = ProfileRemoteError.permissionDenied
+        await finishQuestions(r)
+        await settle { r.model.setupError != nil }
+        #expect(r.model.stage == .setup)
+        r.model.backToQuestions()
+        #expect(r.model.stage == .console && r.model.setupError == nil)
+        #expect(r.model.current != nil, "the last question is open again, every answer still editable")
+    }
 }

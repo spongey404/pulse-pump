@@ -9,7 +9,7 @@ import {
 } from '@firebase/rules-unit-testing';
 import {
   setLogLevel,
-  doc, getDoc, setDoc, updateDoc, deleteDoc, getDocs, collection, query, where, Timestamp, increment,
+  doc, getDoc, setDoc, updateDoc, deleteDoc, getDocs, collection, query, where, Timestamp, increment, writeBatch,
 } from 'firebase/firestore';
 
 setLogLevel('silent');
@@ -189,8 +189,38 @@ describe('profiles', () => {
   it('unauthenticated cannot read even public profile', async () => {
     await no(getDoc(doc(db(null), 'profiles/alice')));
   });
+  // The handle and the profile that uses it are written together, as the app's createAccount does.
+  const claim = (uid, handle, extra = {}) => {
+    const d = db(uid), b = writeBatch(d);
+    b.set(doc(d, `usernames/${handle}`), { uid, createdAt: ts() });
+    b.set(doc(d, `profiles/${uid}`), profile({ username: handle, ...extra }));
+    return b.commit();
+  };
   it('owner creates profile with zero counters', async () => {
-    await ok(setDoc(doc(db('dave'), 'profiles/dave'), profile({ username: 'dave' })));
+    await ok(claim('dave', 'dave'));
+  });
+  it('cannot create a profile whose username is not a handle they own', async () => {
+    await no(setDoc(doc(db('dave'), 'profiles/dave'), profile({ username: 'dave' })));   // never claimed
+    await no(setDoc(doc(db('dave'), 'profiles/dave'), profile({ username: 'taken' })));  // bob's handle
+  });
+  it('cannot point the username of an existing profile at someone else\'s handle', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'usernames/alice'), { uid: 'alice', createdAt: ts() });
+      await setDoc(doc(ctx.firestore(), 'profiles/alice'), profile({ username: 'alice' }));
+    });
+    await no(updateDoc(doc(db('alice'), 'profiles/alice'), { username: 'taken' }));
+    await ok(updateDoc(doc(db('alice'), 'profiles/alice'), { streak: 3 }));   // unchanged username isn't re-checked
+  });
+  it('can rename to a handle claimed in the same batch', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'usernames/alice'), { uid: 'alice', createdAt: ts() });
+      await setDoc(doc(ctx.firestore(), 'profiles/alice'), profile({ username: 'alice' }));
+    });
+    const d = db('alice'), b = writeBatch(d);
+    b.set(doc(d, 'usernames/alice_new'), { uid: 'alice', createdAt: ts() });
+    b.delete(doc(d, 'usernames/alice'));
+    b.update(doc(d, 'profiles/alice'), { username: 'alice_new' });
+    await ok(b.commit());
   });
   it('cannot create someone else\'s profile', async () => {
     await no(setDoc(doc(db('dave'), 'profiles/zed'), profile({ username: 'zed' })));
@@ -225,8 +255,17 @@ describe('profiles', () => {
 });
 
 describe('usernames', () => {
-  it('claims a free valid handle', async () => {
-    await ok(setDoc(doc(db('dave'), 'usernames/dave_01'), { uid: 'dave', createdAt: ts() }));
+  const claimWithProfile = (uid, handle) => {
+    const d = db(uid), b = writeBatch(d);
+    b.set(doc(d, `usernames/${handle}`), { uid, createdAt: ts() });
+    b.set(doc(d, `profiles/${uid}`), profile({ username: handle }));
+    return b.commit();
+  };
+  it('claims a free valid handle together with the profile that uses it', async () => {
+    await ok(claimWithProfile('dave', 'dave_01'));
+  });
+  it('cannot claim a handle on its own (no hoarding)', async () => {
+    await no(setDoc(doc(db('dave'), 'usernames/dave_01'), { uid: 'dave', createdAt: ts() }));
   });
   it('cannot overwrite a taken handle', async () => {
     await no(setDoc(doc(db('dave'), 'usernames/taken'), { uid: 'dave', createdAt: ts() }));
@@ -240,8 +279,8 @@ describe('usernames', () => {
     }
   });
   it('accepts boundary lengths 3 and 20', async () => {
-    await ok(setDoc(doc(db('dave'), 'usernames/abc'), { uid: 'dave', createdAt: ts() }));
-    await ok(setDoc(doc(db('dave'), `usernames/${'a'.repeat(20)}`), { uid: 'dave', createdAt: ts() }));
+    await ok(claimWithProfile('dave', 'abc'));
+    await ok(claimWithProfile('erin', 'a'.repeat(20)));
   });
   it('anyone can get a handle (sign-up checks availability before the account exists), nobody can list', async () => {
     await ok(getDoc(doc(db('dave'), 'usernames/taken')));

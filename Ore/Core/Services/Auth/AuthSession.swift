@@ -128,6 +128,8 @@ final class AuthSession {
     func deleteAccount(password: String? = nil) async throws {
         guard let user = state.user else { throw AuthFailure.notSignedIn }
         do {
+            // A Sign in with Apple account must also revoke Apple's token before the account goes.
+            if user.primaryProvider == .apple { try await provider.revokeAppleToken() }
             do {
                 try await provider.callDeleteAccount()
             } catch AuthFailure.requiresRecentLogin {

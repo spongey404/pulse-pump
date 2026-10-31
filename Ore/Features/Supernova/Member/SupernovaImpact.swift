@@ -41,3 +41,27 @@ enum SupernovaImpact {
         return count
     }
 }
+
+/// What the membership page's Overview shows, decided from the four counts. A zero is never presented as a score: the headline
+/// is the first non-zero of PRs on a suggested weight, suggested weights used and weekly recaps (with its own sentence), and a
+/// brand-new member gets a prompt with no number. The grid shows "—" for a zero, and the whole section waits for a real number.
+enum SupernovaOverview {
+    struct Headline: Equatable { var number: Int; var text: String }
+
+    static let emptyHeadline = "Your first suggested weight is waiting in your next session."
+
+    static func headline(prs: Int, suggested: Int, recaps: Int) -> Headline? {
+        if prs > 0 { return Headline(number: prs, text: prs == 1 ? "PR came from a suggested weight." : "PRs came from a suggested weight.") }
+        if suggested > 0 { return Headline(number: suggested, text: suggested == 1 ? "set used a suggested weight." : "sets used a suggested weight.") }
+        if recaps > 0 { return Headline(number: recaps, text: recaps == 1 ? "weekly recap sent." : "weekly recaps sent.") }
+        return nil
+    }
+
+    /// The grid cell's value: "—" for zero.
+    static func cell(_ n: Int) -> String { n > 0 ? "\(n)" : "—" }
+
+    /// "WHAT SUPERNOVA DID FOR YOU" and its grid appear once any of the four is above zero.
+    static func showsStats(prs: Int, suggested: Int, lagging: Int, recaps: Int) -> Bool {
+        prs > 0 || suggested > 0 || lagging > 0 || recaps > 0
+    }
+}

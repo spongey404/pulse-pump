@@ -90,6 +90,12 @@ final class FakeAuthProvider: AuthProviding {
         if let reauthError { throw reauthError }
     }
 
+    var revokeCalls = 0
+    func revokeAppleToken() async throws {
+        revokeCalls += 1
+        log.events.append("revokeAppleToken")
+    }
+
     func callDeleteAccount() async throws {
         deleteCalls += 1
         log.events.append("callDeleteAccount")

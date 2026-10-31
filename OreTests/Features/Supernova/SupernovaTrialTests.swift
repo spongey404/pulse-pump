@@ -7,6 +7,43 @@ struct SupernovaTrialTests {
     private let cal = Calendar(identifier: .gregorian)
     private func day(_ y: Int, _ m: Int, _ d: Int) -> Date { cal.date(from: DateComponents(year: y, month: m, day: d, hour: 12))! }
 
+    private final class MemoryStore: TrialDateStore {
+        var values: [String: Date] = [:]
+        func read(_ key: String) -> Date? { values[key] }
+        func write(_ date: Date, for key: String) { values[key] = date }
+    }
+
+    @Test func theTrialStartSurvivesAReinstallBecauseTheKeychainRemembersIt() {
+        let store = MemoryStore()
+        store.values[TrialAnchor.installKey] = day(2026, 1, 1)
+        let fresh = UserDefaults(suiteName: "trial-anchor-\(UUID().uuidString)")!   // a reinstall: no UserDefaults
+        #expect(TrialAnchor.installDate(now: day(2026, 6, 1), defaults: fresh, store: store) == day(2026, 1, 1))
+        #expect(fresh.object(forKey: TrialAnchor.installKey) as? Date == day(2026, 1, 1))
+    }
+
+    @Test func anInstallThatPredatesTheKeychainIsAdoptedAndTheEarlierDateWins() {
+        let store = MemoryStore()
+        let defaults = UserDefaults(suiteName: "trial-anchor-\(UUID().uuidString)")!
+        defaults.set(day(2026, 2, 1), forKey: TrialAnchor.installKey)
+        #expect(TrialAnchor.installDate(now: day(2026, 6, 1), defaults: defaults, store: store) == day(2026, 2, 1))
+        #expect(store.values[TrialAnchor.installKey] == day(2026, 2, 1))
+        store.values[TrialAnchor.installKey] = day(2026, 1, 1)
+        #expect(TrialAnchor.installDate(now: day(2026, 6, 1), defaults: defaults, store: store) == day(2026, 1, 1))
+    }
+
+    @Test func aFirstLaunchStartsTheTrialNow() {
+        let store = MemoryStore()
+        let defaults = UserDefaults(suiteName: "trial-anchor-\(UUID().uuidString)")!
+        #expect(TrialAnchor.installDate(now: day(2026, 3, 3), defaults: defaults, store: store) == day(2026, 3, 3))
+    }
+
+    @Test func windingTheClockBackDoesNotExtendTheTrial() {
+        let store = MemoryStore()
+        #expect(TrialAnchor.trialNow(now: day(2026, 6, 1), store: store) == day(2026, 6, 1))
+        #expect(TrialAnchor.trialNow(now: day(2026, 1, 1), store: store) == day(2026, 6, 1), "an earlier clock is ignored")
+        #expect(TrialAnchor.trialNow(now: day(2026, 7, 1), store: store) == day(2026, 7, 1))
+    }
+
     @Test func theDefaultIsThreeMonths() { #expect(SupernovaTrial.defaultMonths == 3) }
 
     @Test func theTrialRunsForCalendarMonthsFromInstall() {

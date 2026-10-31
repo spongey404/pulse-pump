@@ -52,6 +52,8 @@ enum SupernovaFeature: String, CaseIterable, Identifiable {
 @Observable
 class SupernovaService {
     private(set) var isSubscribed = false
+    /// A message the paywall shows after a purchase that isn't finished (Ask to Buy).
+    private(set) var purchaseNotice: String?
     private(set) var currentSubscription: Product?
     private(set) var availableProducts: [Product] = []
     private(set) var isLoading = false
@@ -70,10 +72,18 @@ class SupernovaService {
 
     /// Supernova access as the rest of the app defines it: subscribed or inside the free trial.
     static var hasAccess: Bool {
-        PreviewMembership.forced ?? (UserDefaults.standard.bool(forKey: subscribedMirrorKey) || SupernovaService().isInFreeTrial)
+        PreviewMembership.forced ?? (UserDefaults.standard.bool(forKey: subscribedMirrorKey) || isInFreeTrial)
     }
 
     private var updateListenerTask: Task<Void, Never>?
+
+    /// One listener for the app's whole life (started from `OreApp`): the mirror, accent and widgets learn about a renewal, an
+    /// expiry, a refund or a purchase on another device without anyone opening a Supernova screen.
+    private static let appMonitor = SupernovaService()
+    static func startAppMonitor() {
+        appMonitor.startListening()
+        Task { await appMonitor.refreshSubscriptionStatus() }
+    }
 
     func startListening() {
         guard updateListenerTask == nil else { return }
@@ -104,6 +114,7 @@ class SupernovaService {
     }
 
     func purchase(_ product: Product) async throws -> Bool {
+        purchaseNotice = nil
         let result = try await product.purchase()
 
         switch result {
@@ -111,10 +122,11 @@ class SupernovaService {
             let transaction = try checkVerified(verification)
             await transaction.finish()
             await refreshSubscriptionStatus()
-            return true
+            return isSubscribed   // false if the purchase didn't show up as an entitlement, so the paywall isn't closed on nothing
         case .userCancelled:
             return false
         case .pending:
+            purchaseNotice = "Waiting for approval. Supernova turns on once it is approved."
             return false
         @unknown default:
             return false
@@ -130,22 +142,24 @@ class SupernovaService {
         var foundActive = false
         var renewal: Date?
         var since: Date?
+        var best: Transaction?
         for await result in Transaction.currentEntitlements {
-            if let transaction = try? checkVerified(result) {
-                if transaction.productID == Self.monthlyProductId ||
-                   transaction.productID == Self.yearlyProductId {
-                    foundActive = true
-                    renewal = transaction.expirationDate
-                    since = transaction.originalPurchaseDate
-                    planWord = transaction.productID == Self.yearlyProductId ? "YEARLY" : "MONTHLY"
-                    currentSubscription = availableProducts.first { $0.id == transaction.productID }
-                }
-            }
+            guard let transaction = try? checkVerified(result),
+                  transaction.productID == Self.monthlyProductId || transaction.productID == Self.yearlyProductId else { continue }
+            foundActive = true
+            since = min(since ?? transaction.originalPurchaseDate, transaction.originalPurchaseDate)
+            // Both plans can be entitled at once (a switch in progress): the one that runs longest is the plan in use.
+            if best == nil || (transaction.expirationDate ?? .distantFuture) > (best?.expirationDate ?? .distantFuture) { best = transaction }
+        }
+        if let best {
+            renewal = best.expirationDate
+            planWord = best.productID == Self.yearlyProductId ? "YEARLY" : "MONTHLY"
+            currentSubscription = availableProducts.first { $0.id == best.productID }
         }
         renewalDate = renewal
         memberSince = since
         if PreviewMembership.forced == true, since == nil {   // a pretend member has no purchase: say one began at install
-            memberSince = UserDefaults.standard.object(forKey: "appInstallDate") as? Date
+            memberSince = TrialAnchor.installDate()
             renewalDate = renewalDate ?? Calendar.current.date(byAdding: .month, value: 5, to: Date())
         }
         isSubscribed = PreviewMembership.forced ?? foundActive   // forced is nil outside DEBUG and preview builds
@@ -154,18 +168,15 @@ class SupernovaService {
         WidgetDataService.setSubscribed(PreviewMembership.forced ?? foundActive)
     }
 
-    var isInFreeTrial: Bool {
-        guard let installDate = UserDefaults.standard.object(forKey: "appInstallDate") as? Date else {
-            // First launch — record install date
-            UserDefaults.standard.set(Date(), forKey: "appInstallDate")
-            return SupernovaTrial.months > 0
-        }
-        return SupernovaTrial.isActive(installDate: installDate, months: SupernovaTrial.months)
+    var isInFreeTrial: Bool { Self.isInFreeTrial }
+
+    static var isInFreeTrial: Bool {
+        guard SupernovaTrial.months > 0 else { return false }
+        return SupernovaTrial.isActive(installDate: TrialAnchor.installDate(), now: TrialAnchor.trialNow(), months: SupernovaTrial.months)
     }
 
     var trialDaysRemaining: Int {
-        guard let installDate = UserDefaults.standard.object(forKey: "appInstallDate") as? Date else { return 0 }
-        return SupernovaTrial.daysRemaining(installDate: installDate, months: SupernovaTrial.months)
+        SupernovaTrial.daysRemaining(installDate: TrialAnchor.installDate(), now: TrialAnchor.trialNow(), months: SupernovaTrial.months)
     }
 
     /// "$84 / YR" or "$7 / MO": the price of the plan in use, when the product is loaded.

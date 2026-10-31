@@ -89,7 +89,8 @@ struct WeeklyRecapView: View {
     }
 
     private var nextMonday: String {
-        let next = calendar.date(byAdding: .day, value: 7, to: calendar.dateInterval(of: .weekOfYear, for: Date())!.start)!
+        let thisWeek = calendar.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
+        let next = calendar.date(byAdding: .day, value: 7, to: thisWeek) ?? thisWeek
         let f = DateFormatter(); f.dateFormat = "d MMM"
         return f.string(from: next).uppercased()
     }

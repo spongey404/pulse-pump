@@ -208,34 +208,45 @@ struct SupernovaMemberPage: View {
 
     private var overview: some View {
         let i = impact
-        let cells: [(String, String)] = [("\(i.suggested)", "SUGGESTED WEIGHTS USED"), ("\(i.prs)", "PRS ON A SUGGESTED WEIGHT"),
-                                         ("\(i.lagging)", "LAGGING MUSCLES FLAGGED"), ("\(i.recaps)", "WEEKLY RECAPS SENT")]
+        let cells: [(String, String)] = [(SupernovaOverview.cell(i.suggested), "SUGGESTED WEIGHTS USED"), (SupernovaOverview.cell(i.prs), "PRS ON A SUGGESTED WEIGHT"),
+                                         (SupernovaOverview.cell(i.lagging), "LAGGING MUSCLES FLAGGED"), (SupernovaOverview.cell(i.recaps), "WEEKLY RECAPS SENT")]
+        let headline = SupernovaOverview.headline(prs: i.prs, suggested: i.suggested, recaps: i.recaps)
+        let showsStats = SupernovaOverview.showsStats(prs: i.prs, suggested: i.suggested, lagging: i.lagging, recaps: i.recaps)
         return VStack(spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text("\(i.prs)").font(.spaceMono(48, weight: .bold)).frame(height: 48 * 0.9)   // a CSS 0.9 line box: the glyphs overflow it, so no exact line height (it would clip them)
-                Text("PRs came from a suggested weight.").font(.archivo(15, weight: .semibold))
-                    .cssLineHeight(fontName: "Archivo-SemiBold", size: 15, multiple: 1.3)
-                    .fixedSize(horizontal: false, vertical: true).frame(width: 200, alignment: .leading)
+                if let headline {
+                    Text("\(headline.number)").font(.spaceMono(48, weight: .bold)).frame(height: 48 * 0.9)   // a CSS 0.9 line box: the glyphs overflow it, so no exact line height (it would clip them)
+                    Text(headline.text).font(.archivo(15, weight: .semibold))
+                        .cssLineHeight(fontName: "Archivo-SemiBold", size: 15, multiple: 1.3)
+                        .fixedSize(horizontal: false, vertical: true).frame(width: 200, alignment: .leading)
+                } else {
+                    Text(SupernovaOverview.emptyHeadline).font(.archivo(15, weight: .semibold))
+                        .cssLineHeight(fontName: "Archivo-SemiBold", size: 15, multiple: 1.3)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier(AX.supernova.memberEmptyHeadline)
+                }
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 16).padding(.top, 20).padding(.bottom, 4)
-            sectionLabel("WHAT SUPERNOVA DID FOR YOU", "SINCE \(service.memberSinceMonth)")
-            Rectangle().fill(Self.hair).frame(height: 1)
-            Grid(horizontalSpacing: 0, verticalSpacing: 0) {
-                ForEach(0..<2, id: \.self) { row in
-                    GridRow {
-                        ForEach(0..<2, id: \.self) { col in
-                            let c = cells[row * 2 + col]
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(c.0).font(.spaceMono(26, weight: .bold)).frame(height: 26)   // line-height 1
-                                Text(c.1).font(.spaceMono(8)).tracking(1.2).foregroundStyle(Self.muted)
-                                    .cssLineHeight(fontName: "SpaceMono-Regular", size: 8, multiple: 1.4)
+            if showsStats {
+                sectionLabel("WHAT SUPERNOVA DID FOR YOU", "SINCE \(service.memberSinceMonth)")
+                Rectangle().fill(Self.hair).frame(height: 1)
+                Grid(horizontalSpacing: 0, verticalSpacing: 0) {
+                    ForEach(0..<2, id: \.self) { row in
+                        GridRow {
+                            ForEach(0..<2, id: \.self) { col in
+                                let c = cells[row * 2 + col]
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(c.0).font(.spaceMono(26, weight: .bold)).frame(height: 26)   // line-height 1
+                                    Text(c.1).font(.spaceMono(8)).tracking(1.2).foregroundStyle(Self.muted)
+                                        .cssLineHeight(fontName: "SpaceMono-Regular", size: 8, multiple: 1.4)
+                                }
+                                .padding(.horizontal, 16).padding(.vertical, 14)
+                                .padding(.bottom, 1)   // the cell's 1 pt bottom border takes space in CSS
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .overlay(alignment: .bottom) { Rectangle().fill(Self.hair).frame(height: 1) }
+                                .overlay(alignment: .leading) { if col == 1 { Rectangle().fill(Self.hair).frame(width: 1) } }
                             }
-                            .padding(.horizontal, 16).padding(.vertical, 14)
-                            .padding(.bottom, 1)   // the cell's 1 pt bottom border takes space in CSS
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .overlay(alignment: .bottom) { Rectangle().fill(Self.hair).frame(height: 1) }
-                            .overlay(alignment: .leading) { if col == 1 { Rectangle().fill(Self.hair).frame(width: 1) } }
                         }
                     }
                 }

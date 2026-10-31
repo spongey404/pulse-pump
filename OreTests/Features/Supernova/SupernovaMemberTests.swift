@@ -12,6 +12,22 @@ struct SupernovaMemberTests {
         #expect(try #require(SupernovaMemberConfig.load(from: Data(contentsOf: url))) == m)
     }
 
+    @Test func theHeadlineIsTheFirstNonZeroNumberAndNeverAZero() {
+        #expect(SupernovaOverview.headline(prs: 5, suggested: 12, recaps: 3) == .init(number: 5, text: "PRs came from a suggested weight."))
+        #expect(SupernovaOverview.headline(prs: 0, suggested: 12, recaps: 3) == .init(number: 12, text: "sets used a suggested weight."))
+        #expect(SupernovaOverview.headline(prs: 0, suggested: 0, recaps: 3) == .init(number: 3, text: "weekly recaps sent."))
+        #expect(SupernovaOverview.headline(prs: 1, suggested: 0, recaps: 0)?.text == "PR came from a suggested weight.")
+        #expect(SupernovaOverview.headline(prs: 0, suggested: 0, recaps: 0) == nil, "a brand-new member gets a prompt, not a 0")
+        #expect(SupernovaOverview.emptyHeadline == "Your first suggested weight is waiting in your next session.")
+    }
+
+    @Test func theGridShowsADashForZeroAndTheSectionWaitsForARealNumber() {
+        #expect(SupernovaOverview.cell(0) == "—" && SupernovaOverview.cell(7) == "7")
+        #expect(!SupernovaOverview.showsStats(prs: 0, suggested: 0, lagging: 0, recaps: 0))
+        #expect(SupernovaOverview.showsStats(prs: 0, suggested: 0, lagging: 1, recaps: 0))
+        #expect(SupernovaOverview.showsStats(prs: 0, suggested: 2, lagging: 0, recaps: 0))
+    }
+
     @Test func theDesignsPalettesAndNumbers() {
         #expect(m.accents.map(\.name) == ["SKY", "PINK · FD4A9F", "SIGNAL RED", "VIOLET", "TEAL"])
         #expect(m.accents[1].stops == ["#C2186B", "#FD4A9F", "#FFB3D6"] && m.accents[4].stops == ["#047C74", "#14B8A6", "#99F6E4"])

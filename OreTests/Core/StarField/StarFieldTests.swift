@@ -170,3 +170,20 @@ struct StarFieldTests {
     }
 }
 
+
+@MainActor
+struct RemoteConfigGuardTests {
+    @Test func aRemoteStarFieldConfigWithAbsurdOrNonFiniteNumbersIsRejected() throws {
+        func json(_ edit: (inout [String: Any]) -> Void) throws -> Data {
+            let url = try #require(Bundle.main.url(forResource: "starfield.config", withExtension: "json"))
+            var obj = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+            edit(&obj)
+            return try JSONSerialization.data(withJSONObject: obj)
+        }
+        #expect(StarFieldConfig.load(from: try json { _ in }) == StarFieldConfig.fallback, "the shipped file is valid")
+        #expect(StarFieldConfig.load(from: try json { $0["density"] = 1e12 }) == nil, "millions of particles")
+        #expect(StarFieldConfig.load(from: try json { $0["density"] = -5 }) == nil)
+        #expect(StarFieldConfig.load(from: try json { $0["fps"] = ["paywall": 0, "paywallIdle": 30, "more": 30] }) == nil)
+        #expect(StarFieldConfig.load(from: try json { $0["speed"] = 1e300 }) == nil)
+    }
+}

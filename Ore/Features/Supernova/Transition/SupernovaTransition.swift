@@ -41,6 +41,7 @@ final class SupernovaTransition {
     private var geometry: SupernovaTransitionGeometry?
     private var timers: [Task<Void, Never>] = []
     private var onClosed: (() -> Void)?
+    private var closeWhenOpen: (crossfade: Bool, completion: (() -> Void)?)?
 
     #if DEBUG
     /// While set, the transition is held at this many ms (screenshots).
@@ -128,6 +129,7 @@ final class SupernovaTransition {
     func open(_ source: Kind, fromSource: Bool) {
         guard phase == .closed else { return }
         cancelTimers()
+        closeWhenOpen = nil
         fadingOut = false
         kind = source
         let reduce = UIAccessibility.isReduceMotionEnabled
@@ -163,12 +165,30 @@ final class SupernovaTransition {
         if let f = frozenMs { _ = f; return }   // hold here
         #endif
         let handoff = isShared ? c.open.handoffMs : c.reduceMotionFadeMs
-        schedule(ms: handoff) { [self] in phase = .open }
+        schedule(ms: handoff) { [self] in
+            phase = .open
+            if let pending = closeWhenOpen { closeWhenOpen = nil; close(crossfade: pending.crossfade, completion: pending.completion) }
+        }
     }
 
     /// TRAIN FREE (or a purchase). `crossfade` skips the flight (after a purchase the banner is gone).
     func close(crossfade: Bool = false, completion: (() -> Void)? = nil) {
-        guard phase == .open else { return }
+        // A completion must never be dropped (a purchase can finish while TRAIN FREE is already closing the page):
+        switch phase {
+        case _ where fadingOut, .closing, .revealing:   // (a cross-fade close keeps the phase `.open` while it fades)
+            if let completion { let previous = onClosed; onClosed = { previous?(); completion() } }   // runs when it has closed
+            return
+        case .closed:
+            completion?()   // already closed: nothing to wait for
+            return
+        case .opening, .measuring:
+            // A plain close is a tap during the animation and is ignored; one that carries a completion (a purchase finished)
+            // must not be lost, so it closes the moment the page has opened.
+            if completion != nil { closeWhenOpen = (crossfade, completion) }
+            return
+        case .open:
+            break
+        }
         cancelTimers()
         onClosed = completion
         let c = config

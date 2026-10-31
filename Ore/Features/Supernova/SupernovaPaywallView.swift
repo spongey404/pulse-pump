@@ -23,6 +23,7 @@ struct SupernovaPaywallView: View {
     @State private var transition = SupernovaTransition.shared
     @State private var isPurchasing = false
     @State private var errorMessage: String?
+    @State private var errorTitle = "Couldn't start Supernova"
 
     private struct Feature { let name: String; let desc: String }
     private let features = [
@@ -71,7 +72,7 @@ struct SupernovaPaywallView: View {
             await service.loadProducts()
         }
         .onDisappear { service.stopListening() }
-        .alert("Couldn't start Supernova", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+        .alert(errorTitle, isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
             Button("OK", role: .cancel) {}
         } message: { Text(errorMessage ?? "") }
     }
@@ -231,8 +232,15 @@ struct SupernovaPaywallView: View {
         Task {
             defer { isPurchasing = false }
             do {
-                if try await service.purchase(yearly) { onSubscribed() }
+                errorTitle = "Couldn't start Supernova"
+                if try await service.purchase(yearly) {
+                    onSubscribed()
+                } else if let notice = service.purchaseNotice {
+                    errorTitle = "Almost there"   // Ask to Buy: not an error
+                    errorMessage = notice
+                }
             } catch {
+                errorTitle = "Couldn't start Supernova"
                 errorMessage = error.localizedDescription
             }
         }

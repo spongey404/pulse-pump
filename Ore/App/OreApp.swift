@@ -29,6 +29,7 @@ struct OreApp: App {
         // Firebase must be configured (and pointed at the emulator, if requested) before any Auth/Firestore access.
         FirebaseBootstrap.configure()
         RemoteSettings.start()   // trial length, StarField tuning: Firebase Remote Config, applied without a release
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil { SupernovaService.startAppMonitor() }   // entitlements stay current app-wide
         #if DEBUG
         DevDataAutoAccount.resetStaleSession()   // -debugFreshSession: UI tests start from a clean login + store
         #endif
@@ -62,8 +63,29 @@ struct OreApp: App {
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {
+            // A store that won't open (a failed migration) must not brick the app: move it aside, never delete it, and start
+            // fresh (the synced data comes back on sign-in). If even that fails, run from memory so the app still opens.
+            let moved = quarantineStore(at: modelConfiguration.url)
+            if moved, let fresh = try? ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)]) {
+                return fresh
+            }
+            if let memory = try? ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)]) {
+                return memory
+            }
             fatalError("Could not create ModelContainer: \(error)")
         }
+    }
+
+    /// Moves the store's files into `StoreBackup-<time>` beside it. True if the store file is no longer where it was.
+    private static func quarantineStore(at url: URL) -> Bool {
+        let fm = FileManager.default
+        let dir = url.deletingLastPathComponent().appendingPathComponent("StoreBackup-\(Int(Date().timeIntervalSince1970))")
+        guard (try? fm.createDirectory(at: dir, withIntermediateDirectories: true)) != nil else { return false }
+        for suffix in ["", "-wal", "-shm"] {
+            let src = URL(fileURLWithPath: url.path + suffix)
+            if fm.fileExists(atPath: src.path) { try? fm.moveItem(at: src, to: dir.appendingPathComponent(src.lastPathComponent)) }
+        }
+        return !fm.fileExists(atPath: url.path)
     }
 
     @AppStorage("appTheme") private var appTheme: String = AppTheme.system.rawValue

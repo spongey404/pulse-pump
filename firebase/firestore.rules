@@ -182,15 +182,24 @@ service cloud.firestore {
         && (!('schemaVersion' in d) || d.schemaVersion is int);
     }
 
+    // A profile's username must be a handle the same user owns, as it is after the write (`getAfter`), so the claim and the
+    // profile can be written in one batch. An existing username that isn't being changed isn't re-checked (accounts that
+    // predate handle documents keep working).
+    function ownsHandle(uid, handle) {
+      return getAfter(/databases/$(database)/documents/usernames/$(handle)).data.uid == uid;
+    }
+
     match /profiles/{uid} {
       allow get: if profileVisible(resource.data, uid);
       allow list: if profileVisible(resource.data, uid);
       allow create: if isUser(uid)
         && profileShapeOk(request.resource.data)
+        && ownsHandle(uid, request.resource.data.username)
         && zeroOrAbsent(request.resource.data, 'friendCount')
         && zeroOrAbsent(request.resource.data, 'fanCount');
       allow update: if isUser(uid)
         && profileShapeOk(request.resource.data)
+        && (unchanged('username') || ownsHandle(uid, request.resource.data.username))
         && unchanged('friendCount') && unchanged('fanCount');
       allow delete: if false; // removed by deleteAccount
     }
@@ -204,7 +213,9 @@ service cloud.firestore {
       allow create: if isUser(request.resource.data.uid)
         && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
         && request.resource.data.uid is string
-        && handle.matches('^[a-z0-9._]{3,20}$');
+        && handle.matches('^[a-z0-9._]{3,20}$')
+        // A handle is only claimed together with the profile that uses it (same batch), so one account can't hoard handles.
+        && getAfter(/databases/$(database)/documents/profiles/$(request.resource.data.uid)).data.username == handle;
       allow update: if false;
       allow delete: if isUser(resource.data.uid); // lets the owner release a handle when renaming
     }

@@ -57,6 +57,7 @@ enum AX {
         static let next = "signup.continue"
         static let forgot = "signup.forgot"
         static let retry = "signup.retry"
+        static let changeAnswer = "signup.change-answer"
         static let setupError = "signup.setupError"
         static let welcome = "signup.welcome"
         static func unit(_ raw: String) -> String { "signup.unit." + slug(raw) }
@@ -288,6 +289,7 @@ enum AX {
         static let memberCard = "supernova.member-card"
         static let memberPage = "supernova.member-page"
         static let memberBack = "supernova.member-back"
+        static let memberEmptyHeadline = "supernova.member-empty-headline"
         static func memberTab(_ name: String) -> String { "supernova.member-tab." + slug(name) }
         static let manageSubscription = "supernova.manage"
         static let cancelMembership = "supernova.cancel"
