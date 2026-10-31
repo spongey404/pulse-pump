@@ -15,6 +15,7 @@ struct TickerItem: Equatable {
 
 struct TickerStripView: View {
     let items: [TickerItem]
+    var height: CGFloat = 26
     @Environment(\.colorScheme) private var colorScheme
     @State private var startDate = Date()
 
@@ -99,7 +100,7 @@ struct TickerStripView: View {
                 }
             }
         }
-        .frame(height: 26)
+        .frame(height: height)
         .background(bg)
         .clipped()
         .onChange(of: items) { _, _ in startDate = Date() }

@@ -17,6 +17,7 @@ struct WorkoutCompletionView: View {
     @State private var thumbnailImage: Image?
     @State private var thumbnailUIImage: UIImage?
     @State private var avatarImage: Image?
+    @State private var keyboardUp = false
     @State private var cardContentHeight: CGFloat = 430
     @State private var photoSlideHeight: CGFloat = 300
     @State private var carouselPage: Int? = 0
@@ -60,7 +61,7 @@ struct WorkoutCompletionView: View {
     /// Distance from the screen's bottom edge to the docked bar's content (design: 30 pt), minus the safe area the inset already gives.
     private var dockBottomPadding: CGFloat {
         let inset = UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.safeAreaInsets.bottom ?? 0
-        return max(0, 30 - inset)
+        return keyboardUp ? 10 : 30 - inset   // negative: the bar's content sits 30 pt from the screen edge, inside the home-indicator area
     }
 
     var body: some View {
@@ -87,6 +88,8 @@ struct WorkoutCompletionView: View {
             }
         }
         .background(Color.canvasBg.ignoresSafeArea())
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardUp = true }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboardUp = false }
         .task { await loadAvatar() }
         .onChange(of: selectedPhotoItem) { _, item in
             Task {
@@ -219,7 +222,7 @@ struct WorkoutCompletionView: View {
     private var shareCard: some View {
         ScrollView {
             VStack(spacing: 0) {
-                TickerStripView(items: tickerItems)
+                TickerStripView(items: tickerItems, height: 33)
                 heroBlock
                 statsRow
                 exerciseTable
@@ -228,10 +231,17 @@ struct WorkoutCompletionView: View {
         }
         .scrollBounceBehavior(.basedOnSize)
         .scrollIndicators(.hidden)
-        .frame(height: min(cardContentHeight, Self.cardMaxHeight))
+        .frame(maxHeight: min(cardContentHeight, Self.cardMaxHeight))   // gives way when the keyboard is up
         .frame(maxWidth: .infinity)
+        .layoutPriority(-1)
         .background(Color.surf)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    /// The design breaks a short name onto one word per line (PUSH / DAY).
+    private var heroTitle: String {
+        let words = (data.workoutName ?? "WORKOUT").uppercased().split(separator: " ")
+        return words.count <= 3 ? words.joined(separator: "\n") : words.joined(separator: " ")
     }
 
     private var isMember: Bool { AccentStore.shared.isMember }
@@ -241,9 +251,9 @@ struct WorkoutCompletionView: View {
         let intensities = BodyHeat.Intensities(exercises: data.exercises)
         return HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
-                Text((data.workoutName ?? "WORKOUT").uppercased())
+                Text(heroTitle)
                     .font(.archivo(30, weight: .black))
-                    .lineSpacing(-1.5)
+                    .cssLineHeight(fontName: "Archivo-Black", size: 30, multiple: 0.95)
                     .foregroundStyle(Color.inkPrimary)
                     .lineLimit(3)
                     .minimumScaleFactor(0.6)
@@ -298,7 +308,7 @@ struct WorkoutCompletionView: View {
     private func statCell(_ label: String, _ value: String, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label).font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
-            Text(value).font(Font.spaceMono(18, weight: .bold)).foregroundStyle(color)
+            Text(value).font(Font.spaceMono(18, weight: .bold)).foregroundStyle(color).frame(height: 18)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
