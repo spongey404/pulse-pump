@@ -47,7 +47,7 @@ struct ActivityFeedView: View {
                             Circle().fill(Color.oreAccent).frame(width: 8, height: 8)
                         }
                     }
-                    .frame(minWidth: 44, minHeight: 44)
+                    .frame(width: 44, height: 32)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Activity")
@@ -62,10 +62,10 @@ struct ActivityFeedView: View {
                 .accessibilityIdentifier(AX.social.profile)
             }
             .padding(.horizontal, 16)
-            .padding(.top, 2)
-            .padding(.bottom, 6)
+            .padding(.top, 5)
+            .padding(.bottom, 10)
 
-            HStack(spacing: 0) {
+            HStack(spacing: 20) {
                 ForEach(["FRIENDS", "CHALLENGES"].indices, id: \.self) { i in
                     let label = ["FRIENDS", "CHALLENGES"][i]
                     let isActive = selectedTab == i
@@ -76,8 +76,8 @@ struct ActivityFeedView: View {
                             .font(Font.spaceMono(10, weight: .bold))
                             .tracking(1)
                             .foregroundStyle(isActive ? Color.inkPrimary : Color.inkMuted)
-                            .padding(.horizontal, 14)
                             .padding(.vertical, 10)
+                            .padding(.bottom, 2)
                             .overlay(alignment: .bottom) {
                                 Rectangle().fill(isActive ? Color.oreAccent : Color.clear).frame(height: 2)
                             }
@@ -87,7 +87,9 @@ struct ActivityFeedView: View {
                 }
                 Spacer()
             }
-            .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 0.5) }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 1)
+            .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
 
             if selectedTab == 0 {
                 feedContent
@@ -126,18 +128,18 @@ struct ActivityFeedView: View {
                     NoPostsEmptyState()
                 }
             } else {
-                LazyVStack(spacing: 0) {
+                LazyVStack(spacing: 14) {
                     ForEach(Array(viewModel.feedItems.enumerated()), id: \.element.id) { index, item in
                         FeedPostCard(item: item, viewModel: viewModel)
                             .onAppear {
                                 if index >= viewModel.feedItems.count - 3 { Task { await viewModel.loadMoreFeed() } }
                             }
-                        if index < viewModel.feedItems.count - 1 {
-                            Rectangle().fill(Color.ruleStrong).frame(height: 1)
-                        }
                     }
                     if viewModel.isLoadingMoreFeed { SkeletonRows(count: 1, rowHeight: 60) }
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 14)
+                .padding(.bottom, 14)
             }
         }
         .background(Color.canvasBg)
@@ -165,24 +167,17 @@ struct FeedPostCard: View {
     private var isMine: Bool { item.userId == viewModel.currentUid }
     private var displayName: String { item.username.isEmpty ? (item.handle.isEmpty ? Brand.defaultUserName : item.handle) : item.username }
 
+    private var member: SocialMemberStyle? { SocialMembership.style(for: item.userId, currentUid: viewModel.currentUid) }
+
     var body: some View {
         VStack(spacing: 0) {
-            cardHeader
-
-            if item.includesBodyMap {
-                mapSlide
-                    .frame(height: 330)
-                    .clipped()
-            }
-
+            hero
             statsStrip
-
             if !item.caption.isEmpty { captionSection }
-
-            if !item.includesBodyMap { fullSessionRow }
-
             reactRow
         }
+        .background(Color.surf)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .fullScreenCover(isPresented: $showDetail) {
             FeedSessionSheet(item: item, viewModel: viewModel)
         }
@@ -269,186 +264,195 @@ struct FeedPostCard: View {
         actionMessage = isSaved ? "Workout saved." : "Removed from saved."
     }
 
-    // MARK: Header
-
-    private var cardHeader: some View {
-        HStack(alignment: .center, spacing: 10) {
-            Button { if !isMine { showProfile = true } } label: {
-                Avatar(initial: displayName, size: 38)
-            }
-            .buttonStyle(.plain)
-
-            Button { if !isMine { showProfile = true } } label: {
-                VStack(alignment: .leading, spacing: 1) {
-                    HStack(spacing: 0) {
-                        Text(displayName)
-                            .font(.archivo(14, weight: .semibold))
-                            .foregroundStyle(Color.inkPrimary)
-                        if !item.handle.isEmpty {
-                            Text("  @\(item.handle)")
-                                .font(Font.spaceMono(9))
-                                .foregroundStyle(Color.inkMuted)
-                        }
-                    }
-                    Text("\((item.templateName ?? "WORKOUT").uppercased()) · \(durationLabel) · \(relativeLabel)")
-                        .font(Font.spaceMono(9))
-                        .foregroundStyle(Color.inkMuted)
-                        .lineLimit(1)
-                }
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier(AX.social.postCard(item.handle))
-
-            Spacer()
-
-            Button { menuOpen.toggle() } label: {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 18))
-                    .foregroundStyle(Color.inkMuted)
-                    .frame(width: 44, height: 44)
-            }
-            .buttonStyle(PressScaleButtonStyle())
-            .accessibilityLabel("Post options")
-            .confirmationDialog("Post options", isPresented: $menuOpen) {
-                if isMine {
-                    Button("Delete post", role: .destructive) { confirmDelete = true }
-                } else {
-                    Button("Steal program") { stealProgram() }
-                    Button(viewModel.savedPostIds.contains(item.id) ? "Unsave workout" : "Save workout") { toggleSaved() }
-                    Button("Report post", role: .destructive) { reportPost() }
-                    Button("Block @\(item.handle)", role: .destructive) { confirmBlock = true }
-                    if viewModel.relationship(with: item.userId) != .stranger {
-                        Button("Unfollow", role: .destructive) { unfollow() }
-                    }
-                }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-    }
-
     private var durationLabel: String { "\(item.durationSeconds / 60):\(String(format: "%02d", item.durationSeconds % 60))" }
     private var relativeLabel: String {
         let f = RelativeDateTimeFormatter(); f.unitsStyle = .abbreviated
         return f.localizedString(for: item.date, relativeTo: Date()).uppercased()
     }
 
-    // MARK: Body-map slide (the only media: photos are not uploaded)
+    // MARK: Hero (body map + who, what, PRs)
 
-    private var mapSlide: some View {
-        ZStack(alignment: .topLeading) {
+    private var hero: some View {
+        let tall = item.prCount > 0
+        return ZStack(alignment: tall ? .topLeading : .leading) {
             Color.surf2
-            BodyHeat(intensities: feedBodyHeatIntensities(item: item))
-                .frame(width: 183, height: 290)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            VStack(alignment: .leading, spacing: 10) {
-                ForEach(MuscleSetsFormat.top(item.muscleSets), id: \.label) { m in
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(m.label).font(Font.spaceMono(7)).tracking(1.5).foregroundStyle(Color.inkMuted)
-                        Text("\(m.count)").font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
-                    }
-                }
+            if item.includesBodyMap {
+                SocialBodyMap(muscleSets: item.muscleSets, style: member,
+                              width: tall ? 150 : 100, height: tall ? 240 : 160)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                    .padding(.trailing, 22)
             }
-            .padding(.leading, 16).padding(.top, 14)
-
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    HStack(spacing: 6) {
-                        Text("FULL SESSION").font(Font.spaceMono(8)).tracking(1.5).foregroundStyle(Color.accentInk)
-                        Text("›").font(Font.spaceMono(12)).foregroundStyle(Color.accentInk)
-                    }
-                }
-            }
-            .padding(.trailing, 16).padding(.bottom, 14)
+            heroText(tall: tall)
+                .padding(tall ? 16 : 0)
+                .padding(.leading, tall ? 0 : 16)
+                .frame(maxWidth: tall ? 170 : .infinity, alignment: .leading)
         }
+        .frame(height: tall ? 280 : 180)
+        .overlay(alignment: .topTrailing) { postMenu }
         .contentShape(Rectangle())
         .onTapGesture { showDetail = true }
+        .accessibilityElement(children: .contain)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel("Full session")
     }
 
-    /// Posts without a body map (hidden by the author, or not visible to the viewer) still open the session.
-    private var fullSessionRow: some View {
-        Button { showDetail = true } label: {
-            HStack {
-                Text("\(item.exercises.count) EXERCISES")
-                    .font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted)
-                Spacer()
-                Text("FULL SESSION ›").font(Font.spaceMono(9, weight: .bold)).tracking(1.2).foregroundStyle(Color.accentInk)
+    private func heroText(tall: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button { if !isMine { showProfile = true } } label: {
+                HStack(spacing: 10) {
+                    Group {
+                        if let member {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color(hex: member.palette.accent.hex))
+                                Text(displayName.prefix(1).uppercased()).font(.archivo(14, weight: .black)).foregroundStyle(.white)
+                            }
+                        } else {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.surf)
+                                Text(displayName.prefix(1).uppercased()).font(.archivo(14, weight: .black)).foregroundStyle(Color.inkSecondary)
+                            }
+                        }
+                    }
+                    .frame(width: 34, height: 34)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(displayName).font(.archivo(15, weight: .bold)).foregroundStyle(Color.inkPrimary).lineLimit(1)
+                        if member != nil { SupernovaTag() }
+                    }
+                }
             }
-            .padding(.horizontal, 16)
-            .frame(minHeight: 44)
-            .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
-            .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier(AX.social.postCard(item.handle))
+
+            Text((item.templateName ?? "WORKOUT").uppercased())
+                .font(.archivo(30, weight: .black))
+                .foregroundStyle(Color.inkPrimary)
+                .cssLineHeight(fontName: "Archivo-Black", size: 30, multiple: 0.95)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, tall ? 20 : 14)
+
+            Text("\(durationLabel) · \(relativeLabel)")
+                .font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkMuted)
+                .padding(.top, tall ? 6 : 4)
+
+            if item.prCount > 0 {
+                HStack(spacing: 6) {
+                    PRStar(size: 12)
+                    Text("\(item.prCount) NEW PR\(item.prCount == 1 ? "" : "S")")
+                        .font(.spaceMono(9, weight: .bold)).tracking(1.5).foregroundStyle(Color.inkPrimary)
+                }
+                .padding(.horizontal, 10).padding(.vertical, 6)
+                .background(Color.surf, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .padding(.top, 16)
+            }
         }
-        .buttonStyle(.plain)
     }
 
-    // MARK: Stats strip (4-up)
+    private var postMenu: some View {
+        Button { menuOpen.toggle() } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 16))
+                .foregroundStyle(Color.inkMuted)
+                .frame(width: 44, height: 44)
+        }
+        .buttonStyle(PressScaleButtonStyle())
+        .accessibilityLabel("Post options")
+        .confirmationDialog("Post options", isPresented: $menuOpen) {
+            if isMine {
+                Button("Delete post", role: .destructive) { confirmDelete = true }
+            } else {
+                Button("Steal program") { stealProgram() }
+                Button(viewModel.savedPostIds.contains(item.id) ? "Unsave workout" : "Save workout") { toggleSaved() }
+                Button("Report post", role: .destructive) { reportPost() }
+                Button("Block @\(item.handle)", role: .destructive) { confirmBlock = true }
+                if viewModel.relationship(with: item.userId) != .stranger {
+                    Button("Unfollow", role: .destructive) { unfollow() }
+                }
+            }
+        }
+    }
+
+    // MARK: Stats (3-up, 18 pt)
 
     private var statsStrip: some View {
-        HStack(spacing: 6) {
-            KPIBlock(label: "SETS", value: "\(item.workingSetCount)", alignment: .center)
-            KPIBlock(label: "VOLUME", value: unit.compactVolume(item.volumeKg), alignment: .center)   // feed weights are kg
-            KPIBlock(label: "IMPROVED", value: "\(item.improvedCount)", valueColor: .signalUp, delta: "/\(item.totalExercises)", alignment: .center)
-            KPIBlock(label: "PRS", value: "\(item.prCount)", valueColor: .prGold, alignment: .center)
+        HStack(alignment: .top, spacing: 8) {
+            feedStat("SETS", "\(item.workingSetCount)")
+            feedStat("VOLUME", unit.compactVolume(item.volumeKg))   // feed weights are kg
+            feedStat("IMPROVED", "\(item.improvedCount)", color: .signalUp, suffix: "/\(item.totalExercises)")
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.vertical, 14)
+    }
+
+    private func feedStat(_ label: String, _ value: String, color: Color = .inkPrimary, suffix: String? = nil) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label).font(.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
+            HStack(alignment: .lastTextBaseline, spacing: 0) {
+                Text(value).font(.spaceMono(18, weight: .bold)).foregroundStyle(color).frame(height: 18)
+                if let suffix { Text(suffix).font(.spaceMono(12, weight: .bold)).foregroundStyle(Color.inkMuted).frame(height: 18) }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: Caption
 
     private var captionSection: some View {
-        Text("\(Text(displayName + " ").font(.archivo(13, weight: .bold)))\(Text(item.caption).font(.archivo(13)))")
-        .foregroundStyle(Color.inkPrimary)
-        .lineSpacing(4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-        .padding(.top, 2)
-        .padding(.bottom, 8)
+        Text(item.caption)
+            .font(.archivo(14))
+            .foregroundStyle(Color.inkPrimary)
+            .cssLineHeight(fontName: "Archivo-Regular", size: 14, multiple: 1.45)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
     }
 
-    // MARK: React row
+    // MARK: React row (bare 24 pt icons + Space Mono 14 bold counts)
 
     private var reactRow: some View {
+        SocialReactRow(liked: item.likedByMe, likeCount: item.likeCount, commentCount: item.commentCount,
+                       onLike: { Task { await viewModel.toggleLike(postId: item.id) } },
+                       onComment: { showComments = true })
+    }
+}
+
+/// Like and comment: a bare 24 pt stroked icon with its Space Mono bold 14 count, no outline. Shared by the feed card and the session.
+struct SocialReactRow: View {
+    let liked: Bool
+    let likeCount: Int
+    let commentCount: Int
+    let onLike: () -> Void
+    let onComment: () -> Void
+
+    var body: some View {
         HStack(spacing: 22) {
-            Button { Task { await viewModel.toggleLike(postId: item.id) } } label: {
+            Button(action: onLike) {
                 HStack(spacing: 8) {
-                    Image(systemName: item.likedByMe ? "heart.fill" : "heart")
-                        .font(.system(size: 24, weight: .regular))
-                        .foregroundStyle(item.likedByMe ? Color.oreAccent : Color.inkMuted)
-                    Text("\(item.likeCount)")
-                        .font(Font.spaceMono(14, weight: .bold))
-                        .foregroundStyle(Color.inkPrimary)
+                    Image(systemName: liked ? "heart.fill" : "heart")
+                        .font(.system(size: 24, weight: .light))
+                        .foregroundStyle(liked ? Color.oreAccent : Color.inkMuted)
+                    Text("\(likeCount)").font(.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
                 }
                 .frame(minHeight: 44)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(item.likedByMe ? "Unlike" : "Like")
+            .accessibilityLabel(liked ? "Unlike" : "Like")
 
-            Button { showComments = true } label: {
+            Button(action: onComment) {
                 HStack(spacing: 8) {
                     Image(systemName: "bubble.left")
-                        .font(.system(size: 24, weight: .regular))
+                        .font(.system(size: 24, weight: .light))
                         .foregroundStyle(Color.inkMuted)
-                    Text("\(item.commentCount)")
-                        .font(Font.spaceMono(14, weight: .bold))
-                        .foregroundStyle(Color.inkPrimary)
+                    Text("\(commentCount)").font(.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
                 }
                 .frame(minHeight: 44)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Comments")
-
             Spacer()
         }
         .padding(.horizontal, 16)
         .padding(.top, 4)
-        .padding(.bottom, 14)
+        .padding(.bottom, 8)
     }
 }
 
@@ -465,13 +469,6 @@ struct FeedSessionSheet: View {
     /// The freshest copy (likes and comments update it while the sheet is open).
     private var current: WorkoutFeedItem { viewModel.post(id: item.id, fallback: item) }
     private var displayName: String { item.username.isEmpty ? item.handle : item.username }
-
-    private var tickerItems: [TickerItem] {
-        item.exercises.compactMap { ex in
-            guard ex.improvementScore > 0 else { return nil }
-            return TickerItem(label: ex.name.uppercased(), value: "\(String(format: "%.0f", ex.improvementScore))%", direction: .up)
-        }
-    }
 
     /// Exercises sorted PR-first-then-improved, matching the composer's share-card
     /// ordering — the top `item.prCount` by improvement score are treated as PRs (the
@@ -495,206 +492,128 @@ struct FeedSessionSheet: View {
         }
     }
 
+    private var member: SocialMemberStyle? { SocialMembership.style(for: item.userId, currentUid: viewModel.currentUid) }
+
     private var content: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .center, spacing: 12) {
-                Button { dismiss() } label: {
-                    Text("‹").font(Font.spaceMono(20)).foregroundStyle(Color.inkPrimary)
-                        .frame(minWidth: 28, minHeight: 44)
-                }
-                .buttonStyle(.plain)
-
+            HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(displayName.uppercased()) · \(item.date, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated)) · \(durationLabel)")
-                        .font(Font.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
+                    Text("\(displayName.uppercased()) · \(item.date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)).uppercased()) · \(durationLabel)")
+                        .font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkMuted)
                     Text((item.templateName ?? "WORKOUT").uppercased())
-                        .font(.display(24)).tracking(0.5).foregroundStyle(Color.inkPrimary)
+                        .font(.archivo(26, weight: .black)).tracking(0.5).foregroundStyle(Color.inkPrimary)
                 }
                 Spacer()
+                Button { dismiss() } label: {
+                    Text("‹").font(.archivo(18)).foregroundStyle(Color.inkPrimary)
+                        .frame(width: 36, height: 36)
+                        .background(Color.surf2, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Back")
+                .accessibilityIdentifier(AX.nav.back)
             }
             .padding(.horizontal, 16)
             .padding(.top, 6)
             .padding(.bottom, 12)
-
-            if !tickerItems.isEmpty {
-                TickerStripView(items: tickerItems)
-                    .padding(.bottom, 14)
-            }
+            .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
 
             ScrollView {
                 VStack(spacing: 0) {
                     HStack(spacing: 18) {
                         if item.includesBodyMap {
-                            BodyHeat(intensities: feedBodyHeatIntensities(item: item))
-                                .frame(width: 66, height: 106)
+                            SocialBodyMap(muscleSets: item.muscleSets, style: member, width: 75, height: 120)
                         }
-                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())], spacing: 18) {
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 20), GridItem(.flexible())], alignment: .leading, spacing: 16) {
                             sessionStat(label: "SETS", value: "\(item.workingSetCount)")
                             sessionStat(label: "VOLUME", value: unit.compactVolume(item.volumeKg))   // feed weights are kg
                             sessionStat(label: "IMPROVED", value: "\(item.improvedCount)", valueColor: Color.signalUp, delta: "/\(item.totalExercises)")
-                            sessionStat(label: "PRS", value: "\(item.prCount)", valueColor: Color.prGold, glow: true)
+                            sessionStat(label: "PRS", value: "\(item.prCount)", valueColor: Color.prGold, star: item.prCount > 0)
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 14)
-                    .padding(.bottom, 18)
-                    .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+                    .padding(16)
 
-                    exerciseTableHeader
-
-                    ForEach(sortedExercises, id: \.exercise.id) { entry in
-                        Button { selectedExerciseName = entry.exercise.name } label: {
-                            exerciseRow(entry.exercise, isPR: entry.isPR)
-                        }
-                        .buttonStyle(RowPressStyle())
+                    HStack {
+                        Text("EXERCISES")
+                        Spacer()
+                        Text("BEST · VS LAST")
                     }
+                    .font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkMuted)
+                    .padding(.horizontal, 16).padding(.top, 22).padding(.bottom, 8)
+
+                    VStack(spacing: 0) {
+                        ForEach(Array(sortedExercises.enumerated()), id: \.element.exercise.id) { index, entry in
+                            Button { selectedExerciseName = entry.exercise.name } label: {
+                                exerciseRow(entry.exercise, isPR: entry.isPR, starDelay: -0.5 * Double(index))
+                            }
+                            .buttonStyle(RowPressStyle())
+                        }
+                    }
+                    .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+
+                    SocialReactRow(liked: current.likedByMe, likeCount: current.likeCount, commentCount: current.commentCount,
+                                   onLike: { Task { await viewModel.toggleLike(postId: item.id) } },
+                                   onComment: { showComments = true })
+                        .padding(.bottom, 22)
                 }
             }
         }
         .background(Color.canvasBg)
-        // Bolted to the bottom of the screen via safeAreaInset so a short session still anchors it low.
-        .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 0) {
-                HStack(spacing: 22) {
-                    Button { Task { await viewModel.toggleLike(postId: item.id) } } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: current.likedByMe ? "heart.fill" : "heart").font(.system(size: 24))
-                                .foregroundStyle(current.likedByMe ? Color.oreAccent : Color.inkMuted)
-                            Text("\(current.likeCount)").font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
-                        }
-                        .frame(minHeight: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(current.likedByMe ? "Unlike" : "Like")
-
-                    Button { showComments = true } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "bubble.left").font(.system(size: 24)).foregroundStyle(Color.inkMuted)
-                            Text("\(current.commentCount)").font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
-                        }
-                        .frame(minHeight: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Comments")
-                    Spacer()
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 24)
-                .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
-            }
-            .background(Color.canvasBg)
-        }
     }
 
-    /// Stats-row cell — Space Mono 7px/1.2 tracking label, Archivo 900 26px value.
-    private func sessionStat(label: String, value: String, valueColor: Color = Color.inkPrimary, delta: String? = nil, glow: Bool = false) -> some View {
+    /// Stats cell: Space Mono 8 label, Space Mono bold 22 value (a gold star before the PRs).
+    private func sessionStat(label: String, value: String, valueColor: Color = Color.inkPrimary, delta: String? = nil, star: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(Font.spaceMono(7))
-                .kerning(1.2)
-                .textCase(.uppercase)
-                .foregroundStyle(Color.inkMuted)
-            HStack(alignment: .lastTextBaseline, spacing: 4) {
-                Text(value)
-                    .font(.archivo(26, weight: .black))
-                    .lineSpacing(0)
-                    .foregroundStyle(valueColor)
-                    .shadow(color: glow ? Color.prGold.opacity(0.45) : .clear, radius: 5)
-                if let delta {
-                    Text(delta)
-                        .font(Font.spaceMono(8))
-                        .foregroundStyle(Color.inkMuted)
+            Text(label).font(.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
+            HStack(spacing: 5) {
+                if star { PRStar(size: 14) }
+                HStack(alignment: .lastTextBaseline, spacing: 0) {
+                    Text(value).font(.spaceMono(22, weight: .bold)).foregroundStyle(valueColor).frame(height: 22)
+                    if let delta { Text(delta).font(.spaceMono(22, weight: .bold)).foregroundStyle(Color.inkMuted).frame(height: 22) }
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// `EXERCISE / SET / BEST / VS LAST`, grid `1fr 30px 68px 70px`, gap 6.
-    private var exerciseTableHeader: some View {
-        HStack(spacing: 6) {
-            Text("EXERCISE").frame(maxWidth: .infinity, alignment: .leading)
-            Text("SET").frame(width: 30, alignment: .trailing)
-            Text("BEST").frame(width: 68, alignment: .trailing)
-            Text("VS LAST").frame(width: 70, alignment: .trailing)
-        }
-        .font(Font.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
-        .padding(.horizontal, 16)
-        .padding(.top, 11)
-        .padding(.bottom, 9)
-        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
-    }
-
-    private func exerciseRow(_ exercise: FeedExercise, isPR: Bool) -> some View {
-        // Driven by the same raw kg/rep delta shown in "VS LAST" — not `improvementScore`.
+    /// A settings-style row: name (16 bold) with its sets line under it, the best set and vs-last on the right; a gold star on PRs.
+    private func exerciseRow(_ exercise: FeedExercise, isPR: Bool, starDelay: Double) -> some View {
         let improved = exercise.weightDelta > 0 || exercise.repsDelta > 0
-        let bestSetIndex = exercise.sets.indices.max(by: { exercise.sets[$0].weight * Double(exercise.sets[$0].reps) < exercise.sets[$1].weight * Double(exercise.sets[$1].reps) })
-        let emphasized = isPR || improved
-        let nameColor: Color = isPR ? Color.prGold : (improved ? Color.inkPrimary : Color.inkMuted)
+        // The best set is the working set with the highest estimated 1RM (Epley), so 105×3 beats 60×8.
+        let bestSetIndex = exercise.sets.indices.filter { exercise.sets[$0].isWorking }.max(by: {
+            exercise.sets[$0].weight * (1 + Double(exercise.sets[$0].reps) / 30) < exercise.sets[$1].weight * (1 + Double(exercise.sets[$1].reps) / 30)
+        })
+        let vsLast = vsLastLabel(for: exercise)
 
-        return VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                HStack(spacing: 6) {
-                    Text(exercise.name.uppercased())
-                        .font(.archivo(14, weight: emphasized ? .bold : .regular))
-                        .tracking(0.2)
+        return HStack(alignment: .center, spacing: 10) {
+            if isPR { PRStar(size: 13, delay: starDelay).frame(width: 14) }
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(exercise.name)
+                        .font(.archivo(16, weight: .bold))
+                        .foregroundStyle(improved || isPR ? Color.inkPrimary : Color.inkMuted)
                         .lineLimit(1)
-                        .truncationMode(.tail)
-                        .foregroundStyle(nameColor)
-                    if isPR {
-                        Text("PR")
-                            .font(Font.spaceMono(8, weight: .bold)).tracking(1.2)
-                            .foregroundStyle(Color.prGold)
-                            .shadow(color: Color.prGold.opacity(0.5), radius: 4)
-                            .fixedSize()
-                            .layoutPriority(1)
-                    }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(bestSetIndex.map { setValueLabel(exercise.sets[$0]) } ?? "—")
+                        .font(.spaceMono(14, weight: .bold))
+                        .foregroundStyle(isPR ? Color.prGold : Color.inkPrimary)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                Text("\(exercise.sets.count)")
-                    .font(Font.spaceMono(13))
-                    .foregroundStyle(Color.inkMuted)
-                    .frame(width: 30, alignment: .trailing)
-
-                Text(bestSetIndex.map { setValueLabel(exercise.sets[$0]) } ?? "—")
-                    .font(Font.spaceMono(14, weight: emphasized ? .bold : .regular))
-                    .foregroundStyle(nameColor)
-                    .frame(width: 68, alignment: .trailing)
-
-                Text(vsLastLabel(for: exercise))
-                    .font(Font.spaceMono(11, weight: .bold))
-                    .foregroundStyle(improved ? Color.signalUp : Color.inkMuted)
-                    .frame(width: 70, alignment: .trailing)
-            }
-
-            FlowLayout(spacing: 0) {
-                ForEach(Array(exercise.sets.enumerated()), id: \.offset) { i, set in
-                    HStack(spacing: 0) {
-                        Text(setValueLabel(set))
-                            .font(Font.spaceMono(12, weight: (i == bestSetIndex && emphasized) ? .bold : .regular))
-                            .foregroundStyle(setColor(isBest: i == bestSetIndex, isPR: isPR, emphasized: emphasized))
-                            .shadow(color: (i == bestSetIndex && isPR && emphasized) ? Color.prGold.opacity(0.5) : .clear, radius: 4)
-                        if i != exercise.sets.count - 1 {
-                            Text("·")
-                                .font(Font.spaceMono(12))
-                                .foregroundStyle(Color.inkPrimary.opacity(0.18))
-                                .padding(.horizontal, 6)
-                        }
-                    }
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(exercise.sets.map(setValueLabel).joined(separator: " · "))
+                        .font(.spaceMono(10)).tracking(0.6).foregroundStyle(Color.inkMuted)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(vsLast)
+                        .font(.spaceMono(9, weight: .bold)).tracking(0.8)
+                        .foregroundStyle(improved ? Color.signalUp : Color.inkGhost)
                 }
             }
-            .padding(.top, 7)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 12)
-        .padding(.bottom, 11)
+        .padding(.horizontal, 16).padding(.vertical, 12)
+        .padding(.bottom, 1)   // a CSS border takes space; the hairline sits in it
+        .frame(maxWidth: .infinity, alignment: .leading)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
-    }
-
-    private func setColor(isBest: Bool, isPR: Bool, emphasized: Bool) -> Color {
-        guard isBest && emphasized else { return Color.inkMuted }
-        return isPR ? Color.prGold : Color.inkPrimary
+        .contentShape(Rectangle())
     }
 
     private func setValueLabel(_ set: FeedSetLog) -> String {
@@ -703,8 +622,7 @@ struct FeedSessionSheet: View {
         return set.weight > 0 ? "\(unit.number(set.weight))×\(set.reps)" : "\(set.reps)r"
     }
 
-    /// "VS LAST" is a raw weight/rep gain, not a %. `weightDelta` beating last time takes
-    /// priority; a rep-only gain at the same weight shows as "+N REPS" instead.
+    /// "VS LAST" is a raw weight/rep gain, not a %. A weight gain shows "▲ +5KG"; a rep-only gain at the same weight "▲ +2 REPS".
     private func vsLastLabel(for exercise: FeedExercise) -> String {
         if exercise.weightDelta > 0 {
             return "▲ +\(unit.formatTight(exercise.weightDelta))"

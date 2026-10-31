@@ -14,11 +14,11 @@ struct SocialPill: View {
         Button(action: action) {
             Text(title)
                 .font(Font.spaceMono(9, weight: .bold))
-                .tracking(1.2)
+                .tracking(1.5)
                 .foregroundStyle(style == .filled ? Color.white : Color.inkMuted)
-                .padding(.horizontal, 14)
-                .frame(minHeight: 36)
-                .background(style == .filled ? Color.oreAccent : Color.clear)
+                .padding(.horizontal, 12)
+                .frame(height: 32)
+                .background { if style == .filled { AccentFill() } }
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(style == .outlined ? Color.ruleStrong : Color.clear, lineWidth: 1))
                 .opacity(isDisabled ? 0.5 : 1)

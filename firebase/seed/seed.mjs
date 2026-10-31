@@ -127,9 +127,16 @@ async function main() {
       authorUid: P[n].uid, authorName: P[n].name, authorUsername: P[n].handle, date: daysAgo(daysBack), workoutName: name,
       audience, bodyMapAudience,
       stats: { sets: 14, volumeKg: 5200 + n * 100, durationSec: 3600, prCount: n % 2 },
+      // Same shape the app writes (SocialWire.exerciseData): id, name, sets{weight,reps,duration,distance,setType}, deltas vs last time.
       exercises: [
-        { exerciseId: 'bench-press', exerciseName: 'Bench Press', sets: [{ weightKg: 80, reps: 8, setType: 'standard' }, { weightKg: 85, reps: 5, setType: 'standard' }] },
-        { exerciseId: 'back-squat', exerciseName: 'Back Squat', sets: [{ weightKg: 110, reps: 8, setType: 'standard' }] },
+        { id: 'bench-press', name: 'Bench Press', improvementScore: 5, weightDelta: 5, repsDelta: 0,
+          sets: [[60, 8, 'warmup'], [80, 5, 'standard'], [95, 4, 'standard'], [105, 3, 'standard'], [95, 5, 'standard']].map(([weight, reps, setType]) => ({ weight, reps, duration: 0, distance: 0, setType })) },
+        { id: 'overhead-press', name: 'Overhead Press', improvementScore: 3, weightDelta: 2, repsDelta: 0,
+          sets: [[45, 8, 'standard'], [60, 5, 'standard'], [72.5, 4, 'standard'], [65, 6, 'standard']].map(([weight, reps, setType]) => ({ weight, reps, duration: 0, distance: 0, setType })) },
+        { id: 'cable-fly', name: 'Cable Fly', improvementScore: 0, weightDelta: 0, repsDelta: 2,
+          sets: [[14, 15, 'standard'], [18, 12, 'standard'], [18, 11, 'standard']].map(([weight, reps, setType]) => ({ weight, reps, duration: 0, distance: 0, setType })) },
+        { id: 'lateral-raise', name: 'Lateral Raise', improvementScore: 0, weightDelta: 0, repsDelta: 0,
+          sets: [[12, 12, 'standard'], [12, 11, 'standard'], [10, 14, 'standard']].map(([weight, reps, setType]) => ({ weight, reps, duration: 0, distance: 0, setType })) },
       ],
       likeCount: 0, commentCount: 0, createdAt: daysAgo(daysBack, 19), schemaVersion: 1, ...extra,
     },
@@ -162,7 +169,7 @@ async function main() {
   }
   for (const { id, data } of posts) {
     await db.doc(`posts/${id}`).set({ ...data, likeCount: lCount[id] ?? 0, commentCount: cCount[id] ?? 0 });
-    await db.doc(`posts/${id}/extras/bodymap`).set({ muscleSets: { chest: 9, triceps: 6, shoulders: 4, quads: 8, glutes: 4 }, schemaVersion: 1, updatedAt: NOW });
+    await db.doc(`posts/${id}/extras/bodymap`).set({ muscleSets: { Chest: 9, Triceps: 6, Shoulders: 4, Quads: 8, Glutes: 4 }, schemaVersion: 1, updatedAt: NOW });
   }
 
   // challenges
