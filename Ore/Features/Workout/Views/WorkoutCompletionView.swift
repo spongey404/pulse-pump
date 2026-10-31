@@ -400,6 +400,7 @@ struct WorkoutCompletionView: View {
                 .accessibilityIdentifier(AX.completion.cta)
 
                 Button {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     withAnimation(.spring(response: 0.22, dampingFraction: 0.82)) { showComposerMenu.toggle() }
                 } label: {
                     Text("···")
