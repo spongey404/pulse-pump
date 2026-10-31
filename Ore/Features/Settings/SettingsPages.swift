@@ -224,8 +224,8 @@ struct EditProfilePage: View {
                         field("HEIGHT · CM") { input("Height", text: $height, field: .height, keyboard: .decimalPad) }
                     }
                     field("AGE") { input("Age", text: $age, field: .age, keyboard: .numberPad) }
-                    MoreRow(label: "Email", value: session.user?.email ?? "—", chevron: false) { }
-                    MoreRow(label: "Signed in with", value: (session.user?.providerSummary ?? "").uppercased(), chevron: false) { }
+                    MoreRow(label: "Email", value: session.user?.email ?? "—", chevron: false, isStatic: true)
+                    MoreRow(label: "Signed in with", value: (session.user?.providerSummary ?? "").uppercased(), chevron: false, isStatic: true)
                 }
             }
             .scrollDismissesKeyboard(.interactively)

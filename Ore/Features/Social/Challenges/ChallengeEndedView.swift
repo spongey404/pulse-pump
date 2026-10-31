@@ -19,9 +19,12 @@ struct ChallengeEndedView: View {
         max(1, Calendar.current.dateComponents([.day], from: challenge.startAt, to: challenge.endAt).day ?? 28)
     }
     /// "4 WEEKS" when the length is whole weeks, else "30 DAYS".
+    /// Whole days the challenge ran: one that ends at the last instant of a day is one day short of its whole length.
+    private var wholeDays: Int {
+        Calendar.current.dateComponents([.day], from: challenge.startAt, to: challenge.endAt.addingTimeInterval(60)).day ?? lengthDays
+    }
     private var lengthLabel: String {
-        // A challenge that ends at the last instant of a day is one day short of its whole length.
-        let days = Calendar.current.dateComponents([.day], from: challenge.startAt, to: challenge.endAt.addingTimeInterval(60)).day ?? lengthDays
+        let days = wholeDays
         if days >= 7, days % 7 == 0 { return "\(days / 7) \(days / 7 == 1 ? "WEEK" : "WEEKS")" }
         return "\(days) \(days == 1 ? "DAY" : "DAYS")"
     }
@@ -109,7 +112,7 @@ struct ChallengeEndedView: View {
         let start = Date()
         let draft = ChallengeDraft(
             name: challenge.name, metric: challenge.metric, exerciseName: challenge.exerciseName,
-            startAt: start, endAt: start.addingTimeInterval(Double(lengthDays) * 86_400),
+            startAt: start, endAt: start.addingTimeInterval(Double(wholeDays) * 86_400),
             visibility: challenge.visibility, winCondition: challenge.winCondition,
             unit: challenge.unit, customLabel: challenge.customLabel)
         Task {

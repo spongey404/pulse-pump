@@ -108,6 +108,8 @@ struct MoreRow: View {
     /// Small outlined tag before the value, e.g. "SUPERNOVA".
     var tag: String? = nil
     var toggle: Binding<Bool>? = nil
+    /// Data only (Version, Email, Last synced…): drawn like a row but not a button.
+    var isStatic = false
     var action: () -> Void = {}
 
     var body: some View {
@@ -151,7 +153,9 @@ struct MoreRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(OreRowPressStyle())
+        .allowsHitTesting(!isStatic)
         .accessibilityIdentifier(AX.row(label))
+        .accessibilityRemoveTraits(isStatic ? .isButton : [])
         .accessibilityValue(toggle.map { $0.wrappedValue ? "On" : "Off" } ?? "")
         .accessibilityAddTraits(toggle == nil ? [] : .isToggle)
     }
@@ -259,54 +263,6 @@ struct OrePageFooter<Content: View>: View {
             .frame(maxWidth: .infinity)
             .background(Color.canvasBg)
             .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
-    }
-}
-
-/// Ledger row whose trailing value is a menu picker (Settings option rows).
-struct MoreMenuRow<T: Hashable>: View {
-    let icon: String
-    let label: String
-    @Binding var selection: T
-    let options: [T]
-    let title: (T) -> String
-
-    var body: some View {
-        Menu {
-            Picker(label, selection: $selection) {
-                ForEach(options, id: \.self) { Text(title($0)).tag($0) }
-            }
-        } label: {
-            HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.surf2)
-                    .frame(width: 32, height: 32)
-                    .overlay {
-                        Image(systemName: icon)
-                            .font(.system(size: 14))
-                            .foregroundStyle(Color.inkMuted)
-                    }
-                HStack(spacing: 10) {
-                    Text(label)
-                        .font(.archivo(14, weight: .semibold))
-                        .foregroundStyle(Color.inkPrimary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Text(title(selection).uppercased())
-                        .font(.spaceMono(10))
-                        .tracking(0.8)
-                        .foregroundStyle(Color.inkMuted)
-                        .lineLimit(1)
-                    Text("›").font(.spaceMono(16)).foregroundStyle(Color.inkGhost)
-                }
-                .frame(minHeight: 52)
-                .overlay(alignment: .bottom) {
-                    Rectangle().fill(Color.dsHairLine).frame(height: 1)
-                }
-            }
-            .padding(.horizontal, 16)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier(AX.menu(label))
     }
 }
 

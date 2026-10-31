@@ -60,14 +60,14 @@ struct OreToggleSwitch: View {
     @State private var fxVisible = false
 
     private var cfg: OreToggleConfig { .shared }
-    private var Stardust: Bool { AccentStore.shared.stardustEnabled }
+    private var stardustOn: Bool { AccentStore.shared.stardustEnabled }
     private var ease: Animation? { reduceMotion ? nil : .easeInOut(duration: cfg.durationMs / 1000) }
 
     var body: some View {
         let on = isOn
         let s = scheme == .dark ? cfg.dark : cfg.light
         let t = cfg.track, k = cfg.knob
-        let wantFx = on && Stardust
+        let wantFx = on && stardustOn
         ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: t.radius, style: .continuous)
                 .fill(on ? Color.oreAccent : OreToggleConfig.color(s.offTrack))
@@ -107,26 +107,6 @@ struct OreToggleSwitch: View {
             }
         }
         .onChange(of: on) { _, _ in if !disabled { UISelectionFeedbackGenerator().selectionChanged() } }
-    }
-}
-
-/// A tappable Ore toggle: the track is the hit target (at least 44 pt tall), VoiceOver reads it as a switch.
-struct OreToggle: View {
-    @Binding var isOn: Bool
-    var disabled = false
-    var accessibilityLabel: String
-
-    var body: some View {
-        OreToggleSwitch(isOn: isOn, disabled: disabled)
-            .frame(minHeight: OreToggleConfig.shared.minRowHeight)
-            .contentShape(Rectangle())
-            .onTapGesture { if !disabled { isOn.toggle() } }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(accessibilityLabel)
-            .accessibilityValue(isOn ? "On" : "Off")
-            .accessibilityAddTraits(.isToggle)
-            .accessibilityAddTraits(.isButton)
-            .accessibilityAction { if !disabled { isOn.toggle() } }
     }
 }
 

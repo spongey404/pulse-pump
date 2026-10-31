@@ -142,6 +142,7 @@ final class SupernovaTransition {
         fadingOut = false
         kind = source
         let reduce = UIAccessibility.isReduceMotionEnabled
+        clip = SourceClip()
         if fromSource, !reduce, let src = sources[source], let star = src.asterisk {
             isShared = true
             let scale = source == .member && src.starHeight > 0 ? src.starHeight / config.flyer.glyphSize : config.flyer.startScale

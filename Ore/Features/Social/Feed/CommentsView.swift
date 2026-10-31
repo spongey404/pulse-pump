@@ -43,6 +43,8 @@ struct CommentsView: View {
 
             VStack(spacing: 0) {
                 Capsule().fill(Color.ruleStrong).frame(width: 36, height: 4).padding(.top, 8)
+                    .padding(.horizontal, 60).padding(.bottom, 6).contentShape(Rectangle())
+                    .gesture(DragGesture().onEnded { if $0.translation.height > 40 { dismiss() } })   // drag the handle down to close
 
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text("COMMENTS").font(.archivo(20, weight: .black)).foregroundStyle(Color.inkPrimary)
@@ -75,7 +77,7 @@ struct CommentsView: View {
             .background(Color.canvasBg)
             .clipShape(UnevenRoundedRectangle(topLeadingRadius: 14, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 14, style: .continuous))
             .padding(.top, 170)
-            .ignoresSafeArea(edges: .bottom)
+            .ignoresSafeArea(.container, edges: .bottom)   // the keyboard still pushes the composer up
         }
         .background(Color.canvasBg.ignoresSafeArea())
         .task {

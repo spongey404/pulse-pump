@@ -17,8 +17,8 @@ struct CloudSyncView: View {
                 VStack(spacing: 0) {
                     MorePageIntro(text: "Your workouts, templates and settings back up to your account and come back on any device you sign in on.")
                     MoreSectionLabel(title: "STATUS")
-                    MoreRow(label: "Status", value: sync.statusText.uppercased(), chevron: false) { }
-                    MoreRow(label: "Last synced", value: lastSyncedText, chevron: false) { }
+                    MoreRow(label: "Status", value: sync.statusText.uppercased(), chevron: false, isStatic: true)
+                    MoreRow(label: "Last synced", value: lastSyncedText, chevron: false, isStatic: true)
                 }
             }
             OrePageFooter {

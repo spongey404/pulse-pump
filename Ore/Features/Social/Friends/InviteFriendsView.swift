@@ -60,7 +60,7 @@ struct InviteFriendsView: View {
                             .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Color.ruleStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
                     }
                     .padding(.horizontal, 16).padding(.vertical, 14)
-                    Text("People you invite can join until the challenge ends. Late joiners are scored from the day they join.")
+                    Text("People you invite can join until the challenge ends. Everyone is scored on the sessions they log during the challenge.")
                         .font(.archivo(12)).foregroundStyle(Color.inkMuted)
                         .padding(.horizontal, 16)
                 }

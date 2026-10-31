@@ -122,7 +122,7 @@ struct SettingsView: View {
 
         MoreSectionLabel(title: "APPEARANCE")
         OreSegmentedRow(label: "Theme", options: [("SYSTEM", AppTheme.system), ("LIGHT", .light), ("DARK", .dark)], selection: themeBinding)
-        MoreRow(label: "Simple body map", description: "Shows muscle groups without the detailed heatmap.", value: "COMING SOON", chevron: false) { }
+        MoreRow(label: "Simple body map", description: "Shows muscle groups without the detailed heatmap.", value: "COMING SOON", chevron: false, isStatic: true)
         if isMember {
             MoreRow(label: "Accent colour", description: "Change it on your Supernova page.", value: AccentStore.shared.pickedName.uppercased()) {
                 MoreRouter.shared.pendingSupernova = true
@@ -148,8 +148,8 @@ struct SettingsView: View {
         MoreRow(label: "Rest day alerts", description: "A note on scheduled rest days.", toggle: restDayAlertsBinding(user: user))
         // Rows labelled COMING SOON have nothing behind them yet (no feature / no push pipeline), so they are not switches:
         // a toggle that does nothing is worse than an honest label.
-        MoreRow(label: "Social activity", description: "Likes, comments and new followers.", value: "COMING SOON", chevron: false) { }
-        MoreRow(label: "Challenge updates", description: "Progress and results for challenges you join.", value: "COMING SOON", chevron: false) { }
+        MoreRow(label: "Social activity", description: "Likes, comments and new followers.", value: "COMING SOON", chevron: false, isStatic: true)
+        MoreRow(label: "Challenge updates", description: "Progress and results for challenges you join.", value: "COMING SOON", chevron: false, isStatic: true)
 
         MoreSectionLabel(title: "DATA")
         MoreRow(label: "Import / export", value: "STRONG · HEVY · CSV") { page = .data }
@@ -159,7 +159,7 @@ struct SettingsView: View {
         }
 
         MoreSectionLabel(title: "ABOUT")
-        MoreRow(label: "Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0", chevron: false) { }
+        MoreRow(label: "Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0", chevron: false, isStatic: true)
     }
 
     private func splitValue(_ user: User) -> String {

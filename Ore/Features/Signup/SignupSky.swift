@@ -162,15 +162,15 @@ struct SignupBackdrop: View {
 /// Steps the bar's Stardust; a class so the Canvas closure can drive it.
 @MainActor
 final class SignupBarRunner {
-    private var Stardust: SignupBarStardust?
+    private var engine: SignupBarStardust?
     private var lastT = 0.0
 
     func frame(config: SignupConfig, width: Double, t: Double, boost: Double) -> [SignupBarStardust.Speck] {
-        if Stardust == nil || Stardust!.width != width { Stardust = SignupBarStardust(config: config.bar, width: width) }
+        if engine == nil || engine!.width != width { engine = SignupBarStardust(config: config.bar, width: width) }
         let dt = min(64, max(0, t - lastT))
         lastT = t
-        Stardust!.step(t: t, dt: dt, boost: boost)
-        return Stardust!.specks
+        engine!.step(t: t, dt: dt, boost: boost)
+        return engine!.specks
     }
 }
 

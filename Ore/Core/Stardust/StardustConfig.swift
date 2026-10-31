@@ -116,7 +116,11 @@ final class StardustConfigStore {
     /// Applies remote JSON; an invalid payload is ignored (the previous values stay).
     @discardableResult
     func applyRemote(json: Data) -> Bool {
-        guard let config = StardustConfig.load(from: json) else { return false }
+        guard var config = StardustConfig.load(from: json) else { return false }
+        // A payload written before a variant or palette existed (an old `starfield_config`) must not turn it into a default field:
+        // whatever it doesn't define comes from the bundled config.
+        for (key, value) in base.variants where config.variants[key] == nil { config.variants[key] = value }
+        for (key, value) in base.palettes where config.palettes[key] == nil { config.palettes[key] = value }
         override = config
         return true
     }

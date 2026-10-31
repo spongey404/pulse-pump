@@ -152,6 +152,7 @@ final class SupernovaMemberUITests: UITestCase {
         require(el(AX.supernova.memberBack), "the membership page", timeout: 10)
         RunLoop.current.run(until: Date().addingTimeInterval(1.8))
         tapID(AX.supernova.memberBack)
+        require(card, "the card is back after the close, still tappable", timeout: 10)
         for i in 0..<6 { try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "\(dir)/scrolled-close-\(i).png")) }
     }
 }

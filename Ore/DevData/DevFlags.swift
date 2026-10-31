@@ -26,9 +26,12 @@ enum DevFlags {
         #endif
     }
 
-    /// Logs (once per flag set) that a dev-data flag was ignored.
+    private static var warned = Set<String>()
+
+    /// Logs (once per flag) that a dev-data flag was ignored.
     static func warnIgnored(_ flag: String) {
         #if DEBUG
+        guard warned.insert(flag).inserted else { return }
         print("[DevFlags] ignoring \(flag): dev-data flags only run with -useFirebaseEmulator 1 (never against the real Firebase project)")
         #endif
     }

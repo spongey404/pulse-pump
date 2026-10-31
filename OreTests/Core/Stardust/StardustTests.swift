@@ -186,4 +186,15 @@ struct RemoteConfigGuardTests {
         #expect(StardustConfig.load(from: try json { $0["fps"] = ["paywall": 0, "paywallIdle": 30, "more": 30] }) == nil)
         #expect(StardustConfig.load(from: try json { $0["speed"] = 1e300 }) == nil)
     }
+
+    @Test func aRemoteConfigWrittenBeforeNewVariantsKeepsTheBundledOnes() throws {
+        var old = StardustConfig.fallback
+        for key in ["button", "toggle", "cta", "body"] { old.variants[key] = nil }
+        old.palettes = old.palettes.filter { $0.key == old.defaultPalette }
+        let store = StardustConfigStore()
+        #expect(store.applyRemote(json: try JSONEncoder().encode(old)))
+        let v = store.current.variant("toggle")
+        #expect(v.mini == true && v.min == 18, "a missing variant comes from the bundled config, not a full-size default field")
+        #expect(store.current.palettes.count == StardustConfig.fallback.palettes.count)
+    }
 }

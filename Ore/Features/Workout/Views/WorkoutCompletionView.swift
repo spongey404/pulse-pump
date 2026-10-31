@@ -461,12 +461,7 @@ struct WorkoutCompletionView: View {
                 }
 
                 HStack {
-                    if caption.isEmpty {
-                        Text("Add a caption")
-                            .font(.archivo(15))
-                            .foregroundStyle(Color.inkMuted)
-                    }
-                    TextField("", text: $caption, axis: .vertical)
+                    TextField("", text: $caption, prompt: Text("Add a caption").foregroundStyle(Color.inkMuted), axis: .vertical)
                         .font(.archivo(15))
                         .foregroundStyle(Color.inkPrimary)
                         .accessibilityIdentifier(AX.completion.caption)

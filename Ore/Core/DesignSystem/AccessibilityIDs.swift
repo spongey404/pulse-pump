@@ -292,7 +292,7 @@ enum AX {
         static let memberPage = "supernova.member-page"
         static let memberBack = "supernova.member-back"
         static let memberEmptyHeadline = "supernova.member-empty-headline"
-        static let stardustEnabled = "supernova.Stardust-buttons"
+        static let stardustEnabled = "supernova.stardust-buttons"
         static func memberTab(_ name: String) -> String { "supernova.member-tab." + slug(name) }
         static let manageSubscription = "supernova.manage"
         static let cancelMembership = "supernova.cancel"
