@@ -17,7 +17,7 @@ struct WorkoutCompletionView: View {
     @State private var thumbnailImage: Image?
     @State private var thumbnailUIImage: UIImage?
     @State private var avatarImage: Image?
-    @State private var shareCardHeight: CGFloat = 560
+    @State private var cardContentHeight: CGFloat = 430
     @State private var photoSlideHeight: CGFloat = 300
     @State private var carouselPage: Int? = 0
     @State private var taggedFriends: [FirestoreUserProfile] = []
@@ -32,120 +32,47 @@ struct WorkoutCompletionView: View {
         return f.string(from: Date()).uppercased()
     }
 
+
     private var tickerItems: [TickerItem] {
         var items: [TickerItem] = [
-            TickerItem(label: (data.workoutName ?? "WORKOUT").uppercased(), value: "DONE", direction: nil),
+            TickerItem(label: "", value: "DONE", direction: nil),
         ]
         if data.prCount > 0 {
-            items.append(TickerItem(label: "\(data.prCount) NEW PR\(data.prCount == 1 ? "" : "S")", value: "★", direction: .up, showArrow: false))
+            items.append(TickerItem(label: "\(data.prCount) NEW PR\(data.prCount == 1 ? "" : "S")", value: "★", direction: nil, showArrow: false, gold: true))
         }
-        items.append(TickerItem(label: "IMPROVED",  value: "\(data.improvedCount)/\(data.totalExercises)", direction: .up))
-        items.append(TickerItem(label: "SETS",      value: "\(data.totalSets)",           direction: nil))
-        items.append(TickerItem(label: "KCAL",      value: "\(Int(data.calories))",       direction: nil))
-        items.append(TickerItem(label: "DURATION",  value: data.formattedDuration,        direction: nil))
+        if data.totalExercises > 0 {
+            items.append(TickerItem(label: "IMPROVED", value: "\(data.improvedCount)/\(data.totalExercises)", direction: .up))
+        }
+        items.append(TickerItem(label: "SETS", value: "\(data.totalSets)", direction: nil))
+        if data.streakCount > 0 {
+            items.append(TickerItem(label: "STREAK", value: "\(data.streakCount)D", direction: nil))
+        }
         return items + items
+    }
+
+    /// Clock-style duration for the card (58:42, or 1:02:09 past an hour).
+    private var clockDuration: String {
+        let t = Int(data.duration)
+        let h = t / 3600, m = (t % 3600) / 60, s = t % 60
+        return h > 0 ? String(format: "%d:%02d:%02d", h, m, s) : String(format: "%d:%02d", m, s)
+    }
+
+    /// Distance from the screen's bottom edge to the docked bar's content (design: 30 pt), minus the safe area the inset already gives.
+    private var dockBottomPadding: CGFloat {
+        let inset = UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.safeAreaInsets.bottom ?? 0
+        return max(0, 30 - inset)
     }
 
     var body: some View {
         ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
                 headerBar
-                ScrollView {
-                    VStack(spacing: 0) {
-                        if let photo = thumbnailImage {
-                            GeometryReader { proxy in
-                                let w = proxy.size.width
-                                ScrollView(.horizontal) {
-                                    HStack(alignment: .top, spacing: 0) {
-                                        // Photo slide — natural aspect-ratio height
-                                        photo
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(width: w)
-                                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                                            .overlay(alignment: .topTrailing) {
-                                                Button {
-                                                    thumbnailImage = nil
-                                                    thumbnailUIImage = nil
-                                                    selectedPhotoItem = nil
-                                                    carouselPage = nil
-                                                } label: {
-                                                    Text("REMOVE")
-                                                        .font(Font.spaceMono(8, weight: .bold))
-                                                        .tracking(1.2)
-                                                        .foregroundStyle(Color(hex: "#F9F8F4"))
-                                                        .padding(.horizontal, 10)
-                                                        .padding(.vertical, 6)
-                                                        .background(Color(hex: "#1F1C19").opacity(0.6))
-                                                        .clipShape(Capsule())
-                                                        .padding(8)
-                                                }
-                                                .buttonStyle(.plain)
-                                            }
-                                            .background(GeometryReader { g in
-                                                Color.clear.onAppear { photoSlideHeight = g.size.height }
-                                            })
-                                            .id(0)
-
-                                        // Share card slide — natural content height
-                                        shareCard
-                                            .frame(width: w)
-                                            .background(GeometryReader { g in
-                                                Color.clear.onAppear { shareCardHeight = g.size.height }
-                                            })
-                                            .id(1)
-                                    }
-                                    .scrollTargetLayout()
-                                }
-                                .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
-                                .scrollBounceBehavior(.basedOnSize)
-                                .scrollIndicators(.hidden)
-                                .scrollPosition(id: $carouselPage)
-                            }
-                            .frame(height: (carouselPage ?? 0) == 0 ? photoSlideHeight : shareCardHeight)
-                            .animation(.spring(response: 0.18, dampingFraction: 0.95), value: carouselPage)
-                            .padding(.horizontal, 14)
-                            .padding(.top, 14)
-
-                            // Page dots — outside the animated frame so they don't jump
-                            HStack(spacing: 6) {
-                                ForEach(0..<2, id: \.self) { i in
-                                    Circle()
-                                        .fill((carouselPage ?? 0) == i ? Color.inkPrimary : Color.inkMuted.opacity(0.4))
-                                        .frame(width: 6, height: 6)
-                                        .animation(.easeInOut(duration: 0.12), value: carouselPage)
-                                }
-                            }
-                            .padding(.top, 8)
-                        } else {
-                            shareCard
-                                .background(GeometryReader { geo in
-                                    Color.clear.onAppear { shareCardHeight = geo.size.height }
-                                })
-                                .padding(.horizontal, 14)
-                                .padding(.top, 14)
-                        }
-                        captionComposer
-                        Color.clear.frame(height: 24)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .containerRelativeFrame(.horizontal)
-                }
+                Color.clear.frame(height: 14)
+                cardArea
+                captionComposer
+                Spacer(minLength: 0)
             }
-            .safeAreaInset(edge: .bottom) {
-                DockedCTA(
-                    // Auto-share off ("Never post automatically"): the screen defaults to DONE and
-                    // posting becomes an explicit choice in the overflow menu.
-                    primaryLabel: autoShare ? "POST" : "DONE",
-                    secondaryIcon: "ellipsis",
-                    primaryID: AX.completion.cta,
-                    secondaryID: AX.completion.menu,
-                    secondaryAction: {
-                        withAnimation(.spring(response: 0.22, dampingFraction: 0.82)) { showComposerMenu.toggle() }
-                    },
-                    action: { autoShare ? postAndDismiss(includeBodyMap: true) : dismissWithoutPosting() }
-                )
-            }
+            .safeAreaInset(edge: .bottom, spacing: 0) { dockedBar }
 
             if showComposerMenu {
                 Color(hex: "#1F1C19").opacity(0.45)
@@ -167,9 +94,9 @@ struct WorkoutCompletionView: View {
                    let uiImage = UIImage(data: data) {
                     thumbnailUIImage = uiImage
                     thumbnailImage = Image(uiImage: uiImage)
-                    let availableWidth = UIScreen.main.bounds.width - 28
+                    let availableWidth = UIScreen.main.bounds.width - 32
                     let ratio = uiImage.size.height / uiImage.size.width
-                    photoSlideHeight = availableWidth * ratio
+                    photoSlideHeight = min(availableWidth * ratio, Self.cardMaxHeight)
                     withAnimation(.spring(response: 0.18, dampingFraction: 0.95)) {
                         carouselPage = 0
                     }
@@ -183,49 +110,106 @@ struct WorkoutCompletionView: View {
         }
     }
 
-    private func loadAvatar() async {
-        guard let url = Auth.auth().currentUser?.photoURL else { return }
-        guard let (data, _) = try? await URLSession.shared.data(from: url),
-              let uiImage = UIImage(data: data) else { return }
-        avatarImage = Image(uiImage: uiImage)
+    // MARK: - Card area (the only part that scrolls)
+
+    @ViewBuilder private var cardArea: some View {
+        if let photo = thumbnailImage {
+            GeometryReader { proxy in
+                let w = proxy.size.width
+                ScrollView(.horizontal) {
+                    HStack(alignment: .top, spacing: 0) {
+                        photo
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: w)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .overlay(alignment: .topTrailing) {
+                                Button {
+                                    thumbnailImage = nil
+                                    thumbnailUIImage = nil
+                                    selectedPhotoItem = nil
+                                    carouselPage = nil
+                                } label: {
+                                    Text("REMOVE")
+                                        .font(Font.spaceMono(8, weight: .bold))
+                                        .tracking(1.2)
+                                        .foregroundStyle(Color(hex: "#F9F8F4"))
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(Color(hex: "#1F1C19").opacity(0.6))
+                                        .clipShape(Capsule())
+                                        .padding(8)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .id(0)
+                        shareCard
+                            .frame(width: w)
+                            .id(1)
+                    }
+                    .scrollTargetLayout()
+                }
+                .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
+                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicators(.hidden)
+                .scrollPosition(id: $carouselPage)
+            }
+            .frame(height: (carouselPage ?? 0) == 0 ? photoSlideHeight : min(cardContentHeight, Self.cardMaxHeight))
+            .animation(.spring(response: 0.18, dampingFraction: 0.95), value: carouselPage)
+            .padding(.horizontal, 16)
+
+            HStack(spacing: 6) {
+                ForEach(0..<2, id: \.self) { i in
+                    Circle()
+                        .fill((carouselPage ?? 0) == i ? Color.inkPrimary : Color.inkMuted.opacity(0.4))
+                        .frame(width: 6, height: 6)
+                }
+            }
+            .padding(.top, 8)
+            .padding(.bottom, 6)
+        } else {
+            shareCard
+                .padding(.horizontal, 16)
+                .padding(.bottom, 14)
+        }
     }
+
+    static let cardMaxHeight: CGFloat = 430
 
     // MARK: - Header
 
     private var headerBar: some View {
-        HStack {
-            HStack(spacing: 8) {
-                Button(action: onDismiss) {
-                    Text("‹")
-                        .font(.mono(24, weight: .light))
-                        .foregroundStyle(Color.inkMuted)
-                        .frame(width: 28, height: 32)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Close summary")
-                .accessibilityIdentifier(AX.completion.back)
-                VStack(alignment: .leading, spacing: 2) {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 0) {
                     Text("WORKOUT COMPLETE")
                         .accessibilityIdentifier(AX.completion.title)
-                        .font(Font.spaceMono(8))
-                        .foregroundStyle(Color.inkMuted)
-                        .tracking(1.5)
-                    Text((data.workoutName ?? "WORKOUT").uppercased())
-                        .font(.display(22))
-                        .foregroundStyle(Color.inkPrimary)
-                        .tracking(0.5)
-                        .lineLimit(1)
+                    Text(" · \(shortDateBrief)")
                 }
-            }
-            Spacer()
-            Text(shortDateBrief)
-                .font(Font.spaceMono(10))
+                .font(Font.spaceMono(9))
+                .tracking(1.5)
                 .foregroundStyle(Color.inkMuted)
-                .tracking(0.8)
+                Text((data.workoutName ?? "WORKOUT").uppercased())
+                    .font(.archivo(26, weight: .black))
+                    .tracking(0.5)
+                    .foregroundStyle(Color.inkPrimary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 8)
+            Button(action: onDismiss) {
+                Text("‹")
+                    .font(.archivo(18))
+                    .foregroundStyle(Color.inkPrimary)
+                    .frame(width: 36, height: 36)
+                    .background(Color.surf2, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Close summary")
+            .accessibilityIdentifier(AX.completion.back)
         }
         .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 10)
+        .padding(.top, 6)
+        .padding(.bottom, 12)
         .background(Color.canvasBg)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
     }
@@ -233,59 +217,66 @@ struct WorkoutCompletionView: View {
     // MARK: - Share Card
 
     private var shareCard: some View {
-        VStack(spacing: 0) {
-            TickerStripView(items: tickerItems)
+        ScrollView {
             VStack(spacing: 0) {
-                // Name + duration
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(shortDate)
-                            .font(Font.spaceMono(9))
-                            .foregroundStyle(Color.inkMuted)
-                            .tracking(1.6)
-                        Text((data.workoutName ?? "WORKOUT").uppercased())
-                            .font(.display(44))
-                            .foregroundStyle(Color.inkPrimary)
-                            .tracking(0.5)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.5)
-                    }
-                    Spacer(minLength: 8)
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("DURATION")
-                            .font(Font.spaceMono(8))
-                            .foregroundStyle(Color.inkMuted)
-                            .tracking(1.2)
-                        Text(data.formattedDuration)
-                            .font(.display(26))
-                            .foregroundStyle(Color.inkPrimary)
-                            .tracking(1)
-                    }
-                    .padding(.top, 4)
-                }
-                .padding(.bottom, 12)
-
-                statsRow.padding(.bottom, 12)
-                bodyHeroRow.padding(.bottom, 12)
+                TickerStripView(items: tickerItems)
+                heroBlock
+                statsRow
                 exerciseTable
-
-                // Watermark
-                HStack(spacing: 5) {
-                    RoundedRectangle(cornerRadius: 2).fill(Color.oreAccent).frame(width: 7, height: 7)
-                    Text("ORE")
-                        .font(Font.spaceMono(8))
-                        .foregroundStyle(Color.inkMuted)
-                        .tracking(1.5)
-                    Spacer()
-                }
-                .padding(.top, 10)
             }
-            .padding(16)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardContentHeight = $0 }
         }
+        .scrollBounceBehavior(.basedOnSize)
+        .scrollIndicators(.hidden)
+        .frame(height: min(cardContentHeight, Self.cardMaxHeight))
         .frame(maxWidth: .infinity)
         .background(Color.surf)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.dsHairLine, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private var isMember: Bool { AccentStore.shared.isMember }
+
+    /// Title, time and PR chip on the left; the body map (Stardust in the member's accent for members) on the right.
+    private var heroBlock: some View {
+        let intensities = BodyHeat.Intensities(exercises: data.exercises)
+        return HStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text((data.workoutName ?? "WORKOUT").uppercased())
+                    .font(.archivo(30, weight: .black))
+                    .lineSpacing(-1.5)
+                    .foregroundStyle(Color.inkPrimary)
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.6)
+                Text(clockDuration)
+                    .font(Font.spaceMono(9))
+                    .tracking(1.5)
+                    .foregroundStyle(Color.inkMuted)
+                    .padding(.top, 6)
+                if data.prCount > 0 {
+                    HStack(spacing: 6) {
+                        PRStar(size: 12)
+                        Text("\(data.prCount) NEW PR\(data.prCount == 1 ? "" : "S")")
+                            .font(Font.spaceMono(9, weight: .bold))
+                            .tracking(1.5)
+                            .foregroundStyle(Color.inkPrimary)
+                    }
+                    .padding(.horizontal, 10).padding(.vertical, 6)
+                    .background(Color.surf, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .padding(.top, 12)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            ZStack {
+                BodyHeat(intensities: intensities)
+                if isMember {
+                    StardustMuscleOverlay(intensities: intensities, palette: AccentStore.shared.starPalette)
+                }
+            }
+            .frame(width: 110, height: 176)
+        }
+        .padding(.leading, 16).padding(.trailing, 22)
+        .frame(height: 220)
+        .background(Color.surf2)
     }
 
     // MARK: Stats Row
@@ -296,142 +287,144 @@ struct WorkoutCompletionView: View {
     }
 
     private var statsRow: some View {
-        HStack(spacing: 6) {
-            KPIBlock(label: "SETS", value: "\(data.totalSets)", alignment: .center)
-            KPIBlock(label: "VOL · \(unit.label)", value: volString, alignment: .center)
-            KPIBlock(label: "STREAK", value: "\(data.streakCount)D", alignment: .center)
-            KPIBlock(label: "PRS", value: "\(data.prCount)", valueColor: .prGold, alignment: .center)
+        HStack(alignment: .top, spacing: 8) {
+            statCell("SETS", "\(data.totalSets)", .inkPrimary)
+            statCell("VOLUME · \(unit.label)", volString, .inkPrimary)
+            statCell("IMPROVED", "\(data.improvedCount)/\(data.totalExercises)", .signalUp)
         }
-        .padding(.vertical, 10)
-        .overlay(alignment: .top)    { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
-        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+        .padding(.horizontal, 16).padding(.vertical, 14)
     }
 
-    // MARK: Body + Hero Row
-
-    private var bodyHeroRow: some View {
-        HStack(alignment: .center, spacing: 14) {
-            BodyHeat(intensities: BodyHeat.Intensities(exercises: data.exercises))
-                .frame(width: 69, height: 110)
-
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .lastTextBaseline, spacing: 8) {
-                    Text("\(data.improvedCount)")
-                        .font(Font.spaceMono(42, weight: .bold))
-                        .foregroundStyle(Color.signalUp)
-                        .lineLimit(1)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("OF \(data.totalExercises)")
-                            .font(Font.spaceMono(9))
-                            .foregroundStyle(Color.inkMuted)
-                            .tracking(0.8)
-                        Text("IMPROVED")
-                            .font(Font.spaceMono(8))
-                            .foregroundStyle(Color.inkMuted)
-                            .tracking(0.8)
-                    }
-                }
-
-                if data.prCount > 0 {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("\(data.prCount) NEW PR\(data.prCount == 1 ? "" : "S")")
-                            .font(.display(15))
-                            .foregroundStyle(Color.prGold)
-                            .tracking(0.5)
-                        if let firstPR = data.prDetails.first {
-                            HStack(spacing: 5) {
-                                Text(firstPR.exerciseName.uppercased())
-                                    .font(Font.spaceMono(8))
-                                    .foregroundStyle(Color.inkMuted)
-                                    .tracking(1.2)
-                                    .lineLimit(1)
-                                Text(firstPR.isWeightPR
-                                     ? unit.formatTight(firstPR.weightDelta)
-                                     : "\(firstPR.repsDelta) REP\(firstPR.repsDelta == 1 ? "" : "S")")
-                                    .font(Font.spaceMono(8, weight: .bold))
-                                    .foregroundStyle(Color.signalUp)
-                            }
-                        }
-                    }
-                    .padding(.top, 8)
-                    .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+    private func statCell(_ label: String, _ value: String, _ color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label).font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
+            Text(value).font(Font.spaceMono(18, weight: .bold)).foregroundStyle(color)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: Exercise Table
+    // MARK: Exercise Table (every exercise)
 
     private var exerciseTable: some View {
-        VStack(spacing: 0) {
+        let prNames = Set(data.prDetails.map(\.exerciseName))
+        let rows = data.exercises.enumerated().sorted { a, b in
+            let ap = prNames.contains(a.element.name), bp = prNames.contains(b.element.name)
+            if ap != bp { return ap }
+            if a.element.improvementScore != b.element.improvementScore { return a.element.improvementScore > b.element.improvementScore }
+            return a.offset < b.offset
+        }.map(\.element)
+        return VStack(spacing: 0) {
             HStack(spacing: 6) {
                 Text("EXERCISE").frame(maxWidth: .infinity, alignment: .leading)
-                Text("SETS").frame(width: 30, alignment: .center)
-                Text("BEST SET").frame(width: 62, alignment: .trailing)
-                Text("▲").frame(width: 24, alignment: .trailing)
+                Text("SETS").frame(width: 34, alignment: .leading)
+                Text("BEST").frame(width: 64, alignment: .trailing)
             }
             .font(Font.spaceMono(7))
+            .tracking(1.5)
             .foregroundStyle(Color.inkMuted)
-            .tracking(1.2)
-            .padding(.vertical, 5)
+            .padding(.vertical, 6)
             .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
 
-            let sorted = data.exercises.sorted { $0.improvementScore > $1.improvementScore }
-            let rows = Array(sorted.prefix(7).enumerated())
-            let prExerciseNames = Set(data.prDetails.map { $0.exerciseName })
-            ForEach(rows, id: \.element.id) { i, ex in
-                let improved = ex.improvementScore > 0
-                let isPR = prExerciseNames.contains(ex.name)
+            ForEach(rows) { ex in
+                let isPR = prNames.contains(ex.name)
+                let muted = !isPR && ex.improvementScore <= 0
                 HStack(spacing: 6) {
-                    HStack(spacing: 5) {
-                        Text(ex.name.uppercased())
-                            .font(.archivo(13, weight: isPR ? .bold : .regular))
-                            .tracking(0.3)
-                            .foregroundStyle(isPR ? Color.prGold : Color.inkPrimary)
+                    HStack(spacing: 6) {
+                        Text(ex.name)
+                            .font(.archivo(14, weight: .bold))
+                            .foregroundStyle(isPR ? Color.prGold : (muted ? Color.inkMuted : Color.inkPrimary))
                             .lineLimit(1)
-                        if isPR {
-                            Text("PR")
-                                .font(Font.spaceMono(7, weight: .bold))
-                                .tracking(1.2)
-                                .foregroundStyle(Color.prGold)
-                        }
+                        if isPR { PRStar(size: 11) }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     Text("\(ex.workingSets.count)")
-                        .font(Font.spaceMono(10))
+                        .font(Font.spaceMono(12))
                         .foregroundStyle(Color.inkMuted)
-                        .frame(width: 30, alignment: .center)
+                        .frame(width: 34, alignment: .leading)
                     Text(bestSetText(ex))
-                        .font(Font.spaceMono(11, weight: .bold))
-                        .foregroundStyle(Color.inkPrimary)
-                        .frame(width: 62, alignment: .trailing)
-                    Text(improved ? "▲" : "—")
-                        .font(Font.spaceMono(9, weight: .bold))
-                        .foregroundStyle(improved ? Color.signalUp : Color.inkMuted)
-                        .frame(width: 24, alignment: .trailing)
+                        .font(Font.spaceMono(13, weight: .bold))
+                        .foregroundStyle(muted ? Color.inkMuted : Color.inkPrimary)
+                        .frame(width: 64, alignment: .trailing)
                 }
-                .padding(.vertical, 4)
-                .overlay(alignment: .bottom) {
-                    if i < rows.count - 1 { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
-                }
+                .padding(.vertical, 7)
+                .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
             }
 
-            if data.exercises.count > 7 {
-                Text("+\(data.exercises.count - 7) MORE")
-                    .font(Font.spaceMono(9))
-                    .foregroundStyle(Color.inkMuted)
-                    .tracking(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 5)
+            HStack(spacing: 6) {
+                RoundedRectangle(cornerRadius: 2).fill(Color.oreAccent).frame(width: 7, height: 7)
+                Text("ORE").font(Font.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
+                Spacer()
             }
+            .padding(.top, 10)
         }
-        .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+        .padding(.horizontal, 16).padding(.bottom, 12)
     }
 
     private func bestSetText(_ ex: FeedExercise) -> String {
         guard let best = ex.workingSets.max(by: { $0.weight * Double($0.reps) < $1.weight * Double($1.reps) }) else { return "—" }
         return best.weight > 0 ? "\(unit.number(best.weight))×\(best.reps)" : "\(best.reps)r"
+    }
+
+    // MARK: - Docked POST bar
+
+    private var dockedBar: some View {
+        let store = AccentStore.shared
+        return VStack(spacing: 0) {
+            Rectangle().fill(Color.dsHairLine).frame(height: 1)
+            HStack(spacing: 10) {
+                Button {
+                    // Auto-share off ("Never post automatically"): the screen defaults to DONE and
+                    // posting becomes an explicit choice in the overflow menu.
+                    if autoShare { postAndDismiss(includeBodyMap: true) } else { dismissWithoutPosting() }
+                } label: {
+                    Text(autoShare ? "POST" : "DONE")
+                        .font(.archivo(15, weight: .black))
+                        .tracking(1)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background {
+                            ZStack {
+                                Color.oreAccent
+                                if store.stardustEnabled {
+                                    StardustView(variant: "cta", budget: .more,
+                                                 overrides: StardustParams.Overrides(palette: store.starPalette, density: 1600, gold: 0.4, sparkle: 0.55, fps: 30))
+                                        .allowsHitTesting(false)
+                                        .accessibilityHidden(true)
+                                }
+                            }
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier(AX.completion.cta)
+
+                Button {
+                    withAnimation(.spring(response: 0.22, dampingFraction: 0.82)) { showComposerMenu.toggle() }
+                } label: {
+                    Text("···")
+                        .font(Font.spaceMono(16, weight: .bold))
+                        .foregroundStyle(Color.inkMuted)
+                        .frame(width: 52, height: 52)
+                        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.ruleStrong, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("More")
+                .accessibilityIdentifier(AX.completion.menu)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+            .padding(.bottom, dockBottomPadding)
+        }
+        .background(Color.canvasBg.ignoresSafeArea(edges: .bottom))
+    }
+
+
+    private func loadAvatar() async {
+        guard let url = Auth.auth().currentUser?.photoURL else { return }
+        guard let (data, _) = try? await URLSession.shared.data(from: url),
+              let uiImage = UIImage(data: data) else { return }
+        avatarImage = Image(uiImage: uiImage)
     }
 
     // MARK: - Caption Composer
@@ -445,10 +438,14 @@ struct WorkoutCompletionView: View {
                     if let img = avatarImage {
                         img.resizable().scaledToFill()
                             .frame(width: 36, height: 36)
-                            .clipShape(RoundedRectangle(cornerRadius: 36 * 0.267, style: .continuous))
-                            .overlay(RoundedRectangle(cornerRadius: 36 * 0.267, style: .continuous).strokeBorder(Color.ruleStrong, lineWidth: 1))
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color.ruleStrong, lineWidth: 1))
                     } else {
-                        Avatar(initial: avatarInitial, size: 36)
+                        Text(avatarInitial)
+                            .font(.archivo(15, weight: .black))
+                            .foregroundStyle(.white)
+                            .frame(width: 36, height: 36)
+                            .background(Color.oreAccent, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                     }
                 }
 
@@ -476,42 +473,39 @@ struct WorkoutCompletionView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.top, 12)
+            .padding(.top, 4)
 
             // Tag friends
             SectionLabel(title: "Tag Friends", meta: "Friends Only ›")
-                .padding(.top, 20)
+                .padding(.top, 22)
                 .padding(.bottom, 8)
 
             FlowLayout(spacing: 8) {
                 ForEach(taggedFriends, id: \.uid) { friend in
                     HStack(spacing: 7) {
-                        Avatar(initial: friend.shownName, size: 22, showBorder: false)
+                        Avatar(initial: friend.shownName, size: 24, showBorder: false, textColor: .inkSecondary)
                         Text(friend.shownName)
                             .font(.archivo(13, weight: .semibold))
                             .foregroundStyle(Color.inkPrimary)
                     }
-                    .padding(.leading, 6).padding(.trailing, 12).padding(.vertical, 6)
-                    .overlay(Capsule().strokeBorder(Color.ruleStrong, lineWidth: 1))
+                    .padding(.leading, 4).padding(.trailing, 10)
+                    .frame(height: 32)
+                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Color.ruleStrong, lineWidth: 1))
                 }
 
                 Button { showTagFriendsSheet = true } label: {
-                    HStack(spacing: 6) {
-                        Text("+").font(Font.spaceMono(12))
-                        Text("ADD").font(Font.spaceMono(9, weight: .bold)).tracking(1.2)
-                    }
-                    .foregroundStyle(Color.accentInk)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
+                    Text("+ ADD").font(Font.spaceMono(9, weight: .bold)).tracking(1.5)
+                    .foregroundStyle(Color.inkMuted)
+                    .padding(.horizontal, 10)
+                    .frame(height: 32)
                     .overlay(
-                        Capsule().strokeBorder(Color.ruleStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                        RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Color.ruleStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
                     )
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 16)
-        .padding(.bottom, 16)
         .background(Color.canvasBg)
     }
 

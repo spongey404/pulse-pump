@@ -7,6 +7,8 @@ struct TickerItem: Equatable {
     /// Suppresses the auto-prepended ▲/▼ for items whose value already carries its own
     /// glyph (e.g. a "★" PR item) — direction still drives the value's colour.
     var showArrow: Bool = true
+    /// A personal-record item: label and value in PR gold (#C9892E).
+    var gold: Bool = false
 
     enum Direction: Equatable { case up, down }
 }
@@ -46,7 +48,7 @@ struct TickerStripView: View {
                     let l = ctx.resolve(Text(item.label)
                         .font(Font.mono(10, weight: .medium))
                         .tracking(1)
-                        .foregroundStyle(fg.opacity(0.55)))
+                        .foregroundStyle(item.gold ? Color.prGold : fg.opacity(0.55)))
                     let a: GraphicsContext.ResolvedText? = (item.showArrow ? item.direction : nil).map { dir in
                         ctx.resolve(Text(dir == .up ? "▲" : "▼")
                             .font(Font.mono(10, weight: .medium))
@@ -57,7 +59,7 @@ struct TickerStripView: View {
                         .font(Font.mono(10, weight: .medium))
                         .fontWeight(.bold)
                         .tracking(1)
-                        .foregroundStyle(valueColor(item.direction)))
+                        .foregroundStyle(item.gold ? Color.prGold : valueColor(item.direction)))
                     let d = ctx.resolve(Text("·")
                         .font(Font.mono(10, weight: .medium))
                         .foregroundStyle(fg.opacity(0.18)))
