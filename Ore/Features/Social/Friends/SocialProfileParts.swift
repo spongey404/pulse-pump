@@ -35,56 +35,6 @@ enum FriendMembership {
 
 // MARK: Buttons
 
-/// The small action: 32 pt, radius 8, Space Mono 700 9. Filled = the accent (Stardust for a member who has Stardust buttons on),
-/// outlined = 1 pt rule-strong with muted text. Keeps the `AX.social.pill` identifier the UI tests use.
-struct SocialSmallButton: View {
-    enum Style { case filled, outlined }
-
-    let title: String
-    var style: Style = .filled
-    var isDisabled = false
-    /// A status, not an action (FOLLOWING, FRIENDS): drawn like the button but does nothing and is not dimmed.
-    var isStatic = false
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.spaceMono(9, weight: .bold)).tracking(1.5)
-                .foregroundStyle(style == .filled ? Color.white : Color.inkMuted)
-                .padding(.horizontal, 12)
-                .frame(height: 32)
-                .background {
-                    if style == .filled { fill }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay {
-                    if style == .outlined {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Color.ruleStrong, lineWidth: 1)
-                    }
-                }
-                .opacity(isDisabled ? 0.5 : 1)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(isDisabled || isStatic)
-        .accessibilityIdentifier(AX.social.pill(title))
-    }
-
-    @ViewBuilder private var fill: some View {
-        let store = AccentStore.shared
-        ZStack {
-            Color.oreAccent
-            if store.stardustEnabled {
-                StardustView(variant: "toggle", budget: .more,
-                             overrides: StardustParams.Overrides(palette: store.starPalette, density: 1200, fps: 20))
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
-            }
-        }
-    }
-}
-
 // MARK: Tiles, tags, headers
 
 /// The rounded-square initial: 36 pt in lists, 64 pt on a profile. A member's tile is filled with their accent, everyone else's

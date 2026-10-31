@@ -1,34 +1,5 @@
 import SwiftUI
 
-/// Small pill button used across the Social screens (FOLLOW, ACCEPT, IGNORE, UNFOLLOW, INVITE ...).
-/// Filled = the primary action; outlined = the quiet one.
-struct SocialPill: View {
-    enum Style { case filled, outlined }
-
-    let title: String
-    var style: Style = .filled
-    var isDisabled = false
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(Font.spaceMono(9, weight: .bold))
-                .tracking(1.5)
-                .foregroundStyle(style == .filled ? Color.white : Color.inkMuted)
-                .padding(.horizontal, 12)
-                .frame(height: 32)
-                .background { if style == .filled { AccentFill() } }
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(style == .outlined ? Color.ruleStrong : Color.clear, lineWidth: 1))
-                .opacity(isDisabled ? 0.5 : 1)
-        }
-        .buttonStyle(.plain)
-        .disabled(isDisabled)
-        .accessibilityIdentifier(AX.social.pill(title))
-    }
-}
-
 /// Back chevron + title row used by the pushed Social screens.
 struct SocialScreenHeader<Trailing: View>: View {
     let title: String

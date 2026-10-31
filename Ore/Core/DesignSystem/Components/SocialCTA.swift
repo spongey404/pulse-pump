@@ -77,7 +77,9 @@ struct SocialSmallAction: View {
     enum Style { case filled, outlined }
     let title: String
     var style: Style = .filled
-    var disabled = false
+    var isDisabled = false
+    /// A status, not an action (FOLLOWING, FRIENDS): drawn like the button but does nothing and is not dimmed.
+    var isStatic = false
     let action: () -> Void
 
     var body: some View {
@@ -92,10 +94,15 @@ struct SocialSmallAction: View {
                 .overlay {
                     if style == .outlined { RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Color.ruleStrong, lineWidth: 1) }
                 }
-                .opacity(disabled ? 0.5 : 1)
+                .opacity(isDisabled ? 0.5 : 1)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(disabled)
+        .disabled(isDisabled || isStatic)
         .accessibilityIdentifier(AX.social.pill(title))
     }
 }
+
+/// The same 32 pt small action under the names the other Social screens grew (one component: Space Mono 700 9, radius 8).
+typealias SocialPill = SocialSmallAction
+typealias SocialSmallButton = SocialSmallAction

@@ -103,7 +103,7 @@ struct InviteFriendsView: View {
             }
             Spacer(minLength: 8)
             SocialSmallAction(title: isInvited ? "INVITED" : "INVITE", style: isInvited ? .outlined : .filled,
-                              disabled: inFlight.contains(friend.uid)) {
+                              isDisabled: inFlight.contains(friend.uid)) {
                 // Invites can't be withdrawn from here, so INVITED is final once the write succeeds.
                 guard !isInvited else { return }
                 inFlight.insert(friend.uid)
