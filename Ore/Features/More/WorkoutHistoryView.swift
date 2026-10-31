@@ -266,37 +266,26 @@ struct WorkoutHistoryView: View {
             emptyState
         } else {
             List {
-                statsRow
-                    .listRowInsets(EdgeInsets())
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-                Text("RECENT")
-                    .font(.spaceMono(9))
-                    .tracking(1.3)
-                    .foregroundStyle(Color.inkMuted)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
-                    .padding(.bottom, 6)
-                    .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
-                    .listRowInsets(EdgeInsets())
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-
-                ForEach(workouts) { workout in
-                    Button { selectedWorkout = workout } label: {
-                        listRow(workout)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier(AX.history.row)
-                    .listRowInsets(EdgeInsets())
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) { workoutToDelete = workout } label: {
-                            Label("Delete", systemImage: "trash")
+                ForEach(monthGroups, id: \.title) { group in
+                    MoreSectionLabel(title: group.title)
+                        .listRowInsets(EdgeInsets())
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                    ForEach(group.workouts) { workout in
+                        Button { selectedWorkout = workout } label: {
+                            listRow(workout)
                         }
-                        .tint(Color.signalDown)
+                        .buttonStyle(OreRowPressStyle())
+                        .accessibilityIdentifier(AX.history.row)
+                        .listRowInsets(EdgeInsets())
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) { workoutToDelete = workout } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                            .tint(Color.signalDown)
+                        }
                     }
                 }
             }
@@ -308,73 +297,40 @@ struct WorkoutHistoryView: View {
         }
     }
 
-    private var statsRow: some View {
-        let thisMonth = stats.thisMonthCount
-        let streak = stats.streak
-        return HStack(spacing: 0) {
-            statCell(value: "\(workouts.count)", label: "WORKOUTS")
-            Rectangle().fill(Color.dsHairLine).frame(width: 1)
-            statCell(value: "\(thisMonth)", label: "THIS MONTH")
-            Rectangle().fill(Color.dsHairLine).frame(width: 1)
-            statCell(value: "\(streak)D", label: "STREAK")
+    /// Workouts grouped by month, newest first: "OCTOBER 2026 · 18 WORKOUTS".
+    private var monthGroups: [(title: String, workouts: [Workout])] {
+        let cal = Calendar.current
+        var order: [Date] = []
+        var buckets: [Date: [Workout]] = [:]
+        for w in workouts {
+            let month = cal.date(from: cal.dateComponents([.year, .month], from: w.date)) ?? w.date
+            if buckets[month] == nil { order.append(month) }
+            buckets[month, default: []].append(w)
         }
-        .frame(height: 60)
-        .background(Color.surf)
-        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+        return order.map { month in
+            let list = buckets[month] ?? []
+            return ("\(monthYearLabel(month)) · \(list.count) \(list.count == 1 ? "WORKOUT" : "WORKOUTS")", list)
+        }
     }
 
-    private func statCell(value: String, label: String) -> some View {
-        VStack(spacing: 2) {
-            Text(label)
-                .font(.spaceMono(8))
-                .tracking(1.2)
-                .foregroundStyle(Color.inkMuted)
-            Text(value)
-                .font(.spaceMono(20, weight: .bold))
-                .foregroundStyle(Color.inkPrimary)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
+    /// Row: the workout's name, then "Sat 25 Oct · 62 min · 24 sets" (real numbers only) and a ›.
     private func listRow(_ workout: Workout) -> some View {
         let sets = workout.workingSetCount
         let mins = Int(workout.duration) / 60
-
-        return HStack(spacing: 12) {
-            // Date column
-            VStack(spacing: 0) {
-                Text(shortDay(workout.date))
-                    .font(.spaceMono(8))
-                    .tracking(0.5)
-                    .foregroundStyle(Color.inkMuted)
-                Text(dayNum(workout.date))
-                    .font(.spaceMono(18, weight: .bold))
-                    .foregroundStyle(Color.inkPrimary)
-                    .lineLimit(1)
-                Text(shortMonth(workout.date))
-                    .font(.spaceMono(7))
-                    .tracking(0.5)
-                    .foregroundStyle(Color.inkMuted)
+        let f = DateFormatter(); f.dateFormat = "EEE d MMM"
+        let detail = "\(f.string(from: workout.date)) · \(mins) min · \(sets) \(sets == 1 ? "set" : "sets")"
+        return VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 16) {
+                Text(workout.template?.name ?? "Workout")
+                    .font(.archivo(16, weight: .bold)).foregroundStyle(Color.inkPrimary).lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("›").font(.spaceMono(16)).foregroundStyle(Color.inkGhost)
             }
-            .frame(width: 38)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text((workout.template?.name ?? "Workout").uppercased())
-                    .font(.archivo(16, weight: .black))
-                    .foregroundStyle(Color.inkPrimary)
-                    .lineLimit(1)
-                Text("\(sets) SETS · \(mins)M")
-                    .font(.spaceMono(9))
-                    .foregroundStyle(Color.inkMuted)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Text("›").font(.spaceMono(16)).foregroundStyle(Color.inkGhost)
+            Text(detail).font(.archivo(12)).foregroundStyle(Color.inkMuted)
+                .cssLineHeight(fontName: "Archivo-Regular", size: 12, multiple: 1.4)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.canvasBg)
+        .padding(.vertical, 14).padding(.horizontal, 16)
+        .frame(minHeight: 44).frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
     }

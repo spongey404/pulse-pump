@@ -82,6 +82,28 @@ final class WorkoutUITests: UITestCase {
         require(labelContaining("300"), "the new 300 weight PR")
     }
 
+    /// Saves screenshots of the post-workout summary and its share card (`SHARE_SHOTS=<dir>`).
+    func testShareCardScreenshots() throws {
+        guard let dir = ProcessInfo.processInfo.environment["SHARE_SHOTS"] else { throw XCTSkip("set SHARE_SHOTS to save screenshots") }
+        func shot(_ name: String) { try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "\(dir)/\(name).png")) }
+        busyUser()
+        HomePage(t: self).startPredictedWorkout()
+        let workout = WorkoutPage(t: self)
+        workout.fillSet(1, weight: "100", reps: "8")
+        workout.dismissAndLog(1)
+        workout.waitForSetLogged(1)
+        workout.finishConfirmingRemoval()
+        CompletionPage(t: self).waitForIt()
+        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+        shot("summary-1")
+        app.swipeUp(velocity: .slow)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        shot("summary-2")
+        app.swipeUp(velocity: .slow)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        shot("summary-3")
+    }
+
     func testFinishedSessionAppearsAtTheTopOfHistory() {
         busyUser()
         HomePage(t: self).startPredictedWorkout()

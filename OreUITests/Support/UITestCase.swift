@@ -51,6 +51,16 @@ class UITestCase: XCTestCase {
         app.descendants(matching: .any).matching(identifier: id).firstMatch
     }
 
+    /// Taps the back button of the page on top (a pushed page leaves the one underneath in the hierarchy, offscreen).
+    func tapBack(file: StaticString = #filePath, line: UInt = #line) {
+        let deadline = Date().addingTimeInterval(15)
+        while Date() < deadline {
+            if let back = els(AX.nav.back).allElementsBoundByIndex.last(where: { $0.exists && $0.isHittable }) { back.tap(); return }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        XCTFail("no hittable back button", file: file, line: line)
+    }
+
     func els(_ id: String) -> XCUIElementQuery {
         app.descendants(matching: .any).matching(identifier: id)
     }

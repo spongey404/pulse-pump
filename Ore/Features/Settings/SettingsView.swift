@@ -25,27 +25,26 @@ enum AppTheme: String, CaseIterable, Identifiable {
     }
 }
 
+/// Settings (design "Ore Settings"): list rows with a title and a one-line description, no icon boxes, every switch an
+/// `OreToggle`, every picker a segmented control under its description. Rows that open a page push it with the same transition
+/// as the More list (`OrePushStack`).
 struct SettingsView: View {
+    enum Page: Hashable { case profile, gender, calorie, split, summary, data, equipment, widgets }
+
     var onBack: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(AuthSession.self) private var session
     @Query private var users: [User]
     @State private var supernovaService = SupernovaService()
-    @State private var navigateToEditProfile = false
-    @State private var navigateToSplitConfig = false
-    @State private var showData = false
-    @State private var showEquipment = false
-    @State private var showSignOutAlert = false
-    @State private var showDeleteAccount = false
-    @State private var showChangeUsername = false
+    @State private var page: Page?
+    @State private var showPaywall = false
 
     @AppStorage("calorieFormula") private var calorieFormulaRaw = ""
     @AppStorage("restTimerMode") private var restTimerModeRaw = ""
     @AppStorage("restTimerAlertType") private var alertTypeRaw = ""
     @AppStorage("appTheme") private var themeRaw = ""
     @AppStorage("smartWeightSuggestions") private var smartSuggestions = true
-    @State private var showPaywall = false
     @AppStorage("autoShareToFeed") private var autoShare = true
     @AppStorage("workoutReminders") private var workoutReminders = false
     @AppStorage("restDayAlerts") private var restDayAlerts = false
@@ -54,37 +53,18 @@ struct SettingsView: View {
 
     private var user: User? { users.first }
     private var hasSupernova: Bool { supernovaService.isSubscribed || supernovaService.isInFreeTrial }
+    private var isMember: Bool { supernovaService.isSubscribed }
     private var goBack: () -> Void { onBack ?? { dismiss() } }
 
     var body: some View {
-        Group {
-            if showData {
-                DataExportView(onBack: { showData = false })
-            } else if showEquipment {
-                EquipmentProfilesView(onBack: { showEquipment = false })
-            } else {
-                mainContent
-            }
+        OrePushStack(isOpen: page != nil) {
+            mainContent
+        } page: {
+            if let user, let current = page { destination(current, user: user) }
         }
         .background(Color.canvasBg.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .task { await supernovaService.refreshSubscriptionStatus() }
-        .navigationDestination(isPresented: $navigateToEditProfile) {
-            if let user { EditProfileView(user: user) }
-        }
-        .navigationDestination(isPresented: $navigateToSplitConfig) {
-            if let user { SplitConfigView(user: user) }
-        }
-        .alert("Sign Out", isPresented: $showSignOutAlert) {
-            Button("Cancel", role: .cancel) {}
-            Button("Sign Out", role: .destructive) { signOut() }
-        } message: {
-            Text("This removes your data from this device. It stays safe in your account and comes back when you sign in.")
-        }
-        .sheet(isPresented: $showChangeUsername) {
-            if let user { ChangeUsernameSheet(user: user) }
-        }
-        .deleteAccountFlow(isPresented: $showDeleteAccount)
         .sheet(isPresented: $showPaywall) { SupernovaView(onBack: { showPaywall = false }) }
     }
 
@@ -93,97 +73,106 @@ struct SettingsView: View {
             MoreScreenHeader(title: "SETTINGS", onBack: goBack)
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    if let user {
-                        buildSections(user: user)
-                    }
-                    Color.clear.frame(height: 32)
+                    if let user { sections(user: user) }
+                    Color.clear.frame(height: 40)
                 }
             }
+        }
+        .background(Color.canvasBg.ignoresSafeArea())
+    }
+
+    @ViewBuilder
+    private func destination(_ page: Page, user: User) -> some View {
+        let close = { self.page = nil }
+        switch page {
+        case .profile: EditProfilePage(user: user, onBack: close)
+        case .gender: GenderPage(user: user, onBack: close)
+        case .calorie: CalorieFormulaPage(hasSupernova: hasSupernova, onBack: close)
+        case .split: SplitPage(user: user, onBack: close)
+        case .summary: SummaryDisplayPage(onBack: close)
+        case .data: DataExportView(onBack: close)
+        case .equipment: EquipmentProfilesView(onBack: close)
+        case .widgets: WidgetsView(onBack: close)
         }
     }
 
     @ViewBuilder
-    private func buildSections(user: User) -> some View {
-        // ACCOUNT
-        MoreSectionLabel(title: "ACCOUNT")
-        MoreRow(icon: "person.crop.circle", label: "Edit Profile") { navigateToEditProfile = true }
-        MoreRow(icon: "envelope", label: "Email", value: session.user?.email ?? "—", chevron: false) { }
-        MoreRow(icon: "key", label: "Signed In With", value: (session.user?.providerSummary ?? "").uppercased(), chevron: false) { }
-        MoreRow(icon: "at", label: "Username", value: user.username.isEmpty ? "—" : "@\(user.username)") {
-            showChangeUsername = true
+    private func sections(user: User) -> some View {
+        MoreSectionLabel(title: "ACCOUNT", top: 22)
+        MoreRow(label: "Edit profile", description: "Name, username and body measurements.") { page = .profile }
+
+        MoreSectionLabel(title: "UNITS & BODY")
+        OreSegmentedRow(label: "Weight unit", options: [("KG", UnitPreference.kg), ("LB", UnitPreference.lbs)],
+                        selection: Binding(get: { user.unitPreference }, set: { user.unitPreference = $0; user.markUpdated() }))
+        MoreRow(label: "Gender", description: "Used for calorie estimates.", value: user.gender.displayName.uppercased()) { page = .gender }
+        OreSegmentedRow(label: "Experience level", description: "Sets how quickly suggested weights go up.",
+                        options: [("NEW", ExperienceLevel.beginner), ("SOME", .intermediate), ("ADVANCED", .experienced)],
+                        selection: Binding(get: { user.experienceLevel }, set: { user.experienceLevel = $0; user.markUpdated() }))
+
+        MoreSectionLabel(title: "WORKOUT")
+        smartSuggestionRows(user: user)
+        OreSegmentedRow(label: "Rest timer", description: "Auto starts the timer when you complete a set.",
+                        options: [("AUTO", RestTimerMode.autoStart), ("MANUAL", .manual), ("AUTO · DISMISS", .autoStartWithDismiss)],
+                        selection: restTimerModeBinding)
+        OreSegmentedRow(label: "Timer alert",
+                        options: [("SOUND", AlertType.sound), ("HAPTIC", .vibration), ("BOTH", .both), ("SILENT", .silent)],
+                        selection: alertTypeBinding)
+        MoreRow(label: "Calorie formula", description: hasSupernova ? "Uses heart rate and body weight when available." : "Advanced formula comes with Supernova.",
+                value: (hasSupernova ? calorieFormulaBinding.wrappedValue : .basic) == .basic ? "BASIC" : "ADVANCED") { page = .calorie }
+
+        MoreSectionLabel(title: "APPEARANCE")
+        OreSegmentedRow(label: "Theme", options: [("SYSTEM", AppTheme.system), ("LIGHT", .light), ("DARK", .dark)], selection: themeBinding)
+        MoreRow(label: "Simple body map", description: "Shows muscle groups without the detailed heatmap.", value: "COMING SOON", chevron: false) { }
+        if isMember {
+            MoreRow(label: "Accent colour", description: "Change it on your Supernova page.", value: AccentStore.shared.pickedName.uppercased()) {
+                MoreRouter.shared.pendingSupernova = true
+            }
+            MoreRow(label: "Stardust buttons", description: "Adds Stardust to every accent button. Uses a little more battery.",
+                    toggle: Binding(get: { AccentStore.shared.stardustSetting }, set: { AccentStore.shared.setStardustEnabled($0) }))
+                .accessibilityIdentifier(AX.supernova.stardustEnabled)
         }
 
-        // UNITS & MEASUREMENTS
-        MoreSectionLabel(title: "UNITS & MEASUREMENTS")
-        MoreMenuRow(icon: "scalemass", label: "Weight Unit",
-                    selection: Binding(get: { user.unitPreference },
-                                       set: { user.unitPreference = $0; user.markUpdated() }),
-                    options: Array(UnitPreference.allCases), title: { $0.displayName })
-        MoreMenuRow(icon: "person.fill", label: "Gender",
-                    selection: Binding(get: { user.gender },
-                                       set: { user.gender = $0; user.markUpdated() }),
-                    options: Array(Gender.allCases), title: { $0.displayName })
-        MoreMenuRow(icon: "chart.bar", label: "Experience Level",
-                    selection: Binding(get: { user.experienceLevel },
-                                       set: { user.experienceLevel = $0; user.markUpdated() }),
-                    options: Array(ExperienceLevel.allCases), title: { $0.displayName })
-
-        // WORKOUT
-        MoreSectionLabel(title: "WORKOUT")
-        MoreMenuRow(icon: "flame", label: "Calorie Formula", selection: calorieFormulaBinding,
-                    options: hasSupernova ? Array(CalorieFormula.allCases) : [.basic],
-                    title: { $0.displayName })
-        MoreMenuRow(icon: "timer", label: "Rest Timer Mode", selection: restTimerModeBinding,
-                    options: Array(RestTimerMode.allCases), title: { $0.displayName })
-        MoreMenuRow(icon: "bell", label: "Timer Alert", selection: alertTypeBinding,
-                    options: Array(AlertType.allCases), title: { $0.displayName })
-        smartSuggestionRows(user: user)
-        // Rows labelled COMING SOON have nothing behind them yet (no feature / no push pipeline), so they
-        // are not switches: a toggle that does nothing is worse than an honest label.
-
-        // PRIVACY
-        MoreSectionLabel(title: "PRIVACY")
-        MoreMenuRow(icon: "eye", label: "Profile Visibility", selection: profilePrivacyBinding,
-                    options: PrivacyRow.profile.options, title: { $0.displayName })
-        MoreRow(icon: "square.and.arrow.up", label: "Auto-Share to Feed", toggle: $autoShare)
-
-        // APPEARANCE
-        MoreSectionLabel(title: "APPEARANCE")
-        MoreMenuRow(icon: "moon", label: "Theme", selection: themeBinding,
-                    options: Array(AppTheme.allCases), title: { $0.displayName })
-        MoreRow(icon: "figure.stand", label: "Simple Body Map", value: "COMING SOON", chevron: false) { }
-
-        // TRAINING
         MoreSectionLabel(title: "TRAINING")
-        MoreRow(icon: "calendar.badge.clock", label: "Training Split",
-                value: user.selectedSplit?.name.uppercased() ?? "") { navigateToSplitConfig = true }
+        MoreRow(label: "Training split", value: splitValue(user)) { page = .split }
 
-        // NOTIFICATIONS
+        MoreSectionLabel(title: "POST-WORKOUT")
+        MoreRow(label: "Auto-share to feed", description: "Posts your summary when you finish a workout.", toggle: $autoShare)
+        MoreRow(label: "Summary display", description: "Choose what shows on the workout summary.", value: summaryValue) { page = .summary }
+
+        MoreSectionLabel(title: "PRIVACY")
+        OreSegmentedRow(label: "Profile visibility", description: "Who can see your profile and workouts.",
+                        options: PrivacyRow.profile.options.map { ($0.displayName.uppercased(), $0) }, selection: profilePrivacyBinding)
+
         MoreSectionLabel(title: "NOTIFICATIONS")
-        MoreRow(icon: "bell.badge", label: "Workout Reminders", toggle: workoutRemindersBinding(user: user))
-        MoreRow(icon: "moon", label: "Rest Day Alerts", toggle: restDayAlertsBinding(user: user))
-        MoreRow(icon: "person.2", label: "Social Activity", value: "COMING SOON", chevron: false) { }
-        MoreRow(icon: "trophy", label: "Challenge Updates", value: "COMING SOON", chevron: false) { }
+        MoreRow(label: "Workout reminders", description: "On your training days, at your usual time.", toggle: workoutRemindersBinding(user: user))
+        MoreRow(label: "Rest day alerts", description: "A note on scheduled rest days.", toggle: restDayAlertsBinding(user: user))
+        // Rows labelled COMING SOON have nothing behind them yet (no feature / no push pipeline), so they are not switches:
+        // a toggle that does nothing is worse than an honest label.
+        MoreRow(label: "Social activity", description: "Likes, comments and new followers.", value: "COMING SOON", chevron: false) { }
+        MoreRow(label: "Challenge updates", description: "Progress and results for challenges you join.", value: "COMING SOON", chevron: false) { }
 
-        // DATA
         MoreSectionLabel(title: "DATA")
-        MoreRow(icon: "square.and.arrow.down", label: "Import / Export Data") { showData = true }
-        MoreRow(icon: "dumbbell", label: "Equipment Profiles") { showEquipment = true }
+        MoreRow(label: "Import / export", value: "STRONG · HEVY · CSV") { page = .data }
+        MoreRow(label: "Equipment profiles", description: "Plates and bars available at each gym.") { page = .equipment }
+        MoreRow(label: "Widgets", description: "Home Screen and Lock Screen widgets.", tag: "SUPERNOVA") {
+            if hasSupernova { page = .widgets } else { showPaywall = true }
+        }
 
-        // CLOUD SYNC
-        CloudSyncSection()
-
-        // ABOUT
         MoreSectionLabel(title: "ABOUT")
-        MoreRow(icon: "info.circle", label: "Version",
-                value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
-                chevron: false) { }
+        MoreRow(label: "Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0", chevron: false) { }
+    }
 
-        // SIGN OUT
-        MoreSectionLabel(title: "")
-        MoreRow(icon: "rectangle.portrait.and.arrow.right", label: "Sign Out",
-                destructive: true, chevron: false) { showSignOutAlert = true }
-        MoreRow(icon: "trash", label: "Delete Account", destructive: true, chevron: false) { showDeleteAccount = true }
+    private func splitValue(_ user: User) -> String {
+        guard let split = user.selectedSplit else { return "" }
+        let name = MoreTabView.shortSplit(split.name)
+        if let days = split.type.daysPerWeek { return "\(name) · \(days) DAYS" }
+        return name
+    }
+
+    private var summaryValue: String {
+        let keys = ["summary_showDuration", "summary_showCalories", "summary_showMuscles", "summary_showPRs", "summary_showImprovement"]
+        let on = keys.filter { UserDefaults.standard.object(forKey: $0) as? Bool ?? true }.count
+        return "\(on) OF \(keys.count)"
     }
 
     // MARK: - Smart weight suggestions (Supernova)
@@ -191,22 +180,22 @@ struct SettingsView: View {
     /// Master switch + increment. Free users see a SUPERNOVA row that opens the paywall.
     @ViewBuilder
     private func smartSuggestionRows(user: User) -> some View {
+        let description = "Suggests the next weight on every set, based on your last session."
         if hasSupernova {
-            MoreRow(icon: "brain", label: "Smart Weight Suggestions", toggle: $smartSuggestions)
+            MoreRow(label: "Smart weight suggestions", description: description, toggle: $smartSuggestions)
                 .accessibilityIdentifier("settings.smartWeightSuggestions")
             if smartSuggestions {
                 let unit = user.unitPreference
                 let current = unit.display(user.effectiveProgressionIncrementKg)
-                MoreMenuRow(icon: "plus.forwardslash.minus", label: "Progression Increment",
-                            selection: Binding(
-                                get: { ProgressionRule.incrementChoices(unit).min { abs($0 - current) < abs($1 - current) } ?? current },
-                                set: { user.setProgressionIncrementKg(unit.kg(fromDisplay: $0)) }),
-                            options: ProgressionRule.incrementChoices(unit),
-                            title: { "+\(UnitPreference.trim($0)) \(unit.label)" })
+                OreSegmentedRow(label: "Progression increment",
+                                options: ProgressionRule.incrementChoices(unit).map { ("+\(UnitPreference.trim($0)) \(unit.label.uppercased())", $0) },
+                                selection: Binding(
+                                    get: { ProgressionRule.incrementChoices(unit).min { abs($0 - current) < abs($1 - current) } ?? current },
+                                    set: { user.setProgressionIncrementKg(unit.kg(fromDisplay: $0)) }))
                     .accessibilityIdentifier("settings.progressionIncrement")
             }
         } else {
-            MoreRow(icon: "brain", label: "Smart Weight Suggestions", value: "SUPERNOVA") { showPaywall = true }
+            MoreRow(label: "Smart weight suggestions", description: description, tag: "SUPERNOVA") { showPaywall = true }
                 .accessibilityIdentifier("settings.smartWeightSuggestions")
         }
     }
@@ -268,103 +257,5 @@ struct SettingsView: View {
                 }
             }
         )
-    }
-
-    // MARK: - Actions
-
-    private func signOut() {
-        Task { await session.signOut() }
-    }
-}
-
-// MARK: - Post-Workout Summary Customization
-
-struct PostWorkoutCustomizationView: View {
-    @State private var showDuration = UserDefaults.standard.object(forKey: "summary_showDuration") as? Bool ?? true
-    @State private var showCalories = UserDefaults.standard.object(forKey: "summary_showCalories") as? Bool ?? true
-    @State private var showMuscles = UserDefaults.standard.object(forKey: "summary_showMuscles") as? Bool ?? true
-    @State private var showPRs = UserDefaults.standard.object(forKey: "summary_showPRs") as? Bool ?? true
-    @State private var showImprovement = UserDefaults.standard.object(forKey: "summary_showImprovement") as? Bool ?? true
-
-    var body: some View {
-        List {
-            Section("Visible on Post-Workout Summary") {
-                OreToggleRow(label: "Duration", isOn: $showDuration)
-                    .listRowInsets(EdgeInsets()).listRowSeparator(.hidden)
-                OreToggleRow(label: "Calories Burned", isOn: $showCalories)
-                    .listRowInsets(EdgeInsets()).listRowSeparator(.hidden)
-                OreToggleRow(label: "Muscles Worked", isOn: $showMuscles)
-                    .listRowInsets(EdgeInsets()).listRowSeparator(.hidden)
-                OreToggleRow(label: "PRs Hit", isOn: $showPRs)
-                    .listRowInsets(EdgeInsets()).listRowSeparator(.hidden)
-                OreToggleRow(label: "Improvement Count", isOn: $showImprovement)
-                    .listRowInsets(EdgeInsets()).listRowSeparator(.hidden)
-            }
-        }
-        .navigationTitle("Summary Display")
-        .onChange(of: showDuration) { _, v in UserDefaults.standard.set(v, forKey: "summary_showDuration") }
-        .onChange(of: showCalories) { _, v in UserDefaults.standard.set(v, forKey: "summary_showCalories") }
-        .onChange(of: showMuscles) { _, v in UserDefaults.standard.set(v, forKey: "summary_showMuscles") }
-        .onChange(of: showPRs) { _, v in UserDefaults.standard.set(v, forKey: "summary_showPRs") }
-        .onChange(of: showImprovement) { _, v in UserDefaults.standard.set(v, forKey: "summary_showImprovement") }
-    }
-}
-
-// MARK: - Split Configuration
-
-struct SplitConfigView: View {
-    let user: User
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
-    @State private var selectedType: SplitType = .ppl
-
-    var body: some View {
-        List {
-            Section("Select Split Type") {
-                ForEach(SplitType.allCases) { splitType in
-                    Button {
-                        selectedType = splitType
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(splitType.displayName)
-                                    .font(.archivo(16))
-                                    .foregroundStyle(Color.inkPrimary)
-                                if let days = splitType.daysPerWeek {
-                                    Text("\(days) days/week")
-                                        .font(.spaceMono(11))
-                                        .foregroundStyle(Color.inkMuted)
-                                }
-                            }
-                            Spacer()
-                            if selectedType == splitType {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(Color.accentInk)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            Section {
-                Button("Save Split") {
-                    SplitSchedule.apply(type: selectedType, to: user, modelContext: modelContext)
-                    user.markUpdated()
-                    let split = user.selectedSplit
-                    Task { await NotificationService.shared.reschedule(split: split) }
-                    dismiss()
-                }
-                .font(.archivo(16, weight: .semibold))
-                .foregroundStyle(Color.accentInk)
-            }
-        }
-        .navigationTitle("Training Split")
-        .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            if let current = user.selectedSplit {
-                selectedType = current.type
-            }
-        }
     }
 }

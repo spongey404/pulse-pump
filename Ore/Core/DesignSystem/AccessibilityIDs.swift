@@ -248,6 +248,8 @@ enum AX {
     enum more {
         static let screen = "more.screen"
         static let userName = "more.userName"
+        static let signOutCancel = "more.signout.cancel"
+        static let signOutConfirm = "more.signout.confirm"
     }
 
     enum settings {

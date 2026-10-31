@@ -7,9 +7,9 @@ final class MoreSettingsUITests: UITestCase {
         launch(LaunchConfig(email: LaunchConfig.uniqueEmail("m"), scenario: .busy, weeks: 4, plus: true))
         TabBar(t: self).more()
         let screens: [(row: String, title: String)] = [
-            ("History", "HISTORY"), ("Equipment Profiles", "EQUIPMENT"), ("Weekly Recap", "WEEKLY RECAP"),
-            ("Widgets", "WIDGETS"), ("Settings", "SETTINGS"), ("Data Import", "IMPORT / EXPORT"),
-            ("Privacy & Legal", "PRIVACY & LEGAL"),
+            ("History", "HISTORY"), ("Analytics", "ANALYTICS"), ("Equipment profiles", "EQUIPMENT"), ("Weekly Recap", "WEEKLY RECAP"),
+            ("Settings", "SETTINGS"), ("Cloud Sync", "CLOUD SYNC"), ("Data import", "DATA IMPORT"),
+            ("Privacy & legal", "PRIVACY & LEGAL"),
         ]
         for screen in screens {
             let row = el(AX.row(screen.row))
@@ -21,6 +21,7 @@ final class MoreSettingsUITests: UITestCase {
         }
         // A member's card opens the membership page, which has its own back button.
         let card = el(AX.supernova.memberCard)
+        for _ in 0..<3 { app.swipeDown(velocity: .fast) }   // the list was left scrolled by the rows above
         scrollTo(card)
         card.tap()
         require(el(AX.supernova.memberBack), "the membership page", timeout: 10)
@@ -33,9 +34,10 @@ final class MoreSettingsUITests: UITestCase {
         launch(LaunchConfig(email: LaunchConfig.uniqueEmail("m"), scenario: .busy, weeks: 4))
         let settings = SettingsPage(t: self)
         settings.open()
-        waitForLabel(el(AX.menu("Weight Unit")), matching: "CONTAINS[c]", "kg")
-        settings.choose("Pounds (lbs)", inMenu: "Weight Unit")
-        waitForLabel(el(AX.menu("Weight Unit")), matching: "CONTAINS[c]", "lbs")
+        XCTAssertTrue(el(AX.row("Weight unit KG")).isSelected, "kilograms by default")
+        tapID(AX.row("Weight unit LB"))
+        expectation(for: NSPredicate(format: "isSelected == true"), evaluatedWith: el(AX.row("Weight unit LB")))
+        waitForExpectations(timeout: 10)
 
         // The logger header column follows the unit (stored data stays kg).
         TabBar(t: self).home()
@@ -47,15 +49,14 @@ final class MoreSettingsUITests: UITestCase {
         launch(LaunchConfig(email: LaunchConfig.uniqueEmail("m"), scenario: .newUser, weeks: 2))
         let settings = SettingsPage(t: self)
         settings.open()
-        let visibility = el(AX.menu("Profile Visibility"))
-        scrollTo(visibility)
-        let before = visibility.label
-        visibility.tap()
-        // Pick an option that is not the current one.
-        let other = ["Friends only", "Only me", "Everyone"].first { !before.localizedCaseInsensitiveContains($0) } ?? "Only me"
-        tap(app.buttons[other].firstMatch, "visibility option \(other)")
-        XCTAssertTrue(labelChanges(visibility, from: before, within: 10), "visibility row should show the new choice")
-        require(el(AX.row("Auto-Share to Feed")), "auto-share privacy row")
+        let others = ["Profile visibility Friends only", "Profile visibility Only me", "Profile visibility Everyone"]
+        let current = others.first { el(AX.row($0)).exists && el(AX.row($0)).isSelected }
+        let target = others.first { $0 != current } ?? others[1]
+        scrollTo(el(AX.row(target)))
+        tapID(AX.row(target))
+        expectation(for: NSPredicate(format: "isSelected == true"), evaluatedWith: el(AX.row(target)))
+        waitForExpectations(timeout: 10)
+        require(el(AX.row("Auto-share to feed")), "auto-share row")
     }
 
     func testSigningOutAndBackInRestoresTheWorkoutsFromTheCloud() {
@@ -65,11 +66,12 @@ final class MoreSettingsUITests: UITestCase {
 
         // Wait until the seeded data has been pushed to Firestore (Settings › Cloud Sync › Last Synced).
         let settings = SettingsPage(t: self)
-        settings.open()
+        TabBar(t: self).more()
+        tapID(AX.row("Cloud Sync"))
         let last = el(AX.row("Last Synced"))
-        scrollTo(last)
+        require(last, "Last synced row")
         let syncNow = el(AX.row("Sync Now"))
-        scrollTo(syncNow)
+        require(syncNow, "SYNC NOW button")
         syncNow.tap()
         waitForLabelNotContaining(last, "NEVER", timeout: 60)
 
@@ -88,8 +90,8 @@ final class MoreSettingsUITests: UITestCase {
         // Without the auto sign-in arguments, so the app stays on the sign-in screen once the account is gone.
         relaunch(with: LaunchConfig(email: nil))
         require(el(AX.tab.home), "Home after relaunch")
-        let settings = SettingsPage(t: self)
-        settings.open()
+        TabBar(t: self).more()
+        tapID(AX.row("Privacy & legal"))
         let row = el(AX.row("Delete Account"))
         scrollTo(row)
         row.tap()
@@ -115,7 +117,7 @@ final class MoreSettingsUITests: UITestCase {
 
     func testWidgetGalleryOpensFromTheWidgetsScreen() {
         launch(LaunchConfig(email: LaunchConfig.uniqueEmail("m"), scenario: .busy, weeks: 4, plus: true))
-        TabBar(t: self).more()
+        SettingsPage(t: self).open()
         let widgets = el(AX.row("Widgets"))
         scrollTo(widgets)
         widgets.tap()
@@ -131,5 +133,50 @@ final class MoreSettingsUITests: UITestCase {
         tapID(AX.tutorial.skip)
         waitUntilGone(el(AX.tutorial.card), "coach mark card after SKIP")
         require(el(AX.tab.home), "the app underneath is usable")
+    }
+}
+
+/// Screenshots of the More list and the pages it pushes (`MORE_SHOTS=<dir>`), for checking against the design.
+final class MoreScreensShotsUITests: UITestCase {
+    func testMoreAndSettingsScreenshots() throws {
+        guard let dir = ProcessInfo.processInfo.environment["MORE_SHOTS"] else { throw XCTSkip("set MORE_SHOTS to save screenshots") }
+        func shot(_ name: String) { try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "\(dir)/\(name).png")) }
+        launch(LaunchConfig(email: LaunchConfig.uniqueEmail("ms"), scenario: .busy, weeks: 6, plus: true))
+        TabBar(t: self).more()
+        RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+        shot("more-top")
+        app.swipeUp(velocity: .fast)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+        shot("more-bottom")
+        for (row, name) in [("Settings", "settings"), ("History", "history"), ("Analytics", "analytics"), ("Cloud Sync", "cloudsync"),
+                            ("Equipment profiles", "equipment"), ("Weekly Recap", "recap"), ("Data import", "import"), ("Privacy & legal", "privacy")] {
+            for _ in 0..<3 { app.swipeDown(velocity: .fast) }
+            scrollTo(el(AX.row(row)))
+            tapID(AX.row(row))
+            RunLoop.current.run(until: Date().addingTimeInterval(0.9))
+            shot(name)
+            if name == "settings" {
+                app.swipeUp(velocity: .slow); RunLoop.current.run(until: Date().addingTimeInterval(0.4)); shot("settings-2")
+                app.swipeUp(velocity: .slow); RunLoop.current.run(until: Date().addingTimeInterval(0.4)); shot("settings-3")
+                app.swipeUp(velocity: .fast); RunLoop.current.run(until: Date().addingTimeInterval(0.4)); shot("settings-4")
+                for sub in ["Edit profile", "Gender", "Calorie formula", "Training split", "Summary display"] {
+                    app.swipeDown(velocity: .fast); app.swipeDown(velocity: .fast); app.swipeDown(velocity: .fast)
+                    scrollTo(el(AX.row(sub)))
+                    tapID(AX.row(sub))
+                    RunLoop.current.run(until: Date().addingTimeInterval(0.9))
+                    shot("settings-" + AX.slug(sub))
+                    tapBack()
+                    RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+                }
+            }
+            tapBack()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+        }
+        // The sign-out sheet.
+        app.swipeUp(velocity: .fast)
+        scrollTo(el(AX.row("Sign out")))
+        tapID(AX.row("Sign out"))
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        shot("signout")
     }
 }

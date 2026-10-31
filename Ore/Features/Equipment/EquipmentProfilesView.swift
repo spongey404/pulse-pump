@@ -19,23 +19,34 @@ struct EquipmentProfilesView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-
-            if profiles.isEmpty {
-                emptyState
-            } else {
-                profileTabs
-                Rectangle().fill(Color.dsHairLine).frame(height: 1)
-
-                if let profile = selectedProfile {
-                    ScrollView {
-                        VStack(spacing: 0) {
-                            activeProfileBadge
-                            equipmentSection(profile)
-                            platesSection(profile)
-                            addEquipmentButton
-                            Color.clear.frame(height: 40)
-                        }
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    MorePageIntro(text: "Suggested weights only use plates and bars you have.")
+                    MoreSectionLabel(title: "PROFILES")
+                    if profiles.isEmpty {
+                        Text("No equipment profiles yet.").font(.archivo(13)).foregroundStyle(Color.inkMuted)
+                            .frame(maxWidth: .infinity, alignment: .leading).padding(16)
                     }
+                    ForEach(profiles) { profile in
+                        OreSelectRow(label: profile.name, description: summary(profile),
+                                     tag: profile.id == selectedProfile?.id ? "ACTIVE" : "", selected: false) { selectedId = profile.id }
+                    }
+                    Button { showCreate = true } label: {
+                        Text("+ ADD PROFILE").font(.spaceMono(9, weight: .bold)).tracking(1.5).foregroundStyle(Color.inkMuted)
+                            .frame(maxWidth: .infinity).frame(height: 48)
+                            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Color.ruleStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(14).padding(.horizontal, 2)
+                    .accessibilityIdentifier(AX.row("Add profile"))
+
+                    if let profile = selectedProfile {
+                        MoreSectionLabel(title: "EDIT · \(profile.name.uppercased())")
+                        equipmentSection(profile)
+                        platesSection(profile)
+                        addEquipmentButton
+                    }
+                    Color.clear.frame(height: 40)
                 }
             }
         }
@@ -55,21 +66,16 @@ struct EquipmentProfilesView: View {
     // MARK: - Header
 
     private var header: some View {
-        MoreScreenHeader(title: "EQUIPMENT", titleSize: 22, onBack: { (onBack ?? { dismiss() })() }) {
-            Button { showCreate = true } label: {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.oreAccent)
-                    .overlay { AccentFill().clipShape(RoundedRectangle(cornerRadius: 8)) }
-                    .frame(width: 30, height: 30)
-                    .overlay(
-                        Text("+")
-                            .font(.spaceMono(18))
-                            .foregroundStyle(.white)
-                    )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("New profile")
-        }
+        MoreScreenHeader(title: "EQUIPMENT", onBack: { (onBack ?? { dismiss() })() })
+    }
+
+    /// "Barbell, Dumbbell · 20 kg bar · plates to 25 kg" from what the profile has.
+    private func summary(_ profile: EquipmentProfile) -> String {
+        var parts: [String] = []
+        if let bar = profile.barTypes.first { parts.append("\(unit.number(bar.weightKg)) \(unit.label.lowercased()) bar") }
+        if let top = profile.availablePlates.max() { parts.append("plates to \(unit.number(top)) \(unit.label.lowercased())") }
+        parts.append("\(profile.availableEquipment.count) equipment types")
+        return parts.joined(separator: " · ")
     }
 
     // MARK: - Profile tabs

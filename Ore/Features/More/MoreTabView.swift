@@ -17,7 +17,7 @@ struct MoreTabView: View {
     #else
     @State private var screen: MoreScreen = .hub
     #endif
-    @State private var showSignOutAlert = false
+    @State private var showSignOut = false
     #if DEBUG
     @State private var showStardustPanel = false
     #endif
@@ -30,21 +30,17 @@ struct MoreTabView: View {
     private var streak: Int { StreakCalculator.currentStreak(from: workouts.map(\.date)) }
 
     var body: some View {
-        Group {
-            switch screen {
-            case .hub:      hubView
-            case .history:  WorkoutHistoryView(onBack: { screen = .hub })
-            case .profile:  ProfileView(onBack: { screen = .hub })
-            case .settings: SettingsView(onBack: { screen = .hub })
-            case .equipment: EquipmentProfilesView(onBack: { screen = .hub })
-            case .supernova: hubView
-            case .weeklyRecap: WeeklyRecapView(onBack: { screen = .hub })
-            case .dataImport: DataImportScreen(onBack: { screen = .hub })
-            case .privacy:   PrivacyLegalView(onBack: { screen = .hub })
-            case .widgets:   WidgetsView(onBack: { screen = .hub })
+        ZStack {
+            OrePushStack(isOpen: pageOpen) {
+                hubView
+            } page: {
+                page
             }
+            .blur(radius: showSignOut ? 3 : 0)   // the scrim's 6 pt backdrop blur (CSS px are twice SwiftUI's radius)
+            signOutSheet
+                .zIndex(2)
         }
-        .animation(.easeInOut(duration: 0.22), value: screen)
+        .animation(OrePushStack<EmptyView, EmptyView>.animation, value: showSignOut)
         .onAppear {
             consumeRouter()
             #if DEBUG
@@ -74,6 +70,70 @@ struct MoreTabView: View {
     // MARK: - Hub  (More Hub.dc.html · 3a "Combined hub")
 
     private var isFree: Bool { !supernovaService.isSubscribed }
+
+    private var pageOpen: Bool { screen != .hub && screen != .supernova }
+
+    @ViewBuilder private var page: some View {
+        switch screen {
+        case .history:  WorkoutHistoryView(onBack: { screen = .hub })
+        case .analytics: AnalyticsView(onBack: { screen = .hub })
+        case .profile:  ProfileView(onBack: { screen = .hub })
+        case .settings: SettingsView(onBack: { screen = .hub })
+        case .equipment: EquipmentProfilesView(onBack: { screen = .hub })
+        case .weeklyRecap: WeeklyRecapView(onBack: { screen = .hub })
+        case .cloudSync: CloudSyncView(onBack: { screen = .hub })
+        case .dataImport: DataImportScreen(onBack: { screen = .hub })
+        case .privacy:   PrivacyLegalView(onBack: { screen = .hub })
+        case .widgets:   WidgetsView(onBack: { screen = .hub })
+        case .hub, .supernova: EmptyView()
+        }
+    }
+
+    private var syncedText: String {
+        guard let date = SyncService.shared.lastSyncedAt else { return "Not synced yet" }
+        let f = RelativeDateTimeFormatter(); f.unitsStyle = .short
+        return "Synced " + f.localizedString(for: date, relativeTo: Date())
+    }
+
+    /// SIGN OUT: a bottom sheet over a scrim (rgba(21,26,33,0.45) + 6 pt blur); it slides up over 350 ms.
+    private var signOutSheet: some View {
+        ZStack(alignment: .bottom) {
+            if showSignOut {
+                Color(red: 21 / 255, green: 26 / 255, blue: 33 / 255).opacity(0.45)
+                    .ignoresSafeArea()
+                    .onTapGesture { showSignOut = false }
+                    .transition(.opacity)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("SIGN OUT").font(.archivo(22, weight: .black)).foregroundStyle(Color.inkPrimary)
+                    Text("You'll need to sign back in to access your data.")
+                        .font(.archivo(13)).foregroundStyle(Color.inkSecondary)
+                        .cssLineHeight(fontName: "Archivo-Regular", size: 13, multiple: 1.45)
+                        .padding(.bottom, 12)
+                    Button { showSignOut = false } label: {
+                        Text("CANCEL").font(.archivo(14, weight: .black)).tracking(1).foregroundStyle(Color.inkPrimary)
+                            .frame(maxWidth: .infinity).frame(height: 52)
+                            .background(Color.surf2).clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .buttonStyle(.plain).accessibilityIdentifier(AX.more.signOutCancel)
+                    Button {
+                        showSignOut = false
+                        Task { await session.signOut() }
+                    } label: {
+                        Text("SIGN OUT").font(.archivo(14, weight: .black)).tracking(1).foregroundStyle(Color.signalDown)
+                            .frame(maxWidth: .infinity).frame(height: 52)
+                            .background(Color.signalDown.opacity(0.12)).clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .buttonStyle(.plain).accessibilityIdentifier(AX.more.signOutConfirm)
+                }
+                .padding(.horizontal, 16).padding(.top, 22).padding(.bottom, 34)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.surf.ignoresSafeArea(edges: .bottom))
+                .clipShape(UnevenRoundedRectangle(topLeadingRadius: 14, topTrailingRadius: 14, style: .continuous))
+                .transition(.move(edge: .bottom))
+            }
+        }
+    }
 
     private var hubView: some View {
         VStack(spacing: 0) {
@@ -105,34 +165,24 @@ struct MoreTabView: View {
                         statsRow
                     }
 
-                    MoreSectionLabel(title: "TRAINING", top: 16, bottom: 6)
-                    MoreRow(icon: "clock.arrow.circlepath", label: "History",
-                            value: "\(workouts.count)", minHeight: 48) { screen = .history }
-                    MoreRow(icon: "dumbbell", label: "Equipment Profiles",
-                            value: activeEquipmentName, minHeight: 48) { screen = .equipment }
-                    MoreRow(icon: "waveform.path.ecg", label: "Weekly Recap",
-                            value: "WK \(weekNumber)", minHeight: 48) { screen = .weeklyRecap }
-                    MoreRow(icon: "square.grid.2x2", label: "Widgets", minHeight: 48, tag: "SUPERNOVA") {
-                        screen = supernovaService.isSubscribed || supernovaService.isInFreeTrial ? .widgets : .supernova
-                    }
+                    MoreSectionLabel(title: "TRAINING")
+                    MoreRow(label: "History", description: "Every workout you have logged. \(workouts.count) so far.") { screen = .history }
+                    MoreRow(label: "Analytics", description: "1RM, volume and trends for each exercise.") { screen = .analytics }
+                    MoreRow(label: "Equipment profiles", description: "Plates and bars at each gym." + (activeEquipmentName.isEmpty ? "" : " Using \(activeEquipmentName).")) { screen = .equipment }
+                    MoreRow(label: "Weekly Recap", description: "Training, food and steps for the week. Every Sunday.") { screen = .weeklyRecap }
 
-                    MoreSectionLabel(title: "ACCOUNT", top: 16, bottom: 6)
-                    MoreRow(icon: "gearshape", label: "Settings", minHeight: 48) { screen = .settings }
-                    if isFree {
-                        MoreRow(icon: "bolt", label: Brand.membershipName, value: "FREE", minHeight: 48) { screen = .supernova }
-                            .accessibilityIdentifier(AX.row(Brand.membershipName))
-                    }
+                    MoreSectionLabel(title: "ACCOUNT")
+                    MoreRow(label: "Settings", description: "Units, rest timer, theme and notifications.") { screen = .settings }
+                    MoreRow(label: "Cloud Sync", description: "Backs up your data automatically. \(syncedText).") { screen = .cloudSync }
 
-                    MoreSectionLabel(title: "HELP", top: 16, bottom: 6)
-                    MoreRow(icon: "questionmark.circle", label: "Tutorial", minHeight: 48) {
+                    MoreSectionLabel(title: "HELP")
+                    MoreRow(label: "Tutorial", description: "Replays the walkthrough of logging a workout.", chevron: false) {
                         // The tutorial runs a practice workout, so it can't start over a real one.
                         if drafts.isEmpty { tutorialViewModel.start() } else { showTutorialDraftAlert = true }
                     }
-                    MoreRow(icon: "square.and.arrow.down", label: "Data Import",
-                            value: "STRONG · HEVY", minHeight: 48) { screen = .dataImport }
-                    MoreRow(icon: "shield", label: "Privacy & Legal", minHeight: 48) { screen = .privacy }
-                    MoreRow(icon: "rectangle.portrait.and.arrow.right", label: "Sign Out",
-                            destructive: true, chevron: false, minHeight: 48) { showSignOutAlert = true }
+                    MoreRow(label: "Data import", description: "Bring your history in from Strong, Hevy or a CSV.") { screen = .dataImport }
+                    MoreRow(label: "Privacy & legal", description: "Privacy policy, terms and your data.") { screen = .privacy }
+                    MoreRow(label: "Sign out", destructive: true, chevron: false) { showSignOut = true }
 
                     PreviewMembershipToggle(isMember: supernovaService.isSubscribed) {
                         Task { await supernovaService.refreshSubscriptionStatus() }
@@ -152,14 +202,6 @@ struct MoreTabView: View {
         } message: {
             Text("The tutorial uses a practice workout. Finish or discard your current one, then replay it.")
         }
-        .alert("Sign Out", isPresented: $showSignOutAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Sign Out", role: .destructive) {
-                Task { await session.signOut() }
-            }
-        } message: {
-            Text("This removes your data from this device. It stays safe in your account and comes back when you sign in.")
-        }
         .task {
             await supernovaService.refreshSubscriptionStatus()
             SocialServices.localName = user?.name
@@ -171,7 +213,7 @@ struct MoreTabView: View {
 
     private var activeEquipmentName: String {
         let profiles = user?.liveEquipmentProfiles ?? []
-        return (profiles.first?.name ?? "").uppercased()
+        return profiles.sorted { $0.name < $1.name }.first?.name ?? ""   // the Equipment page marks the first by name ACTIVE
     }
 
     private var weekNumber: Int {
@@ -263,7 +305,7 @@ final class MoreRouter {
 // MARK: - Screen enum
 
 private enum MoreScreen {
-    case hub, history, profile, settings, equipment, supernova, weeklyRecap, dataImport, privacy, widgets
+    case hub, history, analytics, profile, settings, equipment, supernova, weeklyRecap, cloudSync, dataImport, privacy, widgets
 }
 
 #if DEBUG
@@ -271,6 +313,8 @@ private extension MoreScreen {
     static var debugInitial: MoreScreen {
         switch UserDefaults.standard.string(forKey: "debugMoreScreen") {
         case "history": .history
+        case "analytics": .analytics
+        case "cloudSync": .cloudSync
         case "profile": .profile
         case "settings": .settings
         case "equipment": .equipment

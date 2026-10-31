@@ -108,10 +108,10 @@ struct SettingsPage {
     /// More hub / Settings sign out (alert).
     func signOutFromMoreHub() {
         TabBar(t: t).more()
-        let row = t.el(AX.row("Sign Out"))
+        let row = t.el(AX.row("Sign out"))
         t.scrollTo(row)
         row.tap()
-        t.tap(t.app.alerts.buttons["Sign Out"].firstMatch, "Sign Out in the alert")
+        t.tap(t.el(AX.more.signOutConfirm), "SIGN OUT in the sheet")
     }
 }
 

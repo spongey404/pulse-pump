@@ -83,7 +83,7 @@ struct WidgetsView: View {
                     .buttonStyle(.plain)
                     .padding(16)
                     MoreSectionLabel(title: "PREVIEW")
-                    MoreRow(icon: "square.grid.2x2", label: "Widget gallery", value: "ALL WIDGETS") { showGallery = true }
+                    MoreRow(label: "Widget gallery", value: "ALL WIDGETS") { showGallery = true }
                     Spacer().frame(height: 32)
                 }
             }

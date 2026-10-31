@@ -96,7 +96,8 @@ final class AuthOnboardingUITests: UITestCase {
         require(el(AX.tab.home), "Home tab", timeout: 30)
         TabBar(t: self).more()
         tapID(AX.row("Settings"))
-        waitForLabel(el(AX.menu("Weight Unit")), matching: "CONTAINS[c]", "lbs")
+        expectation(for: NSPredicate(format: "isSelected == true"), evaluatedWith: el(AX.row("Weight unit LB")))
+        waitForExpectations(timeout: 10)
     }
 
     func testReturningUserSignsBackInAndLandsOnHomeWithTheirData() {

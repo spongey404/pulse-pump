@@ -58,34 +58,45 @@ struct WeeklyRecapView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            MoreScreenHeader(title: "WEEKLY RECAP", overline: rangeLabel, onBack: onBack) {
-                HStack(spacing: 0) {
-                    Button { weeksBack += 1 } label: {
-                        Text("‹").font(.spaceMono(18)).foregroundStyle(Color.inkMuted).padding(.horizontal, 6)
+            MoreScreenHeader(title: "WEEKLY RECAP", overline: rangeLabel, onBack: onBack)
+            ScrollViewReader { proxy in
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        hero.id("top")
+                        kpis
+                        musclesTable
+                        prSection
+                        pastRecaps(scrollToTop: { withAnimation(OrePushStack<EmptyView, EmptyView>.animation) { proxy.scrollTo("top", anchor: .top) } })
+                        Text("NEXT RECAP · MON \(nextMonday)")
+                            .font(.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(16)
+                        Spacer().frame(height: 16)
                     }
-                    Button { weeksBack = max(0, weeksBack - 1) } label: {
-                        Text("›").font(.spaceMono(18))
-                            .foregroundStyle(weeksBack == 0 ? Color.inkGhost : Color.inkMuted).padding(.horizontal, 6)
-                    }
-                    .disabled(weeksBack == 0)
-                }
-                .buttonStyle(.plain)
-            }
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    hero
-                    kpis
-                    musclesTable
-                    prSection
-                    Text("NEXT RECAP · MON \(nextMonday)")
-                        .font(.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(16)
-                    Spacer().frame(height: 16)
                 }
             }
         }
         .background(Color.canvasBg.ignoresSafeArea())
+    }
+
+    /// PAST RECAPS: the last eight weeks; a row opens that week above.
+    private func pastRecaps(scrollToTop: @escaping () -> Void) -> some View {
+        let f = DateFormatter(); f.dateFormat = "d MMM"
+        return VStack(spacing: 0) {
+            MoreSectionLabel(title: "PAST RECAPS", top: 22)
+            ForEach(0..<8, id: \.self) { back in
+                let w = WeeklyRecapStats(workouts: workouts, weeksBack: back, unit: unit, splitDayCount: users.first?.selectedSplit?.days.count ?? 0)
+                let end = calendar.date(byAdding: .day, value: 6, to: w.weekStart) ?? w.weekStart
+                let count = w.week.count
+                let vol = w.volumeTonnes(w.week)
+                MoreRow(label: back == 0 ? "This week" : "Week \(w.weekNumber)",
+                        description: "\(f.string(from: w.weekStart))–\(f.string(from: end)) · \(count) \(count == 1 ? "workout" : "workouts")" + (vol > 0 ? " · " + String(format: "%.1f", vol) + (unit == .kg ? " t" : "k lb") : ""),
+                        value: back == weeksBack ? "SHOWING" : "") {
+                    weeksBack = back
+                    scrollToTop()
+                }
+            }
+        }
     }
 
     private var nextMonday: String {
