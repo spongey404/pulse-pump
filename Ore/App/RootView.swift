@@ -76,6 +76,7 @@ struct RootView: View {
         }
         #endif
         .task(id: reconcileKey) { await gate.reconcile(hasLocalUser: hasLocalUser) }
+        .onChange(of: session.user?.uid, initial: true) { _, uid in AccentStore.shared.setAccount(uid) }   // each account keeps its own accent and recent row
         .task(id: "\(session.user?.uid ?? "-")|\(route == .main || route == .restoring)") {
             // Sync runs whenever a signed-in user owns the local store; the pull creates the User on a new device.
             guard let uid = session.user?.uid, route == .main || route == .restoring else { return }

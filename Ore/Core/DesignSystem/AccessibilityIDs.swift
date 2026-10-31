@@ -293,7 +293,12 @@ enum AX {
         static func memberTab(_ name: String) -> String { "supernova.member-tab." + slug(name) }
         static let manageSubscription = "supernova.manage"
         static let cancelMembership = "supernova.cancel"
-        static func accentSwatch(_ name: String) -> String { "supernova.accent." + slug(name) }
+        static func accentSwatch(_ name: String) -> String { "supernova.accent." + slug(name) }   // a preset or recent swatch, by its hex without the "#"
+        static let accentCurrent = "supernova.accent-current"
+        static let accentAdjust = "supernova.accent-adjust"
+        static let accentHex = "supernova.accent-hex"
+        static func accentStrip(_ name: String) -> String { "supernova.accent-strip." + slug(name) }
+        static func accentStep(_ name: String, _ direction: Int) -> String { "supernova.accent-step." + slug(name) + (direction < 0 ? ".minus" : ".plus") }
     }
 
     enum tutorial {

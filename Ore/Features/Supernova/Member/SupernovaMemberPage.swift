@@ -25,22 +25,21 @@ struct SupernovaMemberPage: View {
     /// How far the scroll view has moved up; the glitter travels with the content and leaves plain charcoal behind.
     @State private var scrolled: CGFloat = 0
     private var config: SupernovaMemberConfig { SupernovaMemberConfigStore.shared.current }
-    private var accent: AccentChoice { AccentStore.shared.picked }
+    private var palette: StarPalette { AccentStore.shared.pickedPalette }
     private var user: User? { users.first }
 
-    private static let canvas = Color(hex: "#1A1917")   // the dark canvas, always: this page is dark in both appearances
-    private static let hair = Color.white.opacity(0.16)
-    private static let muted = Color.white.opacity(0.72)
-    private static let secondary = Color.white.opacity(0.88)
+    @Environment(\.colorScheme) private var scheme
+    /// The page's text, rules and surfaces follow the appearance (charcoal and white, or paper and ink); what sits on the glitter
+    /// (header, wordmark, glass card) is white in both.
+    private var t: MemberPageTheme { MemberPageTheme(dark: scheme == .dark) }
 
     var body: some View {
         ZStack(alignment: .top) {
-            Self.canvas.ignoresSafeArea()
+            t.canvas.ignoresSafeArea()
             StarFieldView(variant: "paywall", budget: .paywall,
-                          overrides: StarFieldParams.Overrides(palette: accent.palette, density: config.page.count, speed: config.page.speed,
+                          overrides: StarFieldParams.Overrides(palette: palette, density: config.page.count, speed: config.page.speed,
                                                                gold: config.page.gold, sparkle: config.page.sparkle, goldPull: config.page.pull),
                           anchor: anchor)
-                .id(accent.id)
                 .ignoresSafeArea()
                 .mask(LinearGradient(stops: config.page.maskStops.map { .init(color: .black.opacity($0[1]), location: $0[0]) },
                                      startPoint: .top, endPoint: .bottom).ignoresSafeArea())
@@ -53,6 +52,7 @@ struct SupernovaMemberPage: View {
                         wordmark.paywallGroup(1, reveal)
                         card.paywallGroup(2, reveal)
                     }
+                    .foregroundStyle(Color.white)
                     .padding(.horizontal, 24)
                     .padding(.bottom, 22)
                     .background(GeometryReader { g in
@@ -74,8 +74,7 @@ struct SupernovaMemberPage: View {
             }
             .coordinateSpace(name: "memberScroll")
         }
-        .foregroundStyle(.white)
-        .environment(\.colorScheme, .dark)
+        .foregroundStyle(t.ink)
         .onPreferenceChange(SupernovaAsteriskFrameKey.self) {
             anchor = $0
             if let f = $0 { transition.wordmarkMeasured(f) }
@@ -85,7 +84,7 @@ struct SupernovaMemberPage: View {
             await service.loadProducts()
             await service.refreshSubscriptionStatus()
         }
-        .onDisappear { service.stopListening() }
+        .onDisappear { service.stopListening(); AccentStore.shared.commitColour() }   // the colour joins the recent row when the page closes
         .accessibilityIdentifier(AX.supernova.memberPage)
     }
 
@@ -93,7 +92,7 @@ struct SupernovaMemberPage: View {
 
     private var header: some View {
         HStack(spacing: 10) {
-            Button(action: { if transition.acceptsInput { onBack() } }) {
+            Button(action: { if transition.acceptsInput { AccentStore.shared.commitColour(); onBack() } }) {
                 Text("‹").font(.archivo(24)).frame(width: 44, height: 44).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -141,7 +140,7 @@ struct SupernovaMemberPage: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             ZStack {
-                Rectangle().fill(.ultraThinMaterial.opacity(0.6))
+                Rectangle().fill(.ultraThinMaterial.opacity(0.6)).environment(\.colorScheme, .dark)
                 LinearGradient(colors: [.white.opacity(0.22), .white.opacity(0.08)], startPoint: .topLeading, endPoint: .bottomTrailing)
             }
         }
@@ -164,9 +163,9 @@ struct SupernovaMemberPage: View {
             ForEach(Array(["OVERVIEW", "PERKS", "ACCOUNT"].enumerated()), id: \.offset) { i, label in
                 Button { tab = i } label: {
                     Text(label).font(.spaceMono(9, weight: .bold)).tracking(1.5)
-                        .foregroundStyle(i == tab ? Color(hex: "#151A21") : .white.opacity(0.8))
+                        .foregroundStyle(i == tab ? Color(hex: "#151A21") : (t.dark ? .white.opacity(0.8) : .white))
                         .frame(maxWidth: .infinity).frame(height: 36)
-                        .background(i == tab ? Color.white.opacity(0.92) : .clear)
+                        .background(i == tab ? (t.dark ? Color.white.opacity(0.92) : Color.white) : .clear)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
@@ -175,7 +174,7 @@ struct SupernovaMemberPage: View {
             }
         }
         .padding(3)
-        .background(.white.opacity(0.12))
+        .background(t.chip)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 10)
         .frame(maxWidth: .infinity)
@@ -189,7 +188,7 @@ struct SupernovaMemberPage: View {
         HStack(alignment: .firstTextBaseline) {
             Text(left); Spacer(minLength: 0); Text(right)
         }
-        .font(.spaceMono(9)).tracking(1.5).foregroundStyle(Self.muted)
+        .font(.spaceMono(9)).tracking(1.5).foregroundStyle(t.muted)
         .padding(.horizontal, 16).padding(.top, 22).padding(.bottom, 8)
     }
 
@@ -230,7 +229,7 @@ struct SupernovaMemberPage: View {
             .padding(.horizontal, 16).padding(.top, 20).padding(.bottom, 4)
             if showsStats {
                 sectionLabel("WHAT SUPERNOVA DID FOR YOU", "SINCE \(service.memberSinceMonth)")
-                Rectangle().fill(Self.hair).frame(height: 1)
+                Rectangle().fill(t.rule1).frame(height: 1)
                 Grid(horizontalSpacing: 0, verticalSpacing: 0) {
                     ForEach(0..<2, id: \.self) { row in
                         GridRow {
@@ -238,14 +237,14 @@ struct SupernovaMemberPage: View {
                                 let c = cells[row * 2 + col]
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(c.0).font(.spaceMono(26, weight: .bold)).frame(height: 26)   // line-height 1
-                                    Text(c.1).font(.spaceMono(8)).tracking(1.2).foregroundStyle(Self.muted)
+                                    Text(c.1).font(.spaceMono(8)).tracking(1.2).foregroundStyle(t.muted)
                                         .cssLineHeight(fontName: "SpaceMono-Regular", size: 8, multiple: 1.4)
                                 }
                                 .padding(.horizontal, 16).padding(.vertical, 14)
                                 .padding(.bottom, 1)   // the cell's 1 pt bottom border takes space in CSS
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .overlay(alignment: .bottom) { Rectangle().fill(Self.hair).frame(height: 1) }
-                                .overlay(alignment: .leading) { if col == 1 { Rectangle().fill(Self.hair).frame(width: 1) } }
+                                .overlay(alignment: .bottom) { Rectangle().fill(t.rule1).frame(height: 1) }
+                                .overlay(alignment: .leading) { if col == 1 { Rectangle().fill(t.rule1).frame(width: 1) } }
                             }
                         }
                     }
@@ -265,21 +264,21 @@ struct SupernovaMemberPage: View {
     private func appTile(_ name: String, _ detail: String, status: String, active: Bool, url: URL?) -> some View {
         let tile = VStack(alignment: .leading, spacing: 10) {
             RoundedRectangle(cornerRadius: 7)
-                .fill(active ? Color(hex: accent.hex) : .clear)
-                .overlay { if !active { RoundedRectangle(cornerRadius: 7).strokeBorder(.white.opacity(0.32), lineWidth: 1.5) } }
+                .fill(active ? Color(hex: AccentStore.shared.picked.hexString) : .clear)
+                .overlay { if !active { RoundedRectangle(cornerRadius: 7).strokeBorder(t.rule2, lineWidth: 1.5) } }
                 .frame(width: 28, height: 28)
             VStack(alignment: .leading, spacing: 2) {
                 Text(name).font(.archivo(16, weight: .bold))
-                Text(detail).font(.spaceMono(8)).tracking(1.5).foregroundStyle(Self.muted)
+                Text(detail).font(.spaceMono(8)).tracking(1.5).foregroundStyle(t.muted)
             }
             Text(status).font(.spaceMono(8, weight: .bold)).tracking(1.5)
-                .foregroundStyle(active ? Color.white : Self.secondary).lineLimit(1).minimumScaleFactor(0.6)
+                .foregroundStyle(active ? (t.dark ? Color.white : Color(hex: "#151A21")) : t.secondary).lineLimit(1).minimumScaleFactor(0.6)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.white.opacity(0.10))
+        .background(t.elevated)
         .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Self.hair, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(t.rule1, lineWidth: 1))
         return Group {
             if let url { Link(destination: url) { tile }.buttonStyle(.plain) } else { tile }
         }
@@ -298,21 +297,21 @@ struct SupernovaMemberPage: View {
     private var perks: some View {
         VStack(spacing: 0) {
             sectionLabel("YOUR PERKS", "\(Self.perks.count)")
-            Rectangle().fill(Self.hair).frame(height: 1)
+            Rectangle().fill(t.rule1).frame(height: 1)
             ForEach(Array(Self.perks.enumerated()), id: \.offset) { i, p in
                 HStack(alignment: .top, spacing: 12) {
                     StarBullet(size: config.page.starBullet, delay: -(Double(i) * config.page.perkOffset).truncatingRemainder(dividingBy: SignupConfigStore.shared.current.bullet.seconds))
                         .frame(width: 16).padding(.top, 3)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(p.name).font(.archivo(15, weight: .semibold))
-                        Text(p.how).font(.archivo(13)).foregroundStyle(Self.secondary)
+                        Text(p.how).font(.archivo(13)).foregroundStyle(t.secondary)
                             .cssLineHeight(fontName: "Archivo-Regular", size: 13, multiple: 1.4).fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, 16).padding(.vertical, 12)
                 .padding(.bottom, 1)
-                .overlay(alignment: .bottom) { Rectangle().fill(Self.hair).frame(height: 1) }
+                .overlay(alignment: .bottom) { Rectangle().fill(t.rule1).frame(height: 1) }
             }
             Color.clear.frame(height: 40)
         }
@@ -323,26 +322,9 @@ struct SupernovaMemberPage: View {
     private var account: some View {
         VStack(spacing: 0) {
             sectionLabel("ACCENT", "RECOLOURS YOUR CARD")
-            HStack(spacing: 10) {
-                ForEach(AccentChoices.all, id: \.id) { a in
-                    let on = a.id == accent.id
-                    Button { AccentStore.shared.select(a) } label: {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(LinearGradient(colors: a.stops.map { Color(hex: $0) }, startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(on ? Color.white : .clear, lineWidth: 2))
-                            .frame(width: 44, height: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(a.name)
-                    .accessibilityIdentifier(AX.supernova.accentSwatch(a.id))
-                    .accessibilityAddTraits(on ? .isSelected : [])
-                }
-                Text(accent.name).font(.spaceMono(9)).tracking(1.5).foregroundStyle(Self.secondary)
-                    .frame(maxWidth: .infinity, alignment: .trailing).lineLimit(1).minimumScaleFactor(0.7)
-            }
-            .padding(.horizontal, 16).padding(.vertical, 4)
+            AccentPickerView(theme: t)
             sectionLabel("MEMBERSHIP", "")
-            Rectangle().fill(Self.hair).frame(height: 1)
+            Rectangle().fill(t.rule1).frame(height: 1)
             let plan = service.planPriceLabel.map { service.planWord + " · " + $0.replacingOccurrences(of: " / YR", with: "").replacingOccurrences(of: " / MO", with: "") } ?? service.planWord
             row("Plan", plan)
             row("Renews", service.renewsLong)
@@ -351,7 +333,7 @@ struct SupernovaMemberPage: View {
                 .buttonStyle(.plain).accessibilityIdentifier(AX.supernova.manageSubscription)
             HStack {
                 Button { Task { await service.restorePurchases() } } label: {
-                    Text("RESTORE PURCHASES").font(.spaceMono(9)).tracking(1.5).foregroundStyle(Self.muted).padding(.vertical, 12)
+                    Text("RESTORE PURCHASES").font(.spaceMono(9)).tracking(1.5).foregroundStyle(t.muted).padding(.vertical, 12)
                 }
                 .buttonStyle(.plain).accessibilityIdentifier(AX.supernova.restore)
                 Spacer()
@@ -369,11 +351,11 @@ struct SupernovaMemberPage: View {
     private func rowLabel(_ label: String, _ value: String) -> some View {
         HStack(spacing: 10) {
             Text(label).font(.archivo(15, weight: .semibold)).frame(maxWidth: .infinity, alignment: .leading)
-            Text(value).font(.spaceMono(10)).tracking(0.8).foregroundStyle(Self.muted)
-            Text("›").font(.spaceMono(16)).foregroundStyle(.white.opacity(0.45))
+            Text(value).font(.spaceMono(10)).tracking(0.8).foregroundStyle(t.muted)
+            Text("›").font(.spaceMono(16)).foregroundStyle(t.ghost)
         }
         .frame(minHeight: 48).padding(.horizontal, 16).padding(.bottom, 1)
-        .overlay(alignment: .bottom) { Rectangle().fill(Self.hair).frame(height: 1) }
+        .overlay(alignment: .bottom) { Rectangle().fill(t.rule1).frame(height: 1) }
         .contentShape(Rectangle())
     }
 }

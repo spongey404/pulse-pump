@@ -5,67 +5,80 @@ import SwiftUI
 @Suite(.serialized)
 @MainActor
 struct AccentStoreTests {
-    private func store(member: Bool, pick: String? = nil) -> (AccentStore, UserDefaults) {
+    private func store(member: Bool, account: String? = nil, defaults: UserDefaults? = nil) -> (AccentStore, UserDefaults) {
         let name = "accent-tests-\(UUID().uuidString)"
-        let d = UserDefaults(suiteName: name)!
-        d.removePersistentDomain(forName: name)
+        let d = defaults ?? UserDefaults(suiteName: name)!
+        if defaults == nil { d.removePersistentDomain(forName: name) }
         d.set(member, forKey: SupernovaService.subscribedMirrorKey)
-        if let pick { d.set(pick, forKey: AccentStore.defaultsKey) }
-        return (AccentStore(defaults: d), d)
+        return (AccentStore(defaults: d, account: account), d)
+    }
+    private func pick(_ hex: String) -> AccentPick {
+        let c = AccentMath.hsl(fromHex: hex)!
+        return AccentPick(h: c.h, s: c.s, l: c.l, hex: hex)
     }
 
     @Test func everyoneStartsOnOresAccent() {
         let (s, _) = store(member: false)
-        #expect(s.active == AccentChoices.ore)
-        #expect(s.usesOreAccent, "drawn with the catalogue's Ore blue, not the swatch's hex")
-        #expect(AccentChoices.ore.id == "sky" && AccentChoices.all.count == 5)
+        #expect(s.picked.hexString == "#3DB8FF" && s.usesOreAccent, "drawn with the catalogue's Ore blue, not the swatch's hex")
+        #expect(s.swatches.count == 11 && s.swatches.first?.name == "SKY")
     }
 
-    @Test func aFreeUserKeepsOresAccentEvenWithAnOldPick() {
-        let (s, _) = store(member: false, pick: "violet")
-        #expect(s.active == AccentChoices.ore, "a lapsed membership goes back to Ore's accent")
-        #expect(s.picked.id == "violet", "…without losing what they picked")
+    @Test func aFreeUserKeepsOresAccentEvenWithAPick() {
+        let (s, _) = store(member: false)
+        s.set(pick("#8C0099"))
+        #expect(s.active.hexString == "#3DB8FF" && s.usesOreAccent, "a lapsed membership goes back to Ore's accent")
+        #expect(s.picked.hexString == "#8C0099", "…without losing what they picked")
     }
 
     @Test func aMemberGetsTheirPickAndItIsRemembered() {
         let (s, d) = store(member: true)
-        #expect(s.active == AccentChoices.ore)
-        let pink = AccentChoices.choice(id: "pink")
-        s.select(pink)
-        #expect(s.active == pink)
-        #expect(d.string(forKey: AccentStore.defaultsKey) == "pink")
-        #expect(AccentStore(defaults: d).active == pink, "survives a relaunch")
+        s.set(pick("#FD4A9F"))
+        #expect(s.active.hexString == "#FD4A9F" && !s.usesOreAccent)
+        s.flush()
+        #expect(AccentStore(defaults: d).active.hexString == "#FD4A9F", "survives a relaunch")
     }
 
     @Test func buyingOrLosingSupernovaSwitchesTheAccent() {
-        let (s, d) = store(member: false, pick: "pink")
-        #expect(s.active == AccentChoices.ore)
+        let (s, d) = store(member: false)
+        s.set(pick("#FD4A9F"))
+        #expect(s.usesOreAccent)
         d.set(true, forKey: SupernovaService.subscribedMirrorKey); s.refreshMembership()
-        #expect(s.active.id == "pink" && !s.usesOreAccent)
+        #expect(s.active.hexString == "#FD4A9F" && !s.usesOreAccent)
         d.set(false, forKey: SupernovaService.subscribedMirrorKey); s.refreshMembership()
-        #expect(s.active == AccentChoices.ore)
+        #expect(s.usesOreAccent)
     }
 
-    @Test func anUnknownSavedChoiceFallsBackToOre() {
-        let (s, _) = store(member: true, pick: "does-not-exist")
-        #expect(s.active == AccentChoices.ore)
+    @Test func eachAccountKeepsItsOwnPickAndRecentRow() {
+        let (s, d) = store(member: true, account: "alice")
+        s.set(pick("#009945")); s.commitColour()
+        s.setAccount("bob")
+        #expect(s.picked.hexString == "#3DB8FF" && s.swatches.first?.hex == "#3DB8FF", "a new account starts fresh")
+        s.set(pick("#FCC01D"))
+        s.setAccount("alice")   // saves bob's colour on the way out
+        #expect(s.picked.hexString == "#009945" && s.swatches.first?.hex == "#009945", "alice's pick and her recent row come back")
+        #expect(AccentStore(defaults: d, account: "bob").picked.hexString == "#FCC01D")
     }
 
-    @Test func theChoicesAreDistinctAndAmberIsLeftOut() {
-        let hexes = AccentChoices.all.map(\.hex)
-        #expect(Set(hexes).count == hexes.count)
-        #expect(Set(AccentChoices.all.map(\.id)).count == AccentChoices.all.count)
-        #expect(AccentChoices.all.first == AccentChoices.ore, "Ore's own blue is the first swatch, so it can always be put back")
-        #expect(!hexes.contains("#C9892E") && !hexes.contains("#FFC83D"), "amber is Fuel's signal, gold is Supernova's")
-        #expect(AccentChoices.all.map(\.id) == ["sky", "pink", "red", "violet", "teal"], "the design's five")
+    @Test func leavingThePageAddsTheColourToTheFrontOfTheRecentRow() {
+        let (s, _) = store(member: true)
+        s.set(AccentPick(h: 20, s: 80, l: 50, hex: nil))   // a slider colour, not in the row
+        let custom = s.picked.hexString
+        s.commitColour()
+        #expect(s.swatches.count == 11 && s.swatches[0].hex == custom && s.swatches[0].name == "RECENT")
+        #expect(s.swatches.last?.hex != "#FFFFFF", "the last preset dropped off")
+        s.commitColour()
+        #expect(s.swatches.filter { $0.hex == custom }.count == 1, "committing twice doesn't duplicate")
+        s.set(pick("#00EBEB")); s.commitColour()
+        #expect(s.swatches[0].hex == "#00EBEB" && s.swatches.filter { $0.hex == "#00EBEB" }.count == 1, "a colour already in the row moves to the front")
     }
 
-    @Test func theGlitterFollowsTheAccent() {
-        let (s, _) = store(member: true, pick: "pink")
-        #expect(s.starPalette == AccentChoices.choice(id: "pink").palette, "the design's three stops, not derived")
-        #expect(s.starPalette.accent == StarRGBA(css: "#FD4A9F"))
-        let (free, _) = store(member: false, pick: "pink")
-        #expect(free.starPalette == AccentChoices.ore.palette)
+    @Test func theGlitterFollowsThePick() {
+        let (s, _) = store(member: true)
+        s.set(pick("#FD4A9F"))
+        #expect(s.starPalette.accent == StarRGBA(css: "#FD4A9F"), "the middle stop is the exact picked hex")
+        let (free, _) = store(member: false)
+        free.set(pick("#FD4A9F"))
+        #expect(free.starPalette.accent == StarRGBA(css: "#3DB8FF"))
     }
 
     @Test func shortSplitNames() {

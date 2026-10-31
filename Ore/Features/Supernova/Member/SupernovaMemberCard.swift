@@ -14,7 +14,7 @@ struct SupernovaMemberCard: View {
     private var config: SupernovaMemberConfig { SupernovaMemberConfigStore.shared.current }
 
     var body: some View {
-        let accent = AccentStore.shared.picked
+        let palette = AccentStore.shared.pickedPalette
         Button { transition.open(.member, fromSource: true) } label: {
             TimelineView(.animation(minimumInterval: nil, paused: !transition.isAnimating)) { tl in
                 let text = transition.sourceText(.member, at: tl.date)
@@ -62,10 +62,9 @@ struct SupernovaMemberCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
                 ZStack {
-                    Color(hex: accent.stops[1])
+                    Color(hex: palette.accent.hex)
                     StarFieldView(variant: "recapCard", budget: .more,
-                                  overrides: StarFieldParams.Overrides(palette: accent.palette, density: config.card.count, fps: config.card.fps))
-                        .id(accent.id)
+                                  overrides: StarFieldParams.Overrides(palette: palette, density: config.card.count, fps: config.card.fps))   // recoloured live, no remount
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: config.card.radius))

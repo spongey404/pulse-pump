@@ -1,81 +1,18 @@
 {
-  "accents" : [
-    {
-      "blob" : "rgba(15,90,190,0.30)",
-      "hex" : "#3DB8FF",
-      "id" : "sky",
-      "name" : "SKY",
-      "stops" : [
-        "#1A7FE0",
-        "#3DB8FF",
-        "#9FDDFF"
-      ],
-      "veil" : "rgba(10,70,140,0.05)"
-    },
-    {
-      "blob" : "rgba(140,10,70,0.30)",
-      "hex" : "#FD4A9F",
-      "id" : "pink",
-      "name" : "PINK · FD4A9F",
-      "stops" : [
-        "#C2186B",
-        "#FD4A9F",
-        "#FFB3D6"
-      ],
-      "veil" : "rgba(110,10,60,0.05)"
-    },
-    {
-      "blob" : "rgba(120,15,10,0.30)",
-      "hex" : "#FF5A4A",
-      "id" : "red",
-      "name" : "SIGNAL RED",
-      "stops" : [
-        "#B3261E",
-        "#E5281C",
-        "#FF8A7A"
-      ],
-      "veil" : "rgba(100,15,10,0.05)"
-    },
-    {
-      "blob" : "rgba(50,20,140,0.30)",
-      "hex" : "#A78BFA",
-      "id" : "violet",
-      "name" : "VIOLET",
-      "stops" : [
-        "#5B2BD9",
-        "#8B5CF6",
-        "#C4B5FD"
-      ],
-      "veil" : "rgba(40,15,110,0.05)"
-    },
-    {
-      "blob" : "rgba(0,70,65,0.30)",
-      "hex" : "#2DD4BF",
-      "id" : "teal",
-      "name" : "TEAL",
-      "stops" : [
-        "#047C74",
-        "#14B8A6",
-        "#99F6E4"
-      ],
-      "veil" : "rgba(0,60,55,0.05)"
-    }
-  ],
-  "card" : {
-    "count" : 1600,
-    "fps" : 30,
-    "gap" : 16,
-    "padH" : 18,
-    "padV" : 16,
-    "radius" : 14,
-    "settleAfterMs" : 0
+  "card": {
+    "count": 1600,
+    "fps": 30,
+    "gap": 16,
+    "padH": 18,
+    "padV": 16,
+    "radius": 14,
+    "settleAfterMs": 0
   },
-  "defaultAccent" : "sky",
-  "page" : {
-    "count" : 900,
-    "coverage" : 0.65,
-    "gold" : 0.4,
-    "maskStops" : [
+  "page": {
+    "count": 900,
+    "coverage": 0.65,
+    "gold": 0.4,
+    "maskStops": [
       [
         0,
         1
@@ -97,78 +34,212 @@
         0
       ]
     ],
-    "perkOffset" : 0.47,
-    "pull" : 150,
-    "sparkle" : 0.55,
-    "speed" : 1.1,
-    "starBullet" : 13
+    "perkOffset": 0.47,
+    "pull": 150,
+    "sparkle": 0.55,
+    "speed": 1.1,
+    "starBullet": 13
   },
-  "transition" : {
-    "close" : {
-      "contentFadeMs" : 180,
-      "curve" : [
+  "picker": {
+    "defaultHex": "#3DB8FF",
+    "fine": [
+      [
+        120,
+        0.1
+      ],
+      [
+        60,
+        0.25
+      ]
+    ],
+    "holdDelayMs": 380,
+    "holdHue": [
+      [
+        1.5,
+        1
+      ],
+      [
+        3,
+        2
+      ],
+      [
+        5,
+        4
+      ],
+      [
+        8,
+        7
+      ],
+      [
+        1000,
+        12
+      ]
+    ],
+    "holdIntervalsMs": [
+      [
+        1.5,
+        90
+      ],
+      [
+        1000,
+        50
+      ]
+    ],
+    "holdOther": [
+      [
+        1.5,
+        1
+      ],
+      [
+        4,
+        2
+      ],
+      [
+        1000,
+        4
+      ]
+    ],
+    "huePatch": {
+      "minSat": 85,
+      "satBelow": 15,
+      "shadeAbove": 92,
+      "shadeBelow": 8,
+      "shadeMax": 70,
+      "shadeMin": 30
+    },
+    "lightTextOnLightAccents": false,
+    "palette": {
+      "blobAlpha": 0.3,
+      "blobLightness": 22,
+      "darkStops": [
+        0,
+        16,
+        38
+      ],
+      "lightStops": [
+        62,
+        84,
+        100
+      ],
+      "stopDark": 16,
+      "stopLight": 22,
+      "veilAlpha": 0.05,
+      "veilLightness": 25
+    },
+    "presets": [
+      [
+        "SKY",
+        "#3DB8FF"
+      ],
+      [
+        "PINK",
+        "#FD4A9F"
+      ],
+      [
+        "RED",
+        "#FF001E"
+      ],
+      [
+        "PURPLE",
+        "#8C0099"
+      ],
+      [
+        "GREEN",
+        "#009945"
+      ],
+      [
+        "CYAN",
+        "#00EBEB"
+      ],
+      [
+        "ROSE",
+        "#FD6892"
+      ],
+      [
+        "GOLD",
+        "#FCC01D"
+      ],
+      [
+        "SILVER",
+        "#C0C0C0"
+      ],
+      [
+        "BLACK",
+        "#000000"
+      ],
+      [
+        "WHITE",
+        "#FFFFFF"
+      ]
+    ],
+    "recentLimit": 11
+  },
+  "transition": {
+    "close": {
+      "contentFadeMs": 180,
+      "curve": [
         0.45,
         0,
         0.15,
         1
       ],
-      "handoffMs" : 590,
-      "morphAlphaExponent" : 2.2,
-      "ms" : 560
+      "handoffMs": 590,
+      "morphAlphaExponent": 2.2,
+      "ms": 560
     },
-    "content" : {
-      "bannerItems" : 3,
-      "bannerOffsetPt" : 10,
-      "fadeMs" : 520,
-      "groups" : 4,
-      "moveCurve" : [
+    "content": {
+      "bannerItems": 3,
+      "bannerOffsetPt": 10,
+      "fadeMs": 520,
+      "groups": 4,
+      "moveCurve": [
         0.2,
         0.8,
         0.2,
         1
       ],
-      "moveMs" : 720,
-      "offsetPt" : 14,
-      "staggerMs" : 90,
-      "startMs" : 380
+      "moveMs": 720,
+      "offsetPt": 14,
+      "staggerMs": 90,
+      "startMs": 380
     },
-    "flyer" : {
-      "colorHex" : "#FFC83D",
-      "glowAlpha" : 0.85,
-      "glowRadius" : 14,
-      "glyphSize" : 44,
-      "startScale" : 0.4090909090909091
+    "flyer": {
+      "colorHex": "#FFC83D",
+      "glowAlpha": 0.85,
+      "glowRadius": 14,
+      "glyphSize": 44,
+      "startScale": 0.4090909090909091
     },
-    "hubCornerRadius" : 44,
-    "hubOpacity" : 0.35,
-    "hubScale" : 0.94,
-    "maskRadiusEnd" : 44,
-    "maskRadiusStart" : 14,
-    "open" : {
-      "bannerTextFadeMs" : 120,
-      "flyerCurve" : [
+    "hubCornerRadius": 44,
+    "hubOpacity": 0.35,
+    "hubScale": 0.94,
+    "maskRadiusEnd": 44,
+    "maskRadiusStart": 14,
+    "open": {
+      "bannerTextFadeMs": 120,
+      "flyerCurve": [
         0.45,
         0,
         0.15,
         1
       ],
-      "flyerMs" : 760,
-      "handoffMs" : 800,
-      "hubCurve" : [
+      "flyerMs": 760,
+      "handoffMs": 800,
+      "hubCurve": [
         0.32,
         0.72,
         0,
         1
       ],
-      "hubMs" : 600,
-      "maskCurve" : [
+      "hubMs": 600,
+      "maskCurve": [
         0.32,
         0.72,
         0,
         1
       ],
-      "maskMs" : 560
+      "maskMs": 560
     },
-    "reduceMotionFadeMs" : 200
+    "reduceMotionFadeMs": 200
   }
 }

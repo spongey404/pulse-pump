@@ -6,15 +6,35 @@ import Foundation
 /// through `Resources/supernovaMember.config.json`; `fallback` must equal it (a test checks); Remote Config key
 /// `supernova_member_config` replaces it.
 struct SupernovaMemberConfig: Codable, Equatable {
-    struct Accent: Codable, Equatable {
-        var id: String
-        var name: String
-        /// The app's accent when this is picked.
-        var hex: String
-        /// The glitter's gradient: [g0, g1, g2].
-        var stops: [String]
-        var blob: String
-        var veil: String
+    /// The custom accent picker (Account tab): the presets row, the hold-to-repeat and fine-scrub curves, the rules that
+    /// turn a picked colour into the glitter's palette.
+    struct Picker: Codable, Equatable {
+        struct HuePatch: Codable, Equatable {
+            var satBelow: Int, shadeBelow: Int, shadeAbove: Int, minSat: Int, shadeMin: Int, shadeMax: Int
+        }
+        struct PaletteRule: Codable, Equatable {
+            /// Lightness values [g0, g1, g2] for a very light accent (the colour at lightness 100 would vanish), and for a very dark one.
+            var lightStops: [Double], darkStops: [Double]
+            /// Normal accents: g0 = lightness − stopDark, g1 = the exact picked hex, g2 = lightness + stopLight.
+            var stopDark: Double, stopLight: Double
+            var blobLightness: Double, blobAlpha: Double, veilLightness: Double, veilAlpha: Double
+        }
+        var defaultHex: String
+        /// [name, hex]; the first is the default.
+        var presets: [[String]]
+        var recentLimit: Int
+        var holdDelayMs: Double
+        /// [until seconds held, step] for hue, and for saturation and shade.
+        var holdHue: [[Double]]
+        var holdOther: [[Double]]
+        /// [until seconds held, ms between repeats].
+        var holdIntervalsMs: [[Double]]
+        /// [finger distance from the strip in pt, speed factor], largest distance first.
+        var fine: [[Double]]
+        var huePatch: HuePatch
+        var palette: PaletteRule
+        /// Dark text on very light accents (white is always used while this is false).
+        var lightTextOnLightAccents: Bool
     }
     struct Page: Codable, Equatable {
         var count: Double
@@ -41,8 +61,7 @@ struct SupernovaMemberConfig: Codable, Equatable {
         var settleAfterMs: Double
     }
 
-    var accents: [Accent]
-    var defaultAccent: String
+    var picker: Picker
     var page: Page
     var card: Card
     var transition: SupernovaTransitionConfig
@@ -53,15 +72,12 @@ struct SupernovaMemberConfig: Codable, Equatable {
     }
 
     var isUsable: Bool {
-        !accents.isEmpty && accents.allSatisfy { $0.stops.count == 3 && StarRGBA(css: $0.hex) != nil }
-            && accents.contains { $0.id == defaultAccent } && page.maskStops.allSatisfy { $0.count == 2 } && !page.maskStops.isEmpty
+        picker.isUsable && page.maskStops.allSatisfy { $0.count == 2 } && !page.maskStops.isEmpty
             && transition.isUsable
             && (1...6000).contains(page.count) && (0...10).contains(page.speed) && (0...1).contains(page.gold) && (0...1).contains(page.sparkle)
             && (0...2000).contains(page.pull) && [page.coverage, page.starBullet, page.perkOffset].allSatisfy(\.isFinite)
             && page.maskStops.allSatisfy { $0.allSatisfy(\.isFinite) }
     }
-
-    func accent(id: String?) -> Accent { accents.first { $0.id == id } ?? accents.first { $0.id == defaultAccent } ?? accents[0] }
 
     static let fallback: SupernovaMemberConfig = {
         var t = SupernovaTransitionConfig.fallback
@@ -69,14 +85,17 @@ struct SupernovaMemberConfig: Codable, Equatable {
         t.content.bannerItems = 3
         t.maskRadiusStart = 14
         return SupernovaMemberConfig(
-            accents: [
-                Accent(id: "sky", name: "SKY", hex: "#3DB8FF", stops: ["#1A7FE0", "#3DB8FF", "#9FDDFF"], blob: "rgba(15,90,190,0.30)", veil: "rgba(10,70,140,0.05)"),
-                Accent(id: "pink", name: "PINK · FD4A9F", hex: "#FD4A9F", stops: ["#C2186B", "#FD4A9F", "#FFB3D6"], blob: "rgba(140,10,70,0.30)", veil: "rgba(110,10,60,0.05)"),
-                Accent(id: "red", name: "SIGNAL RED", hex: "#FF5A4A", stops: ["#B3261E", "#E5281C", "#FF8A7A"], blob: "rgba(120,15,10,0.30)", veil: "rgba(100,15,10,0.05)"),
-                Accent(id: "violet", name: "VIOLET", hex: "#A78BFA", stops: ["#5B2BD9", "#8B5CF6", "#C4B5FD"], blob: "rgba(50,20,140,0.30)", veil: "rgba(40,15,110,0.05)"),
-                Accent(id: "teal", name: "TEAL", hex: "#2DD4BF", stops: ["#047C74", "#14B8A6", "#99F6E4"], blob: "rgba(0,70,65,0.30)", veil: "rgba(0,60,55,0.05)"),
-            ],
-            defaultAccent: "sky",
+            picker: Picker(
+                defaultHex: "#3DB8FF",
+                presets: [["SKY", "#3DB8FF"], ["PINK", "#FD4A9F"], ["RED", "#FF001E"], ["PURPLE", "#8C0099"], ["GREEN", "#009945"], ["CYAN", "#00EBEB"],
+                          ["ROSE", "#FD6892"], ["GOLD", "#FCC01D"], ["SILVER", "#C0C0C0"], ["BLACK", "#000000"], ["WHITE", "#FFFFFF"]],
+                recentLimit: 11, holdDelayMs: 380,
+                holdHue: [[1.5, 1], [3, 2], [5, 4], [8, 7], [1000, 12]], holdOther: [[1.5, 1], [4, 2], [1000, 4]],
+                holdIntervalsMs: [[1.5, 90], [1000, 50]], fine: [[120, 0.1], [60, 0.25]],
+                huePatch: .init(satBelow: 15, shadeBelow: 8, shadeAbove: 92, minSat: 85, shadeMin: 30, shadeMax: 70),
+                palette: .init(lightStops: [62, 84, 100], darkStops: [0, 16, 38], stopDark: 16, stopLight: 22,
+                               blobLightness: 22, blobAlpha: 0.3, veilLightness: 25, veilAlpha: 0.05),
+                lightTextOnLightAccents: false),
             page: Page(count: 900, speed: 1.1, gold: 0.4, sparkle: 0.55, pull: 150, coverage: 0.65,
                        maskStops: [[0, 1], [0.51, 1], [0.59, 0.6], [0.67, 0.2], [0.73, 0]], starBullet: 13, perkOffset: 0.47),
             card: Card(radius: 14, padH: 18, padV: 16, gap: 16, count: 1600, fps: 30, settleAfterMs: 0),
@@ -106,14 +125,5 @@ final class SupernovaMemberConfigStore {
         guard let config = SupernovaMemberConfig.load(from: json) else { return false }
         override = config
         return true
-    }
-}
-
-extension SupernovaMemberConfig.Accent {
-    var rgba: StarRGBA { StarRGBA(css: hex) ?? StarRGBA(r: 61, g: 184, b: 255) }
-    /// The glitter palette exactly as the design lists it (not derived).
-    var palette: StarPalette {
-        StarPalette(deep: StarRGBA(css: stops[0]) ?? .white, accent: StarRGBA(css: stops[1]) ?? .white, light: StarRGBA(css: stops[2]) ?? .white,
-                    blob: StarRGBA(css: blob) ?? .clear, veil: StarRGBA(css: veil) ?? .clear)
     }
 }

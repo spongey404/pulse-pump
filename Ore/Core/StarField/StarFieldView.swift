@@ -12,7 +12,7 @@ enum StarFieldBudget {
 /// batched paths). A class, so the Canvas closure can step it without touching SwiftUI state.
 @MainActor
 final class StarFieldRunner {
-    let params: StarFieldParams
+    var params: StarFieldParams   // `palette` may change while it runs (the member's accent picker); nothing else does
     private var engine: StarFieldEngine?
     private let seed = UInt64.random(in: 1...UInt64.max)
     /// This view's top-left in global coordinates, and the anchor's centre in global coordinates.
@@ -85,6 +85,7 @@ struct StarFieldView: View {
                 .onAppear { runner.origin = proxy.frame(in: .global).origin }
                 .onChange(of: proxy.frame(in: .global)) { _, f in runner.origin = f.origin }
         })
+        .onChange(of: overrides.palette) { _, palette in if let palette { runner.params.palette = palette } }   // recolour live, no remount
         .onChange(of: anchor) { _, a in runner.anchorGlobal = a.map { CGPoint(x: $0.midX, y: $0.midY) } }
         .onAppear {
             runner.anchorGlobal = anchor.map { CGPoint(x: $0.midX, y: $0.midY) }

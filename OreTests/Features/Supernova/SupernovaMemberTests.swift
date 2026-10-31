@@ -29,8 +29,10 @@ struct SupernovaMemberTests {
     }
 
     @Test func theDesignsPalettesAndNumbers() {
-        #expect(m.accents.map(\.name) == ["SKY", "PINK · FD4A9F", "SIGNAL RED", "VIOLET", "TEAL"])
-        #expect(m.accents[1].stops == ["#C2186B", "#FD4A9F", "#FFB3D6"] && m.accents[4].stops == ["#047C74", "#14B8A6", "#99F6E4"])
+        #expect(m.picker.presets.map { $0[0] } == ["SKY", "PINK", "RED", "PURPLE", "GREEN", "CYAN", "ROSE", "GOLD", "SILVER", "BLACK", "WHITE"])
+        #expect(m.picker.presets.map { $0[1] } == ["#3DB8FF", "#FD4A9F", "#FF001E", "#8C0099", "#009945", "#00EBEB", "#FD6892", "#FCC01D", "#C0C0C0", "#000000", "#FFFFFF"])
+        #expect(m.picker.recentLimit == 11 && m.picker.holdDelayMs == 380 && !m.picker.lightTextOnLightAccents)
+        #expect(m.picker.palette.lightStops == [62, 84, 100] && m.picker.palette.darkStops == [0, 16, 38])
         #expect(m.page.count == 900 && m.page.coverage == 0.65 && m.page.maskStops == [[0, 1], [0.51, 1], [0.59, 0.6], [0.67, 0.2], [0.73, 0]])
         #expect(m.card.radius == 14 && m.card.padH == 18 && m.card.padV == 16 && m.card.gap == 16 && m.card.fps == 30)
         #expect(m.transition.content.groups == 4 && m.transition.content.bannerItems == 3 && m.transition.maskRadiusStart == 14)
@@ -39,10 +41,12 @@ struct SupernovaMemberTests {
 
     @Test func remoteConfigIsValidated() throws {
         let store = SupernovaMemberConfigStore()
-        var broken = m; broken.accents = []
+        var broken = m; broken.picker.presets = []
         #expect(!store.applyRemote(json: try JSONEncoder().encode(broken)))
-        var noDefault = m; noDefault.defaultAccent = "nope"
+        var noDefault = m; noDefault.picker.defaultHex = "nope"
         #expect(!store.applyRemote(json: try JSONEncoder().encode(noDefault)))
+        var badCurve = m; badCurve.picker.holdHue = [[Double.infinity, 1]]
+        #expect(!store.applyRemote(json: (try? JSONEncoder().encode(badCurve)) ?? Data()), "non-finite numbers can't even be encoded; either way it is not applied")
         var tuned = m; tuned.page.count = 500
         #expect(store.applyRemote(json: try JSONEncoder().encode(tuned)))
         #expect(store.current.page.count == 500)
