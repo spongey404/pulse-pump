@@ -47,17 +47,23 @@ struct BodyHeat: View {
 
     var body: some View {
         Canvas { ctx, size in
-            let sx = size.width / 200
-            let sy = size.height / 320
-            func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: x * sx, y: y * sy) }
+            let strokeStyle = StrokeStyle(lineWidth: max(0.5, 1 * min(size.width / 200, size.height / 320)))
             func fill(_ region: Double?) -> Color { region.map(thermal) ?? base }
-            let strokeStyle = StrokeStyle(lineWidth: max(0.5, 1 * min(sx, sy)))
-
-            func draw(_ path: Path, _ region: Double?) {
+            Self.layout(size: size, intensities: intensities, draw: { path, region in
                 ctx.fill(path, with: .color(fill(region)))
                 ctx.stroke(path, with: .color(stroke), style: strokeStyle)
-            }
+            }, line: { path in
+                ctx.stroke(path, with: .color(stroke), style: strokeStyle)
+            })
+        }
+    }
 
+    /// The silhouette's shapes in drawing order, shared by the heat map and by anything that needs the muscles' outlines (the member
+    /// Stardust mask): `draw` gets each filled shape with its intensity (nil = not a trainable region), `line` the stroke-only marks.
+    static func layout(size: CGSize, intensities: Intensities, draw: (Path, Double?) -> Void, line: (Path) -> Void) {
+        let sx = size.width / 200
+        let sy = size.height / 320
+        func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: x * sx, y: y * sy) }
             // Head + neck (always base fill — not a trainable region)
             draw(Path(ellipseIn: CGRect(x: pt(86, 8).x, y: pt(86, 8).y, width: 28 * sx, height: 28 * sy)), nil)
             draw(Path(CGRect(x: pt(94, 34).x, y: pt(94, 34).y, width: 12 * sx, height: 10 * sy)), nil)
@@ -137,8 +143,8 @@ struct BodyHeat: View {
             // Knee marks (stroke only, no fill)
             var kneeL = Path(); kneeL.move(to: pt(78, 232)); kneeL.addLine(to: pt(98, 232))
             var kneeR = Path(); kneeR.move(to: pt(102, 232)); kneeR.addLine(to: pt(124, 232))
-            ctx.stroke(kneeL, with: .color(stroke), style: strokeStyle)
-            ctx.stroke(kneeR, with: .color(stroke), style: strokeStyle)
+            line(kneeL)
+            line(kneeR)
 
             // Calves — L: M80 234 Q76 260 80 286 L96 286 Q98 260 96 234 Z / R mirrored
             var calfL = Path()
@@ -154,7 +160,6 @@ struct BodyHeat: View {
             // Feet (always base fill)
             draw(Path(ellipseIn: CGRect(x: pt(77, 289).x, y: pt(77, 289).y, width: 22 * sx, height: 10 * sy)), nil)
             draw(Path(ellipseIn: CGRect(x: pt(101, 289).x, y: pt(101, 289).y, width: 22 * sx, height: 10 * sy)), nil)
-        }
     }
 
     /// Thermal ramp — 5-stop linear interpolation on the Ore blue accent, exact stops from spec:

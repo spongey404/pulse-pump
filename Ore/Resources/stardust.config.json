@@ -27,6 +27,7 @@
     "rowIcon": { "mini": true, "speedScale": 0.3, "sizeScale": 0.6, "min": 18, "pull": 0 },
     "recapCard": { "mini": true, "speedScale": 0.6, "sizeScale": 0.9, "min": 120, "pull": 0 },
     "button": { "mini": true, "speedScale": 0.5, "sizeScale": 0.7, "min": 14, "pull": 0 },
+    "body": { "mini": true, "speedScale": 0.45, "sizeScale": 0.7, "min": 90, "pull": 0 },
     "cta": { "mini": true, "speedScale": 0.6, "sizeScale": 0.9, "min": 60, "pull": 0 },
     "toggle": { "mini": true, "speedScale": 0.3, "sizeScale": 0.6, "min": 18, "pull": 0 }
   }

@@ -46,35 +46,6 @@ struct OreToggleConfig: Codable, Equatable {
     }
 }
 
-/// The knob's gold four-point star: the design's 24 × 24 path (`M`, `C` and `Z` only), drawn at `size`.
-private struct ToggleStar: Shape {
-    func path(in rect: CGRect) -> Path {
-        let tokens = OreToggleConfig.shared.star.path
-            .replacingOccurrences(of: "M", with: " M ").replacingOccurrences(of: "C", with: " C ").replacingOccurrences(of: "Z", with: " Z ")
-            .split(whereSeparator: { $0 == " " || $0 == "," }).map(String.init)
-        let k = rect.width / 24
-        func pt(_ x: Double, _ y: Double) -> CGPoint { CGPoint(x: rect.minX + x * k, y: rect.minY + y * k) }
-        var path = Path()
-        var i = 0
-        func number() -> Double? { guard i < tokens.count, let v = Double(tokens[i]) else { return nil }; i += 1; return v }
-        while i < tokens.count {
-            let command = tokens[i]; i += 1
-            switch command {
-            case "M":
-                if let x = number(), let y = number() { path.move(to: pt(x, y)) }
-            case "C":
-                while let a = number(), let b = number(), let c = number(), let d = number(), let e = number(), let f = number() {
-                    path.addCurve(to: pt(e, f), control1: pt(a, b), control2: pt(c, d))
-                    if i >= tokens.count || Double(tokens[i]) == nil { break }
-                }
-            case "Z": path.closeSubpath()
-            default: break
-            }
-        }
-        return path
-    }
-}
-
 /// The switch itself, drawn only (no gesture): a 56 × 32 rounded rectangle with a 24 × 24 knob that slides 24 pt. ON is the accent
 /// colour; for a Supernova member with Stardust buttons on, an ON switch also has Stardust in the track and a gold star on the
 /// knob. No spring, no bounce: 250 ms ease-in-out for the knob, the colours and the Stardust; Reduce Motion makes it instant.
@@ -113,7 +84,7 @@ struct OreToggleSwitch: View {
                 .fill(on ? OreToggleConfig.color(cfg.onKnob) : OreToggleConfig.color(s.offKnob))
                 .frame(width: k.size, height: k.size)
                 .overlay {
-                    ToggleStar().fill(Color(hex: cfg.star.colorHex))
+                    FourPointStar().fill(Color(hex: cfg.star.colorHex))
                         .frame(width: cfg.star.size, height: cfg.star.size)
                         .opacity(fxVisible ? 1 : 0)
                 }
