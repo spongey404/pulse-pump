@@ -7,6 +7,7 @@ import SwiftUI
 /// - deleted account: a plain "no longer available" state.
 struct FriendProfileView: View {
     @Environment(\.weightUnit) private var unit
+    @Environment(\.colorScheme) private var scheme
     let uid: String
     let handle: String
     let name: String
@@ -23,6 +24,10 @@ struct FriendProfileView: View {
     private var profile: FirestoreUserProfile? { page?.profile }
     private var shownName: String { profile?.shownName ?? name }
     private var shownHandle: String { (profile?.username.isEmpty == false ? profile?.username : nil) ?? handle }
+    /// Posts name muscles by display name ("Chest"); match case-insensitively so a differently-cased key still colours its region.
+    private var muscleSets: [String: Int] {
+        stats.muscleSets30d.reduce(into: [:]) { $0[$1.key.capitalized, default: 0] += $1.value }
+    }
     private var stats: ProfileStats { ProfileStats(posts: page?.posts ?? []) }
 
     var body: some View {
@@ -158,24 +163,25 @@ struct FriendProfileView: View {
             ProfileFigure(label: "VOLUME", value: unit.compactVolume(stats.volumeKg30d))   // posted weights are kg
             ProfileFigure(label: "PRS", value: "\(stats.prs30d)", isPR: true)
         }
-        .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 16)
+        .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 17)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
 
-        if !stats.muscleSets30d.isEmpty {
+        if !muscleSets.isEmpty {
             SocialSectionLabel(title: "LAST 30 DAYS", ruled: false)
             HStack(spacing: 20) {
                 bodyMap
                 VStack(spacing: 8) {
-                    ForEach(MuscleSetsFormat.top(stats.muscleSets30d, count: 5, abbreviated: false), id: \.label) { m in
+                    ForEach(MuscleSetsFormat.top(muscleSets, count: 5, abbreviated: false), id: \.label) { m in
                         HStack {
-                            Text(m.label).font(.archivo(14, weight: .semibold)).foregroundStyle(Color.inkPrimary)
+                            Text(m.label.capitalized).font(.archivo(14, weight: .semibold)).foregroundStyle(Color.inkPrimary)
                             Spacer()
                             HStack(spacing: 0) {
                                 Text("\(m.count)").font(.spaceMono(13, weight: .bold)).foregroundStyle(Color.inkPrimary)
                                 Text(" SETS").font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
                             }
                         }
-                        .padding(.bottom, 6)
+                        .frame(height: 19.3)
+                        .padding(.bottom, 7)
                         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
                     }
                 }
@@ -183,8 +189,7 @@ struct FriendProfileView: View {
             .padding(.horizontal, 16).padding(.bottom, 8)
         }
 
-        SocialSectionLabel(title: "THIS WEEK", meta: "\(stats.trainedDaysThisWeek) OF 7 DAYS", ruled: false)
-        Rectangle().fill(Color.dsHairLine).frame(height: 1)
+        SocialSectionLabel(title: "THIS WEEK", meta: "\(stats.trainedDaysThisWeek) OF 7 DAYS")
 
         ForEach(stats.week, id: \.day) { day in
             dayRow(day)
@@ -200,9 +205,9 @@ struct FriendProfileView: View {
 
     /// The 30-day body map. A Supernova member's worked muscles are filled with Stardust in their accent; a free friend has none.
     private var bodyMap: some View {
-        let heat = BodyHeat.Intensities(muscleSets: stats.muscleSets30d)
+        let heat = BodyHeat.Intensities(muscleSets: muscleSets)
         return ZStack {
-            BodyHeat(intensities: heat)
+            if scheme == .dark { BodyHeat.darkSurface(heat) } else { BodyHeat(intensities: heat) }
             if let hex = memberHex, let palette = FriendMembership.palette(hex: hex) {
                 StardustMuscleOverlay(intensities: heat, palette: palette)
             }
@@ -218,14 +223,16 @@ struct FriendProfileView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack {
                         Text(name).font(.archivo(16, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                            .cssLineHeight(fontName: "Archivo-Bold", size: 16, multiple: 1.2)
                         Spacer()
                         Text("›").font(.spaceMono(16)).foregroundStyle(Color.inkGhost)
                     }
                     Text([post.templateName, "\(post.workingSetCount) sets"].compactMap { $0 }.joined(separator: " · "))
                         .font(.archivo(12)).foregroundStyle(Color.inkMuted)
+                        .cssLineHeight(fontName: "Archivo-Regular", size: 12, multiple: 1.4)
                 }
                 .padding(.vertical, 12).padding(.horizontal, 16)
-                .frame(minHeight: 44)
+                .frame(minHeight: 64)
                 .contentShape(Rectangle())
                 .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
             }

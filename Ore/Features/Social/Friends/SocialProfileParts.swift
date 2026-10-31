@@ -120,8 +120,35 @@ struct SocialProfileHeader<Trailing: View>: View {
     @ViewBuilder var trailing: () -> Trailing
 
     var body: some View {
-        MoreScreenHeader(title: title, overline: overline.isEmpty ? nil : overline, titleSize: 26, onBack: onBack, trailing: trailing)
-            .textCase(.uppercase)
+        VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 0) {
+                    if !overline.isEmpty {
+                        Text(overline).font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkMuted).lineLimit(1)
+                    }
+                    if !title.isEmpty {
+                        Text(title).font(.archivo(26, weight: .black)).tracking(0.5).foregroundStyle(Color.inkPrimary)
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                            .padding(.top, 4)
+                            .accessibilityIdentifier(AX.nav.title(title))
+                    }
+                }
+                Spacer(minLength: 0)
+                trailing()
+                // The design draws no back arrow (it is shown as a modal); this one is the 36 pt sunken square next to the action.
+                Button(action: onBack) {
+                    Text("‹").font(.archivo(18)).foregroundStyle(Color.inkPrimary)
+                        .frame(width: 36, height: 36).background(Color.surf2)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Back")
+                .accessibilityIdentifier(AX.nav.back)
+            }
+            .padding(.horizontal, 16).padding(.top, 6).padding(.bottom, 12)
+            Rectangle().fill(Color.dsHairLine).frame(height: 1)
+        }
+        .textCase(.uppercase)
     }
 }
 
@@ -152,6 +179,7 @@ struct ProfileFigure: View {
                 if isPR { PRStar(size: 13) }
                 Text(value).font(.spaceMono(20, weight: .bold)).foregroundStyle(isPR ? Color.prGold : Color.inkPrimary)
                     .lineLimit(1).minimumScaleFactor(0.6)
+                    .frame(height: 20)   // CSS line-height: 1
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -174,8 +202,10 @@ struct PersonListRow<Actions: View>: View {
                     PersonTile(name: name, accentHex: accentHex)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(name).font(.archivo(16, weight: .bold)).foregroundStyle(Color.inkPrimary).lineLimit(1)
+                            .cssLineHeight(fontName: "Archivo-Bold", size: 16, multiple: 1.2)
                         if let description, !description.isEmpty {
                             Text(description).font(.archivo(12)).foregroundStyle(Color.inkMuted).lineLimit(1)
+                                .cssLineHeight(fontName: "Archivo-Regular", size: 12, multiple: 1.4)
                         }
                     }
                     Spacer(minLength: 0)
@@ -187,7 +217,8 @@ struct PersonListRow<Actions: View>: View {
             HStack(spacing: 6) { actions() }
         }
         .padding(.vertical, 12).padding(.horizontal, 16)
-        .frame(minHeight: 44)
+        .frame(minHeight: (description ?? "").isEmpty ? 43 : 63, maxHeight: (description ?? "").isEmpty ? .infinity : 63)   // 12 + 19.2 + 3 + 16.8 + 12; the 1 pt rule below is outside it
+        .padding(.bottom, 1)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
     }
 }
@@ -233,7 +264,7 @@ struct SocialSectionLabel: View {
             if let meta { Text(meta) }
         }
         .font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkMuted)
-        .padding(.horizontal, 16).padding(.top, top).padding(.bottom, 8)
+        .padding(.horizontal, 16).padding(.top, top).padding(.bottom, ruled ? 9 : 8)   // 8 + the list's 1 pt top border
         .overlay(alignment: .bottom) { if ruled { Rectangle().fill(Color.dsHairLine).frame(height: 1) } }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)

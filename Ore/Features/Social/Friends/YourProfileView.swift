@@ -62,7 +62,7 @@ struct YourProfileView: View {
                         ProfileFigure(label: "FOLLOWERS", value: "\(followersCount)")
                         ProfileFigure(label: "FOLLOWING", value: "\(following.count)")
                     }
-                    .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 16)
+                    .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 17)
                     .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
 
                     SocialSectionLabel(title: "FOLLOWING", meta: "\(following.count)")
