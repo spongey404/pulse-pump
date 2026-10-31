@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The membership page's colours: the glitter is always behind the header, wordmark and glass card (white text there, in both
+/// The membership page's colours: the Stardust is always behind the header, wordmark and glass card (white text there, in both
 /// appearances); everything below the tabs follows the appearance. From the design's per-theme tokens.
 struct MemberPageTheme: Equatable {
     var dark: Bool
@@ -32,7 +32,7 @@ private extension Color {
 }
 
 /// The Account tab's accent picker: a swatch and an editable hex, ADJUST (hue, shade and saturation strips with − / + buttons),
-/// and the presets & recent row. Every change recolours the page glitter, the More card glitter and the app at once through
+/// and the presets & recent row. Every change recolours the page Stardust, the More card Stardust and the app at once through
 /// `AccentStore`. All the rules (curves, thresholds, palette) are `AccentMath` and the config's `picker` block.
 struct AccentPickerView: View {
     var theme: MemberPageTheme

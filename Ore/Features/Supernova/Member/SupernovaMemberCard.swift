@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The member's card at the top of More (design "Supernova Member Flow"): it replaces the profile row. Glitter in the member's
+/// The member's card at the top of More (design "Supernova Member Flow"): it replaces the profile row. Stardust in the member's
 /// accent behind white text; tapping it opens the membership page with the shared-element transition. It reports its frame and
 /// its "*" to `SupernovaTransition`, hides the "*" while the flyer stands in for it, and brings its text back after the close.
 struct SupernovaMemberCard: View {
@@ -22,7 +22,9 @@ struct SupernovaMemberCard: View {
                     HStack(alignment: .top) {
                         HStack(spacing: 0) {
                             Text("SUPERNOVA").opacity(text[0].opacity).offset(y: text[0].offset)
-                            Text("*").foregroundStyle(Color(hex: "#FFC83D"))
+                            // The flyer is an Archivo Black "*" scaled from 44 pt, so the card's is the same face (a Space Mono one
+                            // is a different shape and sits lower, which showed as a jump when the flyer landed).
+                            Text("*").font(.custom("Archivo-Black", size: Self.starSize)).foregroundStyle(Color(hex: "#FFC83D"))
                                 .opacity(transition.sourceAsteriskHidden(.member) ? 0 : 1)
                                 .transaction { $0.animation = nil }
                                 .background(GeometryReader { p in Color.clear.onChange(of: p.frame(in: .global), initial: true) { _, f in star = f; report() } })
@@ -63,8 +65,8 @@ struct SupernovaMemberCard: View {
             .background {
                 ZStack {
                     Color(hex: palette.accent.hex)
-                    StarFieldView(variant: "recapCard", budget: .more,
-                                  overrides: StarFieldParams.Overrides(palette: palette, density: config.card.count, fps: config.card.fps))   // recoloured live, no remount
+                    StardustView(variant: "recapCard", budget: .more,
+                                  overrides: StardustParams.Overrides(palette: palette, density: config.card.count, fps: config.card.fps))   // recoloured live, no remount
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: config.card.radius))
@@ -79,6 +81,9 @@ struct SupernovaMemberCard: View {
         .padding(.bottom, 18)
     }
 
+    /// Font size of the card's "*"; the flyer lands at this size (`SupernovaTransition.Source.starHeight` is a font size here).
+    private static let starSize: CGFloat = 11
+
     private func dateColumn(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(label).font(.spaceMono(7)).tracking(1.5).foregroundStyle(.white.opacity(0.8))
@@ -88,6 +93,6 @@ struct SupernovaMemberCard: View {
 
     private func report() {
         guard frame != .zero, star != .zero else { return }
-        transition.report(.member, rect: frame, asterisk: CGPoint(x: star.midX, y: star.midY), starHeight: star.height)
+        transition.report(.member, rect: frame, asterisk: CGPoint(x: star.midX, y: star.midY), starHeight: Double(Self.starSize))
     }
 }

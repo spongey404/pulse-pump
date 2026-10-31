@@ -182,6 +182,7 @@ struct ProgramsTabView: View {
                 } label: {
                     RoundedRectangle(cornerRadius: 10)
                         .fill(Color.oreAccent)
+                        .overlay { AccentFill().clipShape(RoundedRectangle(cornerRadius: 10)) }
                         .frame(width: 34, height: 34)
                         .overlay(
                             Image(systemName: "plus")
@@ -284,7 +285,7 @@ struct ProgramsTabView: View {
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 16)
                                 .frame(height: 32)
-                                .background(Color.oreAccent)
+                                .background { AccentFill() }
                                 .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                         .buttonStyle(PressScaleButtonStyle())

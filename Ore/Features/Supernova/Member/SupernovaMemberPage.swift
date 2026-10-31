@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// The Supernova membership page (design "Supernova Member Flow"): a full-page glitter in the member's accent, fixed behind the
+/// The Supernova membership page (design "Supernova Member Flow"): a full-page Stardust in the member's accent, fixed behind the
 /// scroll view and masked so it covers the top 65 % and fades to charcoal; white text on glass; sticky OVERVIEW · PERKS · ACCOUNT
 /// tabs. It grows out of the More card (`SupernovaTransition`, kind `.member`): its four content groups (header row, wordmark,
 /// card, tabs and content) arrive staggered, and its wordmark's "*" is where the flyer lands.
@@ -16,28 +16,28 @@ struct SupernovaMemberPage: View {
     @State private var transition = SupernovaTransition.shared
     @State private var tab: Int = {
         #if DEBUG
-        return Int(UserDefaults.standard.string(forKey: "debugMemberTab") ?? "") ?? 0   // `-debugMemberTab 0|1|2`
+        return Int(UserDefaults.standard.string(forKey: "debugMemberTab") ?? "") ?? 0   // `-debugMemberTab 0|1|2|3`
         #else
         return 0
         #endif
     }()
     @State private var anchor: CGRect?
-    /// How far the scroll view has moved up; the glitter travels with the content and leaves plain charcoal behind.
+    /// How far the scroll view has moved up; the Stardust travels with the content and leaves plain charcoal behind.
     @State private var scrolled: CGFloat = 0
     private var config: SupernovaMemberConfig { SupernovaMemberConfigStore.shared.current }
     private var palette: StarPalette { AccentStore.shared.pickedPalette }
     private var user: User? { users.first }
 
     @Environment(\.colorScheme) private var scheme
-    /// The page's text, rules and surfaces follow the appearance (charcoal and white, or paper and ink); what sits on the glitter
+    /// The page's text, rules and surfaces follow the appearance (charcoal and white, or paper and ink); what sits on the Stardust
     /// (header, wordmark, glass card) is white in both.
     private var t: MemberPageTheme { MemberPageTheme(dark: scheme == .dark) }
 
     var body: some View {
         ZStack(alignment: .top) {
             t.canvas.ignoresSafeArea()
-            StarFieldView(variant: "paywall", budget: .paywall,
-                          overrides: StarFieldParams.Overrides(palette: palette, density: config.page.count, speed: config.page.speed,
+            StardustView(variant: "paywall", budget: .paywall,
+                          overrides: StardustParams.Overrides(palette: palette, density: config.page.count, speed: config.page.speed,
                                                                gold: config.page.gold, sparkle: config.page.sparkle, goldPull: config.page.pull),
                           anchor: anchor)
                 .ignoresSafeArea()
@@ -63,6 +63,7 @@ struct SupernovaMemberPage: View {
                             switch tab {
                             case 0: overview
                             case 1: perks
+                            case 2: appearance
                             default: account
                             }
                         }
@@ -160,7 +161,7 @@ struct SupernovaMemberPage: View {
 
     private var tabs: some View {
         HStack(spacing: 0) {
-            ForEach(Array(["OVERVIEW", "PERKS", "ACCOUNT"].enumerated()), id: \.offset) { i, label in
+            ForEach(Array(["OVERVIEW", "PERKS", "APPEARANCE", "ACCOUNT"].enumerated()), id: \.offset) { i, label in
                 Button { tab = i } label: {
                     Text(label).font(.spaceMono(9, weight: .bold)).tracking(1.5)
                         .foregroundStyle(i == tab ? Color(hex: "#151A21") : (t.dark ? .white.opacity(0.8) : .white))
@@ -179,7 +180,7 @@ struct SupernovaMemberPage: View {
         .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 10)
         .frame(maxWidth: .infinity)
         .background {
-            // No blur and no band: the page glitter stays sharp behind the pinned tabs, with no hard edge.
+            // No blur and no band: the page Stardust stays sharp behind the pinned tabs, with no hard edge.
             Color.clear
         }
     }
@@ -188,7 +189,8 @@ struct SupernovaMemberPage: View {
         HStack(alignment: .firstTextBaseline) {
             Text(left); Spacer(minLength: 0); Text(right)
         }
-        .font(.spaceMono(9)).tracking(1.5).foregroundStyle(t.muted)
+        .font(.spaceMono(9)).tracking(1.5)
+        .modifier(StardustLegibleText(scrolled: scrolled, stops: config.page.maskStops, enabled: !t.dark, ink: t.muted))
         .padding(.horizontal, 16).padding(.top, 22).padding(.bottom, 8)
     }
 
@@ -317,12 +319,25 @@ struct SupernovaMemberPage: View {
         }
     }
 
+    // MARK: Appearance
+
+    private var appearance: some View {
+        VStack(spacing: 0) {
+            sectionLabel("ACCENT", "RECOLOURS YOUR CARD")
+            AccentPickerView(theme: t)
+            sectionLabel("BUTTONS", "")
+            Rectangle().fill(t.rule1).frame(height: 1)
+            OreToggleRow(label: "Stardust buttons", description: "Adds Stardust to every accent button. Uses a little more battery.",
+                         isOn: Binding(get: { AccentStore.shared.stardustSetting }, set: { AccentStore.shared.setStardustEnabled($0) }),
+                         identifier: AX.supernova.stardustEnabled)
+            Color.clear.frame(height: 40)
+        }
+    }
+
     // MARK: Account
 
     private var account: some View {
         VStack(spacing: 0) {
-            sectionLabel("ACCENT", "RECOLOURS YOUR CARD")
-            AccentPickerView(theme: t)
             sectionLabel("MEMBERSHIP", "")
             Rectangle().fill(t.rule1).frame(height: 1)
             let plan = service.planPriceLabel.map { service.planWord + " · " + $0.replacingOccurrences(of: " / YR", with: "").replacingOccurrences(of: " / MO", with: "") } ?? service.planWord
@@ -357,5 +372,38 @@ struct SupernovaMemberPage: View {
         .frame(minHeight: 48).padding(.horizontal, 16).padding(.bottom, 1)
         .overlay(alignment: .bottom) { Rectangle().fill(t.rule1).frame(height: 1) }
         .contentShape(Rectangle())
+    }
+}
+
+/// Light mode: text that sits over the page Stardust (the top of the tab content, before it scrolls away) turns white where the
+/// Stardust is, and goes back to the muted ink where the canvas shows. The Stardust's own vertical mask says how much is behind.
+private struct StardustLegibleText: ViewModifier {
+    var scrolled: CGFloat
+    var stops: [[Double]]
+    var enabled: Bool
+    /// The colour used where the canvas shows.
+    var ink: Color
+    @State private var screenY: CGFloat = 1000
+
+    /// Opacity of the Stardust at this text's place on the screen (the same stops the page masks it with).
+    private var stardustAlpha: Double {
+        let h = max(UIScreen.main.bounds.height, 1)
+        let at = Double((screenY + scrolled) / h)
+        guard let first = stops.first, let last = stops.last else { return 0 }
+        if at <= first[0] { return first[1] }
+        if at >= last[0] { return last[1] }
+        for (a, b) in zip(stops, stops.dropFirst()) where at <= b[0] {
+            let f = (at - a[0]) / max(b[0] - a[0], 0.0001)
+            return a[1] + (b[1] - a[1]) * f
+        }
+        return 0
+    }
+
+    func body(content: Content) -> some View {
+        // Fully on the Stardust: white. Fully on the canvas: the ink. Between: the Stardust's opacity picks the mix.
+        let a = enabled ? min(1, stardustAlpha * 1.6) : 0
+        return content
+            .foregroundStyle(ink.mix(with: .white.opacity(0.95), by: a))
+            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).midY } action: { screenY = $0 }
     }
 }

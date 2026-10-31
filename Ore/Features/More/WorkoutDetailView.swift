@@ -48,8 +48,8 @@ struct WorkoutDetailView: View {
 
                 if supernovaService.isSubscribed || supernovaService.isInFreeTrial {
                     Section {
-                        Toggle("Deload Week", isOn: $workout.isDeload)
-                            .tint(Color.accentInk)
+                        OreToggleRow(label: "Deload Week", isOn: $workout.isDeload)
+                            .listRowInsets(EdgeInsets()).listRowSeparator(.hidden)
                     }
                 }
 

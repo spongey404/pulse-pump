@@ -15,7 +15,7 @@ final class SupernovaMemberUITests: UITestCase {
             require(el(AX.supernova.memberBack), "the membership page, round \(round)", timeout: 10)
             RunLoop.current.run(until: Date().addingTimeInterval(1.8))   // the flight is done by about 0.8 s, the content by 1.6 s
             require(el(AX.supernova.memberEmptyHeadline), "a brand-new member sees the prompt, never a 0")
-            for tab in ["PERKS", "ACCOUNT", "OVERVIEW"] {
+            for tab in ["PERKS", "APPEARANCE", "ACCOUNT", "OVERVIEW"] {
                 tapID(AX.supernova.memberTab(tab))
                 RunLoop.current.run(until: Date().addingTimeInterval(0.3))
             }
@@ -29,7 +29,21 @@ final class SupernovaMemberUITests: UITestCase {
         }
     }
 
-    func testGlitterScrollsAwayWithThePage() {
+    func testStardustButtonsSwitchIsOnTheAppearanceTab() {
+        launch(LaunchConfig(email: LaunchConfig.uniqueEmail("gb"), scenario: .newUser, plus: true))
+        TabBar(t: self).more()
+        el(AX.supernova.memberCard).tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(1.8))
+        tapID(AX.supernova.memberTab("APPEARANCE"))
+        let toggle = el(AX.supernova.stardustEnabled)
+        require(toggle, "the Stardust buttons switch")
+        XCTAssertEqual(toggle.value as? String, "On", "on by default for a member")
+        toggle.tap()
+        XCTAssertEqual(el(AX.supernova.stardustEnabled).value as? String, "Off")
+        XCTAssertTrue(app.staticTexts["Adds Stardust to every accent button. Uses a little more battery."].exists, "the battery hint")
+    }
+
+    func testStardustScrollsAwayWithThePage() {
         launch(LaunchConfig(email: LaunchConfig.uniqueEmail("scr"), scenario: .newUser, plus: true))
         TabBar(t: self).more()
         el(AX.supernova.memberCard).tap()
@@ -51,7 +65,7 @@ final class SupernovaMemberUITests: UITestCase {
         TabBar(t: self).more()
         el(AX.supernova.memberCard).tap()
         RunLoop.current.run(until: Date().addingTimeInterval(1.8))
-        tapID(AX.supernova.memberTab("ACCOUNT"))
+        tapID(AX.supernova.memberTab("APPEARANCE"))
         let pink = el(AX.supernova.accentSwatch("FD4A9F"))
         require(pink, "the Pink preset")
         pink.tap()
@@ -72,7 +86,7 @@ final class SupernovaMemberUITests: UITestCase {
         TabBar(t: self).more()
         el(AX.supernova.memberCard).tap()
         RunLoop.current.run(until: Date().addingTimeInterval(1.8))
-        tapID(AX.supernova.memberTab("ACCOUNT"))
+        tapID(AX.supernova.memberTab("APPEARANCE"))
         let field = el(AX.supernova.accentHex)
         require(field, "the hex field")
         field.tap()
@@ -83,7 +97,7 @@ final class SupernovaMemberUITests: UITestCase {
         waitForExpectations(timeout: 10)
         el(AX.supernova.memberCard).tap()
         RunLoop.current.run(until: Date().addingTimeInterval(1.8))
-        tapID(AX.supernova.memberTab("ACCOUNT"))
+        tapID(AX.supernova.memberTab("APPEARANCE"))
         require(el(AX.supernova.accentSwatch("123456")), "the colour joined the recent row")
     }
 
@@ -98,12 +112,46 @@ final class SupernovaMemberUITests: UITestCase {
             TabBar(t: self).more()
             el(AX.supernova.memberCard).tap()
             RunLoop.current.run(until: Date().addingTimeInterval(1.8))
-            for (i, tab) in ["OVERVIEW", "PERKS", "ACCOUNT"].enumerated() {
+            for (i, tab) in ["OVERVIEW", "PERKS", "APPEARANCE", "ACCOUNT"].enumerated() {
                 tapID(AX.supernova.memberTab(tab))
                 RunLoop.current.run(until: Date().addingTimeInterval(0.6))
                 try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "\(dir)/\(mode)-\(i)-\(tab).png"))
             }
             app.terminate()
         }
+    }
+
+    /// Saves the card at rest and the transition held at the end of its close (`MEMBER_SHOTS=<dir>`), to compare the "*" flyer with the real one.
+    func testCloseEndsOnTheCardsAsterisk() throws {
+        guard let dir = ProcessInfo.processInfo.environment["MEMBER_SHOTS"] else { throw XCTSkip("set MEMBER_SHOTS to save screenshots") }
+        let first = LaunchConfig(email: LaunchConfig.uniqueEmail("cl"), scenario: .newUser, plus: true)
+        launch(first)
+        app.terminate()
+        for (name, extra) in [("rest", []), ("close-540", ["-debugTransition", "member-close:540"]), ("close-559", ["-debugTransition", "member-close:559"])] as [(String, [String])] {
+            var config = first.relaunch
+            config.extraArguments = ["-debugStartTab", "4", "-debugSignupNoStars", "1", "-devDataPlus", "1"] + extra
+            launch(config)
+            RunLoop.current.run(until: Date().addingTimeInterval(name == "rest" ? 2 : 6))
+            try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "\(dir)/\(name).png"))
+            app.terminate()
+        }
+    }
+
+    /// The card scrolled partly under the More header: opening and closing must start and end on what is visible (frames saved with `MEMBER_SHOTS`).
+    func testClosingFromAPartlyScrolledCardEndsOnTheVisiblePart() throws {
+        guard let dir = ProcessInfo.processInfo.environment["MEMBER_SHOTS"] else { throw XCTSkip("set MEMBER_SHOTS to save screenshots") }
+        launch(LaunchConfig(email: LaunchConfig.uniqueEmail("scl"), scenario: .newUser, plus: true))
+        TabBar(t: self).more()
+        let card = el(AX.supernova.memberCard)
+        require(card, "the membership card")
+        let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
+        from.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.62)))   // a small scroll
+        RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+        try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "\(dir)/scrolled-rest.png"))
+        card.tap()
+        require(el(AX.supernova.memberBack), "the membership page", timeout: 10)
+        RunLoop.current.run(until: Date().addingTimeInterval(1.8))
+        tapID(AX.supernova.memberBack)
+        for i in 0..<6 { try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "\(dir)/scrolled-close-\(i).png")) }
     }
 }

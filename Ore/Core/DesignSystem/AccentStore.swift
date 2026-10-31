@@ -14,12 +14,45 @@ final class AccentStore {
     static let shared = AccentStore()
     static let defaultsPrefix = "accentState.v2"
 
-    private struct Saved: Codable { var pick: AccentPick; var swatches: [AccentSwatch] }
+    private struct Saved: Codable {
+        var pick: AccentPick
+        var swatches: [AccentSwatch]
+        var stardustEnabled: Bool?
+        /// The saved blob still has the pre-rename `glitterButtons` key: it is read once and rewritten as `stardustEnabled` at once.
+        var migrated = false
+
+        enum CodingKeys: String, CodingKey { case pick, swatches, stardustEnabled, legacyGlitterButtons = "glitterButtons" }
+
+        init(pick: AccentPick, swatches: [AccentSwatch], stardustEnabled: Bool?) {
+            self.pick = pick; self.swatches = swatches; self.stardustEnabled = stardustEnabled
+        }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            pick = try c.decode(AccentPick.self, forKey: .pick)
+            swatches = try c.decode([AccentSwatch].self, forKey: .swatches)
+            if let now = try c.decodeIfPresent(Bool.self, forKey: .stardustEnabled) {
+                stardustEnabled = now
+            } else if let old = try c.decodeIfPresent(Bool.self, forKey: .legacyGlitterButtons) {
+                stardustEnabled = old
+                migrated = true
+            }
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(pick, forKey: .pick)
+            try c.encode(swatches, forKey: .swatches)
+            try c.encodeIfPresent(stardustEnabled, forKey: .stardustEnabled)
+        }
+    }
 
     private let defaults: UserDefaults
     private var accountKey: String
     private(set) var pick: AccentPick
     private(set) var swatches: [AccentSwatch]
+    /// The member's setting: filled accent buttons get the Stardust behind their label (Appearance tab).
+    private(set) var stardustSetting: Bool
     private(set) var isMember: Bool
 
     init(defaults: UserDefaults = .standard, account: String? = nil) {
@@ -28,6 +61,7 @@ final class AccentStore {
         let loaded = Self.load(defaults: defaults, key: Self.key(account))
         pick = loaded.pick
         swatches = loaded.swatches
+        stardustSetting = loaded.stardustEnabled ?? true
         isMember = SupernovaPaywallGate.isMember(defaults)
     }
 
@@ -43,9 +77,11 @@ final class AccentStore {
     }
 
     private static func load(defaults: UserDefaults, key: String) -> Saved {
-        let fresh = Saved(pick: defaultPick, swatches: AccentMath.defaultSwatches(picker))
+        let fresh = Saved(pick: defaultPick, swatches: AccentMath.defaultSwatches(picker), stardustEnabled: true)
         guard let data = defaults.data(forKey: key), let saved = try? JSONDecoder().decode(Saved.self, from: data) else { return fresh }
-        return Saved(pick: saved.pick, swatches: AccentMath.normalized(saved.swatches, picker: picker))
+        let result = Saved(pick: saved.pick, swatches: AccentMath.normalized(saved.swatches, picker: picker), stardustEnabled: saved.stardustEnabled)
+        if saved.migrated, let out = try? JSONEncoder().encode(result) { defaults.set(out, forKey: key) }   // read the old key, write the new one, drop the old
+        return result
     }
 
     @ObservationIgnored private var saveTask: Task<Void, Never>?
@@ -63,7 +99,7 @@ final class AccentStore {
     func flush() { saveTask?.cancel(); saveTask = nil; save() }
 
     private func save() {
-        guard let data = try? JSONEncoder().encode(Saved(pick: pick, swatches: swatches)) else { return }
+        guard let data = try? JSONEncoder().encode(Saved(pick: pick, swatches: swatches, stardustEnabled: stardustSetting)) else { return }
         defaults.set(data, forKey: Self.key(accountKey == "-" ? nil : accountKey))
     }
 
@@ -78,11 +114,20 @@ final class AccentStore {
     /// The name shown under the hex field.
     var pickedName: String { AccentMath.name(for: pick, in: swatches) }
 
-    /// The picker changes the colour (live: the page glitter, the card glitter and the app follow).
+    /// The picker changes the colour (live: the page Stardust, the card Stardust and the app follow).
     func set(_ new: AccentPick) {
         guard new != pick else { return }
         pick = new
         saveSoon()
+    }
+
+    /// Filled accent buttons show the Stardust: the member's setting, and only while the membership is active.
+    var stardustEnabled: Bool { isMember && stardustSetting }
+
+    func setStardustEnabled(_ on: Bool) {
+        guard on != stardustSetting else { return }
+        stardustSetting = on
+        flush()
     }
 
     /// The member leaves the page: the colour goes to the front of the recent row.
@@ -102,6 +147,7 @@ final class AccentStore {
         let loaded = Self.load(defaults: defaults, key: Self.key(uid))
         pick = loaded.pick
         swatches = loaded.swatches
+        stardustSetting = loaded.stardustEnabled ?? true
     }
 
     /// Re-reads membership (after a purchase, a restore, or the status refresh).
@@ -118,7 +164,7 @@ final class AccentStore {
     /// The catalogue's tint, 8% in both schemes.
     var accentSoft: Color { usesOreAccent ? .accentSoftDefault : Color(hex: active.hexString).opacity(0.08) }
 
-    /// Palette for the member glitter, derived from the colour (`AccentMath.palette`).
+    /// Palette for the member Stardust, derived from the colour (`AccentMath.palette`).
     var starPalette: StarPalette { AccentMath.palette(for: active, rule: Self.picker.palette) }
     /// The same for what the member has picked, even while it isn't in use (the membership page and card).
     var pickedPalette: StarPalette { AccentMath.palette(for: pick, rule: Self.picker.palette) }

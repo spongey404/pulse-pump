@@ -24,13 +24,13 @@ struct CubicBezier: Equatable {
     static let easeOut = CubicBezier([0, 0, 0.58, 1])
 }
 
-/// What the transition draws at one instant: the paywall's mask, its content groups, the flying asterisk, the star field's
+/// What the transition draws at one instant: the paywall's mask, its content groups, the flying asterisk, the Stardust's
 /// morph toward the banner, and the banner's own text. Computed from the time and the pre-measured geometry only, so every
 /// piece comes from the same clock and can't drift (and it is testable without a screen).
 struct SupernovaTransitionFrame: Equatable {
     struct Piece: Equatable { var opacity: Double; var offset: Double }
     struct Flyer: Equatable { var center: CGPoint; var scale: Double }
-    /// Which source's own background the star field draws while the page closes into it.
+    /// Which source's own background the Stardust draws while the page closes into it.
     enum MorphStyle: Equatable { case banner, card }
     struct Morph: Equatable { var rect: CGRect; var alpha: Double; var style: MorphStyle = .banner }
 
@@ -58,6 +58,11 @@ enum SupernovaTransitionMath {
     static func lerp(_ a: CGPoint, _ b: CGPoint, _ e: Double) -> CGPoint { CGPoint(x: lerp(a.x, b.x, e), y: lerp(a.y, b.y, e)) }
     static func lerp(_ a: CGRect, _ b: CGRect, _ e: Double) -> CGRect {
         CGRect(x: lerp(a.minX, b.minX, e), y: lerp(a.minY, b.minY, e), width: lerp(a.width, b.width, e), height: lerp(a.height, b.height, e))
+    }
+    /// How far `rect` has grown from `source` toward `screen`, 0…1 (by height).
+    static func grown(_ rect: CGRect, from source: CGRect, to screen: CGRect) -> Double {
+        let span = screen.height - source.height
+        return span > 1 ? clamp((rect.height - source.height) / span) : 1
     }
     static func clamp(_ x: Double) -> Double { min(1, max(0, x)) }
 
@@ -110,7 +115,7 @@ enum SupernovaTransitionMath {
                                  flyer: nil, morph: nil, bannerText: hidden(c.content.bannerItems, offset: c.content.bannerOffsetPt))
     }
 
-    /// Mounted but not started: the paywall is there (its star field already running) but not visible, at the banner's rect.
+    /// Mounted but not started: the paywall is there (its Stardust already running) but not visible, at the banner's rect.
     static func measuring(g: SupernovaTransitionGeometry, config c: SupernovaTransitionConfig) -> SupernovaTransitionFrame {
         SupernovaTransitionFrame(maskRect: g.bannerRect, maskRadius: c.maskRadiusStart, paywallOpacity: 0,
                                  groups: hidden(c.content.groups, offset: c.content.offsetPt), flyer: nil, morph: nil,

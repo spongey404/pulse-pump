@@ -5,8 +5,8 @@ import SwiftUI
 struct SupernovaDebugScreen: View {
     let screen: String
     var body: some View {
-        if screen == "starfield" {
-            StarFieldDevPanel()
+        if screen == "stardust" {
+            StardustDevPanel()
         } else {
             SupernovaPaywallView(onSubscribed: {}, onTrainFree: {})
         }

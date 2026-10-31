@@ -19,7 +19,7 @@ struct MoreTabView: View {
     #endif
     @State private var showSignOutAlert = false
     #if DEBUG
-    @State private var showStarFieldPanel = false
+    @State private var showStardustPanel = false
     #endif
     @State private var showTutorialDraftAlert = false
     @Query(filter: #Predicate<Workout> { $0.isDraft && $0.deletedAt == nil }) private var drafts: [Workout]
@@ -60,7 +60,7 @@ struct MoreTabView: View {
             SupernovaTransition.shared.open(isFree ? .paywall : .member, fromSource: false)
         }
         #if DEBUG
-        .sheet(isPresented: $showStarFieldPanel) { StarFieldDevPanel() }
+        .sheet(isPresented: $showStardustPanel) { StardustDevPanel() }
         #endif
     }
 
@@ -85,7 +85,7 @@ struct MoreTabView: View {
                     .cssLineHeight(fontName: "Archivo-Black", size: 28, multiple: 1.0)
                     .accessibilityIdentifier(AX.more.screen)
                     #if DEBUG
-                    .onLongPressGesture(minimumDuration: 1.0) { showStarFieldPanel = true }   // hidden glitter tuning panel
+                    .onLongPressGesture(minimumDuration: 1.0) { showStardustPanel = true }   // hidden Stardust tuning panel
                     #endif
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 16)
@@ -100,7 +100,7 @@ struct MoreTabView: View {
                         statsRow
                         SupernovaBanner()
                     } else {
-                        // Members: the membership card takes the profile row's place; no glitter anywhere else.
+                        // Members: the membership card takes the profile row's place; no Stardust anywhere else.
                         SupernovaMemberCard(name: user?.name ?? "Athlete", username: memberHandle, program: memberProgram, service: supernovaService)
                         statsRow
                     }
@@ -140,6 +140,11 @@ struct MoreTabView: View {
                     Spacer().frame(height: 32)
                 }
             }
+            // What the list shows (the card or banner may be scrolled partly out of it): the Supernova transition grows from, and
+            // shrinks back to, only that part.
+            .background(GeometryReader { p in
+                Color.clear.onChange(of: p.frame(in: .global), initial: true) { _, f in SupernovaTransition.shared.reportViewport(f) }
+            })
         }
         .background(Color.canvasBg.ignoresSafeArea())
         .alert("Finish your workout first", isPresented: $showTutorialDraftAlert) {

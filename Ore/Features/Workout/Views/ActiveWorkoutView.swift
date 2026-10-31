@@ -691,7 +691,7 @@ struct ActiveWorkoutView: View {
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 48)
-                            .background(Color.oreAccent)
+                            .background { AccentFill() }
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                     .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.97))

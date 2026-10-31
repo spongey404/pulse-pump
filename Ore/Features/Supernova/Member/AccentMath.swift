@@ -27,7 +27,7 @@ struct AccentSwatch: Codable, Equatable {
     var pick: AccentPick { AccentPick(h: h, s: s, l: l, hex: hex) }
 }
 
-/// The picker's rules, pure (no SwiftUI): colour conversion, the glitter palette derived from a colour, how a slider edit
+/// The picker's rules, pure (no SwiftUI): colour conversion, the Stardust palette derived from a colour, how a slider edit
 /// changes the colour, the hold-to-repeat and fine-scrub curves, and how the recent row is kept. Every number comes from
 /// `SupernovaMemberConfig.Picker`.
 enum AccentMath {
@@ -74,7 +74,7 @@ enum AccentMath {
         return "#" + t.uppercased()
     }
 
-    // MARK: Glitter palette
+    // MARK: Stardust palette
 
     /// [g0, g1, g2] as hex plus the glow and veil, from the picked colour.
     static func palette(for pick: AccentPick, rule: SupernovaMemberConfig.Picker.PaletteRule) -> StarPalette {

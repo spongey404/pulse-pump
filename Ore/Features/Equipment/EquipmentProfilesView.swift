@@ -59,6 +59,7 @@ struct EquipmentProfilesView: View {
             Button { showCreate = true } label: {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color.oreAccent)
+                    .overlay { AccentFill().clipShape(RoundedRectangle(cornerRadius: 8)) }
                     .frame(width: 30, height: 30)
                     .overlay(
                         Text("+")
@@ -291,7 +292,7 @@ struct EquipmentProfilesView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 20)
                     .frame(height: 40)
-                    .background(Color.oreAccent)
+                    .background { AccentFill() }
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)

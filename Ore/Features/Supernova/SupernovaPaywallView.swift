@@ -1,8 +1,8 @@
 import SwiftUI
 import StoreKit
 
-/// The full-screen Supernova paywall, laid out from the Claude Design file `Supernova Final.dc.html`: glitter behind
-/// everything that melts into the dark free strip at the bottom, the wordmark with its gold asterisk (the glitter's
+/// The full-screen Supernova paywall, laid out from the Claude Design file `Supernova Final.dc.html`: Stardust behind
+/// everything that melts into the dark free strip at the bottom, the wordmark with its gold asterisk (the Stardust's
 /// gold attractor), four starred features, one white CTA, and the way out ("TRAIN FREE").
 ///
 /// Always dark, like the design. Shown once, at the end of first-run onboarding (`SupernovaPaywallGate`).
@@ -43,9 +43,9 @@ struct SupernovaPaywallView: View {
     var body: some View {
         ZStack {
             Color.canvasBg.ignoresSafeArea()
-            StarFieldView(variant: "paywall", budget: .paywall, anchor: anchor)
+            StardustView(variant: "paywall", budget: .paywall, anchor: anchor)
                 .ignoresSafeArea()
-            // The glitter melts into the free strip: clear to 66%, canvas at 55% by 78%, solid from 89%.
+            // The Stardust melts into the free strip: clear to 66%, canvas at 55% by 78%, solid from 89%.
             LinearGradient(stops: [
                 .init(color: .clear, location: 0),
                 .init(color: .clear, location: 0.66),

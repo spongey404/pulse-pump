@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Where a StarField's frame budget comes from.
-enum StarFieldBudget {
+/// Where a Stardust's frame budget comes from.
+enum StardustBudget {
     /// Full speed, dropping to the idle rate after `idleAfterMs` (the paywall).
     case paywall
     /// Capped, and frozen on its last frame after `settleAfterMs` (the More tab). 0 = never freeze.
@@ -11,63 +11,63 @@ enum StarFieldBudget {
 /// Drives one field: owns the engine and reuses it frame to frame (nothing is allocated per frame except the few
 /// batched paths). A class, so the Canvas closure can step it without touching SwiftUI state.
 @MainActor
-final class StarFieldRunner {
-    var params: StarFieldParams   // `palette` may change while it runs (the member's accent picker); nothing else does
-    private var engine: StarFieldEngine?
+final class StardustRunner {
+    var params: StardustParams   // `palette` may change while it runs (the member's accent picker); nothing else does
+    private var engine: StardustEngine?
     private let seed = UInt64.random(in: 1...UInt64.max)
     /// This view's top-left in global coordinates, and the anchor's centre in global coordinates.
     var origin: CGPoint = .zero
     var anchorGlobal: CGPoint?
 
-    init(params: StarFieldParams) { self.params = params }
+    init(params: StardustParams) { self.params = params }
 
     var particleCount: Int { engine?.count ?? 0 }
 
     func frame(size: CGSize, t: Double) -> (dots: [StarDot], flares: [StarFlare]) {
-        if engine == nil || engine!.size != size { engine = StarFieldEngine(params: params, size: size, seed: seed) }
+        if engine == nil || engine!.size != size { engine = StardustEngine(params: params, size: size, seed: seed) }
         let anchor = anchorGlobal.map { CGPoint(x: $0.x - origin.x, y: $0.y - origin.y) }
         engine!.step(t: t, anchor: anchor)
         return (engine!.dots, engine!.flares)
     }
 }
 
-/// The glitter: a gradient, two drifting glows, a few hundred twinkling stars, a veil. Everything tunable comes from
-/// `StarFieldConfig` (see `starfield.config.json`); this view only draws what `StarFieldEngine` computes.
+/// The Stardust: a gradient, two drifting glows, a few hundred twinkling stars, a veil. Everything tunable comes from
+/// `StardustConfig` (see `stardust.config.json`); this view only draws what `StardustEngine` computes.
 ///
 /// Drawing is batched: stars of one colour and one (quantised) brightness are a single path and a single fill, and the
 /// gradient is the only full-view fill. The timeline is paused whenever it can't be seen: off screen, app in the
 /// background, Low Power Mode, Reduce Motion (one still frame), or once a `.more` field has settled.
-struct StarFieldView: View {
+struct StardustView: View {
     var variant: String = "paywall"
-    var budget: StarFieldBudget = .more
-    var overrides: StarFieldParams.Overrides = .init()
+    var budget: StardustBudget = .more
+    var overrides: StardustParams.Overrides = .init()
     /// Frame of the gold anchor (the wordmark's asterisk) in global coordinates.
     var anchor: CGRect? = nil
 
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// While the paywall closes into the More banner: the banner's own background, drawn over the paywall's inside the
-    /// shrinking rect (under the particles), so the last frame is the banner and the glitter never freezes.
-    @Environment(\.starFieldMorph) private var morph
-    @State private var runner: StarFieldRunner
+    /// shrinking rect (under the particles), so the last frame is the banner and the Stardust never freezes.
+    @Environment(\.stardustMorph) private var morph
+    @State private var runner: StardustRunner
     @State private var start = Date()
     @State private var visible = false
     @State private var settled = false
     @State private var idle = false
     @State private var lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
-    private let config: StarFieldConfig
+    private let config: StardustConfig
 
-    init(variant: String = "paywall", budget: StarFieldBudget = .more, overrides: StarFieldParams.Overrides = .init(),
-         anchor: CGRect? = nil, config: StarFieldConfig? = nil) {
+    init(variant: String = "paywall", budget: StardustBudget = .more, overrides: StardustParams.Overrides = .init(),
+         anchor: CGRect? = nil, config: StardustConfig? = nil) {
         self.variant = variant
         self.budget = budget
         self.overrides = overrides
         self.anchor = anchor
-        let cfg = config ?? StarFieldConfigStore.shared.current
+        let cfg = config ?? StardustConfigStore.shared.current
         self.config = cfg
         var o = overrides
         o.fps = overrides.fps ?? (budget == .paywall ? cfg.fps.paywall : cfg.fps.more)
-        _runner = State(initialValue: StarFieldRunner(params: StarFieldParams(config: cfg, variant: variant, overrides: o)))
+        _runner = State(initialValue: StardustRunner(params: StardustParams(config: cfg, variant: variant, overrides: o)))
     }
 
     private var fps: Int { budget == .paywall && idle ? config.fps.paywallIdle : runner.params.fps }

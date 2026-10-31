@@ -2,52 +2,52 @@ import Testing
 import Foundation
 @testable import Ore
 
-struct StarFieldTests {
-    private let config = StarFieldConfig.fallback
+struct StardustTests {
+    private let config = StardustConfig.fallback
     private let phone = CGSize(width: 390, height: 844)
 
-    private func engine(_ variant: String, size: CGSize? = nil, overrides: StarFieldParams.Overrides = .init(), seed: UInt64 = 7) -> StarFieldEngine {
-        StarFieldEngine(params: StarFieldParams(config: config, variant: variant, overrides: overrides), size: size ?? phone, seed: seed)
+    private func engine(_ variant: String, size: CGSize? = nil, overrides: StardustParams.Overrides = .init(), seed: UInt64 = 7) -> StardustEngine {
+        StardustEngine(params: StardustParams(config: config, variant: variant, overrides: overrides), size: size ?? phone, seed: seed)
     }
 
     // MARK: config
 
     @Test func theBundledJSONMatchesTheShippedFallback() throws {
-        let url = try #require(Bundle.main.url(forResource: "starfield.config", withExtension: "json"),
-                               "starfield.config.json ships in the app bundle")
-        let decoded = try #require(StarFieldConfig.load(from: Data(contentsOf: url)))
-        #expect(decoded == StarFieldConfig.fallback, "the JSON (shared with Android) and the Swift fallback must not drift apart")
+        let url = try #require(Bundle.main.url(forResource: "stardust.config", withExtension: "json"),
+                               "stardust.config.json ships in the app bundle")
+        let decoded = try #require(StardustConfig.load(from: Data(contentsOf: url)))
+        #expect(decoded == StardustConfig.fallback, "the JSON (shared with Android) and the Swift fallback must not drift apart")
     }
 
     @Test func aBrokenRemotePayloadIsIgnored() async {
         await MainActor.run {
-            let store = StarFieldConfigStore()
+            let store = StardustConfigStore()
             #expect(!store.applyRemote(json: Data("{ nope".utf8)))
             #expect(store.current == store.base)
         }
     }
 
     @Test func variantsMergeOverTheGlobalDefaults() {
-        let full = StarFieldParams(config: config, variant: "paywall")
+        let full = StardustParams(config: config, variant: "paywall")
         #expect(!full.mini && !full.compact && full.speed == 1.1 && full.pull == 180 && full.minCount == 40)
-        let banner = StarFieldParams(config: config, variant: "banner")
+        let banner = StardustParams(config: config, variant: "banner")
         #expect(banner.compact && !banner.mini)
         #expect(abs(banner.pull - 180 * 0.45) < 1e-9, "the banner pulls over 45% of the radius")
-        let tag = StarFieldParams(config: config, variant: "tag")
+        let tag = StardustParams(config: config, variant: "tag")
         #expect(tag.mini && tag.minCount == 26 && tag.sizeScale == 0.5)
         #expect(abs(tag.speed - 1.1 * 0.2) < 1e-9 && abs(tag.pull - 180 * 0.12) < 1e-9)
-        #expect(StarFieldParams(config: config, variant: "avatar").pull == 0, "the avatar has no pull")
-        #expect(StarFieldParams(config: config, variant: "recapCard").minCount == 120)
-        #expect(StarFieldParams(config: config, variant: "rowIcon").minCount == 18)
+        #expect(StardustParams(config: config, variant: "avatar").pull == 0, "the avatar has no pull")
+        #expect(StardustParams(config: config, variant: "recapCard").minCount == 120)
+        #expect(StardustParams(config: config, variant: "rowIcon").minCount == 18)
     }
 
     @Test func overridesWinOverTheConfig() {
-        let p = StarFieldParams(config: config, variant: "paywall", overrides: .init(density: 300, speed: 2, gold: 0.2, sparkle: 1, goldPull: 50, fps: 24))
+        let p = StardustParams(config: config, variant: "paywall", overrides: .init(density: 300, speed: 2, gold: 0.2, sparkle: 1, goldPull: 50, fps: 24))
         #expect(p.count == 300 && p.speed == 2 && p.gold == 0.2 && p.sparkle == 1 && p.pull == 50 && p.fps == 24)
     }
 
     @Test func aMiniSwaysLessAndFlashesMore() {
-        let mini = StarFieldParams(config: config, variant: "tag"), full = StarFieldParams(config: config, variant: "paywall")
+        let mini = StardustParams(config: config, variant: "tag"), full = StardustParams(config: config, variant: "paywall")
         #expect(mini.swayBase == 1.5 && mini.swayPerSize == 2 && full.swayBase == 6 && full.swayPerSize == 5)
         #expect(mini.flashProb == 0.003 && mini.flashDecay == 0.08 && full.flashProb == 0.0015 && full.flashDecay == 0.04)
         #expect(mini.flareLength == 3 && mini.flareFlashLength == 4 && mini.flareWidth == 0.6)
@@ -173,17 +173,17 @@ struct StarFieldTests {
 
 @MainActor
 struct RemoteConfigGuardTests {
-    @Test func aRemoteStarFieldConfigWithAbsurdOrNonFiniteNumbersIsRejected() throws {
+    @Test func aRemoteStardustConfigWithAbsurdOrNonFiniteNumbersIsRejected() throws {
         func json(_ edit: (inout [String: Any]) -> Void) throws -> Data {
-            let url = try #require(Bundle.main.url(forResource: "starfield.config", withExtension: "json"))
+            let url = try #require(Bundle.main.url(forResource: "stardust.config", withExtension: "json"))
             var obj = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
             edit(&obj)
             return try JSONSerialization.data(withJSONObject: obj)
         }
-        #expect(StarFieldConfig.load(from: try json { _ in }) == StarFieldConfig.fallback, "the shipped file is valid")
-        #expect(StarFieldConfig.load(from: try json { $0["density"] = 1e12 }) == nil, "millions of particles")
-        #expect(StarFieldConfig.load(from: try json { $0["density"] = -5 }) == nil)
-        #expect(StarFieldConfig.load(from: try json { $0["fps"] = ["paywall": 0, "paywallIdle": 30, "more": 30] }) == nil)
-        #expect(StarFieldConfig.load(from: try json { $0["speed"] = 1e300 }) == nil)
+        #expect(StardustConfig.load(from: try json { _ in }) == StardustConfig.fallback, "the shipped file is valid")
+        #expect(StardustConfig.load(from: try json { $0["density"] = 1e12 }) == nil, "millions of particles")
+        #expect(StardustConfig.load(from: try json { $0["density"] = -5 }) == nil)
+        #expect(StardustConfig.load(from: try json { $0["fps"] = ["paywall": 0, "paywallIdle": 30, "more": 30] }) == nil)
+        #expect(StardustConfig.load(from: try json { $0["speed"] = 1e300 }) == nil)
     }
 }

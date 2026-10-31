@@ -47,7 +47,7 @@ struct StarPalette: Equatable {
         self.deep = deep; self.accent = accent; self.light = light; self.blob = blob; self.veil = veil
     }
 
-    init?(_ p: StarFieldConfig.Palette) {
+    init?(_ p: StardustConfig.Palette) {
         guard p.stops.count == 3, let d = StarRGBA(css: p.stops[0]), let a = StarRGBA(css: p.stops[1]),
               let l = StarRGBA(css: p.stops[2]), let b = StarRGBA(css: p.blob), let v = StarRGBA(css: p.veil) else { return nil }
         self.init(deep: d, accent: a, light: l, blob: b, veil: v)

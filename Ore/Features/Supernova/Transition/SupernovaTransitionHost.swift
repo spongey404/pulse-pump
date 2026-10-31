@@ -3,17 +3,17 @@ import SwiftUI
 /// What the paywall's six content groups show right now (header label, wordmark, subhead, feature list, CTA block, free
 /// strip): opacity and a downward offset, from the transition's clock. Empty = everything shown.
 private struct PaywallRevealKey: EnvironmentKey { static let defaultValue: [SupernovaTransitionFrame.Piece] = [] }
-/// The banner-look morph the paywall's star field draws while it closes.
-private struct StarFieldMorphKey: EnvironmentKey { static let defaultValue: SupernovaTransitionFrame.Morph? = nil }
+/// The banner-look morph the paywall's Stardust draws while it closes.
+private struct StardustMorphKey: EnvironmentKey { static let defaultValue: SupernovaTransitionFrame.Morph? = nil }
 
 extension EnvironmentValues {
     var paywallReveal: [SupernovaTransitionFrame.Piece] {
         get { self[PaywallRevealKey.self] }
         set { self[PaywallRevealKey.self] = newValue }
     }
-    var starFieldMorph: SupernovaTransitionFrame.Morph? {
-        get { self[StarFieldMorphKey.self] }
-        set { self[StarFieldMorphKey.self] = newValue }
+    var stardustMorph: SupernovaTransitionFrame.Morph? {
+        get { self[StardustMorphKey.self] }
+        set { self[StardustMorphKey.self] = newValue }
     }
 }
 
@@ -29,7 +29,16 @@ extension View {
 struct SupernovaMaskShape: Shape {
     var rect: CGRect
     var radius: Double
-    func path(in _: CGRect) -> Path { Path(roundedRect: rect, cornerRadius: radius, style: .continuous) }
+    /// Corner radii of the edges where the source was cut off by the list's edge: they stay square at the source and round off as the
+    /// mask grows (0 = square, 1 = `radius`).
+    var topRound: Double = 1
+    var bottomRound: Double = 1
+
+    func path(in _: CGRect) -> Path {
+        if topRound >= 1, bottomRound >= 1 { return Path(roundedRect: rect, cornerRadius: radius, style: .continuous) }
+        let t = radius * topRound, b = radius * bottomRound
+        return UnevenRoundedRectangle(topLeadingRadius: t, bottomLeadingRadius: b, bottomTrailingRadius: b, topTrailingRadius: t, style: .continuous).path(in: rect)
+    }
 }
 
 /// The gold "*" that flies between the banner and the wordmark. Rendered at the large size and scaled down, never a
@@ -79,6 +88,14 @@ struct SupernovaTransitionHost<Content: View>: View {
         .onAppear { transition.screen = UIScreen.main.bounds }
     }
 
+    /// The page's mask at this frame; an edge the source was cut off at stays square until the mask has grown past it.
+    private func mask(_ f: SupernovaTransitionFrame, origin: CGPoint) -> SupernovaMaskShape {
+        let clip = transition.clip
+        let grown = SupernovaTransitionMath.grown(f.maskRect, from: transition.sourceRect, to: transition.screen)
+        return SupernovaMaskShape(rect: f.maskRect.offsetBy(dx: -origin.x, dy: -origin.y), radius: f.maskRadius,
+                                  topRound: clip.top ? grown : 1, bottomRound: clip.bottom ? grown : 1)
+    }
+
     /// How far the More layer is pushed back (0 at rest, 1 fully).
     private var hubProgress: Double {
         #if DEBUG
@@ -107,13 +124,16 @@ struct SupernovaTransitionHost<Content: View>: View {
                         }
                     }
                         .environment(\.paywallReveal, f.groups)
-                        .environment(\.starFieldMorph, f.morph)
-                        .clipShape(SupernovaMaskShape(rect: f.maskRect.offsetBy(dx: -origin.x, dy: -origin.y), radius: f.maskRadius))
+                        .environment(\.stardustMorph, f.morph)
+                        .clipShape(mask(f, origin: origin))
                         .opacity(opacity)
                         .allowsHitTesting(transition.acceptsInput)
                     if var fl = f.flyer, transition.isShared {
                         let _ = { fl.center = CGPoint(x: fl.center.x - origin.x, y: fl.center.y - origin.y) }()
                         SupernovaFlyer(flyer: fl, config: transition.config.flyer)
+                            // A "*" that started out of sight (scrolled under the header) shows only inside the page's mask, so it
+                            // slides out of view with the card instead of popping in over the header.
+                            .clipShape(transition.clip.starHidden ? mask(f, origin: origin) : SupernovaMaskShape(rect: CGRect(origin: .zero, size: proxy.size), radius: 0))
                     }
                 }
                 .frame(width: proxy.size.width, height: proxy.size.height)

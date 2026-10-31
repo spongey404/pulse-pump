@@ -481,7 +481,7 @@ struct BodyMapTabView: View {
                 } label: {
                     Text("VIEW ›").font(.archivo(13, weight: .black)).tracking(1.5).foregroundStyle(.white)
                         .padding(.horizontal, 18).frame(height: 44)
-                        .background(Color.oreAccent)
+                        .background { AccentFill() }
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.plain)

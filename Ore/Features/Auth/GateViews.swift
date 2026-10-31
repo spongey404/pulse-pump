@@ -59,7 +59,7 @@ struct GateMessageView: View {
                     Text(primary.label)
                         .font(.archivo(19, weight: .black)).tracking(2).foregroundStyle(.white)
                         .frame(maxWidth: .infinity).frame(height: 52)
-                        .background(Color.oreAccent).clipShape(RoundedRectangle(cornerRadius: 12))
+                        .background { AccentFill() }.clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.plain)
                 if let secondary {

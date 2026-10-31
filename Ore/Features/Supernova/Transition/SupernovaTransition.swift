@@ -8,7 +8,7 @@ import Observation
 /// This object owns the state machine and the clock; `SupernovaTransitionMath` turns (phase, time, geometry) into what
 /// to draw, so every piece comes from one clock. Geometry is measured before the animation starts, never during.
 ///
-///   closed → measuring (paywall mounted, invisible, star field already running) → opening → open
+///   closed → measuring (paywall mounted, invisible, Stardust already running) → opening → open
 ///   open → closing → revealing (banner text returns, staggered) → closed
 ///
 /// Reduce Motion, or no measured banner (opened from a row, not the banner): the paywall just cross-fades (200 ms).
@@ -37,6 +37,13 @@ final class SupernovaTransition {
     var screen: CGRect = UIScreen.main.bounds
     /// Each source's frame, its asterisk's centre and that asterisk's height (global), reported while the screen is at rest.
     private(set) var sources: [Kind: Source] = [:]
+    /// The part of the screen the More list shows (below its header, above the tab bar), reported by More.
+    private(set) var viewport: CGRect?
+    /// How the tapped source sits in that viewport when the page opens: scrolled partly out at the top or bottom, or its "*" out of sight.
+    struct SourceClip: Equatable { var top = false, bottom = false, starHidden = false }
+    private(set) var clip = SourceClip()
+    /// The on-screen part of the tapped source (what the mask grows from).
+    var sourceRect: CGRect { geometry?.bannerRect ?? screen }
     private var wordmarkRest: CGPoint?
     private var geometry: SupernovaTransitionGeometry?
     private var timers: [Task<Void, Never>] = []
@@ -103,6 +110,8 @@ final class SupernovaTransition {
 
     func reportBanner(rect: CGRect, asterisk: CGPoint?) { report(.paywall, rect: rect, asterisk: asterisk, starHeight: 0) }
 
+    func reportViewport(_ rect: CGRect) { if rect != viewport { viewport = rect } }
+
     func report(_ source: Kind, rect: CGRect, asterisk: CGPoint?, starHeight: Double) {
         guard phase == .closed else { return }
         var s = sources[source] ?? Source(rect: rect, asterisk: nil, starHeight: starHeight)
@@ -136,7 +145,20 @@ final class SupernovaTransition {
         if fromSource, !reduce, let src = sources[source], let star = src.asterisk {
             isShared = true
             let scale = source == .member && src.starHeight > 0 ? src.starHeight / config.flyer.glyphSize : config.flyer.startScale
-            geometry = SupernovaTransitionGeometry(bannerRect: src.rect, bannerAsterisk: star, wordmarkAsterisk: star, screen: screen, startScale: scale)
+            // A source scrolled partly out of the list (under the header or the tab bar) grows from, and shrinks back to, only the
+            // part that is on screen: that is what the user sees as the card, and what comes back at the end of the close.
+            var rect = src.rect
+            clip = SourceClip()
+            if let v = viewport {
+                let visible = src.rect.intersection(v)
+                if !visible.isNull, visible.height >= 24 {
+                    rect = visible
+                    clip.top = visible.minY > src.rect.minY + 0.5
+                    clip.bottom = visible.maxY < src.rect.maxY - 0.5
+                }
+                clip.starHidden = !v.contains(star)
+            }
+            geometry = SupernovaTransitionGeometry(bannerRect: rect, bannerAsterisk: star, wordmarkAsterisk: star, screen: screen, startScale: scale)
             wordmarkRest = nil
             phase = .measuring
             // If the page never reports its asterisk, fall back to the cross-fade rather than hang.

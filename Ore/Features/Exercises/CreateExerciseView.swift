@@ -119,7 +119,7 @@ struct CreateExerciseView: View {
                         } label: {
                             Text("Save Exercise")
                                 .frame(maxWidth: .infinity, minHeight: 50)
-                                .background(Color.oreAccent)
+                                .background { AccentFill() }
                                 .foregroundStyle(.white)
                                 .clipShape(RoundedRectangle(cornerRadius: 14))
                         }
@@ -427,8 +427,7 @@ struct DetailsStepCard: View {
                 }
 
                 // Unilateral toggle
-                Toggle("Unilateral (log each side separately)", isOn: $isUnilateral)
-                    .padding()
+                OreToggleRow(label: "Unilateral (log each side separately)", isOn: $isUnilateral, divider: false)
                     .background(Color.surf)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
@@ -527,8 +526,7 @@ struct ReviewStepCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16))
 
                 // Community toggle
-                Toggle("Submit to community library", isOn: $submitToCommunity)
-                    .padding()
+                OreToggleRow(label: "Submit to community library", isOn: $submitToCommunity, divider: false)
                     .background(Color.surf)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 Text("Community submissions require approval before appearing in the public library.")

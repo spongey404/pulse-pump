@@ -161,7 +161,7 @@ struct TemplateDetailView: View {
                         .foregroundStyle(Color.canvasBg)
                         .frame(height: 32)
                         .padding(.horizontal, 14)
-                        .background(Color.oreAccent)
+                        .background { AccentFill() }
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
@@ -189,7 +189,7 @@ struct TemplateDetailView: View {
                             .foregroundStyle(Color.canvasBg)
                             .frame(height: 32)
                             .padding(.horizontal, 14)
-                            .background(Color.oreAccent)
+                            .background { AccentFill() }
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
@@ -733,7 +733,7 @@ struct TemplateDetailView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
-                    .background(Color.oreAccent)
+                    .background { AccentFill() }
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.97))

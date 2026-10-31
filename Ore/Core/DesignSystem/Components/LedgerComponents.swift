@@ -129,7 +129,7 @@ struct MoreRow: View {
                             .lineLimit(1)
                     }
                     if let toggle {
-                        MoreToggle(isOn: toggle.wrappedValue)
+                        OreToggleSwitch(isOn: toggle.wrappedValue)
                     } else if chevron {
                         Text("›").font(.spaceMono(16)).foregroundStyle(Color.inkGhost)
                     }
@@ -144,20 +144,8 @@ struct MoreRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(AX.row(label))
-    }
-}
-
-/// 44×26 pill toggle drawn to spec (accent when on, deep surface when off).
-struct MoreToggle: View {
-    let isOn: Bool
-    var body: some View {
-        Capsule()
-            .fill(isOn ? Color.oreAccent : Color.inkPrimary.opacity(0.18))
-            .frame(width: 44, height: 26)
-            .overlay(alignment: isOn ? .trailing : .leading) {
-                Circle().fill(.white).frame(width: 22, height: 22).padding(2)
-            }
-            .animation(.easeInOut(duration: 0.15), value: isOn)
+        .accessibilityValue(toggle.map { $0.wrappedValue ? "On" : "Off" } ?? "")
+        .accessibilityAddTraits(toggle == nil ? [] : .isToggle)
     }
 }
 

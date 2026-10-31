@@ -289,11 +289,16 @@ struct PostWorkoutCustomizationView: View {
     var body: some View {
         List {
             Section("Visible on Post-Workout Summary") {
-                Toggle("Duration", isOn: $showDuration)
-                Toggle("Calories Burned", isOn: $showCalories)
-                Toggle("Muscles Worked", isOn: $showMuscles)
-                Toggle("PRs Hit", isOn: $showPRs)
-                Toggle("Improvement Count", isOn: $showImprovement)
+                OreToggleRow(label: "Duration", isOn: $showDuration)
+                    .listRowInsets(EdgeInsets()).listRowSeparator(.hidden)
+                OreToggleRow(label: "Calories Burned", isOn: $showCalories)
+                    .listRowInsets(EdgeInsets()).listRowSeparator(.hidden)
+                OreToggleRow(label: "Muscles Worked", isOn: $showMuscles)
+                    .listRowInsets(EdgeInsets()).listRowSeparator(.hidden)
+                OreToggleRow(label: "PRs Hit", isOn: $showPRs)
+                    .listRowInsets(EdgeInsets()).listRowSeparator(.hidden)
+                OreToggleRow(label: "Improvement Count", isOn: $showImprovement)
+                    .listRowInsets(EdgeInsets()).listRowSeparator(.hidden)
             }
         }
         .navigationTitle("Summary Display")

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Every tunable of the sign-up console in one place: typing speed, the step list and its copy, validation ranges,
-/// the star field, the background, the progress-bar glitter and the star bullets. The bundled
+/// the Stardust, the background, the progress-bar Stardust and the star bullets. The bundled
 /// `Resources/signup.config.json` is the shared source (an Android build reads the same file); `fallback` must equal it
 /// (a test checks). `SignupConfigStore` is the Remote Config hook (`signup_config`).
 struct SignupConfig: Codable, Equatable {

@@ -442,7 +442,7 @@ struct SupernovaView: View {
                         .padding(.horizontal, 18)
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
-                        .background(Color.oreAccent)
+                        .background { AccentFill() }
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                     .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.97))

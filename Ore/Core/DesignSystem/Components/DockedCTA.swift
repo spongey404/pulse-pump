@@ -31,7 +31,7 @@ struct DockedCTA: View {
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
-                            .background(Color.oreAccent)
+                            .background { AccentFill() }
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                     .buttonStyle(.plain)

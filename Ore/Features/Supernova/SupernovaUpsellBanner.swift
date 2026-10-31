@@ -28,7 +28,7 @@ struct SupernovaUpsellBanner: View {
                     .tracking(1)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(Color.oreAccent)
+                    .background { AccentFill() }
                     .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
             }
@@ -67,7 +67,7 @@ struct SupernovaBlurOverlay: View {
                         .tracking(1)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 10)
-                        .background(Color.oreAccent)
+                        .background { AccentFill() }
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }

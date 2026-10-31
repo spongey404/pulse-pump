@@ -159,22 +159,22 @@ struct SignupBackdrop: View {
     }
 }
 
-/// Steps the bar's glitter; a class so the Canvas closure can drive it.
+/// Steps the bar's Stardust; a class so the Canvas closure can drive it.
 @MainActor
 final class SignupBarRunner {
-    private var glitter: SignupBarGlitter?
+    private var Stardust: SignupBarStardust?
     private var lastT = 0.0
 
-    func frame(config: SignupConfig, width: Double, t: Double, boost: Double) -> [SignupBarGlitter.Speck] {
-        if glitter == nil || glitter!.width != width { glitter = SignupBarGlitter(config: config.bar, width: width) }
+    func frame(config: SignupConfig, width: Double, t: Double, boost: Double) -> [SignupBarStardust.Speck] {
+        if Stardust == nil || Stardust!.width != width { Stardust = SignupBarStardust(config: config.bar, width: width) }
         let dt = min(64, max(0, t - lastT))
         lastT = t
-        glitter!.step(t: t, dt: dt, boost: boost)
-        return glitter!.specks
+        Stardust!.step(t: t, dt: dt, boost: boost)
+        return Stardust!.specks
     }
 }
 
-/// The 6 pt progress bar: a white fill with glitter drifting through the filled part only.
+/// The 6 pt progress bar: a white fill with Stardust drifting through the filled part only.
 struct SignupProgressBar: View {
     let config: SignupConfig
     let surge: SignupSurge

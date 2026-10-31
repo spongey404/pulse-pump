@@ -14,7 +14,7 @@ enum SupernovaAsterisk {
     static let paywallGapEm: CGFloat = 0.04
 }
 
-/// Where the asterisk is on screen (global coordinates), so a `StarField` can pull its glitter toward it.
+/// Where the asterisk is on screen (global coordinates), so a `Stardust` can pull its Stardust toward it.
 struct SupernovaAsteriskFrameKey: PreferenceKey {
     static var defaultValue: CGRect? = nil
     static func reduce(value: inout CGRect?, nextValue: () -> CGRect?) { value = nextValue() ?? value }

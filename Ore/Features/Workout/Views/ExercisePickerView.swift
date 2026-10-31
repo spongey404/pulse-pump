@@ -360,7 +360,7 @@ private struct VariantsView: View {
                                     .foregroundStyle(.white)
                                     .frame(height: 32)
                                     .padding(.horizontal, 14)
-                                    .background(Color.oreAccent)
+                                    .background { AccentFill() }
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                             }
                             .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.93))
@@ -453,7 +453,7 @@ private struct ExerciseRow: View {
                         .foregroundStyle(.white)
                         .frame(height: 30)
                         .padding(.horizontal, 14)
-                        .background(Color.oreAccent)
+                        .background { AccentFill() }
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 } else {
                     HStack(spacing: 4) {

@@ -1,11 +1,11 @@
 import Foundation
 
-/// Every StarField tunable, in one typed value. No number lives in the renderer or the engine.
+/// Every Stardust tunable, in one typed value. No number lives in the renderer or the engine.
 ///
-/// The defaults are the file `starfield.config.json` (the same JSON an Android build reads), decoded at launch;
-/// `StarFieldConfig.fallback` is the copy used if the file is missing or invalid. `StarFieldConfigStore` merges
+/// The defaults are the file `stardust.config.json` (the same JSON an Android build reads), decoded at launch;
+/// `StardustConfig.fallback` is the copy used if the file is missing or invalid. `StardustConfigStore` merges
 /// a remote override on top (a hook for Remote Config, see there), so values can change without a release.
-struct StarFieldConfig: Codable, Equatable {
+struct StardustConfig: Codable, Equatable {
     struct Sway: Codable, Equatable { var base: Double; var perSize: Double }
     struct Flash: Codable, Equatable { var prob: Double; var decay: Double }
     struct Flare: Codable, Equatable { var minSize: Double; var length: Double; var flashLength: Double; var width: Double }
@@ -50,7 +50,7 @@ struct StarFieldConfig: Codable, Equatable {
     func variant(_ key: String) -> Variant { variants[key] ?? Variant() }
 
     /// The shipped values, used when the bundled JSON can't be read.
-    static let fallback = StarFieldConfig(
+    static let fallback = StardustConfig(
         density: 1600, minParticles: 40, speed: 1.1, gold: 0.40, sparkle: 0.55, goldPull: 180,
         sway: .init(base: 6, perSize: 5), flash: .init(prob: 0.0015, decay: 0.04),
         flare: .init(minSize: 1.1, length: 4, flashLength: 5, width: 0.7),
@@ -64,10 +64,12 @@ struct StarFieldConfig: Codable, Equatable {
             "avatar": .init(mini: true, speedScale: 0.35, sizeScale: 0.8, min: 30, pull: 0),
             "rowIcon": .init(mini: true, speedScale: 0.3, sizeScale: 0.6, min: 18, pull: 0),
             "recapCard": .init(mini: true, speedScale: 0.6, sizeScale: 0.9, min: 120, pull: 0),
+            "button": .init(mini: true, speedScale: 0.5, sizeScale: 0.7, min: 14, pull: 0),
+            "toggle": .init(mini: true, speedScale: 0.3, sizeScale: 0.6, min: 18, pull: 0),
         ])
 
-    static func load(from data: Data) -> StarFieldConfig? {
-        guard let c = try? JSONDecoder().decode(StarFieldConfig.self, from: data), c.isUsable else { return nil }
+    static func load(from data: Data) -> StardustConfig? {
+        guard let c = try? JSONDecoder().decode(StardustConfig.self, from: data), c.isUsable else { return nil }
         return c
     }
 
@@ -89,30 +91,30 @@ struct StarFieldConfig: Codable, Equatable {
 
 /// Where the live config comes from: the bundled JSON, then an override.
 ///
-/// `override` is the Remote Config hook: assign a decoded `StarFieldConfig` (or JSON through `applyRemote(json:)`)
-/// and every StarField created afterwards uses it. Nothing here depends on Firebase, so no dependency is added
+/// `override` is the Remote Config hook: assign a decoded `StardustConfig` (or JSON through `applyRemote(json:)`)
+/// and every Stardust created afterwards uses it. Nothing here depends on Firebase, so no dependency is added
 /// until the remote-values source is chosen (Firebase Remote Config, Statsig, …).
 @MainActor
-final class StarFieldConfigStore {
-    static let shared = StarFieldConfigStore()
-    private(set) var base: StarFieldConfig
-    var override: StarFieldConfig?
+final class StardustConfigStore {
+    static let shared = StardustConfigStore()
+    private(set) var base: StardustConfig
+    var override: StardustConfig?
 
     init(bundle: Bundle = .main) {
-        if let url = bundle.url(forResource: "starfield.config", withExtension: "json"),
-           let data = try? Data(contentsOf: url), let config = StarFieldConfig.load(from: data) {
+        if let url = bundle.url(forResource: "stardust.config", withExtension: "json"),
+           let data = try? Data(contentsOf: url), let config = StardustConfig.load(from: data) {
             base = config
         } else {
             base = .fallback
         }
     }
 
-    var current: StarFieldConfig { override ?? base }
+    var current: StardustConfig { override ?? base }
 
     /// Applies remote JSON; an invalid payload is ignored (the previous values stay).
     @discardableResult
     func applyRemote(json: Data) -> Bool {
-        guard let config = StarFieldConfig.load(from: json) else { return false }
+        guard let config = StardustConfig.load(from: json) else { return false }
         override = config
         return true
     }

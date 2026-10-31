@@ -4,7 +4,7 @@ import Foundation
 /// Options for `DevDataService`. Parsed from launch arguments so the same switches work from
 /// Xcode (Edit Scheme › Arguments), `xcrun simctl launch`, XCUITest and `bin/createdevdata.sh`:
 ///
-///     -createDevData 1            run the seeder on launch (required)
+///     -createDevData 1            run the seeder on launch (required; only with -useFirebaseEmulator 1)
 ///     -devDataReset 1             wipe user data first (default: only seed if the store has no user)
 ///     -devDataScenario busy       busy | lapsed | new-user
 ///     -devDataWeeks 16            weeks of history (2…52)
@@ -38,6 +38,7 @@ struct DevDataConfig: Equatable {
     /// nil unless `-createDevData 1` was passed.
     static func fromLaunchArguments(_ d: UserDefaults = .standard) -> DevDataConfig? {
         guard d.bool(forKey: "createDevData") else { return nil }
+        guard DevFlags.mayRunDevDataFlags(defaults: d) else { DevFlags.warnIgnored("-createDevData"); return nil }
         var c = DevDataConfig()
         if let s = d.string(forKey: "devDataScenario"), let v = Scenario(rawValue: s) { c.scenario = v }
         if let w = Int(d.string(forKey: "devDataWeeks") ?? "") { c.weeks = min(max(w, 2), 52) }

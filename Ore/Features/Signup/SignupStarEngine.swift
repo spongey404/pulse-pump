@@ -85,8 +85,8 @@ struct SignupStarEngine {
     static func level(answered: Int, total: Int) -> Double { total > 0 ? min(1, Double(answered) / Double(total)) : 0 }
 }
 
-/// The glitter inside the progress bar's filled part: specks drifting right, twinkling, faster during a surge.
-struct SignupBarGlitter {
+/// The Stardust inside the progress bar's filled part: specks drifting right, twinkling, faster during a surge.
+struct SignupBarStardust {
     struct Speck { var x: Double, y: Double, radius: Double, alpha: Double, gold: Bool, silver: Bool }
 
     private struct Particle { var x: Double, y: Double, z: Double, tw: Double, s: Double, v: Double, fl: Double = 0, gold: Bool, silver: Bool }

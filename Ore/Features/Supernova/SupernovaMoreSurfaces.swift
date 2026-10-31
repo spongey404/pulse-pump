@@ -2,7 +2,7 @@ import SwiftUI
 
 // The Supernova surfaces on the More tab, from the Claude Design file `Supernova Final.dc.html`:
 // the free user's "GO SUPERNOVA*" banner and the member's avatar, profile tag, row icon and Weekly Recap card.
-// All glitter is `StarFieldView` configured by `starfield.config.json`; nothing here has its own numbers for it.
+// All Stardust is `StardustView` configured by `stardust.config.json`; nothing here has its own numbers for it.
 
 /// A vertical fade over the first and last `edge` points, eased the way the design's mask is (not a straight ramp).
 struct EasedEdgeFade: View {
@@ -20,7 +20,7 @@ struct EasedEdgeFade: View {
     }
 }
 
-/// The free plan's banner. The glitter is the compact StarField, pulled toward the asterisk after "GO SUPERNOVA".
+/// The free plan's banner. The Stardust is the compact Stardust, pulled toward the asterisk after "GO SUPERNOVA".
 /// Tapping it opens the paywall with the shared-element transition (`SupernovaTransition`): this view reports its frame
 /// and its asterisk's centre while the screen is at rest, hides the asterisk while the flyer stands in for it, and brings
 /// its text back after the close.
@@ -31,8 +31,8 @@ struct SupernovaBanner: View {
 
     /// The banner's own colour (the palette's accent stop), shown until the first frame.
     private var base: Color {
-        let c = StarFieldConfigStore.shared.current
-        let p = StarPalette(c.palettes[c.defaultPalette] ?? StarFieldConfig.fallback.palettes["sky"]!)
+        let c = StardustConfigStore.shared.current
+        let p = StarPalette(c.palettes[c.defaultPalette] ?? StardustConfig.fallback.palettes["sky"]!)
         return Color(.sRGB, red: (p?.accent.r ?? 61) / 255, green: (p?.accent.g ?? 184) / 255, blue: (p?.accent.b ?? 255) / 255)
     }
 
@@ -66,7 +66,7 @@ struct SupernovaBanner: View {
             .background {
                 ZStack {
                     base
-                    StarFieldView(variant: "banner", budget: .more, anchor: anchor)
+                    StardustView(variant: "banner", budget: .more, anchor: anchor)
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 12))

@@ -13,6 +13,7 @@ struct OrePillButton: View {
                     // Base fill
                     Capsule()
                         .fill(isDestructive ? Color.signalDown : Color.oreAccent)
+                        .overlay { if !isDestructive { AccentFill().clipShape(Capsule()) } }
 
                     // Progress overlay (lighter tint on top)
                     if let progress {

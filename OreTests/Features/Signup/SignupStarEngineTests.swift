@@ -62,8 +62,8 @@ struct SignupStarEngineTests {
         #expect(SignupStarEngine.level(answered: 0, total: 0) == 0)
     }
 
-    @Test func barGlitterDriftsRightAndWraps() {
-        var g = SignupBarGlitter(config: SignupConfig.fallback.bar, width: 334)
+    @Test func barStardustDriftsRightAndWraps() {
+        var g = SignupBarStardust(config: SignupConfig.fallback.bar, width: 334)
         g.step(t: 100, dt: 16, boost: 0)
         #expect(g.specks.count == 90)
         let x0 = g.specks.map(\.x)

@@ -1,5 +1,7 @@
 #!/bin/bash -e
 # Build Ore, install it on a simulator with a clean store, and launch it with the dev-data seeder.
+# Always launches with -useFirebaseEmulator 1 (the dev-data flags are ignored without it), so nothing reaches the real
+# Firebase project; start the emulators (`firebase emulators:start`) if you want sync or social to work.
 # (The iOS equivalent of `manage.py createdevdata` — see Ore/DevData/DevDataConfig.swift.)
 set -o pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
@@ -64,7 +66,7 @@ xcrun simctl install booted "$app"
 
 echo "==> Seeding ($scenario, $weeks weeks, seed $seed, $units)"
 xcrun simctl launch booted "$bundle" \
-	-createDevData 1 -devDataReset 1 \
+	-useFirebaseEmulator 1 -createDevData 1 -devDataReset 1 \
 	-devDataScenario "$scenario" -devDataWeeks "$weeks" -devDataSeed "$seed" -devDataUnits "$units" \
 	-devDataPlus "$plus" -devDataDraft "$draft" >/dev/null
 

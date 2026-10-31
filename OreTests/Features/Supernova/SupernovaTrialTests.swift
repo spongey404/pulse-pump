@@ -75,13 +75,20 @@ struct SupernovaTrialTests {
     @MainActor @Test func remoteValuesApplyAndBadOnesAreIgnored() {
         let saved = UserDefaults.standard.object(forKey: SupernovaTrial.cacheKey)
         defer { UserDefaults.standard.set(saved, forKey: SupernovaTrial.cacheKey) }
-        RemoteSettings.apply(trialMonths: 6, starFieldJSON: nil)
+        RemoteSettings.apply(trialMonths: 6, stardustJSON: nil)
         #expect(SupernovaTrial.months == 6)
-        RemoteSettings.apply(trialMonths: 99, starFieldJSON: nil)   // out of range: keeps 6
+        RemoteSettings.apply(trialMonths: 99, stardustJSON: nil)   // out of range: keeps 6
         #expect(SupernovaTrial.months == 6)
-        RemoteSettings.apply(trialMonths: nil, starFieldJSON: nil)
+        RemoteSettings.apply(trialMonths: nil, stardustJSON: nil)
         #expect(SupernovaTrial.months == 6)
-        RemoteSettings.apply(trialMonths: 0, starFieldJSON: "not json")
+        RemoteSettings.apply(trialMonths: 0, stardustJSON: "not json")
         #expect(SupernovaTrial.months == 0)
+    }
+
+    @Test @MainActor func theOldRemoteConfigKeyIsUsedForOneReleaseWhenTheNewOneIsEmpty() {
+        #expect(RemoteSettings.stardustKey == "stardust_config" && RemoteSettings.legacyStardustKey == "starfield_config")
+        #expect(RemoteSettings.firstNonEmpty("new", "old") == "new")
+        #expect(RemoteSettings.firstNonEmpty("", "old") == "old")
+        #expect(RemoteSettings.firstNonEmpty(nil, nil) == nil)
     }
 }

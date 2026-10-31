@@ -13,6 +13,7 @@ enum DevDataAutoAccount {
         let d = UserDefaults.standard
         guard let email = d.string(forKey: "debugEmail"), let password = d.string(forKey: "debugPassword"),
               !email.isEmpty, !password.isEmpty else { return nil }
+        guard DevFlags.mayRunDevDataFlags(defaults: d) else { DevFlags.warnIgnored("-debugEmail/-debugPassword"); return nil }
         return (email, password)
     }
 
@@ -25,6 +26,7 @@ enum DevDataAutoAccount {
     /// keeps both. Runs synchronously from `OreApp.init`.
     static func resetStaleSession() {
         guard UserDefaults.standard.bool(forKey: "debugFreshSession") else { return }
+        guard DevFlags.mayRunDevDataFlags() else { DevFlags.warnIgnored("-debugFreshSession"); return }
         try? Auth.auth().signOut()
         for key in SwiftDataSyncLifecycle.userDefaultsKeysToClear { UserDefaults.standard.removeObject(forKey: key) }   // first-run flags belong to the account
         UserDefaults.standard.removeObject(forKey: "devDataPlus")   // a seeded run's "pretend member" flag, persisted by DevDataService

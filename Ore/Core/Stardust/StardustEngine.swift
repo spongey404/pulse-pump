@@ -15,7 +15,7 @@ struct StarRandom: RandomNumberGenerator {
 }
 
 /// One instance's settings once the global config, the variant and the caller's overrides are merged.
-struct StarFieldParams: Equatable {
+struct StardustParams: Equatable {
     var mini: Bool
     var compact: Bool
     var count: Double          // density per 390×844 pt
@@ -42,7 +42,7 @@ struct StarFieldParams: Equatable {
         var fps: Int? = nil
     }
 
-    init(config: StarFieldConfig, variant key: String, overrides: Overrides = .init()) {
+    init(config: StardustConfig, variant key: String, overrides: Overrides = .init()) {
         let v = config.variant(key)
         let mini = v.mini ?? false
         self.mini = mini
@@ -64,12 +64,12 @@ struct StarFieldParams: Equatable {
         flareLength = mini ? config.flare.length - 1 : config.flare.length
         flareFlashLength = mini ? config.flare.flashLength - 1 : config.flare.flashLength
         flareWidth = mini ? config.flare.width - 0.1 : config.flare.width
-        palette = overrides.palette ?? StarPalette(config.palettes[config.defaultPalette] ?? StarFieldConfig.fallback.palettes["sky"]!) ?? StarPalette.derived(fromAccent: StarRGBA(r: 61, g: 184, b: 255))
+        palette = overrides.palette ?? StarPalette(config.palettes[config.defaultPalette] ?? StardustConfig.fallback.palettes["sky"]!) ?? StarPalette.derived(fromAccent: StarRGBA(r: 61, g: 184, b: 255))
         fps = overrides.fps ?? 30
     }
 }
 
-/// What one frame draws. Filled by `StarFieldEngine.step` into reused arrays (nothing is allocated per frame).
+/// What one frame draws. Filled by `StardustEngine.step` into reused arrays (nothing is allocated per frame).
 struct StarDot {
     var x: Double, y: Double, radius: Double
     var color: StarRGBA          // alpha already applied
@@ -86,7 +86,7 @@ struct StarFlare { var x: Double, y: Double, length: Double, color: StarRGBA }
 
 /// The particle simulation: positions, twinkle, flashes, flares and the pull toward the gold anchor. Pure maths on
 /// plain values (no SwiftUI), a port of the design's canvas loop, so it is deterministic under a seed and testable.
-struct StarFieldEngine {
+struct StardustEngine {
     enum Kind: UInt8 { case gold, silver, blue, white }
 
     private struct Particle {
@@ -97,7 +97,7 @@ struct StarFieldEngine {
         var k: Double = 0
     }
 
-    let params: StarFieldParams
+    let params: StardustParams
     private(set) var size: CGSize
     private var particles: [Particle] = []
     private var rng: StarRandom
@@ -109,12 +109,12 @@ struct StarFieldEngine {
     var count: Int { particles.count }
 
     /// Particle count for a view of this area: scales with area so small views stay cheap.
-    static func particleCount(params: StarFieldParams, size: CGSize) -> Int {
-        let n = (params.count * Double(size.width * size.height) / StarFieldConfig.referenceArea).rounded()
+    static func particleCount(params: StardustParams, size: CGSize) -> Int {
+        let n = (params.count * Double(size.width * size.height) / StardustConfig.referenceArea).rounded()
         return max(params.minCount, Int(n))
     }
 
-    init(params: StarFieldParams, size: CGSize, seed: UInt64 = 1) {
+    init(params: StardustParams, size: CGSize, seed: UInt64 = 1) {
         self.params = params
         self.size = size
         rng = StarRandom(seed: seed)

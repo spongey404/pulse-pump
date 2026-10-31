@@ -1,0 +1,13 @@
+{
+  "track": { "width": 56, "height": 32, "radius": 8, "border": 1 },
+  "knob": { "size": 24, "radius": 6, "inset": 3, "travel": 24 },
+  "minRowHeight": 44,
+  "durationMs": 250,
+  "disabledOpacity": 0.4,
+  "light": { "offTrack": [224, 229, 235, 1], "offBorder": [21, 26, 33, 0.14], "offKnob": [255, 255, 255, 1] },
+  "dark": { "offTrack": [255, 255, 255, 0.12], "offBorder": [255, 255, 255, 0.16], "offKnob": [255, 255, 255, 0.55] },
+  "onKnob": [255, 255, 255, 1],
+  "star": { "path": "M12 0C13 8 16 11 24 12C16 13 13 16 12 24C11 16 8 13 0 12C8 11 11 8 12 0Z", "size": 12, "colorHex": "#FFC83D" },
+  "fx": { "density": 1600, "gold": 0.4, "sparkle": 0.55, "fps": 30 },
+  "row": { "padV": 14, "padH": 16, "gapV": 6, "gapH": 16, "descriptionMaxWidth": 280 }
+}

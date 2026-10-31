@@ -5,7 +5,7 @@ import Observation
 enum SignupStage: Equatable { case landing, console, setup, welcome }
 enum SignupMethod: Equatable { case email, apple, google }
 
-/// The speed of the star field's surge: set by the flow when a step is answered, decayed and read by the renderer.
+/// The speed of the Stardust's surge: set by the flow when a step is answered, decayed and read by the renderer.
 /// A plain reference, so the renderer can read it every frame without observation.
 final class SignupSurge {
     var boost: Double = 0

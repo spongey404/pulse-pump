@@ -28,7 +28,7 @@ struct OreApp: App {
     init() {
         // Firebase must be configured (and pointed at the emulator, if requested) before any Auth/Firestore access.
         FirebaseBootstrap.configure()
-        RemoteSettings.start()   // trial length, StarField tuning: Firebase Remote Config, applied without a release
+        RemoteSettings.start()   // trial length, Stardust tuning: Firebase Remote Config, applied without a release
         if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil { SupernovaService.startAppMonitor() }   // entitlements stay current app-wide
         #if DEBUG
         DevDataAutoAccount.resetStaleSession()   // -debugFreshSession: UI tests start from a clean login + store

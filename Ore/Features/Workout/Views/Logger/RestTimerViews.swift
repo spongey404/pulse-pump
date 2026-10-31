@@ -94,7 +94,7 @@ struct RestTimerModalView: View {
                         .tracking(2)
                         .frame(maxWidth: .infinity)
                         .frame(height: 46)
-                        .background(Color.oreAccent)
+                        .background { AccentFill() }
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.97))

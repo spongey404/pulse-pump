@@ -15,6 +15,24 @@ enum DevFlags {
         #endif
     }
 
+    /// The dev-data launch flags (`-createDevData`, `-devDataReset`, `-debugEmail/-debugPassword`, `-debugFreshSession`) sign in,
+    /// create accounts, wipe the store and sync fake workouts. They only run against the local emulators, so a manual launch
+    /// (Xcode, `simctl launch`) can never write fake data to the real Firebase project. Add `-useFirebaseEmulator 1` to use them.
+    static func mayRunDevDataFlags(defaults: UserDefaults = .standard) -> Bool {
+        #if DEBUG
+        usesFirebaseEmulator(defaults: defaults)
+        #else
+        false
+        #endif
+    }
+
+    /// Logs (once per flag set) that a dev-data flag was ignored.
+    static func warnIgnored(_ flag: String) {
+        #if DEBUG
+        print("[DevFlags] ignoring \(flag): dev-data flags only run with -useFirebaseEmulator 1 (never against the real Firebase project)")
+        #endif
+    }
+
     /// Use the seeded in-memory social backend (`SocialFixtures`) instead of Firestore. DEBUG only,
     /// off by default, and never while the emulator is in use (the emulator has real data).
     static var socialFixtures: Bool { socialFixtures(defaults: .standard) }

@@ -228,7 +228,7 @@ struct CreateTemplateView: View {
                 .foregroundStyle(.white)
                 .frame(height: 40)
                 .padding(.horizontal, 20)
-                .background(Color.oreAccent)
+                .background { AccentFill() }
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .shadow(color: Color.oreAccent.opacity(0.4), radius: 8, y: 4)
             }

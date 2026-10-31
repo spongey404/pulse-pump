@@ -27,7 +27,7 @@ struct NoFriendsEmptyState: View {
                     .foregroundStyle(.white)
                     .frame(height: 44)
                     .padding(.horizontal, 24)
-                    .background(Color.oreAccent)
+                    .background { AccentFill() }
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)

@@ -139,6 +139,7 @@ struct StartWorkoutDock: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.oreAccent)
+                    .overlay { AccentFill().clipShape(RoundedRectangle(cornerRadius: 12)) }
                     .shadow(color: Color.oreAccent.opacity(0.35), radius: 8, y: 3)
 
                 HStack {

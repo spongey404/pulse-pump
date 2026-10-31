@@ -327,7 +327,7 @@ struct HomeTabView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("PREDICTED TODAY · \(splitLabel)")
+                        Text("PREDICTED TODAY · \(splitLabel.uppercased())")
                             .font(.spaceMono(9))
                             .tracking(1.5)
                             .foregroundStyle(Color.accentInk)

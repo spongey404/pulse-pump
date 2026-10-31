@@ -1,13 +1,13 @@
 import Foundation
 
 /// Everything tunable about the Supernova member experience (design "Supernova Member Flow"): the accent palettes, the page
-/// glitter (count, coverage and the mask that fades it to charcoal), the More card, and the card ⇄ page transition (same
+/// Stardust (count, coverage and the mask that fades it to charcoal), the More card, and the card ⇄ page transition (same
 /// shape as `SupernovaTransitionConfig`, with the member values: 4 content groups, card radius 14). Shared with Android
 /// through `Resources/supernovaMember.config.json`; `fallback` must equal it (a test checks); Remote Config key
 /// `supernova_member_config` replaces it.
 struct SupernovaMemberConfig: Codable, Equatable {
     /// The custom accent picker (Account tab): the presets row, the hold-to-repeat and fine-scrub curves, the rules that
-    /// turn a picked colour into the glitter's palette.
+    /// turn a picked colour into the Stardust's palette.
     struct Picker: Codable, Equatable {
         struct HuePatch: Codable, Equatable {
             var satBelow: Int, shadeBelow: Int, shadeAbove: Int, minSat: Int, shadeMin: Int, shadeMax: Int
@@ -42,9 +42,9 @@ struct SupernovaMemberConfig: Codable, Equatable {
         var gold: Double
         var sparkle: Double
         var pull: Double
-        /// Share of the screen the glitter covers (the mask below fades it out by then).
+        /// Share of the screen the Stardust covers (the mask below fades it out by then).
         var coverage: Double
-        /// [location 0–1, opacity] stops of the vertical mask over the page glitter.
+        /// [location 0–1, opacity] stops of the vertical mask over the page Stardust.
         var maskStops: [[Double]]
         var starBullet: Double
         /// Seconds between one perk's star and the next one's phase.
@@ -57,7 +57,7 @@ struct SupernovaMemberConfig: Codable, Equatable {
         var gap: Double
         var count: Double
         var fps: Int
-        /// Freeze the card's glitter after this many ms (0 = keep moving).
+        /// Freeze the card's Stardust after this many ms (0 = keep moving).
         var settleAfterMs: Double
     }
 
