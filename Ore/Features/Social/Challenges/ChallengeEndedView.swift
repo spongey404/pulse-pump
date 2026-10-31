@@ -27,7 +27,6 @@ struct ChallengeEndedView: View {
     }
     private var label: String {
         var parts = ["Ended \(challenge.endAt.formatted(.dateTime.day().month(.abbreviated)))", metric.displayName]
-        if let exercise = challenge.exerciseName { parts.append(exercise) }
         parts.append("\(challenge.memberCount) \(challenge.memberCount == 1 ? "person" : "people")")
         return parts.joined(separator: " · ").uppercased()
     }
@@ -99,6 +98,7 @@ struct ChallengeEndedView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label.uppercased()).font(.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
             Text(value).font(.spaceMono(20, weight: .bold)).foregroundStyle(Color.inkPrimary).lineLimit(1).minimumScaleFactor(0.6)
+                .frame(height: 20)   // the design's line-height 1
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)

@@ -49,7 +49,7 @@ struct InviteFriendsView: View {
                             friendRow(friend)
                         }
                     }
-                    .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+                    .padding(.top, 1).overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
 
                     SectionLabel(title: "Not on \(Brand.appName)")
                         .padding(.horizontal, 16).padding(.top, 22).padding(.bottom, 8)
@@ -115,7 +115,7 @@ struct InviteFriendsView: View {
                 }
             }
         }
-        .padding(.horizontal, 16).padding(.vertical, 12)
+        .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 13)
         .frame(minHeight: 44)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
     }

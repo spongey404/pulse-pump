@@ -28,13 +28,7 @@ struct ChallengeLeaderboardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ChallengeHeader(label: label, title: challenge.name.uppercased(), onBack: { dismiss() }) {
-                if canInvite { ChallengeHeaderTextButton(title: "+ INVITE") { showInvite = true } }
-                ChallengeHeaderButton { menuOpen = true } label: {
-                    Text("···").font(.archivo(18, weight: .bold)).foregroundStyle(Color.inkPrimary)
-                }
-                .accessibilityLabel("Challenge options")
-            }
+            ChallengeHeader(label: label, title: challenge.name.uppercased(), onBack: { dismiss() })
 
             ScrollView {
                 VStack(spacing: 0) {
@@ -52,6 +46,15 @@ struct ChallengeLeaderboardView: View {
                             }
                         }
                         ChallengeActivityList(rows: rows, metric: metric, weightUnit: weightUnit)
+                    }
+                    if board != nil {
+                        // Invite and options live under the list, so the header stays as the design draws it (just the back button).
+                        HStack(spacing: 8) {
+                            if canInvite { SocialSmallAction(title: "+ INVITE", style: .outlined) { showInvite = true } }
+                            SocialSmallAction(title: "OPTIONS", style: .outlined) { menuOpen = true }
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16).padding(.top, 22)
                     }
                 }
                 Color.clear.frame(height: 16)

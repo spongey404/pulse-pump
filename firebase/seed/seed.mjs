@@ -196,6 +196,12 @@ async function main() {
     startAt: ts(8 * DAY), endAt: Timestamp.fromMillis(NOW + 20 * DAY),
   });
   await board('seed-global', [1, 3, 5, 7].map((n, i) => ({ n, score: Math.round(volume(workoutsBy[n])), at: (i + 1) * 5400_000, hidden: !P[n].lb })));
+  // an ended challenge (so the "challenge ended" screen has something to show)
+  await db.doc('challenges/seed-ended').set({
+    ...chBase, status: 'ended', creatorUid: P[2].uid, name: 'Autumn Bench', metric: 'heaviestLift', exerciseName: 'Bench Press', isGlobal: false, visibility: 'invite',
+    startAt: ts(30 * DAY), endAt: ts(2 * DAY),
+  });
+  await board('seed-ended', [{ n: 2, score: 112, at: 5 * DAY }, { n: 3, score: 104, at: 6 * DAY }, { n: 1, score: 98, at: 7 * DAY }]);
   // pending invite: friend1 invited friend4 to Bench Club (id = challengeId_toUid)
   await db.doc(`invites/seed-bench_${P[4].uid}`).set({
     challengeId: 'seed-bench', fromUid: P[1].uid, toUid: P[4].uid, status: 'pending', challengeName: 'Bench Club',

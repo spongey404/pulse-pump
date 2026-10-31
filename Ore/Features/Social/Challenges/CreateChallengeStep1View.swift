@@ -49,7 +49,7 @@ struct CreateChallengeStep1View: View {
                             metricRow(m)
                         }
                     }
-                    .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+                    .padding(.top, 1).overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
 
                     if allowsExercise {
                         Button { showExercisePicker = true } label: {
@@ -127,7 +127,7 @@ struct CreateChallengeStep1View: View {
                     Text("✓").font(.spaceMono(14, weight: .bold)).foregroundStyle(Color.accentInk)
                 }
             }
-            .padding(.horizontal, 16).padding(.vertical, 12)
+            .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 12.65)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(selected ? Color.activeRowBg : Color.clear)
             .overlay(alignment: .leading) {

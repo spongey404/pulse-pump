@@ -31,7 +31,7 @@ struct ChallengesView: View {
                                 inviteRow(invite)
                             }
                         }
-                        .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+                        .padding(.top, 1).overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
                     }
 
                     SectionLabel(title: "Friend Challenges", meta: "\(viewModel.activeFriendChallenges.count) Active")
@@ -68,7 +68,7 @@ struct ChallengesView: View {
                                 .buttonStyle(OreRowPressStyle())
                             }
                         }
-                        .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+                        .padding(.top, 1).overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
                     }
                 }
                 Color.clear.frame(height: 32)
@@ -126,6 +126,7 @@ struct ChallengesView: View {
 
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(mine.map { "\($0.rank)" } ?? "—").font(.spaceMono(52, weight: .bold)).foregroundStyle(white)
+                    .frame(height: 46.8)   // the design's line-height 0.9
                 VStack(alignment: .leading, spacing: 0) {
                     Text("OF \(total.formatted())")
                     if let mine, let top = Self.topPercent(rank: mine.rank, of: total) {

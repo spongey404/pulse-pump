@@ -45,7 +45,24 @@ final class ChallengeShotsUITests: UITestCase {
         scrollTo(el(AX.row("Create challenge")))
         tapID(AX.row("Create challenge"))
         require(labelContaining("NEW CHALLENGE"), "step 1", timeout: 20)
+        type("August Volume", into: AX.row("Challenge name"))
+        dismissKeyboard()
         RunLoop.current.run(until: Date().addingTimeInterval(1.0))
         try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "\(dir)/6a-create.png"))
+    }
+
+    func testEndedScreenshot() throws {
+        guard let dir = ProcessInfo.processInfo.environment["CHALLENGE_SHOTS"] else { throw XCTSkip("set CHALLENGE_SHOTS to save screenshots") }
+        launch(LaunchConfig(email: "friend1@example.com", password: "password", autoOnboard: false))
+        require(el(AX.tab.home), "Home for the seeded user", timeout: 90)
+        SocialPage(t: self).open()
+        tapID(AX.social.tabChallenges)
+        require(el(AX.social.challengeName), "global challenge card", timeout: 45)
+        let ended = labelContaining("Autumn Bench")
+        scrollTo(ended)
+        tap(ended, "ended challenge row")
+        require(labelContaining("WINNER"), "winner card", timeout: 20)
+        RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+        try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "\(dir)/7b-ended.png"))
     }
 }

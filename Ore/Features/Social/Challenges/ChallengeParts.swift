@@ -49,7 +49,7 @@ struct ChallengeHeader<Actions: View>: View {
                 .accessibilityIdentifier(AX.nav.back)
             }
         }
-        .padding(.horizontal, 16).padding(.top, 6).padding(.bottom, 12)
+        .padding(.horizontal, 16).padding(.top, 6).padding(.bottom, 13)   // 12 + the 1 pt rule (a CSS border takes space)
         .frame(maxWidth: .infinity, alignment: .leading)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
     }
@@ -157,6 +157,7 @@ struct ChallengeBoardRow<Trailing: View>: View {
         }
         .padding(.horizontal, 16)
         .frame(minHeight: minHeight)
+        .padding(.bottom, 1)   // the row's 1 pt rule sits below its min height
         .background(row.isMe ? Color.activeRowBg : Color.clear)
         .overlay(alignment: .leading) { if row.isMe { Rectangle().fill(Color.accentInk).frame(width: 2) } }
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
@@ -233,7 +234,7 @@ struct ChallengeActivityList: View {
                         line(item.row, at: item.at)
                     }
                 }
-                .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+                .padding(.top, 1).overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
             }
         }
     }
@@ -251,7 +252,7 @@ struct ChallengeActivityList: View {
             Spacer(minLength: 8)
             Text(Self.ago(at)).font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
         }
-        .padding(.horizontal, 16).padding(.vertical, 12)
+        .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 13)
         .frame(minHeight: 44)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
         .accessibilityElement(children: .combine)
