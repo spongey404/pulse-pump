@@ -27,7 +27,7 @@ Every account signs in with `friendN@example.com` / `password` (N = 1..8):
 Contents: auth accounts, `users/{uid}` (+ five workouts and a bodyweight entry each), `usernames`, `profiles` with
 consistent `friendCount`/`fanCount`, 11 `follows` edges, 7 posts (everyone / friends / onlyMe, with
 `extras/bodymap`), comments and likes with matching counters, challenges `seed-bench` (heaviestLift, friends),
-`seed-volume` (totalVolume) and `seed-global` (global, one hidden entry) with members and ranked entries, a pending
+`seed-volume` (totalVolume), `seed-ended` (an ended heaviestLift board) and `seed-global` (global, one hidden entry) with members and ranked entries, a pending
 invite (`invites/seed-bench_seed-friend4`) and one report. UIDs are `seed-friendN`.
 
 Point the iOS app at the emulators in DEBUG builds: Auth `127.0.0.1:9099`, Firestore `127.0.0.1:8085`,
