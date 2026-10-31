@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// 3b — Challenges tab: the global challenge (joinable), invites, friend challenges and create.
+/// 3a — Challenges tab: the global (monthly) challenge as a card (Stardust for members who have it on, flat accent otherwise),
+/// invites, friend challenges with mini podiums, and a dashed create button.
 /// Everything shown comes from Firestore; scores and ranks are computed by Cloud Functions.
 struct ChallengesView: View {
     @Bindable var viewModel: SocialViewModel
@@ -24,15 +25,18 @@ struct ChallengesView: View {
 
                     if !viewModel.pendingChallengeInvites.isEmpty {
                         SectionLabel(title: "Invites", meta: "\(viewModel.pendingChallengeInvites.count)")
-                            .padding(.horizontal, 16).padding(.top, 22).padding(.bottom, 4)
-                        ForEach(viewModel.pendingChallengeInvites) { invite in
-                            inviteRow(invite)
+                            .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 8)
+                        VStack(spacing: 0) {
+                            ForEach(viewModel.pendingChallengeInvites) { invite in
+                                inviteRow(invite)
+                            }
                         }
+                        .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
                     }
 
                     SectionLabel(title: "Friend Challenges", meta: "\(viewModel.activeFriendChallenges.count) Active")
                         .padding(.horizontal, 16)
-                        .padding(.top, 22)
+                        .padding(.top, viewModel.pendingChallengeInvites.isEmpty ? 8 : 22)
                         .padding(.bottom, 8)
 
                     if viewModel.activeFriendChallenges.isEmpty {
@@ -42,27 +46,29 @@ struct ChallengesView: View {
                             NavigationLink {
                                 ChallengeLeaderboardView(challenge: challenge, viewModel: viewModel)
                             } label: {
-                                friendChallengeRow(challenge)
+                                friendChallengeCard(challenge)
                             }
                             .buttonStyle(.plain)
+                            .padding(.horizontal, 16).padding(.bottom, 14)
                         }
-                        DashedAdd(title: "Create Challenge") { showCreateChallenge = true }
-                            .padding(.horizontal, 16)
-                            .padding(.top, 8)
+                        createButton
                     }
 
                     let ended = viewModel.endedChallenges
                     if !ended.isEmpty {
                         SectionLabel(title: "Ended", meta: "\(ended.count)")
-                            .padding(.horizontal, 16).padding(.top, 22).padding(.bottom, 4)
-                        ForEach(ended) { challenge in
-                            NavigationLink {
-                                ChallengeEndedView(challenge: challenge, viewModel: viewModel)
-                            } label: {
-                                endedChallengeRow(challenge)
+                            .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 8)
+                        VStack(spacing: 0) {
+                            ForEach(ended) { challenge in
+                                NavigationLink {
+                                    ChallengeEndedView(challenge: challenge, viewModel: viewModel)
+                                } label: {
+                                    endedChallengeRow(challenge)
+                                }
+                                .buttonStyle(OreRowPressStyle())
                             }
-                            .buttonStyle(.plain)
                         }
+                        .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
                     }
                 }
                 Color.clear.frame(height: 32)
@@ -84,6 +90,18 @@ struct ChallengesView: View {
         }
     }
 
+    private var createButton: some View {
+        Button { showCreateChallenge = true } label: {
+            Text("+ CREATE CHALLENGE")
+                .font(.spaceMono(9, weight: .bold)).tracking(1.5).foregroundStyle(Color.inkMuted)
+                .frame(maxWidth: .infinity).frame(height: 48)
+                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Color.ruleStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16).padding(.bottom, 30)
+        .accessibilityIdentifier(AX.row("Create challenge"))
+    }
+
     // MARK: Global card
 
     private func globalChallengeCard(_ challenge: SocialChallenge) -> some View {
@@ -91,39 +109,40 @@ struct ChallengesView: View {
         let board = viewModel.boards[challenge.id]
         let mine = board?.mine
         let joined = board?.isMember ?? viewModel.isJoined(challenge)
-        let gap = mine.flatMap { m in board.flatMap { Leaderboard.gapToNext(rows: $0.rows, mine: m) } }
+        let total = max(challenge.memberCount, board?.rows.count ?? 0)
+        let ends = challenge.endAt.formatted(.dateTime.day().month(.abbreviated)).uppercased()
+        let monthly = challenge.endAt.timeIntervalSince(challenge.startAt) >= 25 * 86_400
+        let white = Color.white
 
         return VStack(alignment: .leading, spacing: 0) {
-            SectionLabel(title: "Global", meta: "Ends \(challenge.endAt.formatted(.dateTime.day().month(.abbreviated)))")
-                .padding(.bottom, 8)
+            Text("\(monthly ? "THIS MONTH · " : "")GLOBAL · ENDS \(ends)")
+                .font(.spaceMono(9)).tracking(1.5).foregroundStyle(white.opacity(0.9))
+            Text(challenge.name.uppercased())
+                .font(.archivo(32, weight: .black)).foregroundStyle(white)
+                .padding(.top, 6)
+                .accessibilityIdentifier(AX.social.challengeName)
+            Text(Self.sentence(metric.globalSubheading(weightUnit)))
+                .font(.archivo(13)).foregroundStyle(white.opacity(0.9))
 
-            VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(mine.map { "\($0.rank)" } ?? "—").font(.spaceMono(52, weight: .bold)).foregroundStyle(white)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("SET BY \(Brand.appName.uppercased()) · \(challenge.startAt.formatted(.dateTime.day().month(.abbreviated)))–\(challenge.endAt.formatted(.dateTime.day().month(.abbreviated)))")
-                        .font(Font.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
-                        .padding(.bottom, 5)
-                    Text(challenge.name.uppercased())
-                        .font(.archivo(26, weight: .black)).tracking(0.5).lineSpacing(0)
-                        .foregroundStyle(Color.inkPrimary)
-                        .padding(.bottom, 3)
-                        .accessibilityIdentifier(AX.social.challengeName)
-                    Text(metric.globalSubheading(weightUnit))
-                        .font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted)
+                    Text("OF \(total.formatted())")
+                    if let mine, let top = Self.topPercent(rank: mine.rank, of: total) {
+                        Text("TOP \(top)%")
+                    }
                 }
-                .padding(.horizontal, 14).padding(.top, 14).padding(.bottom, 12)
+                .font(.spaceMono(9)).tracking(1.5).foregroundStyle(white.opacity(0.9))
+            }
+            .padding(.top, 20)
 
-                HStack(spacing: 0) {
-                    kpiCell(label: "Your Total", value: mine.map { metric.formatScoreCompact($0.entry.score, weightUnit) } ?? "—", showTrailingBorder: true)
-                    kpiCell(label: "Rank", value: mine.map { "\($0.rank)" } ?? "—", delta: "OF \(challenge.memberCount.formatted())", showTrailingBorder: true)
-                    kpiCell(label: "To Next", value: gap.map { metric.formatScoreCompact($0, weightUnit) } ?? "—", showTrailingBorder: false)
-                }
-                .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
-
+            VStack(spacing: 0) {
+                Rectangle().fill(white.opacity(0.3)).frame(height: 1)
                 if joined {
                     NavigationLink {
                         GlobalLeaderboardView(challenge: challenge, viewModel: viewModel)
                     } label: {
-                        actionRow("VIEW LEADERBOARD")
+                        cardFooter(left: footerScore(challenge: challenge, mine: mine, board: board), right: "BOARD ›")
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier(AX.social.challengeView)
@@ -132,38 +151,57 @@ struct ChallengesView: View {
                         isJoiningGlobal = true
                         Task { await viewModel.join(challenge); isJoiningGlobal = false }
                     } label: {
-                        actionRow(isJoiningGlobal ? "JOINING…" : "JOIN")
+                        cardFooter(left: "JOIN TO GET ON THE BOARD", right: isJoiningGlobal ? "JOINING…" : "JOIN ›")
                     }
                     .buttonStyle(.plain)
                     .disabled(isJoiningGlobal)
                     .accessibilityIdentifier(AX.social.challengeJoin)
                 }
             }
-            .background(Color.surf)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.dsHairLine, lineWidth: 1))
+            .padding(.top, 16)
         }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background { SocialCardFill() }
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(.bottom, 14)
     }
 
-    private func actionRow(_ title: String) -> some View {
+    /// "48.2K KG · 1.4K TO 46TH": your score, and the gap to the place above when there is one.
+    private func footerScore(challenge: SocialChallenge, mine: LeaderboardRow?, board: ChallengeBoard?) -> String {
+        guard let mine else { return "NO SCORE YET" }
+        let metric = challenge.metric
+        let suffix = metric.scoreSuffix(weightUnit)
+        var text = metric.formatScoreCompact(mine.entry.score, weightUnit) + (suffix.isEmpty ? "" : " " + suffix)
+        if let board, let gap = Leaderboard.gapToNext(rows: board.rows, mine: mine),
+           let above = board.rows.last(where: { $0.rank < mine.rank }) {
+            text += " · \(metric.formatScoreCompact(gap, weightUnit)) TO \(Leaderboard.ordinal(above.rank))"
+        }
+        return text
+    }
+
+    private func cardFooter(left: String, right: String) -> some View {
         HStack {
-            Text(title).font(.archivo(14, weight: .black)).tracking(0.5).foregroundStyle(Color.accentInk)
-            Spacer()
-            Text("›").font(Font.spaceMono(14)).foregroundStyle(Color.accentInk)
+            Text(left).font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.white).lineLimit(1)
+            Spacer(minLength: 8)
+            Text(right).font(.spaceMono(9, weight: .bold)).tracking(1.5).foregroundStyle(Color.white)
         }
-        .padding(.horizontal, 14)
-        .frame(minHeight: 44)
+        .padding(.top, 12)
         .contentShape(Rectangle())
-        .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
     }
 
-    private func kpiCell(label: String, value: String, delta: String? = nil, showTrailingBorder: Bool) -> some View {
-        KPIBlock(label: label, value: value, delta: delta, alignment: .leading)
-            .padding(.horizontal, 14).padding(.vertical, 10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .overlay(alignment: .trailing) {
-                if showTrailingBorder { Rectangle().fill(Color.dsHairLine).frame(width: 1) }
-            }
+    /// "EVERY KG LIFTED · ALL SESSIONS COUNT" → "Every kg lifted. All sessions count."
+    static func sentence(_ shouting: String) -> String {
+        shouting.split(separator: "·").map { part in
+            let t = part.trimmingCharacters(in: .whitespaces).lowercased()
+            return t.prefix(1).uppercased() + t.dropFirst() + "."
+        }.joined(separator: " ")
+    }
+
+    /// Top x% of the board (1...100), nil when the board is empty.
+    static func topPercent(rank: Int, of total: Int) -> Int? {
+        guard total > 0, rank > 0 else { return nil }
+        return min(100, max(1, Int((Double(rank) / Double(total) * 100).rounded(.up))))
     }
 
     // MARK: Rows
@@ -172,65 +210,94 @@ struct ChallengesView: View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(invite.challengeName).font(.archivo(16, weight: .bold)).foregroundStyle(Color.inkPrimary)
-                Text("INVITED BY \(invite.fromUsername.isEmpty ? "A FRIEND" : "@" + invite.fromUsername.uppercased())")
-                    .font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
+                Text("Invited by \(invite.fromUsername.isEmpty ? "a friend" : "@" + invite.fromUsername)")
+                    .font(.archivo(12)).foregroundStyle(Color.inkMuted)
             }
             Spacer()
-            SocialPill(title: "JOIN", style: .filled) { Task { await viewModel.respond(to: invite, accept: true) } }
-            SocialPill(title: "IGNORE", style: .outlined) { Task { await viewModel.respond(to: invite, accept: false) } }
+            SocialSmallAction(title: "JOIN", style: .filled) { Task { await viewModel.respond(to: invite, accept: true) } }
+            SocialSmallAction(title: "IGNORE", style: .outlined) { Task { await viewModel.respond(to: invite, accept: false) } }
         }
-        .padding(.horizontal, 16)
-        .frame(minHeight: 64)
-        .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+        .padding(.horizontal, 16).padding(.vertical, 12)
+        .frame(minHeight: 44)
+        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
     }
 
-    private func friendChallengeRow(_ challenge: SocialChallenge) -> some View {
-        let mine = viewModel.boards[challenge.id]?.mine
-        return VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(challenge.name).font(.archivo(17, weight: .bold)).foregroundStyle(Color.inkPrimary)
-                Spacer()
-                Text(timeLeft(challenge)).font(Font.spaceMono(9)).foregroundStyle(Color.inkMuted)
+    private func friendChallengeCard(_ challenge: SocialChallenge) -> some View {
+        let board = viewModel.boards[challenge.id]
+        let mine = board?.mine
+        let sub = [challenge.exerciseName ?? challenge.metric.displayName, challengeTimeLeft(challenge)].joined(separator: " · ")
+        return HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(challenge.name).font(.archivo(17, weight: .bold)).foregroundStyle(Color.inkPrimary).lineLimit(1)
+                Text(sub).font(.archivo(12)).foregroundStyle(Color.inkMuted).lineLimit(1)
             }
-            Text("\(challenge.metric.displayName.uppercased()) · \(challenge.memberCount) \(challenge.memberCount == 1 ? "PARTICIPANT" : "PARTICIPANTS")")
-                .font(Font.spaceMono(9)).tracking(1).foregroundStyle(Color.inkMuted)
-
-            HStack {
-                KPIBlock(label: "You", value: mine.map { challenge.metric.formatScore($0.entry.score, weightUnit) } ?? "—")
-                Spacer()
-                KPIBlock(label: "Position", value: mine.map { "\($0.rank)" } ?? "—", alignment: .trailing)
-                Text("›").font(.system(size: 14)).foregroundStyle(Color.inkMuted).padding(.leading, 8)
-            }
-            .padding(.top, 4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if let rows = board?.rows, !rows.isEmpty { miniPodium(rows) }
+            Text(mine.map { Leaderboard.ordinal($0.rank) } ?? "—")
+                .font(.spaceMono(15, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                .frame(width: 36, alignment: .trailing)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+        .padding(14)
+        .background(Color.surf, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(AX.social.challengeRow)
+    }
+
+    /// Second, first, third: initial tile over a bar (18 / 26 / 12 pt) in the sunken tone, you in the accent.
+    private func miniPodium(_ rows: [LeaderboardRow]) -> some View {
+        let top = Array(rows.prefix(3))
+        let heights: [CGFloat] = [26, 18, 12]
+        return HStack(alignment: .bottom, spacing: 3) {
+            ForEach([1, 0, 2].filter { $0 < top.count }, id: \.self) { i in
+                let r = top[i]
+                VStack(spacing: 3) {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(r.isMe ? Color.oreAccent : Color.surf2)
+                        .frame(width: 22, height: 22)
+                        .overlay {
+                            Text(String((r.isMe ? "You" : r.entry.username).prefix(1)).uppercased())
+                                .font(.archivo(9, weight: .black))
+                                .foregroundStyle(r.isMe ? Color.white : Color.inkSecondary)
+                        }
+                    UnevenRoundedRectangle(topLeadingRadius: 4, topTrailingRadius: 4)
+                        .fill(Color.surf2).frame(width: 22, height: heights[i])
+                }
+            }
+        }
+        .accessibilityHidden(true)
     }
 
     private func endedChallengeRow(_ challenge: SocialChallenge) -> some View {
         let mine = viewModel.boards[challenge.id]?.mine
-        return HStack {
+        return HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(challenge.name).font(.archivo(16, weight: .semibold)).foregroundStyle(Color.inkPrimary)
-                Text("ENDED \(challenge.endAt.formatted(.dateTime.day().month(.abbreviated)).uppercased())")
-                    .font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
+                Text(challenge.name).font(.archivo(16, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                Text("Ended \(challenge.endAt.formatted(.dateTime.day().month(.abbreviated)))")
+                    .font(.archivo(12)).foregroundStyle(Color.inkMuted)
             }
             Spacer()
-            if let mine { Text(Leaderboard.ordinal(mine.rank)).font(Font.spaceMono(11, weight: .bold)).foregroundStyle(Color.inkPrimary) }
-            Text("›").font(.system(size: 14)).foregroundStyle(Color.inkMuted).padding(.leading, 8)
+            if let mine { Text(Leaderboard.ordinal(mine.rank)).font(.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary) }
+            Text("›").font(.spaceMono(14)).foregroundStyle(Color.inkMuted)
         }
-        .padding(.horizontal, 16)
-        .frame(minHeight: 56)
-        .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+        .padding(.horizontal, 16).padding(.vertical, 12)
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
+        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
     }
+}
 
-    private func timeLeft(_ challenge: SocialChallenge) -> String {
-        let days = Calendar.current.dateComponents([.day], from: Date(), to: challenge.endAt).day ?? 0
-        if days <= 0 {
-            let hours = max(1, Calendar.current.dateComponents([.hour], from: Date(), to: challenge.endAt).hour ?? 1)
-            return "\(hours)H LEFT"
+/// Behind the monthly challenge card: the accent, with the member's Stardust drifting over it when they have Stardust buttons on.
+struct SocialCardFill: View {
+    var body: some View {
+        ZStack {
+            Color.oreAccent
+            if AccentStore.shared.stardustEnabled {
+                StardustView(variant: "banner", budget: .more,
+                             overrides: StardustParams.Overrides(palette: AccentStore.shared.starPalette))
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
         }
-        return "\(days)D LEFT"
     }
 }

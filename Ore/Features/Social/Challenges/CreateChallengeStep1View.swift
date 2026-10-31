@@ -29,71 +29,74 @@ struct CreateChallengeStep1View: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SocialScreenHeader(title: "NEW CHALLENGE", onBack: { dismiss() })
+            ChallengeHeader(label: "STEP 1 OF 2", title: "NEW CHALLENGE", onBack: { dismiss() })
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    HStack {
-                        TextField("Name your challenge", text: $name)
-                            .font(.archivo(20, weight: .bold))
-                            .foregroundStyle(Color.inkPrimary)
-                    }
-                    .padding(.top, 16)
-                    .frame(minHeight: 44, alignment: .bottom)
-                    .overlay(alignment: .bottom) { Rectangle().fill(Color.ruleStrong).frame(height: 1) }
+                    SectionLabel(title: "Name").padding(.horizontal, 16).padding(.top, 22).padding(.bottom, 8)
+                    TextField("Name your challenge", text: $name)
+                        .font(.archivo(15, weight: .semibold))
+                        .foregroundStyle(Color.inkPrimary)
+                        .padding(.horizontal, 12)
+                        .frame(height: 44)
+                        .background(Color.surf2, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .padding(.horizontal, 16)
+                        .accessibilityIdentifier(AX.row("Challenge name"))
 
-                    SectionLabel(title: "Measured By").padding(.top, 24).padding(.bottom, 8)
-                    ForEach(metrics) { m in
-                        metricRow(m)
+                    SectionLabel(title: "Measured By").padding(.horizontal, 16).padding(.top, 22).padding(.bottom, 8)
+                    VStack(spacing: 0) {
+                        ForEach(metrics) { m in
+                            metricRow(m)
+                        }
                     }
+                    .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
 
                     if allowsExercise {
                         Button { showExercisePicker = true } label: {
                             HStack {
-                                Text("EXERCISE").font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
+                                Text("EXERCISE").font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
                                 Spacer()
                                 HStack(spacing: 4) {
                                     Text(exerciseName ?? (needsExercise ? "Choose one" : "Any exercise"))
                                         .font(.archivo(15, weight: .semibold))
                                         .foregroundStyle(exerciseName == nil && needsExercise ? Color.signalDown : Color.inkPrimary)
-                                    Text("›").font(Font.spaceMono(12)).foregroundStyle(Color.inkMuted)
+                                    Text("›").font(.spaceMono(12)).foregroundStyle(Color.inkMuted)
                                 }
                             }
+                            .padding(.horizontal, 16)
                             .frame(minHeight: 44)
+                            .contentShape(Rectangle())
                             .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
                         }
                         .buttonStyle(.plain)
-                        .padding(.top, 8)
                     }
 
-                    SectionLabel(title: "Runs For").padding(.top, 24).padding(.bottom, 10)
+                    SectionLabel(title: "Runs For").padding(.horizontal, 16).padding(.top, 22).padding(.bottom, 8)
                     FlowLayout(spacing: 8) {
                         ForEach(ChallengeWindow.allCases) { w in
-                            FilterChip(title: w.label(), isSelected: window == w) { window = w }
+                            SocialSmallAction(title: w.label(), style: window == w ? .filled : .outlined) { window = w }
                         }
                     }
+                    .padding(.horizontal, 16)
                     if window == .custom {
                         DatePicker("Ends", selection: $customEnd, in: (Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date())..., displayedComponents: .date)
                             .font(.archivo(15, weight: .semibold))
-                            .padding(.top, 12)
+                            .padding(.horizontal, 16).padding(.top, 12)
                     }
 
                     Text("SCORED FROM LOGGED SESSIONS · NOTHING TO ENTER BY HAND · ONLY PEOPLE YOU INVITE CAN JOIN")
-                        .font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted)
-                        .padding(.top, 24)
+                        .font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
+                        .padding(16)
                 }
-                .padding(.horizontal, 16)
                 .padding(.bottom, 24)
             }
         }
         .background(Color.canvasBg)
         .navigationBarBackButtonHidden(true)
-        .safeAreaInset(edge: .bottom) {
-            DockedCTA(leadingText: "STEP 2 · INVITE FRIENDS", primaryLabel: isCreating ? "…" : "NEXT ›", style: .quiet) {
-                createAndAdvance()
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            SocialDock {
+                SocialCTA(title: isCreating ? "…" : "NEXT · INVITE", disabled: !canCreate, id: AX.row("Next invite")) { createAndAdvance() }
             }
-            .disabled(!canCreate)
-            .opacity(canCreate ? 1 : 0.5)
         }
         .navigationDestination(isPresented: $showInvite) {
             if let created { InviteFriendsView(viewModel: viewModel, challenge: created) }
@@ -113,25 +116,28 @@ struct CreateChallengeStep1View: View {
     private func metricRow(_ m: ChallengeMetric) -> some View {
         let selected = metric == m
         return Button { metric = m } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(m.displayName).font(.archivo(16, weight: selected ? .bold : .regular)).foregroundStyle(Color.inkPrimary)
-                    Text("\(m.unitLabel(weightUnit)) · \(m.rule)").font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(m.displayName).font(.archivo(16, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                    Text("\(m.unitLabel(weightUnit)) · \(m.rule)".uppercased()).font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
+                        .multilineTextAlignment(.leading)
                 }
-                Spacer()
+                Spacer(minLength: 8)
                 if selected {
-                    Text("✓").font(Font.spaceMono(13, weight: .bold)).foregroundStyle(Color.accentInk)
+                    Text("✓").font(.spaceMono(14, weight: .bold)).foregroundStyle(Color.accentInk)
                 }
             }
-            .padding(.horizontal, 8)
-            .frame(minHeight: 56)
+            .padding(.horizontal, 16).padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(selected ? Color.activeRowBg : Color.clear)
             .overlay(alignment: .leading) {
-                if selected { Rectangle().fill(Color.oreAccent).frame(width: 2) }
+                if selected { Rectangle().fill(Color.accentInk).frame(width: 2) }
             }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private func createAndAdvance() {

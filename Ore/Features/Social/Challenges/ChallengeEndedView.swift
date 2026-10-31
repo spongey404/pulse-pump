@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// 7b — challenge ended: winner band and the final board, from the entries the functions wrote.
+/// 7b — challenge ended: winner card with a gold star, your result, the final board (from the entries the functions wrote)
+/// and a rematch.
 struct ChallengeEndedView: View {
     let challenge: SocialChallenge
     @Environment(\.weightUnit) private var weightUnit
@@ -17,77 +18,90 @@ struct ChallengeEndedView: View {
     private var lengthDays: Int {
         max(1, Calendar.current.dateComponents([.day], from: challenge.startAt, to: challenge.endAt).day ?? 28)
     }
+    /// "4 WEEKS" when the length is whole weeks, else "30 DAYS".
+    private var lengthLabel: String {
+        // A challenge that ends at the last instant of a day is one day short of its whole length.
+        let days = Calendar.current.dateComponents([.day], from: challenge.startAt, to: challenge.endAt.addingTimeInterval(60)).day ?? lengthDays
+        if days >= 7, days % 7 == 0 { return "\(days / 7) \(days / 7 == 1 ? "WEEK" : "WEEKS")" }
+        return "\(days) \(days == 1 ? "DAY" : "DAYS")"
+    }
+    private var label: String {
+        var parts = ["Ended \(challenge.endAt.formatted(.dateTime.day().month(.abbreviated)))", metric.displayName]
+        if let exercise = challenge.exerciseName { parts.append(exercise) }
+        parts.append("\(challenge.memberCount) \(challenge.memberCount == 1 ? "person" : "people")")
+        return parts.joined(separator: " · ").uppercased()
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            SocialScreenHeader(title: challenge.name.uppercased(), onBack: { dismiss() })
+            ChallengeHeader(label: label, title: challenge.name.uppercased(), onBack: { dismiss() })
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    HStack(spacing: 8) {
-                        Text("ENDED \(challenge.endAt.formatted(.dateTime.day().month(.abbreviated)).uppercased())")
-                            .font(Font.spaceMono(8, weight: .bold)).tracking(1.2).foregroundStyle(Color.inkMuted)
-                            .padding(.horizontal, 9).padding(.vertical, 5)
-                            .background(Color.surf2).clipShape(RoundedRectangle(cornerRadius: 8))
-                        Text("\(metric.displayName.uppercased()) · \(challenge.memberCount) \(challenge.memberCount == 1 ? "PERSON" : "PEOPLE")")
-                            .font(Font.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkMuted)
-                    }
-                    .padding(.top, 12)
-
                     if let winner {
-                        HStack(spacing: 14) {
-                            Avatar(initial: winner.entry.username, size: 44)
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("WINNER").font(Font.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
-                                Text((winner.isMe ? "You" : winner.entry.username).uppercased())
-                                    .font(.archivo(22, weight: .black)).tracking(0.5)
-                                    .foregroundStyle(Color.medalGold)
-                                    .shadow(color: Color.medalGold.opacity(0.45), radius: 5)
-                            }
-                            Spacer()
-                            VStack(alignment: .trailing, spacing: 3) {
-                                Text("BEST").font(Font.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
-                                Text(metric.formatScore(winner.entry.score, weightUnit)).font(Font.spaceMono(18, weight: .bold)).foregroundStyle(Color.inkPrimary)
-                            }
-                        }
-                        .padding(.vertical, 14)
-                        .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
-                        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
-                        .padding(.top, 14)
+                        winnerCard(winner).padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 14)
                     } else if board != nil {
                         Text("NO WINNER · NOBODY SCORED")
-                            .font(Font.spaceMono(9)).tracking(1.2).foregroundStyle(Color.inkMuted).padding(.top, 16)
+                            .font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkMuted).padding(16)
                     }
 
-                    HStack(spacing: 0) {
-                        KPIBlock(label: "You Finished", value: mine.map { Leaderboard.ordinal($0.rank) } ?? "—", alignment: .center).frame(maxWidth: .infinity)
-                        KPIBlock(label: "Your Best", value: mine.map { metric.formatScore($0.entry.score, weightUnit) } ?? "—", alignment: .center).frame(maxWidth: .infinity)
-                        KPIBlock(label: "People", value: "\(max(challenge.memberCount, rows.count))", alignment: .center).frame(maxWidth: .infinity)
+                    HStack(alignment: .top, spacing: 8) {
+                        stat("You finished", mine.map { Leaderboard.ordinal($0.rank) } ?? "—")
+                        stat("Your best", mine.map { metric.formatScore($0.entry.score, weightUnit) } ?? "—")
+                        stat("People", "\(max(challenge.memberCount, rows.count))")
                     }
-                    .padding(.vertical, 16)
+                    .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 16)
+                    .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
 
-                    SectionLabel(title: "Final", meta: "Leaderboard").padding(.bottom, 6)
-                    if board == nil { SkeletonRows(count: 4) }
+                    SectionLabel(title: "Final Board")
+                        .padding(.horizontal, 16).padding(.top, 22).padding(.bottom, 8)
+                    if board == nil { SkeletonRows(count: 4).padding(.horizontal, 16) }
                     ForEach(rows) { row in
-                        boardRow(row)
+                        ChallengeBoardRow(row: row, minHeight: 52) {
+                            ScoreText(value: metric.formatScore(row.entry.score, weightUnit), suffix: metric.scoreSuffix(weightUnit), size: 14)
+                        }
                     }
                 }
-                .padding(.horizontal, 16)
                 .padding(.bottom, 24)
             }
         }
         .background(Color.canvasBg)
         .navigationBarBackButtonHidden(true)
         .task { await viewModel.loadBoard(challenge) }
-        .safeAreaInset(edge: .bottom) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             // Clients can only create private challenges, so a global one can't be re-run from here.
             if !challenge.isGlobal {
-                DockedCTA(leadingText: "SAME METRIC, NEW \(lengthDays) DAYS", primaryLabel: isRunningAgain ? "…" : "RUN IT AGAIN ›", style: .quiet) {
-                    runAgain()
+                SocialDock {
+                    SocialCTA(title: isRunningAgain ? "…" : "RUN IT AGAIN", info: "SAME METRIC · \(lengthLabel)",
+                              disabled: isRunningAgain, id: AX.row("Run it again")) { runAgain() }
                 }
-                .disabled(isRunningAgain)
             }
         }
+    }
+
+    private func winnerCard(_ winner: LeaderboardRow) -> some View {
+        let name = winner.entry.username.isEmpty ? Brand.defaultUserName : winner.entry.username
+        let suffix = metric.scoreSuffix(weightUnit)
+        return VStack(spacing: 8) {
+            PRStar(size: 22)
+            Text("WINNER").font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkMuted)
+            ChallengeAvatar(name: name, isMe: winner.isMe, size: 56)
+            Text(winner.isMe ? "You" : name).font(.archivo(26, weight: .black)).foregroundStyle(Color.inkPrimary).lineLimit(1)
+            ScoreText(value: metric.formatScore(winner.entry.score, weightUnit), suffix: suffix, size: 20, color: .prGold)
+        }
+        .padding(.vertical, 22).padding(.horizontal, 16)
+        .frame(maxWidth: .infinity)
+        .background(Color.surf, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+
+    private func stat(_ label: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label.uppercased()).font(.spaceMono(8)).tracking(1.2).foregroundStyle(Color.inkMuted)
+            Text(value).font(.spaceMono(20, weight: .bold)).foregroundStyle(Color.inkPrimary).lineLimit(1).minimumScaleFactor(0.6)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 
     private func runAgain() {
@@ -101,32 +115,6 @@ struct ChallengeEndedView: View {
         Task {
             if await viewModel.createChallenge(draft) != nil { dismiss() }
             isRunningAgain = false
-        }
-    }
-
-    private func boardRow(_ row: LeaderboardRow) -> some View {
-        let (fg, glow) = medalColor(for: row.rank)
-        let name = row.entry.username.isEmpty ? Brand.defaultUserName : row.entry.username
-        return HStack(spacing: 10) {
-            Text("\(row.rank)").font(Font.spaceMono(15, weight: .bold)).foregroundStyle(fg).shadow(color: glow, radius: 4)
-                .frame(width: 22, alignment: .leading)
-            Avatar(initial: name, size: 32, showBorder: false)
-            Text(row.isMe ? "You" : name).font(.archivo(16, weight: row.rank <= 3 ? .bold : .regular)).foregroundStyle(row.isMe ? Color.accentInk : fg).shadow(color: glow, radius: 4)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Text(metric.formatScore(row.entry.score, weightUnit)).font(Font.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkPrimary)
-                .frame(width: 68, alignment: .trailing)
-        }
-        .frame(minHeight: 56)
-        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
-        .accessibilityElement(children: .combine)
-    }
-
-    private func medalColor(for rank: Int) -> (Color, Color) {
-        switch rank {
-        case 1: (Color.medalGold, Color.medalGold.opacity(0.45))
-        case 2: (Color.medalSteel, .clear)
-        case 3: (Color.medalBronze, .clear)
-        default: (Color.inkMuted, .clear)
         }
     }
 }
