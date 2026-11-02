@@ -65,6 +65,8 @@ final class SocialViewModel {
     @ObservationIgnored private var lastFeedFetch: Date?
     @ObservationIgnored private var singleAuthorQueries = false
     private(set) var hiddenPostIds: Set<String> = []
+    /// Friends whose posts the viewer muted (kept on this device; they are still friends and still see yours).
+    private(set) var mutedUids: Set<String> = []
     static let cacheTTL: TimeInterval = 5 * 60
 
     // Comments
@@ -120,6 +122,7 @@ final class SocialViewModel {
             stateUid = me.uid
             if let uid = me.uid {
                 hiddenPostIds = Set(defaults.stringArray(forKey: Self.hiddenKey(uid)) ?? [])
+                mutedUids = Set(defaults.stringArray(forKey: Self.mutedKey(uid)) ?? [])
             }
         }
         return me.uid != nil
@@ -143,6 +146,7 @@ final class SocialViewModel {
         pendingChallengeInvites = []
         boards = [:]
         hiddenPostIds = []
+        mutedUids = []
         pendingPost = nil
         likeInFlight = []
     }
@@ -269,6 +273,7 @@ final class SocialViewModel {
 
     private static func dismissedKey(_ uid: String) -> String { "social.dismissedFans.\(uid)" }
     private static func hiddenKey(_ uid: String) -> String { "social.hiddenPosts.\(uid)" }
+    private static func mutedKey(_ uid: String) -> String { "social.mutedFriends.\(uid)" }
 
     private func loadDismissed() -> Set<String> {
         guard let uid = me.uid else { return [] }
@@ -453,6 +458,21 @@ final class SocialViewModel {
         }
     }
 
+    /// "Hide this post": gone from this viewer's feed, nothing sent to anyone.
+    func hide(postId: String) { hidePost(postId) }
+
+    /// "Mute <name>": their posts leave this viewer's feed; they stay friends.
+    func mute(uid: String) {
+        mutedUids.insert(uid)
+        feedItems.removeAll { $0.userId == uid }
+        if let me = me.uid { defaults.set(Array(mutedUids).sorted(), forKey: Self.mutedKey(me)) }
+    }
+
+    func unmute(uid: String) {
+        mutedUids.remove(uid)
+        if let me = me.uid { defaults.set(Array(mutedUids).sorted(), forKey: Self.mutedKey(me)) }
+    }
+
     private func hidePost(_ id: String) {
         hiddenPostIds.insert(id)
         feedItems.removeAll { $0.id == id }
@@ -517,7 +537,7 @@ final class SocialViewModel {
                 continue   // an unreadable single author: skip them, keep the rest of the feed
             }
         }
-        let merged = FeedQueryPlanner.merge(pages, blocked: graph.blocked, hidden: hiddenPostIds, limit: limit)
+        let merged = FeedQueryPlanner.merge(pages, blocked: graph.blocked.union(mutedUids), hidden: hiddenPostIds, limit: limit)
         return (await hydrate(merged), hasMore)
     }
 
@@ -629,14 +649,39 @@ final class SocialViewModel {
     /// published; nil when nothing was posted (workout posts are "Only me", signed out, already
     /// posted, or the write failed — a failed post is kept in `pendingPost` for a retry).
     @discardableResult
-    func publishWorkoutPost(data: WorkoutCompletionData, caption: String, taggedUids: [String], includeBodyMap: Bool) async -> PostPayload? {
+    /// The payload the composer would post, for "Save as draft" (nothing is sent).
+    func draftPayload(data: WorkoutCompletionData, caption: String, taggedUids: [String], includeBodyMap: Bool, extras: PostExtras) -> PostPayload? {
+        guard syncIdentity(), let uid = me.uid else { return nil }
+        return FeedPostBuilder.makePayload(data: data, author: .init(uid: uid, name: myName, handle: myHandle), caption: caption, taggedUids: taggedUids,
+                                           includeBodyMap: includeBodyMap, privacy: privacyService.settings, date: now(), extras: extras)
+    }
+
+    func publishWorkoutPost(data: WorkoutCompletionData, caption: String, taggedUids: [String], includeBodyMap: Bool,
+                            extras: PostExtras = PostExtras(), photoJPEG: Data? = nil) async -> PostPayload? {
         guard syncIdentity(), let uid = me.uid else { return nil }
         if myProfile == nil { await loadMyProfile() }
         let author = FeedPostBuilder.Author(uid: uid, name: myName, handle: myHandle)
-        guard let payload = FeedPostBuilder.makePayload(data: data, author: author, caption: caption, taggedUids: taggedUids,
-                                                       includeBodyMap: includeBodyMap, privacy: privacyService.settings, date: now()),
+        guard var payload = FeedPostBuilder.makePayload(data: data, author: author, caption: caption, taggedUids: taggedUids,
+                                                       includeBodyMap: includeBodyMap, privacy: privacyService.settings, date: now(), extras: extras),
               !publishedPostIds.contains(payload.postId) else { return nil }
+        if let photoJPEG, payload.photoURL == nil {
+            // A failed upload posts without the photo rather than losing the whole session.
+            payload.photoURL = try? await PostPhotoStore.shared.upload(jpeg: photoJPEG, authorUid: uid, postId: payload.postId)
+        }
         return await publish(payload)
+    }
+
+    /// Posts a draft saved from the composer (History › POST IT) and removes it once it is up.
+    @discardableResult
+    func publishDraft(workoutId: String) async -> Bool {
+        guard syncIdentity(), let uid = me.uid, var draft = PostDraftStore.shared.draft(forWorkout: workoutId),
+              draft.payload.authorUid == uid, !publishedPostIds.contains(draft.payload.postId) else { return false }
+        if draft.payload.photoURL == nil, let jpeg = PostDraftStore.shared.photo(of: draft) {
+            draft.payload.photoURL = try? await PostPhotoStore.shared.upload(jpeg: jpeg, authorUid: uid, postId: draft.payload.postId)
+        }
+        guard await publish(draft.payload) != nil else { return false }
+        PostDraftStore.shared.discard(workout: workoutId)
+        return true
     }
 
     @discardableResult
@@ -658,6 +703,38 @@ final class SocialViewModel {
         guard let payload = pendingPost, !publishedPostIds.contains(payload.postId) else { return }
         await publish(payload)
         if pendingPost == nil { await loadFeed(forceRefresh: true) }
+    }
+
+    /// Saves an author's edit of their own post: the post document, the photo in Storage, and the recalculated stats and body map.
+    @discardableResult
+    func updatePost(_ post: WorkoutFeedItem, edit: EditPostModel, recalc: EditPostModel.Recalc) async -> Bool {
+        guard syncIdentity(), let uid = me.uid, post.userId == uid else { return false }
+        var photoURL = edit.photoURL
+        if edit.removePhoto { await PostPhotoStore.shared.delete(authorUid: uid, postId: post.id); photoURL = nil }
+        if let jpeg = edit.newPhotoJPEG { photoURL = try? await PostPhotoStore.shared.upload(jpeg: jpeg, authorUid: uid, postId: post.id) }
+        let sets = FeedPostBuilder.muscleSetCounts(for: recalc.exercises)
+        let payload = PostPayload(
+            postId: post.id, authorUid: uid, authorName: post.username, authorUsername: post.handle, date: post.date,
+            workoutName: post.templateName ?? "Workout", audience: PostAudience(rawValue: post.audience ?? "") ?? .friends,
+            bodyMapAudience: PostAudience(rawValue: post.bodyMapAudience ?? "") ?? .friends,
+            stats: .init(sets: recalc.sets, volumeKg: recalc.volumeKg, durationSec: post.durationSeconds, prCount: recalc.prCount),
+            exercises: recalc.exercises.map(\.forPost), caption: edit.caption.trimmingCharacters(in: .whitespacesAndNewlines),
+            taggedUids: edit.taggedUids, muscleSets: sets.isEmpty || post.bodyMapAudience == PostAudience.onlyMe.rawValue ? nil : sets,
+            photoURL: photoURL, song: edit.song, taggedNames: edit.taggedNames, editedAt: now())
+        do {
+            try await remote.updatePost(payload)
+            var updated = post
+            updated.caption = payload.caption; updated.exercises = payload.exercises; updated.prCount = payload.stats.prCount
+            updated.improvedCount = recalc.improved; updated.totalExercises = recalc.exercises.count
+            updated.taggedFriendUids = payload.taggedUids; updated.taggedNames = payload.taggedNames
+            updated.photoURL = photoURL; updated.song = edit.song; updated.isEdited = true; updated.muscleSets = sets
+            if let i = feedItems.firstIndex(where: { $0.id == post.id }) { feedItems[i] = updated }
+            if profilePosts[post.id] != nil { profilePosts[post.id] = updated }
+            return true
+        } catch {
+            lastError = "Couldn't save your changes. Try again."
+            return false
+        }
     }
 
     func deletePost(_ id: String) async {

@@ -240,7 +240,7 @@ service cloud.firestore {
     function postShapeOk(d) {
       return d.keys().hasOnly(['authorUid', 'authorName', 'authorUsername', 'date', 'workoutName', 'audience',
                                'bodyMapAudience', 'stats', 'exercises', 'likeCount', 'commentCount', 'createdAt',
-                               'caption', 'workoutId', 'taggedUids', 'schemaVersion', 'updatedAt'])
+                               'caption', 'workoutId', 'taggedUids', 'taggedNames', 'photoURL', 'song', 'editedAt', 'schemaVersion', 'updatedAt'])
         && isStr(d.authorName, 0, 100)
         && isStr(d.authorUsername, 0, 40)
         && isTs(d.date)
@@ -253,6 +253,11 @@ service cloud.firestore {
         && optStr(d, 'caption', 500)
         && optStr(d, 'workoutId', 100)
         && optList(d, 'taggedUids', 20)
+        && optList(d, 'taggedNames', 20)
+        && optStr(d, 'photoURL', 600)
+        && (!('song' in d) || (d.song is map && d.song.keys().hasOnly(['title', 'artist', 'artworkURL', 'previewURL', 'appleMusicId'])
+            && isStr(d.song.title, 1, 120) && isStr(d.song.artist, 0, 120)))
+        && (!('editedAt' in d) || isTs(d.editedAt))
         && schemaOk(d);
     }
 

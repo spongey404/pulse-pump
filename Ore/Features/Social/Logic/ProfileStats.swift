@@ -39,6 +39,22 @@ struct ProfileStats {
 
     var last30Days: [WorkoutFeedItem] { posts.filter { $0.date >= thirtyDayCutoff && $0.date <= now.addingTimeInterval(86_400) } }
 
+    /// Posts in the last `days` days (7D / 30D on a profile).
+    func posts(inLast days: Int) -> [WorkoutFeedItem] {
+        let cutoff = calendar.date(byAdding: .day, value: -days, to: now) ?? now
+        return posts.filter { $0.date >= cutoff && $0.date <= now.addingTimeInterval(86_400) }
+    }
+
+    func muscleSets(inLast days: Int) -> [String: Int] {
+        posts(inLast: days).reduce(into: [:]) { acc, post in for (m, n) in post.muscleSets { acc[m, default: 0] += n } }
+    }
+
+    /// "5 WORKOUTS · 112K KG · ▲ 2 PRS" for the hero (the volume is formatted by the caller).
+    func heroCounts(inLast days: Int) -> (workouts: Int, volumeKg: Double, prs: Int) {
+        let p = posts(inLast: days)
+        return (p.count, p.reduce(0) { $0 + $1.volumeKg }, p.reduce(0) { $0 + $1.prCount })
+    }
+
     /// Working-set volume (kg) over the last 30 days.
     var volumeKg30d: Double { last30Days.reduce(0) { $0 + $1.volumeKg } }
     var prs30d: Int { last30Days.reduce(0) { $0 + $1.prCount } }

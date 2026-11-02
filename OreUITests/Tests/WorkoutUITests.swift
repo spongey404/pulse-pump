@@ -96,9 +96,13 @@ final class WorkoutUITests: UITestCase {
             workout.dismissAndLog(1)
             workout.waitForSetLogged(1)
             workout.finishConfirmingRemoval()
-            CompletionPage(t: self).waitForIt()
-            RunLoop.current.run(until: Date().addingTimeInterval(1.5))
-            try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "\(dir)/\(name).png"))
+            let page = CompletionPage(t: self)
+            page.waitForIt()
+            RunLoop.current.run(until: Date().addingTimeInterval(2.5))
+            try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "\(dir)/\(name)-summary.png"))
+            page.openComposer()
+            RunLoop.current.run(until: Date().addingTimeInterval(2.5))
+            try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "\(dir)/\(name)-composer.png"))
             app.terminate()
         }
     }

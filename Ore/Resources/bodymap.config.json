@@ -1,0 +1,16 @@
+{
+  "amount": 0.8,
+  "size": 0.95,
+  "flicker": 0.55,
+  "gold": 0.30,
+  "flare": 0.8,
+  "lifespan": 0.5,
+  "sway": 0,
+  "fps": 30,
+  "heatAccent": "#1AA7FF",
+  "reveal": { "delayMs": 150, "staggerMs": 70, "fillMs": 650, "rippleMs": 420, "starFadeMs": 380 },
+  "theme": {
+    "light": { "outline": "#E0E5EB", "muscle": "#C9D0D8", "ink": "#8A929C" },
+    "dark": { "outline": "#2E2A26", "muscle": "#433D37", "ink": "#6E6760" }
+  }
+}

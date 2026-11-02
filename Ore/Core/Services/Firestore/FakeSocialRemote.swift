@@ -229,6 +229,21 @@ final class FakeSocialRemote: SocialRemote {
         if let sets = payload.muscleSets { bodyMaps[payload.postId] = sets }
     }
 
+    func updatePost(_ payload: PostPayload) async throws {
+        try check("updatePost")
+        log.append("updatePost:\(payload.postId)")
+        guard let i = posts.firstIndex(where: { $0.id == payload.postId }), posts[i].userId == meUid else { throw SocialError.permissionDenied }
+        posts[i].caption = payload.caption
+        posts[i].exercises = payload.exercises
+        posts[i].prCount = payload.stats.prCount
+        posts[i].taggedFriendUids = payload.taggedUids
+        posts[i].taggedNames = payload.taggedNames
+        posts[i].photoURL = payload.photoURL
+        posts[i].song = payload.song
+        posts[i].isEdited = true
+        bodyMaps[payload.postId] = payload.muscleSets
+    }
+
     func deletePost(id: String) async throws {
         try check("deletePost")
         posts.removeAll { $0.id == id }

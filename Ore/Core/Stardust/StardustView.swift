@@ -43,6 +43,8 @@ struct StardustView: View {
     var overrides: StardustParams.Overrides = .init()
     /// Frame of the gold anchor (the wordmark's asterisk) in global coordinates.
     var anchor: CGRect? = nil
+    /// Hold one still frame (an active workout under the tab bar), like Low Power Mode and Reduce Motion.
+    var frozen = false
 
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -58,7 +60,8 @@ struct StardustView: View {
     private let config: StardustConfig
 
     init(variant: String = "paywall", budget: StardustBudget = .more, overrides: StardustParams.Overrides = .init(),
-         anchor: CGRect? = nil, config: StardustConfig? = nil) {
+         anchor: CGRect? = nil, frozen: Bool = false, config: StardustConfig? = nil) {
+        self.frozen = frozen
         self.variant = variant
         self.budget = budget
         self.overrides = overrides
@@ -71,12 +74,12 @@ struct StardustView: View {
     }
 
     private var fps: Int { budget == .paywall && idle ? config.fps.paywallIdle : runner.params.fps }
-    private var paused: Bool { !visible || scenePhase != .active || lowPower || reduceMotion || settled }
+    private var paused: Bool { !visible || scenePhase != .active || lowPower || reduceMotion || frozen || settled }
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / Double(max(1, fps)), paused: paused)) { timeline in
             Canvas(opaque: true, rendersAsynchronously: false) { ctx, size in
-                let t = reduceMotion || lowPower ? 1500 : timeline.date.timeIntervalSince(start) * 1000
+                let t = reduceMotion || lowPower || frozen ? 1500 : timeline.date.timeIntervalSince(start) * 1000
                 draw(ctx: &ctx, size: size, t: t)
             }
         }

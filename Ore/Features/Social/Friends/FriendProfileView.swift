@@ -18,6 +18,9 @@ struct FriendProfileView: View {
     @State private var openedPost: WorkoutFeedItem?
     @State private var confirmBlock = false
     @State private var menuOpen = false
+    @State private var friendMenu = false
+    @State private var range = 7
+    @State private var challenging = false
     @State private var message: String?
 
     private var relationship: Relationship { viewModel.relationship(with: uid) }
@@ -27,6 +30,12 @@ struct FriendProfileView: View {
     /// Posts name muscles by display name ("Chest"); match case-insensitively so a differently-cased key still colours its region.
     private var muscleSets: [String: Int] {
         stats.muscleSets30d.reduce(into: [:]) { $0[$1.key.capitalized, default: 0] += $1.value }
+    }
+    /// Their heaviest posted set per lift (never fabricated: from the sessions I am allowed to see).
+    private var theirBest: [String: Double] {
+        (page?.posts ?? []).flatMap(\.exercises).reduce(into: [:]) { acc, e in
+            if let m = e.workingSets.map(\.weight).max(), m > (acc[e.name] ?? 0) { acc[e.name] = m }
+        }
     }
     private var stats: ProfileStats { ProfileStats(posts: page?.posts ?? []) }
 
@@ -65,6 +74,9 @@ struct FriendProfileView: View {
         .background(Color.canvasBg)
         .navigationBarBackButtonHidden(true)
         .task(id: relationship) { page = await viewModel.loadProfilePage(uid: uid) }
+        .sheet(isPresented: $challenging) {
+            DirectChallengeSheet(friendUid: uid, friendName: shownName, theirBest: theirBest, viewModel: viewModel)
+        }
         .fullScreenCover(item: $openedPost) { post in
             FeedSessionSheet(item: post, viewModel: viewModel)
         }
@@ -98,7 +110,7 @@ struct FriendProfileView: View {
     /// The accent of this person when they are a Supernova member (nil until the profile carries it: see `FriendMembership`).
     private var memberHex: String? { FriendMembership.accentHex(forUid: uid) }
 
-    private var identityRow: some View {
+    @ViewBuilder private var identityRow: some View {
         HStack(alignment: .center, spacing: 14) {
             PersonTile(name: shownName, size: 64, accentHex: memberHex)
             VStack(alignment: .leading, spacing: 4) {
@@ -106,11 +118,27 @@ struct FriendProfileView: View {
                     .font(.archivo(26, weight: .black)).foregroundStyle(Color.inkPrimary)
                     .lineLimit(1).minimumScaleFactor(0.6)
                 if memberHex != nil { SupernovaTag() }
+                else if !shownHandle.isEmpty { Text("@\(shownHandle.uppercased())").font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkMuted) }
             }
             Spacer(minLength: 0)
             relationshipButton
         }
         .padding(16)
+        if relationship == .friends, let pending = PendingDirectChallenges.pending(uid: uid) {
+            Text(DirectChallengeModel.pendingLine(length: pending.length, name: shownName)).font(.spaceMono(9, weight: .bold)).tracking(1.5)
+                .foregroundStyle(Color.inkSecondary).padding(.horizontal, 16).padding(.bottom, 8)
+        } else if relationship == .friends && page?.access == .visible {
+            Button { challenging = true } label: {
+                Text("CHALLENGE").font(.spaceMono(9, weight: .bold)).tracking(1.5).foregroundStyle(Color.accentInk)
+                    .padding(.horizontal, 14).frame(height: 36)
+                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Color.ruleStrong, lineWidth: 1))
+            }
+            .buttonStyle(.plain).padding(.horizontal, 16).padding(.bottom, 8).accessibilityIdentifier("profile.challenge")
+        }
+        if relationship == .following {
+            Text("Request sent. \(shownName) sees it in Activity.").font(.archivo(12)).foregroundStyle(Color.inkMuted)
+                .padding(.horizontal, 16).padding(.bottom, 8)
+        }
     }
 
     @ViewBuilder
@@ -122,15 +150,29 @@ struct FriendProfileView: View {
             case .me, .blocked:
                 EmptyView()
             case .friends:
-                SocialSmallButton(title: "FRIENDS", style: .outlined, isStatic: true) {}
+                Button { friendMenu = true } label: { friendsLabel }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $friendMenu, attachmentAnchor: .point(.bottom), arrowEdge: .top) {
+                        PostMenuPopover {
+                            PostMenuRow(title: viewModel.mutedUids.contains(uid) ? "Unmute" : "Mute") {
+                                friendMenu = false
+                                if viewModel.mutedUids.contains(uid) { viewModel.unmute(uid: uid) } else { viewModel.mute(uid: uid) }
+                            }
+                            PostMenuRow(title: "Remove friend", destructive: true) { friendMenu = false; Task { _ = await viewModel.unfollow(uid) } }
+                        }
+                    }
             case .following:
-                SocialSmallButton(title: "FOLLOWING", style: .outlined, isStatic: true) {}
-            case .fan:
-                SocialSmallButton(title: "FOLLOW BACK", style: .filled) { Task { await viewModel.follow(uid) } }
-            case .stranger:
-                SocialSmallButton(title: "FOLLOW", style: .filled) { Task { await viewModel.follow(uid) } }
+                AddFriendButton(requested: true, onAdd: {}, onCancel: { Task { _ = await viewModel.unfollow(uid) } })
+            case .fan, .stranger:
+                AddFriendButton(requested: false, onAdd: { Task { _ = await viewModel.follow(uid) } }, onCancel: {})
             }
         }
+    }
+
+    private var friendsLabel: some View {
+        Text("✓ FRIENDS").font(.spaceMono(9, weight: .bold)).tracking(1.5).foregroundStyle(Color.inkPrimary)
+            .padding(.horizontal, 14).frame(height: 36)
+            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Color.ruleStrong, lineWidth: 1))
     }
 
     private func notice(_ title: String, detail: String? = nil, icon: String) -> some View {
@@ -155,45 +197,39 @@ struct FriendProfileView: View {
 
     // MARK: Visible profile
 
+    private var rangeMuscles: [String: Int] {
+        stats.muscleSets(inLast: range).reduce(into: [:]) { $0[$1.key.capitalized, default: 0] += $1.value }
+    }
+    private var rangeLevels: [String: Double] { BodyMapLevels.levels(muscleSets: rangeMuscles) }
+
     @ViewBuilder
     private var visibleContent: some View {
         HStack(spacing: 6) {
-            ProfileFigure(label: "STREAK", value: "\(profile?.currentStreak ?? 0)D")
-            ProfileFigure(label: "THIS WK", value: "\(stats.trainedDaysThisWeek)")
-            ProfileFigure(label: "VOLUME", value: unit.compactVolume(stats.volumeKg30d))   // posted weights are kg
-            ProfileFigure(label: "PRS", value: "\(stats.prs30d)", isPR: true)
+            ProfileFigure(label: "WORKOUTS", value: "\(profile?.totalWorkouts ?? 0)")
+            ProfileFigure(label: "WK STREAK", value: "\(profile?.currentStreak ?? 0)")
+            ProfileFigure(label: "FOLLOWERS", value: "\(profile?.fanCount ?? 0)")
+            ProfileFigure(label: "FRIENDS", value: "\(profile?.friendCount ?? 0)")
         }
         .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 17)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
 
-        if !muscleSets.isEmpty {
-            SocialSectionLabel(title: "LAST 30 DAYS", ruled: false)
-            HStack(spacing: 20) {
-                bodyMap
-                VStack(spacing: 8) {
-                    ForEach(MuscleSetsFormat.top(muscleSets, count: 5, abbreviated: false), id: \.label) { m in
-                        HStack {
-                            Text(m.label.capitalized).font(.archivo(14, weight: .semibold)).foregroundStyle(Color.inkPrimary)
-                            Spacer()
-                            HStack(spacing: 0) {
-                                Text("\(m.count)").font(.spaceMono(13, weight: .bold)).foregroundStyle(Color.inkPrimary)
-                                Text(" SETS").font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
-                            }
-                        }
-                        .frame(height: 19.3)
-                        .padding(.bottom, 7)
-                        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
-                    }
-                }
-            }
-            .padding(.horizontal, 16).padding(.bottom, 8)
+        HStack {
+            SocialSectionLabel(title: "TRAINING", ruled: false)
+            Spacer()
+            SegmentedChoice(options: [("7D", 7), ("30D", 30)], selection: $range).padding(.trailing, 16).padding(.top, 14)
         }
-
-        SocialSectionLabel(title: "THIS WEEK", meta: "\(stats.trainedDaysThisWeek) OF 7 DAYS")
-
-        ForEach(stats.week, id: \.day) { day in
-            dayRow(day)
+        let hero = stats.heroCounts(inLast: range)
+        if !rangeLevels.isEmpty {
+            BodyMapSwapView(levels: rangeLevels, member: memberHex != nil, accentHex: memberHex)
+                .id(range)
+                .frame(height: 400)
         }
+        Text("\(hero.workouts) WORKOUT\(hero.workouts == 1 ? "" : "S") · \(unit.compactVolume(hero.volumeKg)) · ▲ \(hero.prs) PR\(hero.prs == 1 ? "" : "S")")
+            .font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkSecondary)
+            .frame(maxWidth: .infinity).padding(.vertical, 12)
+
+        SocialSectionLabel(title: "RECENT WORKOUTS")
+        ForEach((page?.posts ?? []).sorted { $0.date > $1.date }.prefix(8)) { post in recentRow(post) }
 
         if relationship != .friends && relationship != .me {
             Text("YOU SEE THEIR PUBLIC SESSIONS · FRIENDS SEE MORE")
@@ -203,49 +239,65 @@ struct FriendProfileView: View {
         }
     }
 
-    /// The 30-day body map. A Supernova member's worked muscles are filled with Stardust in their accent; a free friend has none.
-    private var bodyMap: some View {
-        let heat = BodyHeat.Intensities(muscleSets: muscleSets)
-        return ZStack {
-            if scheme == .dark { BodyHeat.darkSurface(heat) } else { BodyHeat(intensities: heat) }
-            if let hex = memberHex, let palette = FriendMembership.palette(hex: hex) {
-                StardustMuscleOverlay(intensities: heat, palette: palette)
-            }
-        }
-        .frame(width: 94, height: 150)
-    }
-
-    @ViewBuilder
-    private func dayRow(_ day: (day: Date, post: WorkoutFeedItem?)) -> some View {
-        let name = day.day.formatted(.dateTime.weekday(.abbreviated))
-        if let post = day.post {
-            Button { openedPost = post } label: {
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack {
-                        Text(name).font(.archivo(16, weight: .bold)).foregroundStyle(Color.inkPrimary)
-                            .cssLineHeight(fontName: "Archivo-Bold", size: 16, multiple: 1.2)
-                        Spacer()
-                        Text("›").font(.spaceMono(16)).foregroundStyle(Color.inkGhost)
+    private func recentRow(_ post: WorkoutFeedItem) -> some View {
+        let lv = BodyMapLevels.levels(muscleSets: post.muscleSets)
+        return Button { openedPost = post } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Color.surf
+                    if let side = BodyMapLevels.trainedSides(lv).first {
+                        BodyFigureView(side: side, levels: lv, member: memberHex != nil, accentHex: memberHex).padding(.top, 3)
                     }
-                    Text([post.templateName, "\(post.workingSetCount) sets"].compactMap { $0 }.joined(separator: " · "))
-                        .font(.archivo(12)).foregroundStyle(Color.inkMuted)
-                        .cssLineHeight(fontName: "Archivo-Regular", size: 12, multiple: 1.4)
                 }
-                .padding(.vertical, 12).padding(.horizontal, 16)
-                .frame(minHeight: 64)
-                .contentShape(Rectangle())
-                .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+                .frame(width: 52, height: 72).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text((post.templateName ?? "Workout").capitalized).font(.archivo(16, weight: .bold)).foregroundStyle(Color.inkPrimary).lineLimit(1)
+                    Text("\(PostTime.ago(post.date)) · \(post.workingSetCount) SETS · \(unit.compactVolume(post.volumeKg))")
+                        .font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkMuted)
+                }
+                Spacer(minLength: 0)
+                Text("›").font(.spaceMono(16)).foregroundStyle(Color.inkGhost)
             }
-            .buttonStyle(.plain)
-        } else {
-            HStack {
-                Text(name).font(.archivo(16, weight: .bold)).foregroundStyle(Color.inkGhost)
-                Spacer()
-                Text("REST").font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkGhost)
-            }
-            .padding(.vertical, 12).padding(.horizontal, 16)
-            .frame(minHeight: 44)
-            .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+            .padding(.horizontal, 16).padding(.vertical, 8).contentShape(Rectangle())
+            .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
         }
+        .buttonStyle(.plain)
+    }
+}
+
+/// ADD FRIEND (accent): on tap the fill drains right to left (380 ms) and the label slides to REQUESTED (outlined); tap again cancels.
+/// Only the button animates.
+struct AddFriendButton: View {
+    var requested: Bool
+    let onAdd: () -> Void
+    let onCancel: () -> Void
+    @State private var shown: Bool?
+    private var isRequested: Bool { shown ?? requested }
+
+    var body: some View {
+        Button {
+            if isRequested { withAnimation(.easeOut(duration: 0.2)) { shown = false }; onCancel() }
+            else { withAnimation(.easeInOut(duration: 0.38)) { shown = true }; onAdd() }
+        } label: {
+            ZStack {
+                // The fill stays pinned to the right edge and its left edge runs right: it drains right to left in the sense of the
+                // design (the colour leaves from the left).
+                GeometryReader { g in
+                    RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.oreAccent)
+                        .frame(width: isRequested ? 0 : g.size.width).frame(maxWidth: .infinity, alignment: .trailing)
+                }
+                RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(isRequested ? Color.ruleStrong : Color.clear, lineWidth: 1)
+                Text(isRequested ? "REQUESTED" : "ADD FRIEND").font(.spaceMono(9, weight: .bold)).tracking(1.5)
+                    .foregroundStyle(isRequested ? Color.inkSecondary : Color.white)
+                    .id(isRequested)
+                    .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .move(edge: .leading).combined(with: .opacity)))
+            }
+            .frame(width: 112, height: 36)
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isRequested ? "Requested. Tap to cancel" : "Add friend")
+        .accessibilityIdentifier("profile.addFriend")
+        .onChange(of: requested) { _, _ in shown = nil }
     }
 }

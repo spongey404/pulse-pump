@@ -15,6 +15,7 @@
 		38AB00092F80B00000DEC87C /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 38AB000A2F80B00000DEC87C /* FirebaseFirestore */; };
 		38WG000D2F80C00000DEC87C /* OreWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 38WG00012F80C00000DEC87C /* OreWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		38AB000C2F80B00000DEC87C /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 38AB000B2F80B00000DEC87C /* FirebaseFunctions */; };
+		38AB00102F80B00000DEC87C /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 38AB000F2F80B00000DEC87C /* FirebaseStorage */; };
 		38AB000D2F80B00000DEC87C /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = 38AB000E2F80B00000DEC87C /* FirebaseRemoteConfig */; };
 /* End PBXBuildFile section */
 
@@ -114,6 +115,7 @@
 				38AB00062F80B00000DEC87C /* FirebaseCore in Frameworks */,
 				38AB00092F80B00000DEC87C /* FirebaseFirestore in Frameworks */,
 				38AB000C2F80B00000DEC87C /* FirebaseFunctions in Frameworks */,
+				38AB00102F80B00000DEC87C /* FirebaseStorage in Frameworks */,
 				38AB000D2F80B00000DEC87C /* FirebaseRemoteConfig in Frameworks */,
 				38AB00072F80B00000DEC87C /* GoogleSignIn in Frameworks */,
 				38AB00082F80B00000DEC87C /* GoogleSignInSwift in Frameworks */,
@@ -195,6 +197,7 @@
 				38AB00022F80B00000DEC87C /* FirebaseCore */,
 				38AB000A2F80B00000DEC87C /* FirebaseFirestore */,
 				38AB000B2F80B00000DEC87C /* FirebaseFunctions */,
+				38AB000F2F80B00000DEC87C /* FirebaseStorage */,
 				38AB000E2F80B00000DEC87C /* FirebaseRemoteConfig */,
 				38AB00032F80B00000DEC87C /* GoogleSignIn */,
 				38AB00042F80B00000DEC87C /* GoogleSignInSwift */,
@@ -830,6 +833,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 387856342F80A70B00813102 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFunctions;
+		};
+		38AB000F2F80B00000DEC87C /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 387856342F80A70B00813102 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
 		};
 		38AB000E2F80B00000DEC87C /* FirebaseRemoteConfig */ = {
 			isa = XCSwiftPackageProductDependency;

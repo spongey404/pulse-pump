@@ -6,6 +6,12 @@ import SwiftData
 struct BodyMapTabView: View {
     @State private var heatmapMode: HeatmapMode = .volume
     @State private var selectedMuscle: MuscleGroup?
+    @State private var mapReplay = 0
+    #if DEBUG
+    @State private var showMapPanel = false
+    @State private var debugPreset: Int? = UserDefaults.standard.string(forKey: "debugBodyMapPreset").flatMap(Int.init)
+    @State private var debugMember: Bool? = UserDefaults.standard.string(forKey: "debugBodyMapMember").map { $0 == "1" }
+    #endif
     @State private var selectedDayIndex: Int = -1
     @State private var weekOffset: Int = 0
     @State private var showCalendar = false
@@ -106,8 +112,16 @@ struct BodyMapTabView: View {
                         }
                         .padding(.bottom, 10)
 
-                        BodyMap2DView(levels: heatLevels) { selectedMuscle = $0 }
-                            .frame(height: 290)
+                        BodyMapView(levels: mapLevels, member: mapMember, accentHex: AccentStore.shared.active.hexString, replay: mapReplay) { id in
+                            selectedMuscle = BodyMapLevels.group(of: id)
+                        }
+                        #if DEBUG
+                        .onLongPressGesture { showMapPanel = true }
+                        .sheet(isPresented: $showMapPanel) {
+                            BodyMapDevPanel(presetIndex: $debugPreset, memberOverride: $debugMember) { mapReplay += 1 }
+                                .presentationDetents([.medium])
+                        }
+                        #endif
 
                         HStack(spacing: 6) {
                             Text(heatmapMode == .recency ? "48H+ AGO" : "0%")
@@ -503,6 +517,18 @@ struct BodyMapTabView: View {
     private var musclesWorkedCount: Int { stats.musclesWorkedCount }
     private var topMuscles: [BodyMapStats.MuscleItem] { stats.topMuscles }
     private var gapMuscles: [BodyMapStats.MuscleItem] { stats.gapMuscles }
+    private var mapLevels: [String: Double] {
+        #if DEBUG
+        if let i = debugPreset { return BodyMapDevPanel.presets[i].1 }
+        #endif
+        return BodyMapLevels.levels(heatLevels)
+    }
+    private var mapMember: Bool {
+        #if DEBUG
+        if let m = debugMember { return m }
+        #endif
+        return AccentStore.shared.isMember
+    }
     private var heatLevels: [MuscleGroup: Double] { stats.heatLevels(mode: heatmapMode) }
 
     // MARK: - Ticker

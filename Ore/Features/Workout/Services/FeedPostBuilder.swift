@@ -9,6 +9,15 @@ import Foundation
 ///   `muscleSets`, which goes to `extras/bodymap` and is guarded by `bodyMapAudience`. With the body
 ///   map set to "Only me" (or "Post without body map") no extras document is written at all.
 /// - `audience` / `bodyMapAudience` come from the privacy settings at post time.
+/// What the composer adds to a post besides the caption and tags (Ore Feed Post Final §3c).
+struct PostExtras: Equatable {
+    var photoURL: String? = nil
+    var song: PostSong? = nil
+    var taggedNames: [String] = []
+    /// WHO CAN SEE IT: ONLY ME.
+    var onlyMe = false
+}
+
 enum FeedPostBuilder {
     /// The "Workout posts" privacy row, from the local copy. `.onlyMe` means nothing is posted.
     static func audience(defaults: UserDefaults = .standard) -> PrivacyLevel {
@@ -29,10 +38,12 @@ enum FeedPostBuilder {
         taggedUids: [String],
         includeBodyMap: Bool,
         privacy: PrivacySettings,
-        date: Date = Date()
+        date: Date = Date(),
+        extras: PostExtras = PostExtras()
     ) -> PostPayload? {
-        let audience = privacy.postAudience
-        guard audience != .onlyMe else { return nil }
+        // The composer's WHO CAN SEE IT = ONLY ME posts with the `onlyMe` audience (the author sees it, nobody else).
+        let audience = extras.onlyMe ? PostAudience.onlyMe : privacy.postAudience
+        guard audience != .onlyMe || extras.onlyMe else { return nil }
 
         // Working sets only, and only exercises that have at least one.
         let posted: [FeedExercise] = data.exercises.compactMap { ex in
@@ -64,7 +75,10 @@ enum FeedPostBuilder {
             exercises: posted,
             caption: caption.trimmingCharacters(in: .whitespacesAndNewlines),
             taggedUids: taggedUids,
-            muscleSets: (muscleSets?.isEmpty == false) ? muscleSets : nil
+            muscleSets: (muscleSets?.isEmpty == false) ? muscleSets : nil,
+            photoURL: extras.photoURL,
+            song: extras.song,
+            taggedNames: extras.taggedNames
         )
     }
 

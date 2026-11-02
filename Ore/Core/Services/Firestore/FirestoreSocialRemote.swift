@@ -264,6 +264,25 @@ final class FirestoreSocialRemote: SocialRemote {
         }
     }
 
+    func updatePost(_ p: PostPayload) async throws {
+        let me = try requireUid()
+        guard p.authorUid == me else { throw SocialError.invalid("Author mismatch") }
+        try await run {
+            let ref = db.collection("posts").document(p.postId)
+            let full = SocialWire.postDocument(p, now: Date())
+            // Only the content fields: counters, author, audience and createdAt stay as they were.
+            var fields: [String: Any] = ["stats": full["stats"] as Any, "exercises": full["exercises"] as Any, "workoutName": full["workoutName"] as Any,
+                                          "editedAt": p.editedAt ?? Date()]
+            for key in ["caption", "taggedUids", "taggedNames", "photoURL", "song"] { fields[key] = full[key] ?? FieldValue.delete() }
+            try await ref.updateData(Self.encode(fields))
+            if let sets = p.muscleSets, !sets.isEmpty {
+                try await set(ref.collection("extras").document("bodymap"), SocialWire.bodyMapDocument(sets, now: Date()))
+            } else {
+                try? await ref.collection("extras").document("bodymap").delete()
+            }
+        }
+    }
+
     func deletePost(id: String) async throws {
         try await run {
             let ref = db.collection("posts").document(id)

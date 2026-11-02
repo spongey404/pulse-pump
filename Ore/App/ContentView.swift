@@ -50,7 +50,7 @@ struct ContentView: View {
             }
             .toolbar(.hidden, for: .tabBar)
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                CustomTabBar(selectedTab: $selectedTab)
+                CustomTabBar(selectedTab: $selectedTab, workoutActive: workoutViewModel.isActive)
             }
             .fullScreenCover(isPresented: $workoutViewModel.isActive) {
                 ActiveWorkoutView(viewModel: workoutViewModel)

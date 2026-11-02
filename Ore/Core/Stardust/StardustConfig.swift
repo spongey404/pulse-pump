@@ -65,6 +65,7 @@ struct StardustConfig: Codable, Equatable {
             "rowIcon": .init(mini: true, speedScale: 0.3, sizeScale: 0.6, min: 18, pull: 0),
             "recapCard": .init(mini: true, speedScale: 0.6, sizeScale: 0.9, min: 120, pull: 0),
             "button": .init(mini: true, speedScale: 0.5, sizeScale: 0.7, min: 14, pull: 0),
+            "homeKey": .init(mini: true, speedScale: 0.3, sizeScale: 0.6, min: 24, pull: 0),
             "body": .init(mini: true, speedScale: 0.45, sizeScale: 0.7, min: 90, pull: 0),
             "cta": .init(mini: true, speedScale: 0.6, sizeScale: 0.9, min: 60, pull: 0),
             "toggle": .init(mini: true, speedScale: 0.3, sizeScale: 0.6, min: 18, pull: 0),

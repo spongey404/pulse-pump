@@ -160,7 +160,25 @@ enum SocialWire {
         let caption = String(p.caption.prefix(500))
         if !caption.isEmpty { data["caption"] = caption }
         if !p.taggedUids.isEmpty { data["taggedUids"] = Array(p.taggedUids.prefix(20)) }
+        if !p.taggedNames.isEmpty { data["taggedNames"] = p.taggedNames.prefix(20).map { String($0.prefix(60)) } }
+        if let url = p.photoURL, !url.isEmpty { data["photoURL"] = String(url.prefix(600)) }
+        if let song = p.song { data["song"] = songData(song) }
+        if let edited = p.editedAt { data["editedAt"] = edited }
         return data
+    }
+
+    static func songData(_ s: PostSong) -> [String: Any] {
+        var d: [String: Any] = ["title": String(s.title.prefix(120)), "artist": String(s.artist.prefix(120))]
+        if let a = s.artworkURL { d["artworkURL"] = String(a.prefix(600)) }
+        if let u = s.previewURL { d["previewURL"] = String(u.prefix(600)) }
+        if let id = s.appleMusicId { d["appleMusicId"] = String(id.prefix(40)) }
+        return d
+    }
+
+    static func song(from d: [String: Any]?) -> PostSong? {
+        guard let d, let title = d["title"] as? String, let artist = d["artist"] as? String else { return nil }
+        return PostSong(title: title, artist: artist, artworkURL: d["artworkURL"] as? String, previewURL: d["previewURL"] as? String,
+                        appleMusicId: d["appleMusicId"] as? String)
     }
 
     /// `posts/{id}/extras/bodymap`.
@@ -174,7 +192,7 @@ enum SocialWire {
         let exercises = (d["exercises"] as? [[String: Any]] ?? []).compactMap { exercise(from: $0) }
         let improved = exercises.filter { $0.improvementScore > 0 || $0.weightDelta > 0 || $0.repsDelta > 0 }.count
         let name = string(d["workoutName"])
-        return WorkoutFeedItem(
+        var item = WorkoutFeedItem(
             id: id,
             userId: author,
             username: string(d["authorName"]),
@@ -195,6 +213,11 @@ enum SocialWire {
             likeCount: int(d["likeCount"]),
             commentCount: int(d["commentCount"])
         )
+        item.photoURL = d["photoURL"] as? String
+        item.song = song(from: d["song"] as? [String: Any])
+        item.taggedNames = d["taggedNames"] as? [String]
+        item.isEdited = d["editedAt"] != nil ? true : nil
+        return item
     }
 
     static func muscleSets(from d: [String: Any]) -> [String: Int]? {

@@ -393,6 +393,20 @@ describe('posts: audience matrix', () => {
   it('schemaVersion must be int', async () => {
     await no(setDoc(doc(db('alice'), 'posts/x5'), post('friends', { schemaVersion: 'one' })));
   });
+  it('photo, song, tagged names and editedAt are accepted; junk inside song is not', async () => {
+    const song = { title: 'Song', artist: 'Artist', previewURL: 'https://example.com/p.m4a' };
+    await ok(setDoc(doc(db('alice'), 'posts/x6'), post('friends', { photoURL: 'https://example.com/p.jpg', song, taggedNames: ['Sam'], editedAt: ts() })));
+    await no(setDoc(doc(db('alice'), 'posts/x7'), post('friends', { song: { ...song, extra: 1 } })));
+    await no(setDoc(doc(db('alice'), 'posts/x8'), post('friends', { song: { title: '', artist: 'A' } })));
+    await no(setDoc(doc(db('alice'), 'posts/x9'), post('friends', { photoURL: 'h'.repeat(601) })));
+  });
+  it('only the author can change the photo, song, caption, tags or workout', async () => {
+    for (const patch of [{ photoURL: 'https://example.com/x.jpg' }, { song: { title: 'T', artist: 'A' } }, { caption: 'x' }, { taggedUids: ['bob'] }, { exercises: [] }]) {
+      await no(updateDoc(doc(db('bob'), 'posts/pe'), patch));
+      await no(updateDoc(doc(db('carol'), 'posts/pe'), patch));
+    }
+    await ok(updateDoc(doc(db('alice'), 'posts/pe'), { caption: 'edited', editedAt: ts() }));
+  });
 });
 
 describe('posts/{id}/extras/bodymap', () => {

@@ -1,9 +1,11 @@
 import SwiftUI
 
 /// How a post's author looks on Social when they are a Supernova member: their worked muscles carry Stardust in their accent
-/// (`StardustMuscleOverlay`), and their name carries the SUPERNOVA* tag.
+/// (`BodyMapPair`), and their name carries the SUPERNOVA* tag.
 struct SocialMemberStyle: Equatable {
     var palette: StarPalette
+    /// The member's accent (the body map's heat colour); nil = Ore's blue.
+    var accentHex: String? = nil
 }
 
 /// Whether a post's author is a Supernova member, and in which accent.
@@ -20,7 +22,7 @@ enum SocialMembership {
     static func style(for uid: String, currentUid: String?) -> SocialMemberStyle? {
         if let currentUid, uid == currentUid {
             let store = AccentStore.shared
-            return store.isMember ? SocialMemberStyle(palette: store.starPalette) : nil
+            return store.isMember ? SocialMemberStyle(palette: store.starPalette, accentHex: store.active.hexString) : nil
         }
         return remote(uid)
     }
@@ -48,13 +50,8 @@ struct SocialBodyMap: View {
     let height: CGFloat
 
     var body: some View {
-        let intensities = BodyHeat.Intensities(muscleSets: muscleSets)
-        ZStack {
-            BodyHeat(intensities: intensities)
-            if let style {
-                StardustMuscleOverlay(intensities: intensities, palette: style.palette)
-            }
-        }
+        BodyMapPair(levels: BodyMapLevels.levels(BodyHeat.Intensities(muscleSets: muscleSets)), member: style != nil,
+                    accentHex: style?.accentHex, height: height)
         .frame(width: width, height: height)
     }
 }

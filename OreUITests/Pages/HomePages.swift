@@ -138,20 +138,29 @@ struct CompletionPage {
 
     func waitForIt() { t.require(t.el(AX.completion.title), "workout summary", timeout: 20) }
 
+    /// The summary (§3a) comes first; CONTINUE TO POST opens the composer (§3c). Idempotent.
+    func openComposer() {
+        if t.el(AX.completion.continueToPost).waitForExistence(timeout: 3) { t.tapID(AX.completion.continueToPost) }
+        t.require(t.el(AX.completion.cta), "composer POST button", timeout: 10)
+    }
+
     func caption(_ text: String) {
+        openComposer()
         t.type(text, into: AX.completion.caption)
         t.dismissKeyboard()
     }
 
     /// Primary button: POST (auto-share on) or DONE.
-    var primaryLabel: String { t.require(t.el(AX.completion.cta), "summary CTA").label }
+    var primaryLabel: String { openComposer(); return t.require(t.el(AX.completion.cta), "composer CTA").label }
 
     func dismiss() {
+        openComposer()
         t.tapID(AX.completion.cta)
         t.waitUntilGone(t.el(AX.completion.title), "summary")
     }
 
     func dontPostViaMenu() {
+        openComposer()
         t.tapID(AX.completion.menu)
         t.tapID(AX.completion.dontPost)
         t.waitUntilGone(t.el(AX.completion.title), "summary")

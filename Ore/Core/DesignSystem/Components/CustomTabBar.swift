@@ -5,6 +5,8 @@ import SwiftUI
 struct CustomTabBar: View {
     @Binding var selectedTab: Int
     @Environment(\.colorScheme) private var scheme
+    /// A workout (logger, rest timer) is running: the Home key's Stardust holds a still frame.
+    var workoutActive = false
 
     private struct Tab {
         let tag: Int
@@ -49,12 +51,22 @@ struct CustomTabBar: View {
         } label: {
             VStack(spacing: 3) {
                 ZStack {
+                    let store = AccentStore.shared
+                    let stardust = store.stardustEnabled
                     RoundedRectangle(cornerRadius: 15)
                         .fill(Color.oreAccent)
                         .frame(width: 46, height: 46)
+                        .overlay {
+                            if stardust {
+                                StardustView(variant: "homeKey", budget: .more,
+                                             overrides: StardustParams.Overrides(palette: store.starPalette, gold: 0.40, sparkle: 0.55, goldPull: 0, fps: 30),
+                                             frozen: workoutActive)
+                                    .clipShape(RoundedRectangle(cornerRadius: 15))
+                            }
+                        }
                     Image(systemName: active ? tab.activeIcon : tab.icon)
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(stardust && Self.isLight(hex: store.active.hexString) ? Color(hex: "#151A21") : .white)
                 }
                 .offset(y: -10)
 
@@ -96,5 +108,14 @@ struct CustomTabBar: View {
         .buttonStyle(.plain)
         .accessibilityIdentifier(Self.ids[tab.tag])
         .accessibilityLabel(tab.label)
+    }
+
+    /// Light accents (relative luminance above 0.6) take the ink glyph instead of white.
+    static func isLight(hex: String) -> Bool {
+        let h = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
+        guard h.count == 6, let v = Int(h, radix: 16) else { return false }
+        func lin(_ c: Int) -> Double { let x = Double(c) / 255; return x <= 0.03928 ? x / 12.92 : pow((x + 0.055) / 1.055, 2.4) }
+        let l = 0.2126 * lin(v >> 16 & 255) + 0.7152 * lin(v >> 8 & 255) + 0.0722 * lin(v & 255)
+        return l > 0.6
     }
 }

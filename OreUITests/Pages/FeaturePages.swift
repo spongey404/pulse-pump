@@ -73,16 +73,11 @@ struct BodyPage {
 
     var totalSets: Int { Int(t.require(t.el(AX.body.totalSets), "hero total").label) ?? -1 }
 
-    /// Taps inside the front figure where the chest is drawn. The map is vector art laid out as
-    /// `min(w/160, h/292)` over a 160x292 viewBox shifted by (-20,-10) (BodyMap2DView); the chest path spans x 70..99, y 56..92.
+    /// Taps inside the front figure where the chest is drawn: the artwork is 1640 x 2360 and fills the element; the chest
+    /// spans x 603..1037, y 693..882 (BodyMap geometry), so (700, 790) is on a pec.
     func tapChestOnFrontFigure() {
         let figure = t.require(t.el(AX.body.figureFront), "front body map")
-        let f = figure.frame
-        let s = min(f.width / 160, f.height / 292)
-        let ox = (f.width - 160 * s) / 2
-        let x = ox + (84 - 20) * s
-        let y = (72 - 10) * s
-        figure.coordinate(withNormalizedOffset: CGVector(dx: x / f.width, dy: y / f.height)).tap()
+        figure.coordinate(withNormalizedOffset: CGVector(dx: 700.0 / 1640, dy: 790.0 / 2360)).tap()
     }
 }
 

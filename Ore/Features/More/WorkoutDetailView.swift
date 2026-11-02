@@ -8,6 +8,7 @@ struct WorkoutDetailView: View {
     @State private var showDeleteConfirmation = false
     @State private var isEditing = false
     @State private var supernovaService = SupernovaService()
+    @State private var postDraft = false
 
     private var totalSets: Int { workout.workingSetCount }
     private var totalExercises: Int { workout.exerciseLogs.count }
@@ -15,6 +16,22 @@ struct WorkoutDetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             detailHeader
+            if postDraft {
+                // "Save as draft" in the composer: post it from here whenever the person is ready.
+                Button { Task { if await SocialViewModel.shared.publishDraft(workoutId: workout.id.uuidString) { postDraft = false } } } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("POST THIS WORKOUT").font(.archivo(15, weight: .black)).foregroundStyle(Color.inkPrimary)
+                            Text("YOU SAVED A DRAFT OF THE POST").font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
+                        }
+                        Spacer()
+                        Text("›").font(.archivo(22)).foregroundStyle(Color.inkPrimary)
+                    }
+                    .padding(.horizontal, 16).frame(minHeight: 56)
+                    .background(Color.surf2)
+                }
+                .buttonStyle(.plain).accessibilityIdentifier("history.postDraft")
+            }
             statsStrip
             Rectangle().fill(Color.dsHairLine).frame(height: 1)
 
@@ -63,7 +80,10 @@ struct WorkoutDetailView: View {
         }
         .background(Color.canvasBg.ignoresSafeArea())
         .navigationBarHidden(true)
-        .task { await supernovaService.refreshSubscriptionStatus() }
+        .task {
+            postDraft = PostDraftStore.shared.hasDraft(forWorkout: workout.id.uuidString)
+            await supernovaService.refreshSubscriptionStatus()
+        }
         .confirmationDialog("Delete Workout?", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive) {
                 modelContext.softDelete(workout)   // tombstone, so the deletion syncs

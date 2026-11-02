@@ -70,6 +70,8 @@ protocol SocialRemote: AnyObject {
 
     // Posts
     func createPost(_ payload: PostPayload) async throws
+    /// Author-only edit: replaces the post's content fields (not its counters, author or creation time) and its body map.
+    func updatePost(_ payload: PostPayload) async throws
     func deletePost(id: String) async throws
     func fetchPosts(_ query: PostQuery) async throws -> [WorkoutFeedItem]
     /// `extras/bodymap` of a post; nil when absent or not visible to the caller.

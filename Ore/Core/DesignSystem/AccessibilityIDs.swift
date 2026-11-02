@@ -170,6 +170,7 @@ enum AX {
         static let menu = "completion.menu"
         static let caption = "completion.caption"
         static let back = "completion.back"
+        static let continueToPost = "completion.continue"
         static let dontPost = "completion.menu.dontPost"
         static let postToFeed = "completion.menu.postToFeed"
         static let postNoBodyMap = "completion.menu.postNoBodyMap"

@@ -57,25 +57,3 @@ struct SupernovaTag: View {
             .accessibilityLabel("Supernova")
     }
 }
-
-/// A member's worked muscles filled with Stardust in their accent: Stardust masked to the muscles' shapes, opacity per region
-/// 0.35 + intensity × 0.65. Lay it over a `BodyHeat` of the same size (the normal background stays; free viewers see it too).
-struct StardustMuscleOverlay: View {
-    let intensities: BodyHeat.Intensities
-    let palette: StarPalette
-
-    var body: some View {
-        StardustView(variant: "body", budget: .more,
-                     overrides: StardustParams.Overrides(palette: palette, density: 1600, gold: 0.4, sparkle: 0.55, fps: 30))
-            .mask {
-                Canvas { ctx, size in
-                    BodyHeat.layout(size: size, intensities: intensities, draw: { path, region in
-                        guard let region else { return }
-                        ctx.fill(path, with: .color(.black.opacity(0.35 + max(0, min(1, region)) * 0.65)))
-                    }, line: { _ in })
-                }
-            }
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-    }
-}

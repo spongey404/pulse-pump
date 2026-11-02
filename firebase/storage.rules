@@ -1,0 +1,20 @@
+rules_version = '2';
+
+// Post photos: posts/{authorUid}/{postId}/photo.jpg. Only the author writes or deletes (rule: only the author can edit a post's photo);
+// any signed-in user may read (the post document decides who actually sees the URL).
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /posts/{authorUid}/{postId}/{file} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.auth.uid == authorUid
+        && file == 'photo.jpg'
+        && request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null && request.auth.uid == authorUid;
+    }
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

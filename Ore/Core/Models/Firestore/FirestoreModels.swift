@@ -166,6 +166,12 @@ struct WorkoutFeedItem: Codable, Identifiable, Equatable {
     /// `extras/bodymap`: muscle group display name -> weighted set count. Empty when the viewer may
     /// not see the body map (or the author chose not to share it).
     var muscleSets: [String: Int]
+    /// Optional extras of the Feed Post design. nil = none; absent in older documents.
+    var photoURL: String?
+    var song: PostSong?
+    /// Display names of `taggedFriendUids`, in the same order ("Trained with Sam and Jordan").
+    var taggedNames: [String]?
+    var isEdited: Bool?
 
     var includesBodyMap: Bool { !muscleSets.isEmpty }
 
@@ -209,8 +215,8 @@ struct WorkoutFeedItem: Codable, Identifiable, Equatable {
 }
 
 /// What the client writes to create a post. Counters are intentionally absent (functions own them).
-struct PostPayload: Equatable {
-    struct Stats: Equatable {
+struct PostPayload: Equatable, Codable {
+    struct Stats: Equatable, Codable {
         var sets: Int
         var volumeKg: Double
         var durationSec: Int
@@ -232,6 +238,12 @@ struct PostPayload: Equatable {
     var taggedUids: [String]
     /// Contents of `extras/bodymap`; nil means no extras document is written.
     var muscleSets: [String: Int]?
+    /// Composer extras (Feed Post design): the photo's download URL, the attached Apple Music song, and the names of `taggedUids`.
+    var photoURL: String? = nil
+    var song: PostSong? = nil
+    var taggedNames: [String] = []
+    /// Set when the author edits the post afterwards (the post shows EDITED).
+    var editedAt: Date? = nil
 }
 
 struct FeedComment: Codable, Identifiable, Equatable {
