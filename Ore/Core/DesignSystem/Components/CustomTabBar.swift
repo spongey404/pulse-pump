@@ -70,10 +70,12 @@ struct CustomTabBar: View {
                 }
                 .offset(y: -10)
 
+                // The key is always raised in the accent; only the SELECTED tab reads as highlighted, so the label is accent on Home
+                // and muted everywhere else (it used to stay blue and make Home look selected on Programs).
                 Text(tab.label.uppercased())
-                    .font(.spaceMono(7, weight: .bold))
+                    .font(.spaceMono(7, weight: active ? .bold : .regular))
                     .tracking(1)
-                    .foregroundStyle(Color.accentInk)
+                    .foregroundStyle(active ? Color.accentInk : Color.inkMuted)
                     .offset(y: -10)
             }
             .frame(maxWidth: .infinity)

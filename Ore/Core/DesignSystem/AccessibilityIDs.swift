@@ -150,10 +150,33 @@ enum AX {
         static func exerciseNumber(_ i: Int) -> String { "workout.exercise.\(i).number" }
         /// A row in the set-type sheet, by its name ("Warmup", "Dropset", …).
         static func setTypeRow(_ name: String) -> String { "workout.setTypeRow." + slug(name) }
-        static func rirToggle(_ i: Int) -> String { "workout.exercise.\(i).rirToggle" }
         static func platesToggle(ex: Int, _ n: Int) -> String { "workout.set.\(ex).\(n).plates" }
         static let restModal = "workout.restModal"
-        static let restModalClose = "workout.restModal.close"
+        /// The ··· on an exercise card and the rows of its popover.
+        static func exerciseMenu(_ i: Int) -> String { "workout.exercise.\(i).menu" }
+        static func menuRow(_ name: String) -> String { "workout.menu." + slug(name) }
+        static func noteButton(_ i: Int) -> String { "workout.exercise.\(i).note" }
+        static func grip(_ i: Int) -> String { "workout.exercise.\(i).grip" }
+        /// Lines under a set (drops, rounds, left / right): `k` is 1-based.
+        static func subReps(ex: Int, _ n: Int, _ k: Int) -> String { "workout.set.\(ex).\(n).sub.\(k).reps" }
+        static func addSub(ex: Int, _ n: Int) -> String { "workout.set.\(ex).\(n).addSub" }
+        static let reorderDone = "workout.reorder.done"
+        static let sheetClose = "workout.sheet.close"
+        static let restSkip = "workout.restSheet.skip"
+        static let finishConfirm = "workout.finish.confirm"
+        static let finishKeepGoing = "workout.finish.keepGoing"
+    }
+
+    /// The logger's keypad (flat grid, "EDITING KG").
+    enum keypad {
+        static let root = "keypad.root"
+        static func key(_ k: String) -> String { "keypad.key." + k }
+        static let backspace = "keypad.key.backspace"
+        static let next = "keypad.next"
+        static let done = "keypad.done"
+        static let editing = "keypad.editing"
+        static func step(_ label: String) -> String { "keypad.step." + slug(label) }
+        static func rir(_ v: Int) -> String { "keypad.rir.\(v)" }
     }
 
     enum picker {
@@ -210,25 +233,45 @@ enum AX {
 
     enum programs {
         static let screen = "programs.screen"
+        /// The bordered "+" at the top right: the only way to start a program.
         static let add = "programs.add"
-        static let newProgram = "programs.new"
         static let empty = "programs.empty"
+        static let pageTitle = "programs.pageTitle"
+        static let upNext = "programs.upNext"
+        static let upNextStart = "programs.upNext.start"
         static func row(_ name: String) -> String { "programs.row." + slug(name) }
-        static func swipeDelete(_ name: String) -> String { "programs.swipeDelete." + slug(name) }
-        static let presetBlank = "programs.preset.blank"
-        // Create
+        // Start from
+        static func template(_ id: String) -> String { "programs.template." + id }
+        // New / edit program
         static let createName = "programs.create.name"
         static func createDays(_ n: Int) -> String { "programs.create.days.\(n)" }
+        static func day(_ weekday: Int) -> String { "programs.create.day.\(weekday)" }
         static let createSave = "programs.create.save"
-        static let createBack = "programs.create.back"
-        static let createAddExercise = "programs.create.addExercise"
-        // Detail
-        static let detailEdit = "programs.detail.edit"
-        static let detailDone = "programs.detail.done"
-        static let detailStart = "programs.detail.start"
-        static let detailBack = "programs.detail.back"
-        static let detailAddExercise = "programs.detail.addExercise"
-        static let detailTitle = "programs.detail.title"
+        static let createAddWorkout = "programs.create.addWorkout"
+        static func workoutName(_ i: Int) -> String { "programs.create.workout.\(i).name" }
+        static func workoutRemove(_ i: Int) -> String { "programs.create.workout.\(i).remove" }
+        static let deleteProgram = "programs.edit.delete"
+        // Program page
+        static let editProgram = "programs.detail.edit"
+        static func workoutRow(_ i: Int) -> String { "programs.detail.workout.\(i)" }
+        static func workoutStart(_ i: Int) -> String { "programs.detail.workout.\(i).start" }
+        static let detailAddWorkout = "programs.detail.addWorkout"
+        // Workout page
+        static let workoutEdit = "programs.workout.edit"
+        static let workoutStartDock = "programs.workout.start"
+        static let workoutDone = "programs.workout.done"
+        static let workoutAddExercise = "programs.workout.addExercise"
+        static func exerciseRow(_ i: Int) -> String { "programs.workout.exercise.\(i)" }
+        static func exerciseField(_ i: Int, _ field: String, plus: Bool) -> String { "programs.workout.exercise.\(i).\(field).\(plus ? "plus" : "minus")" }
+        static func exerciseRemove(_ i: Int) -> String { "programs.workout.exercise.\(i).remove" }
+        static let workoutNote = "programs.workout.note"
+        // Add exercises
+        static let pickSearch = "programs.pick.search"
+        static func pickMove(_ name: String) -> String { "programs.pick.move." + slug(name) }
+        static func pickMuscle(_ name: String) -> String { "programs.pick.muscle." + slug(name) }
+        static func pickRow(_ name: String) -> String { "programs.pick.row." + slug(name) }
+        static func pickAdd(_ name: String) -> String { "programs.pick.add." + slug(name) }
+        static let pickDock = "programs.pick.dock"
     }
 
     enum body {

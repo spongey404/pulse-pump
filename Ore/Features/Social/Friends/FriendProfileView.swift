@@ -283,7 +283,7 @@ struct AddFriendButton: View {
                 // The fill stays pinned to the right edge and its left edge runs right: it drains right to left in the sense of the
                 // design (the colour leaves from the left).
                 GeometryReader { g in
-                    RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.oreAccent)
+                    AccentFill(priority: 5).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                         .frame(width: isRequested ? 0 : g.size.width).frame(maxWidth: .infinity, alignment: .trailing)
                 }
                 RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(isRequested ? Color.ruleStrong : Color.clear, lineWidth: 1)

@@ -81,7 +81,11 @@ enum SyncMapper {
             "name": clamp(t.name, maxName),
             "splitDays": t.splitDays,
             "notes": clamp(t.notes, maxNotes),
+            "programDays": t.programDays,
+            "programOrder": t.programOrder,
         ]
+        if let id = t.programId { f["programId"] = idString(id) }
+        if let n = t.programName { f["programName"] = clamp(n, maxName) }
         f["exercises"] = t.templateExercises.sorted { $0.order < $1.order }.map { e -> [String: Any] in
             var d: [String: Any] = [
                 "exerciseId": idString(e.exerciseId),
@@ -90,6 +94,7 @@ enum SyncMapper {
                 "targetSets": e.targetSets,
             ]
             if let v = e.targetReps { d["targetReps"] = v }
+            if let v = e.targetRepsHigh { d["targetRepsHigh"] = v }
             if let v = e.targetRIR { d["targetRIR"] = v }
             if let v = e.restSeconds { d["restSeconds"] = v }
             if let v = e.notes { d["notes"] = v }

@@ -23,6 +23,7 @@ struct TemplateSeedService {
         } else {
             repairExerciseLinks(modelContext: modelContext)
         }
+        ProgramMigration.run(modelContext: modelContext)     // programs: Push / Pull / Legs are workouts of "Push Pull Legs"
     }
 
     /// Stable id for a preset, derived from its name, so every install (and every signed-in device) seeds the SAME

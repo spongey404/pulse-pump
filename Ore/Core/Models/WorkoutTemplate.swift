@@ -15,6 +15,13 @@ final class WorkoutTemplate: SyncRecord {
     var syncedAt: Date?
     var syncDigest: String?
     var schemaVersion: Int = 1
+    /// Program → Workouts → Exercises (Ore Programs): this template is one WORKOUT of a program. The program's own fields live on each of
+    /// its workouts (no separate program record to sync): `programName`, `programDays` (Calendar weekdays, 1 = Sunday) and the workout's
+    /// place in the rotation, `programOrder`. nil `programId` = not migrated yet.
+    var programId: UUID?
+    var programName: String?
+    var programDays: [Int] = []
+    var programOrder: Int = 0
 
     @Relationship(deleteRule: .nullify, inverse: \Workout.template) var workouts: [Workout]
 
@@ -39,7 +46,10 @@ struct TemplateExercise: Codable, Identifiable {
     var exerciseName: String
     var order: Int
     var targetSets: Int
+    /// The low end of the rep range (and the only number older templates have).
     var targetReps: Int?
+    /// The high end of the rep range; nil = a single target (`targetReps`).
+    var targetRepsHigh: Int?
     var targetRIR: Int?
     var restSeconds: Int?
     var notes: String?
@@ -50,6 +60,7 @@ struct TemplateExercise: Codable, Identifiable {
         order: Int,
         targetSets: Int = 3,
         targetReps: Int? = nil,
+        targetRepsHigh: Int? = nil,
         targetRIR: Int? = nil,
         restSeconds: Int? = nil,
         notes: String? = nil
@@ -60,6 +71,7 @@ struct TemplateExercise: Codable, Identifiable {
         self.order = order
         self.targetSets = targetSets
         self.targetReps = targetReps
+        self.targetRepsHigh = targetRepsHigh
         self.targetRIR = targetRIR
         self.restSeconds = restSeconds
         self.notes = notes

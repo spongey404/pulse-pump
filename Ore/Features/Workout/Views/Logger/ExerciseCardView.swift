@@ -9,450 +9,270 @@ struct ExerciseAnalytics {
     let lastNote: String
 }
 
+/// One exercise of the logger (Ore Logger 1a "tightened"): `≡ 01 NAME … N/M ···`, a one-line meta, the sunken column strip, 40 pt set
+/// rows, then `+ SET` and `+ NOTE`. No ▲/▼ against last time and no per-set PR marks while training: the only live result is a new
+/// estimated 1RM, which turns the header's 1RM gold with a star.
 struct ExerciseCardView: View {
     @Binding var entry: ExerciseEntry
     let exerciseIndex: Int
     let viewModel: WorkoutViewModel
-    let onSetTypeTap: (Int) -> Void
-    let onMenuTap: (CGRect) -> Void
-    var onDragChanged: ((CGFloat) -> Void)? = nil
-    var onDragEnded: ((CGFloat) -> Void)? = nil
+    /// The set whose field the keypad is editing, if it is in this card.
+    var keypad: KeypadTarget?
+    /// The one set of the whole workout that is "active" (the next to log), if it is in this card.
+    var activeSetIndex: Int?
+    var onSetTypeTap: (Int) -> Void
+    var onTapField: (Int, LoggerField) -> Void
+    var onStartReorder: () -> Void
+    var onOpenProgression: () -> Void
+    var onOpenRest: () -> Void
+    var onOpenReplace: () -> Void
+    var onRemove: () -> Void
+    var onLogSet: (Int) -> Void
     @Environment(\.modelContext) private var modelContext
     @Environment(\.weightUnit) private var unit
-    @State private var isCollapsed = false
-    @State private var openPlateForSetIdx: Int? = nil
-    @State private var plateBarWeight: Double = 20
-    @State private var analytics: ExerciseAnalytics? = nil
-    @State private var menuButtonFrame: CGRect = .zero
+    @State private var analytics: ExerciseAnalytics?
+    @State private var menuOpen = false
+    @State private var noteOpen = false
     @State private var showProgressionPaywall = false
 
+    private var load: LoggerMath.Load { LoggerMath.load(equipment: entry.equipmentType, exerciseType: entry.exerciseType, name: entry.exerciseName) }
     private var completedSets: Int { entry.sets.filter(\.isCompleted).count }
-    private var showRIR: Bool { entry.sets.contains { !$0.rir.isEmpty } || entry.sets.contains { $0.targetRIR != nil } }
-    private var isBarbellType: Bool {
-        [EquipmentType.barbell, .ezBar, .trapBar, .smithMachine].contains(entry.equipmentType)
-    }
-    /// The first set of the exercise the tutorial is working on (it names one at a time).
-    private func isTutorialRow(_ setIdx: Int) -> Bool { setIdx == 0 && isLastExercise }
-    private var isLastExercise: Bool {
-        guard let name = TutorialFocus.shared.exerciseName else { return false }
-        return entry.exerciseName == name
-    }
-    private var nextUncompletedSetIdx: Int? {
-        entry.sets.indices.first { !entry.sets[$0].isCompleted }
-    }
+    private var nextUncompletedSetIdx: Int? { entry.sets.indices.first { !entry.sets[$0].isCompleted } }
+    private var isTutorialExercise: Bool { TutorialFocus.shared.exerciseName == entry.exerciseName }
+    private var hasPlates: Bool { [EquipmentType.barbell, .ezBar, .trapBar].contains(entry.equipmentType) }
+    private var progression: LoggerMath.ProgressionConfig { viewModel.progressionConfig(exerciseIndex: exerciseIndex) }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Card header
-            cardHeader
-                .padding(.horizontal, 12)
-                .padding(.top, 10)
-                .padding(.bottom, 8)
-
-            if !isCollapsed {
-                Rectangle().fill(Color.dsHairLine).frame(height: 1)
-
-                // Column header row
-                columnHeaderRow
-
-                Rectangle().fill(Color.dsHairLine).frame(height: 1)
-
-                // Set rows
-                ForEach(Array(entry.sets.enumerated()), id: \.element.id) { setIdx, set in
-                    let ghost = viewModel.ghostText(for: entry.exerciseId, setIndex: setIdx, modelContext: modelContext)
-                    let weightStr = set.weight.isEmpty ? (ghost?.weight ?? "") : set.weight
-                    let weightVal = parseDecimal(weightStr) ?? 0
-
-                    VStack(spacing: 0) {
-                        SwipeToDeleteRow(
-                            onDeleteTapped: {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
-                                    viewModel.removeSet(exerciseIndex: exerciseIndex, setIndex: setIdx)
-                                }
-                            },
-                            resetReveal: isCollapsed
-                        ) {
-                            setRowView(setIdx: setIdx, set: set, ghost: ghost)
-                        }
-                        // Tutorial spotlight: the first set of the exercise added last.
-                        .tutorialTarget("tutorial.set-row",
-                                        enabled: isTutorialRow(setIdx))
-
-                        // Plate calculator — only for the next uncompleted set
-                        if isBarbellType && setIdx == nextUncompletedSetIdx && weightVal > plateBarWeight {
-                            let isOpen = openPlateForSetIdx == setIdx
-                            VStack(spacing: 0) {
-                                Button {
-                                    withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
-                                        openPlateForSetIdx = isOpen ? nil : setIdx
-                                    }
-                                } label: {
-                                    HStack {
-                                        Text("PLATES · \(unit.formatTight(weightVal))")
-                                            .font(.spaceMono(9))
-                                            .tracking(1.2)
-                                            .foregroundStyle(Color.inkMuted)
-                                        Spacer()
-                                        Text(isOpen ? "▴ CLOSE" : "▾ SHOW")
-                                            .font(.spaceMono(9))
-                                            .tracking(0.8)
-                                            .foregroundStyle(Color.inkMuted)
-                                    }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.surf2)
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityIdentifier(AX.workout.platesToggle(ex: exerciseIndex, setIdx + 1))
-                                .tutorialTarget("tutorial.plates-toggle", enabled: isTutorialRow(setIdx))
-
-                                InlinePlateCalculatorView(
-                                    targetWeight: weightVal,
-                                    barWeight: $plateBarWeight
-                                )
-                                .tutorialTarget("tutorial.plates-view", enabled: isOpen && isTutorialRow(setIdx))
-                                .frame(maxHeight: isOpen ? .infinity : 0, alignment: .top)
-                                .clipped()
-                                .animation(.spring(response: 0.32, dampingFraction: 0.8), value: isOpen)
-                            }
-                            .background(Color.surf2)
-                        }
-
-                        Rectangle().fill(Color.dsHairLine).frame(height: 1)
-                    }
-                    .transition(.asymmetric(
-                        insertion: .push(from: .bottom).combined(with: .opacity),
-                        removal: .opacity
-                    ))
-                }
-
-                // Add set row
-                HStack(spacing: 8) {
-                    Button {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-                            viewModel.addSet(to: exerciseIndex)
-                        }
-                    } label: {
-                        Text("+ ADD SET")
-                            .font(.spaceMono(10))
-                            .foregroundStyle(Color.inkMuted)
-                            .tracking(0.8)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 30)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4]))
-                                    .foregroundStyle(Color.inkFaint)
-                            )
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier(AX.workout.addSet(exerciseIndex))
-
-                    Button {
-                        // Animated, so the RIR column eases in and the weight/reps columns glide over to make room.
-                        withAnimation(.easeInOut(duration: 0.28)) {
-                            if showRIR {
-                                for i in entry.sets.indices {
-                                    entry.sets[i].rir = ""
-                                    entry.sets[i].targetRIR = nil
-                                }
-                            } else {
-                                for i in entry.sets.indices {
-                                    entry.sets[i].targetRIR = 3
-                                }
-                            }
-                        }
-                    } label: {
-                        Text("RIR \(showRIR ? "ON" : "OFF")")
-                            .font(.spaceMono(9))
-                            .tracking(0.5)
-                            .foregroundStyle(showRIR ? Color.inkPrimary : Color.inkMuted)
-                            .frame(height: 30)
-                            .padding(.horizontal, 10)
-                            .background(Color.surf2)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .strokeBorder(Color.dsHairLine, lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.97))
-                    .accessibilityIdentifier(AX.workout.rirToggle(exerciseIndex))
-                    .tutorialTarget("tutorial.rir-toggle", enabled: isLastExercise)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-
-                progressionChipRow
-
-                // Exercise notes row
-                Rectangle().fill(Color.dsHairLine).frame(height: 1)
-                ExerciseNotesRow(notes: $entry.notes, lastSessionNote: analytics?.lastNote ?? "")
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+            header
+            columnStrip
+            ForEach(Array(entry.sets.enumerated()), id: \.element.id) { i, set in
+                setBlock(i, set)
+                    .id("row-\(set.id.uuidString)")
             }
+            footer
+            if noteOpen { noteBox }
         }
-        .background(Color.surf)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(Color.dsHairLine, lineWidth: 1)
-        )
+        .background(Color.surf, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.dsHairLine, lineWidth: 1))
         .task(id: entry.exerciseId) { loadAnalytics() }
         .sheet(isPresented: $showProgressionPaywall) { SupernovaView(onBack: { showProgressionPaywall = false }) }
-        .onAppear { if PlateMath.sameBar(plateBarWeight, 20) { plateBarWeight = unit.olympicBarKg } }
-        .onChange(of: unit) { _, u in plateBarWeight = u.olympicBarKg }
     }
 
-    private func loadAnalytics() {
-        let logs = modelContext.finalLogs(forExercise: entry.exerciseId)
-        guard !logs.isEmpty else { return }
+    // MARK: Header
 
-        // All-time best set by estimated 1RM (Epley formula)
-        let allSets = logs.flatMap(\.workingSets).filter { $0.weight > 0 && $0.reps > 0 }
-        guard let prSet = allSets.max(by: {
-            ($0.weight * (1 + Double($0.reps) / 30)) < ($1.weight * (1 + Double($1.reps) / 30))
-        }) else { return }
-        let estimated1RM = prSet.weight * (1 + Double(prSet.reps) / 30)
-
-        // Delta: most recent session best weight vs session before
-        var deltaKg: Double? = nil
-        if logs.count >= 2 {
-            let lastBest = logs[0].workingSets.map(\.weight).max() ?? 0
-            let prevBest = logs[1].workingSets.map(\.weight).max() ?? 0
-            if prevBest > 0 { deltaKg = lastBest - prevBest }
-        }
-
-        // Last session note for ghost text
-        let lastNote = logs.first?.notes ?? ""
-
-        analytics = ExerciseAnalytics(
-            prWeight: prSet.weight,
-            prReps: prSet.reps,
-            estimated1RM: estimated1RM,
-            deltaKg: deltaKg,
-            lastNote: lastNote
-        )
-    }
-
-    // MARK: Progression threshold (Supernova smart weight suggestions)
-
-    private static let thresholdChoices = Array(ProgressionRule.thresholdRange)
-
-    @ViewBuilder
-    private var progressionChipRow: some View {
-        if entry.exerciseType != .timeBased, entry.exerciseType != .distanceBased {
-            let threshold = viewModel.progressionThreshold(exerciseIndex: exerciseIndex)
-            let hasPlus = viewModel.hasPlusAccess()
-            HStack {
-                if hasPlus {
-                    Menu {
-                        Button("Off") { viewModel.setProgressionThreshold(nil, exerciseIndex: exerciseIndex, modelContext: modelContext) }
-                        ForEach(Self.thresholdChoices, id: \.self) { reps in
-                            Button("\(reps) reps") {
-                                viewModel.setProgressionThreshold(reps, exerciseIndex: exerciseIndex, modelContext: modelContext)
-                            }
-                        }
-                    } label: { progressionChipLabel(threshold: threshold, locked: false) }
-                } else {
-                    Button { showProgressionPaywall = true } label: { progressionChipLabel(threshold: nil, locked: true) }
-                        .buttonStyle(.plain)
-                }
-                Spacer()
+    private var header: some View {
+        HStack(alignment: .top, spacing: 6) {
+            Button(action: onStartReorder) {
+                VStack(spacing: 3) { ForEach(0..<3, id: \.self) { _ in RoundedRectangle(cornerRadius: 1).fill(Color.inkMuted).frame(width: 18, height: 2) } }
+                    .frame(width: 28, height: 30).contentShape(Rectangle())
             }
-            .padding(.horizontal, 12)
-            .padding(.bottom, 8)
-            .accessibilityIdentifier("progression.threshold.\(Exercise.normalisedName(entry.exerciseName).replacingOccurrences(of: " ", with: "-"))")
-        }
-    }
-
-    private func progressionChipLabel(threshold: Int?, locked: Bool) -> some View {
-        HStack(spacing: 4) {
-            if locked { Image(systemName: "lock.fill").font(.system(size: 8)) }
-            Text(locked ? "PROGRESS · SUPERNOVA" : (threshold.map { "PROGRESS AT \($0) REPS" } ?? "PROGRESS · OFF"))
-                .font(.spaceMono(9))
-                .tracking(0.5)
-        }
-        .foregroundStyle(threshold != nil ? Color.accentInk : Color.inkMuted)
-        .padding(.horizontal, 8)
-        .frame(height: 24)
-        .background(Color.surf2)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
-        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.dsHairLine, lineWidth: 1))
-    }
-
-    // MARK: Card Header
-
-    private var cardHeader: some View {
-        HStack(alignment: .center, spacing: 0) {
-            // Drag handle — hold to reorder, tap propagates to outer onTapGesture
-            VStack(spacing: 2) {
-                ForEach(0..<3, id: \.self) { _ in
-                    Rectangle()
-                        .fill(Color.inkPrimary)
-                        .frame(width: 12, height: 1.5)
+            .buttonStyle(.plain).accessibilityLabel("Reorder exercises").accessibilityIdentifier(AX.workout.grip(exerciseIndex))
+            Text(String(format: "%02d", exerciseIndex + 1)).font(.spaceMono(10)).tracking(1.5).foregroundStyle(Color.inkMuted).padding(.top, 4)
+                .accessibilityIdentifier(AX.workout.exerciseNumber(exerciseIndex))
+            VStack(alignment: .leading, spacing: 0) {
+                Text(entry.exerciseName.uppercased()).font(.archivo(17, weight: .bold)).tracking(0.3).foregroundStyle(Color.inkPrimary)
+                    .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier(AX.workout.exerciseName(exerciseIndex))
+                meta.padding(.top, 4)
+                if progression.enabled {
+                    Text("AUTO · \(progression.reps)+ REPS → +\(unit.formatTight(progression.incrementKg))").font(.spaceMono(8, weight: .bold)).tracking(1.5)
+                        .foregroundStyle(Color.accentInk).padding(.top, 4)
                 }
-            }
-            .opacity(0.4)
-            .padding(.trailing, 10)
-            .highPriorityGesture(
-                DragGesture(minimumDistance: 8)
-                    .onChanged { value in onDragChanged?(value.translation.height) }
-                    .onEnded { value in onDragEnded?(value.translation.height) }
-            )
-
-            // Exercise info — fills remaining space, tappable via outer gesture
-            VStack(alignment: .leading, spacing: 3) {
-                // Centred, not baseline-aligned: a name that wraps to two lines keeps the number beside the middle.
-                HStack(alignment: .center, spacing: 8) {
-                    Text(String(format: "%02d", exerciseIndex + 1))
-                        .font(.spaceMono(9))
-                        .foregroundStyle(Color.inkMuted)
-                        .tracking(1)
-                        .fixedSize()
-                        .accessibilityIdentifier(AX.workout.exerciseNumber(exerciseIndex))
-                    Text(entry.exerciseName.uppercased())
-                        .font(.archivo(18, weight: .black))
-                        .foregroundStyle(Color.inkPrimary)
-                        .tracking(0.3)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityIdentifier(AX.workout.exerciseName(exerciseIndex))
-                }
-                HStack(spacing: 5) {
-                    Text(entry.equipmentType.rawValue.uppercased())
-                        .font(.spaceMono(9))
-                        .foregroundStyle(Color.inkMuted)
-                    if let a = analytics {
-                        Text("·").font(.spaceMono(9)).foregroundStyle(Color.inkMuted)
-                        Text("PR").font(.spaceMono(8)).foregroundStyle(Color.inkMuted)
-                        Text("\(unit.number(a.prWeight))×\(a.prReps)")
-                            .font(.spaceMono(9, weight: .bold)).foregroundStyle(Color.inkPrimary)
-                        Text("·").font(.spaceMono(9)).foregroundStyle(Color.inkMuted)
-                        Text("1RM").font(.spaceMono(8)).foregroundStyle(Color.inkMuted)
-                        Text("~\(Int(unit.display(a.estimated1RM).rounded()))")
-                            .font(.spaceMono(9, weight: .bold)).foregroundStyle(Color.inkPrimary)
-                        if let delta = a.deltaKg, abs(delta) > 0.01 {
-                            Text("·").font(.spaceMono(9)).foregroundStyle(Color.inkMuted)
-                            Text("\(delta > 0 ? "▲" : "▼") \(unit.formatTight(abs(delta)))")
-                                .font(.spaceMono(9, weight: .bold))
-                                .foregroundStyle(delta > 0 ? Color.signalUp : Color.signalDown)
-                        }
-                    } else {
-                        Text("·").font(.spaceMono(9)).foregroundStyle(Color.inkMuted)
-                        Text("PR —").font(.spaceMono(9)).foregroundStyle(Color.inkMuted)
-                        Text("·").font(.spaceMono(9)).foregroundStyle(Color.inkMuted)
-                        Text("1RM —").font(.spaceMono(9)).foregroundStyle(Color.inkMuted)
-                    }
+                if let note = analytics?.lastNote, !note.isEmpty {
+                    Text("\u{201C}\(note)\u{201D}").font(.archivo(12).italic()).foregroundStyle(Color.inkSecondary).padding(.top, 6)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            Text("\(completedSets)/\(entry.sets.count)").font(.spaceMono(11, weight: .bold))
+                .foregroundStyle(completedSets == entry.sets.count && completedSets > 0 ? Color.signalUp : Color.inkSecondary).padding(.top, 4)
+            Button { menuOpen = true } label: {
+                Text("···").font(.spaceMono(14, weight: .bold)).foregroundStyle(Color.inkSecondary).frame(width: 36, height: 30).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain).accessibilityLabel("Exercise options").accessibilityIdentifier(AX.workout.exerciseMenu(exerciseIndex))
+            .tutorialTarget("tutorial.exercise-menu", enabled: isTutorialExercise)
+            .popover(isPresented: $menuOpen, attachmentAnchor: .point(.bottom), arrowEdge: .top) { menu }
+        }
+        .padding(.leading, 4).padding(.trailing, 4).padding(.top, 9).padding(.bottom, 7)
+    }
 
-            // Right side: sets count | menu | collapse — equal 8pt gaps
-            HStack(spacing: 8) {
-                Text("\(completedSets)/\(entry.sets.count)")
-                    .font(.spaceMono(9, weight: .bold))
-                    .foregroundStyle(Color.inkMuted)
-                    .frame(width: 28, alignment: .center)
+    /// `<EQUIPMENT> · PR <best> · 1RM <best>` on one line.
+    private var meta: some View {
+        let loggedSets = entry.sets.filter { $0.isCompleted && $0.setType != .warmup }.map { (kg: $0.loggedWeightKg, reps: $0.loggedReps) }
+        let history = analytics?.estimated1RM ?? 0
+        let live = LoggerMath.liveBest(history: history, logged: loggedSets, assisted: load == .assisted)
+        var t = Text(entry.equipmentType.displayName.uppercased()).foregroundStyle(Color.inkMuted)
+        t = t + Text(" · PR ").foregroundStyle(Color.inkMuted)
+        t = t + Text(analytics.map { "\(unit.number($0.prWeight))×\($0.prReps)" } ?? "—").fontWeight(.bold).foregroundStyle(Color.inkPrimary)
+        t = t + Text(" · 1RM ").foregroundStyle(Color.inkMuted)
+        t = t + Text(live.value > 0 ? "\(Int(unit.display(live.value).rounded()))" : "—").fontWeight(.bold).foregroundStyle(live.beat ? Color.prGold : Color.inkPrimary)
+        return HStack(spacing: 4) {
+            t.font(.spaceMono(9)).tracking(1.5).lineLimit(1)
+            if live.beat { StarBullet(size: 10) }
+        }
+    }
 
-                // ··· menu — Button prevents tap from bubbling to collapse gesture
-                Button {
-                    onMenuTap(menuButtonFrame)
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Color.inkMuted)
-                        .frame(width: 28, height: 28)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .background(GeometryReader { geo in
-                    Color.clear.task(id: geo.frame(in: .global).minY) {
-                        menuButtonFrame = geo.frame(in: .global)
-                    }
-                })
+    private var menu: some View {
+        PostMenuPopover {
+            LoggerMenuRow(title: "RIR column", value: entry.rirOn ? "ON" : "OFF", valueColor: entry.rirOn ? .accentInk : .inkMuted,
+                          tutorialID: isTutorialExercise ? "tutorial.rir-row" : nil) {
+                menuOpen = false
+                withAnimation(.easeInOut(duration: 0.28)) { entry.rirOn.toggle() }
+            }
+            LoggerMenuRow(title: "Auto progression", value: progression.enabled ? "\(progression.reps) → +\(LoggerMath.trim(unit.display(progression.incrementKg)))" : "OFF",
+                          valueColor: progression.enabled ? .accentInk : .inkMuted) {
+                menuOpen = false
+                if viewModel.hasPlusAccess() { onOpenProgression() } else { showProgressionPaywall = true }
+            }
+            LoggerMenuRow(title: "Rest timer", value: "\(Self.clock(restDefault)) ›", valueColor: .inkSecondary) { menuOpen = false; onOpenRest() }
+            LoggerMenuRow(title: entry.supersetGroup == nil ? "Superset with next" : "Remove superset",
+                          value: entry.supersetGroup.map { "GROUP \($0)" } ?? (exerciseIndex < viewModel.exerciseEntries.count - 1 ? "+ \(viewModel.exerciseEntries[exerciseIndex + 1].exerciseName.uppercased().prefix(12))" : "LAST EXERCISE"),
+                          bold: false) {
+                menuOpen = false
+                viewModel.toggleSuperset(exerciseIndex: exerciseIndex)
+            }
+            LoggerMenuRow(title: "Replace exercise", value: "›", valueColor: .inkGhost) { menuOpen = false; onOpenReplace() }
+            LoggerMenuRow(title: "Remove exercise", destructive: true, divider: false) { menuOpen = false; onRemove() }
+        }
+    }
 
-                // Collapse arrow — decorative; entire header collapses via outer gesture
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(Color.inkMuted)
-                    .rotationEffect(.degrees(isCollapsed ? -90 : 0))
-                    .animation(.spring(response: 0.3, dampingFraction: 0.75), value: isCollapsed)
-                    .frame(width: 20, height: 28)
+    private var restDefault: Int {
+        RestTimerService.perExerciseOverride(exerciseId: entry.exerciseId)
+            ?? viewModel.restTimer.restDuration(isCompound: entry.isCompound, exerciseId: entry.exerciseId, templateSeconds: entry.restSeconds)
+    }
+
+    static func clock(_ s: Int) -> String { String(format: "%d:%02d", s / 60, s % 60) }
+
+    // MARK: Columns
+
+    private var columnStrip: some View {
+        HStack(spacing: 6) {
+            Text("#").frame(width: 40, alignment: .leading)
+            switch entry.exerciseType {
+            case .timeBased: Text("SEC").frame(maxWidth: .infinity)
+            case .distanceBased: Text("DIST").frame(maxWidth: .infinity)
+            default:
+                Text(load.header(unit: unit.label)).frame(maxWidth: .infinity)
+                Text("REPS").frame(maxWidth: .infinity)
+            }
+            if entry.rirOn { Text("RIR").frame(width: 30).tutorialTarget("tutorial.rir-header", enabled: isTutorialExercise) }
+            Text("✓").frame(width: 28, alignment: .trailing)
+        }
+        .font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
+        .padding(.leading, 10).padding(.trailing, 12).padding(.vertical, 5)
+        .background(Color.surf2)
+        .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+    }
+
+    // MARK: Rows (+ the plate calculator under the next set of a barbell exercise)
+
+    @ViewBuilder private func setBlock(_ i: Int, _ set: SetEntry) -> some View {
+        let ghost = viewModel.ghost(exerciseIndex: exerciseIndex, setIndex: i, modelContext: modelContext)
+        let isActive = i == activeSetIndex
+        VStack(spacing: 0) {
+            LoggerSetRow(
+                set: set, setIndex: i, exerciseIndex: exerciseIndex, ghost: ghost, load: load, exerciseType: entry.exerciseType, rirOn: entry.rirOn,
+                isActive: isActive,
+                editing: keypad.flatMap { $0.exerciseIndex == exerciseIndex && $0.setIndex == i ? $0.field : nil },
+                onTypeTap: { onSetTypeTap(i) },
+                onCheck: { if set.isCompleted { viewModel.unlogSet(exerciseIndex: exerciseIndex, setIndex: i) } else { onLogSet(i) } },
+                onTapField: { onTapField(i, $0) },
+                onStep: { field, dir in
+                    viewModel.step(field, by: dir * Self.stepSize(field, unit: unit), exerciseIndex: exerciseIndex, setIndex: i, modelContext: modelContext, unit: unit)
+                },
+                onScrubCommit: { field, value in
+                    if field == .weight { viewModel.setValue(.weight, unit.kg(fromDisplay: value), exerciseIndex: exerciseIndex, setIndex: i) }
+                    else { viewModel.setValue(field, value, exerciseIndex: exerciseIndex, setIndex: i) }
+                },
+                onSubStep: { sub, field, dir in stepSub(i, sub, field, dir) },
+                onSubRemove: { viewModel.removeSub(exerciseIndex: exerciseIndex, setIndex: i, subIndex: $0) },
+                onAddSub: { viewModel.addSub(exerciseIndex: exerciseIndex, setIndex: i, unit: unit) },
+                isTutorialRow: i == 0 && isTutorialExercise
+            )
+            .tutorialTarget("tutorial.set-row", enabled: i == 0 && isTutorialExercise)
+            if hasPlates && i == nextUncompletedSetIdx { plateSection(i, ghostKg: ghost) }
+        }
+    }
+
+    static func stepSize(_ field: LoggerField, unit: UnitPreference) -> Double { field == .weight ? LoggerMath.kgStep(unit) : 1 }
+
+    private func stepSub(_ i: Int, _ sub: Int, _ field: LoggerField, _ dir: Double) {
+        guard entry.sets[i].subs.indices.contains(sub) else { return }
+        var line = entry.sets[i].subs[sub]
+        switch field {
+        case .weight:
+            let shown = unit.display(Double(line.shownWeight) ?? 0)
+            line.weight = WorkoutViewModel.kgText(unit.kg(fromDisplay: LoggerMath.stepped(shown, by: dir * LoggerMath.kgStep(unit))))
+        default:
+            line.reps = "\(Int(LoggerMath.stepped(Double(line.shownReps) ?? 0, by: dir)))"
+        }
+        entry.sets[i].subs[sub] = line
+    }
+
+    @State private var plateOpen = false
+    @State private var barKg = 20.0
+
+    @ViewBuilder private func plateSection(_ i: Int, ghostKg: WorkoutViewModel.LoggerGhost?) -> some View {
+        let shownKg = Double(entry.sets[i].weight.isEmpty ? (ghostKg?.weight ?? "") : entry.sets[i].weight) ?? 0
+        let previousKg: Double? = i > 0 ? Double(entry.sets[i - 1].weight.isEmpty ? (viewModel.ghost(exerciseIndex: exerciseIndex, setIndex: i - 1, modelContext: modelContext)?.weight ?? "") : entry.sets[i - 1].weight) : nil
+        if shownKg > 0 {
+            LoggerPlateSection(setNumber: i + 1, kg: shownKg, previousKg: previousKg, isOpen: $plateOpen, barKg: $barKg, exerciseIndex: exerciseIndex,
+                               tutorial: i == 0 && isTutorialExercise)
+                .onAppear { barKg = entry.equipmentType == .ezBar ? 7.5 : (entry.equipmentType == .trapBar ? 25 : unit.olympicBarKg) }
+        }
+    }
+
+    // MARK: Footer: + SET and + NOTE
+
+    private var footer: some View {
+        HStack(spacing: 8) {
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) { viewModel.addSet(to: exerciseIndex) }
+            } label: {
+                Text("+ SET").font(.spaceMono(9, weight: .bold)).tracking(1.5).foregroundStyle(Color.inkSecondary)
+                    .frame(maxWidth: .infinity).frame(height: 32)
+                    .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.ruleStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
                     .contentShape(Rectangle())
             }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) { isCollapsed.toggle() }
-        }
-    }
-
-    // MARK: Set Row Helper (extracted to avoid type-check timeout)
-
-    @ViewBuilder
-    private func setRowView(setIdx: Int, set: SetEntry, ghost: (weight: String, reps: String)?) -> some View {
-        NewSetRowView(
-            setEntry: Binding(
-                get: { entry.sets[setIdx] },
-                set: { entry.sets[setIdx] = $0 }
-            ),
-            setIndex: setIdx,
-            exerciseIndex: exerciseIndex,
-            exerciseType: entry.exerciseType,
-            showRIR: showRIR,
-            ghostText: ghost,
-            // One tinted row per screen: only the next set to log is "active".
-            isActive: setIdx == nextUncompletedSetIdx,
-            onSetTypeTap: { onSetTypeTap(setIdx) },
-            onLog: {
-                // Save ghost values first (empty fields showing placeholders), then PR-check them.
-                viewModel.applyGhostValues(exerciseIndex: exerciseIndex, setIndex: setIdx, modelContext: modelContext)
-                viewModel.checkPR(exerciseIndex: exerciseIndex, setIndex: setIdx, modelContext: modelContext)
-                viewModel.logSet(exerciseIndex: exerciseIndex, setIndex: setIdx, modelContext: modelContext)
-            },
-            onUnlog: {
-                viewModel.unlogSet(exerciseIndex: exerciseIndex, setIndex: setIdx)
-            },
-            onDelete: {},
-            isTutorialRow: isTutorialRow(setIdx)
-        )
-    }
-
-    // MARK: Column Header Row
-
-    private var columnHeaderRow: some View {
-        let cols: [GridItem] = showRIR
-            ? [GridItem(.fixed(36)), GridItem(.fixed(22)), GridItem(.flexible()), GridItem(.flexible()), GridItem(.fixed(38)), GridItem(.fixed(30))]
-            : [GridItem(.fixed(36)), GridItem(.fixed(22)), GridItem(.flexible()), GridItem(.flexible()), GridItem(.fixed(30))]
-
-        return HStack(spacing: 0) {
-            Text("TYPE")
-                .frame(width: 36, alignment: .leading)
-            Text("#")
-                .frame(width: 22, alignment: .leading)
-            Text(unit.label)
-                .frame(maxWidth: .infinity, alignment: .center)
-            Text("REPS")
-                .frame(maxWidth: .infinity, alignment: .center)
-            if showRIR {
-                Text("RIR")
-                    .frame(width: 38, alignment: .center)
-                    .transition(.opacity)
-                    .tutorialTarget("tutorial.rir-header", enabled: isLastExercise)
+            .buttonStyle(.plain).accessibilityIdentifier(AX.workout.addSet(exerciseIndex))
+            Button { withAnimation(.easeInOut(duration: 0.2)) { noteOpen.toggle() } } label: {
+                Text(entry.notes.isEmpty ? "+ NOTE" : "NOTE ✓").font(.spaceMono(8, weight: .bold)).tracking(1.5).foregroundStyle(Color.inkSecondary)
+                    .padding(.horizontal, 12).frame(height: 32)
+                    .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.ruleStrong, lineWidth: 1)).contentShape(Rectangle())
             }
-            Text("✓")
-                .frame(width: 30, alignment: .trailing)
+            .buttonStyle(.plain).accessibilityIdentifier(AX.workout.noteButton(exerciseIndex))
         }
-        .font(.spaceMono(8))
-        .textCase(.uppercase)
-        .tracking(1.5)
-        .foregroundStyle(Color.inkMuted)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 5)
-        .background(Color.surf2)
+        .padding(.horizontal, 12).padding(.top, 8).padding(.bottom, 10)
+        .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+    }
+
+    /// The existing exercise note box (note icon + a text row), opened from + NOTE, with the "NOTE for next time…" hint.
+    private var noteBox: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "note.text.badge.plus").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.inkMuted).padding(.top, 2)
+            ZStack(alignment: .topLeading) {
+                if entry.notes.isEmpty {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text("NOTE").font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
+                        Text("for next time…").font(.archivo(14).italic()).foregroundStyle(Color.inkFaint)
+                    }
+                    .allowsHitTesting(false)
+                }
+                TextField("", text: $entry.notes, axis: .vertical).font(.archivo(14)).foregroundStyle(Color.inkPrimary).lineLimit(1...5)
+                    .accessibilityIdentifier("workout.exercise.\(exerciseIndex).noteField")
+            }
+        }
+        .padding(.horizontal, 12).padding(.vertical, 10)
+        .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+    }
+
+    // MARK: Analytics
+
+    private func loadAnalytics() {
+        let logs = modelContext.finalLogs(forExercise: entry.exerciseId)
+        guard !logs.isEmpty else { analytics = nil; return }
+        let allSets = logs.flatMap(\.workingSets).filter { $0.weight > 0 && $0.reps > 0 }
+        guard let prSet = allSets.max(by: { LoggerMath.epley(kg: $0.weight, reps: $0.reps) < LoggerMath.epley(kg: $1.weight, reps: $1.reps) }) else { return }
+        analytics = ExerciseAnalytics(prWeight: prSet.weight, prReps: prSet.reps, estimated1RM: LoggerMath.epley(kg: prSet.weight, reps: prSet.reps),
+                                      deltaKg: nil, lastNote: logs.first?.notes ?? "")
     }
 }
-
-// MARK: - New Set Row

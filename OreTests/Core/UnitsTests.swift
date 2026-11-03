@@ -144,7 +144,10 @@ struct UnitsTests {
         #expect(PlateMath.tier(forKg: 25) == .red)
         #expect(PlateMath.tier(forKg: 45 * UnitPreference.kgPerLb) == .blue)   // 45 lb ~ 20 kg
         #expect(PlateMath.tier(forKg: 20) == .blue)
-        #expect(PlateMath.tier(forKg: 2.5 * UnitPreference.kgPerLb) == .light)
+        #expect(PlateMath.tier(forKg: 2.5 * UnitPreference.kgPerLb) == .chrome)    // 2.5 lb ~ 1.25 kg
+        #expect(PlateMath.tier(forKg: 5) == .white && PlateMath.tier(forKg: 10 * UnitPreference.kgPerLb) == .white)
+        #expect(PlateMath.tier(forKg: 2.5) == .black && PlateMath.tier(forKg: 5 * UnitPreference.kgPerLb) == .black)
+        #expect(PlateMath.tier(forKg: 15) == .yellow && PlateMath.tier(forKg: 10) == .green)
     }
 
     // MARK: Stored values are untouched by the preference

@@ -1,313 +1,178 @@
 import SwiftUI
 import SwiftData
-import FirebaseAuth
 
+/// The Programs tab (Ore Programs 01, 14): PROGRAMS + the bordered "+", an UP NEXT card (the only accent button on the tab), and
+/// YOUR PROGRAMS, each with its week. The tab owns its navigation: Start from, New / Edit program, Program, Workout and Add exercises.
 struct ProgramsTabView: View {
     let onStartFromTemplate: (WorkoutTemplate) -> Void
     @Environment(\.modelContext) private var modelContext
     @Query(filter: #Predicate<WorkoutTemplate> { $0.deletedAt == nil }, sort: \WorkoutTemplate.name) private var templates: [WorkoutTemplate]
-    @Query(filter: #Predicate<Workout> { !$0.isDraft && $0.deletedAt == nil }, sort: \Workout.date, order: .reverse)
-    private var recentWorkouts: [Workout]
-    @State private var showPresetPicker = false
-    @State private var showCreateBlank = false
-    @State private var selectedNavItem: TemplateNavItem?
-    @State private var groupToDelete: ProgramGroup? = nil
+    @State private var path = NavigationPath()
 
-    // Group templates by their splitDays; templates with no splitDays stay individual
-    private var programGroups: [ProgramGroup] {
-        var buckets: [(key: String, templates: [WorkoutTemplate])] = []
-        var seen: [String: Int] = [:]
-        for t in templates {
-            let key = t.splitDays.isEmpty ? "__solo_\(t.id)" : t.splitDays.joined()
-            if let idx = seen[key] {
-                buckets[idx].templates.append(t)
-            } else {
-                seen[key] = buckets.count
-                buckets.append((key: key, templates: [t]))
-            }
-        }
-        return buckets.map { bucket in
-            ProgramGroup(
-                id: bucket.key,
-                name: derivedName(for: bucket.templates),
-                templates: bucket.templates,
-                splitDays: bucket.templates.first?.splitDays ?? []
-            )
-        }
-    }
-
-    private func derivedName(for templates: [WorkoutTemplate]) -> String {
-        if templates.count == 1 { return templates[0].name }
-        let names = templates.map { $0.name.lowercased() }
-        let hasPush  = names.contains { $0.contains("push") }
-        let hasPull  = names.contains { $0.contains("pull") }
-        let hasLegs  = names.contains { $0.contains("leg") }
-        let hasUpper = names.contains { $0.contains("upper") }
-        let hasLower = names.contains { $0.contains("lower") }
-        let hasFull  = names.contains { $0.contains("full") }
-        if hasPush && hasPull && hasLegs { return "Push Pull Legs" }
-        if hasPush && hasLegs            { return "Push Legs" }
-        if hasPull && hasLegs            { return "Pull Legs" }
-        if hasPush && hasPull            { return "Push Pull" }
-        if hasUpper && hasLower          { return "Upper Lower" }
-        if hasFull                       { return "Full Body" }
-        return templates.map(\.name).joined(separator: " / ")
-    }
-
-    private func setCount(for muscle: MuscleGroup) -> Int {
-        recentWorkouts.flatMap(\.exerciseLogs)
-            .filter { $0.exercise?.primaryMuscleGroups.contains(muscle) == true }
-            .flatMap(\.workingSets).count
-    }
-
-    private var programsTickerItems: [TickerItem] {
-        guard recentWorkouts.count >= 3 else { return [] }
-        let pairs: [(String, Int)] = [
-            ("CHEST", setCount(for: .chest)),
-            ("BACK",  setCount(for: .back)),
-            ("QUADS", setCount(for: .quads)),
-            ("HAMS",  setCount(for: .hamstrings)),
-            ("SHLDR", setCount(for: .shoulders)),
-            ("BICEP", setCount(for: .biceps)),
-            ("TRI",   setCount(for: .triceps)),
-        ]
-        return pairs.filter { $0.1 > 0 }.map { TickerItem(label: $0.0, value: "\($0.1) SETS", direction: nil) }
-    }
+    private var programs: [ProgramSummary] { ProgramPlan.programs(from: templates) }
 
     var body: some View {
-        VStack(spacing: 0) {
-            programsHeader
+        NavigationStack(path: $path) {
+            root
+                .toolbar(.hidden, for: .navigationBar)
+                .navigationDestination(for: ProgramRoute.self) { destination($0) }
+        }
+    }
 
+    // MARK: Root
+
+    private var root: some View {
+        VStack(spacing: 0) {
+            header
             ScrollView {
-                LazyVStack(spacing: 0) {
-                    if programGroups.isEmpty {
+                VStack(spacing: 0) {
+                    if programs.isEmpty {
                         emptyState
                     } else {
-                        ForEach(programGroups) { group in
-                            SwipeToDeleteRow(onDeleteTapped: { groupToDelete = group }) {
-                                ProgramGroupRowView(group: group)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture { selectedNavItem = TemplateNavItem(group: group) }
-                                    .accessibilityElement(children: .combine)
-                                    .accessibilityAddTraits(.isButton)
-                                    .accessibilityIdentifier(AX.programs.row(group.name))
-                            }
+                        if let up = ProgramPlan.upNext(programs) { upNextCard(up) }
+                        ProgramSectionRow(left: "YOUR PROGRAMS", right: "\(programs.count)")
+                        VStack(spacing: 0) {
+                            ForEach(programs) { p in programRow(p) }
                         }
+                        .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
                     }
-
-                    newProgramButton
-
-                    if !recentWorkouts.isEmpty {
-                        quickStartSection
-                    }
-
-                    Color.clear.frame(height: 40)
+                    Color.clear.frame(height: 24)
                 }
             }
         }
         .background(Color.canvasBg.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
-        .navigationDestination(item: $selectedNavItem) { navItem in
-            TemplateDetailView(
-                template: navItem.templates.first!,
-                groupName: navItem.groupName,
-                siblings: navItem.templates,
-                onStartWorkout: onStartFromTemplate
-            )
-        }
-        .sheet(isPresented: $showPresetPicker) {
-            PresetTemplatePicker(onSelectPresets: { presets in
-                var copies: [WorkoutTemplate] = []
-                presets.forEach { preset in
-                    let copy = WorkoutTemplate(name: preset.name, templateExercises: preset.templateExercises, splitDays: preset.splitDays)
-                    modelContext.insert(copy)
-                    copies.append(copy)
-                }
-                showPresetPicker = false
-                if let first = copies.first {
-                    selectedNavItem = TemplateNavItem(first, groupName: nil, siblings: copies)
-                }
-            }, onBlank: {
-                showPresetPicker = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                    showCreateBlank = true
-                }
-            })
-        }
-        .navigationDestination(isPresented: $showCreateBlank) {
-            CreateTemplateView()
-        }
-        .destructiveModal(
-            isPresented: Binding(
-                get: { groupToDelete != nil },
-                set: { if !$0 { groupToDelete = nil } }
-            ),
-            kicker: "DELETE PROGRAM",
-            title: "Delete \(groupToDelete?.name ?? "program")?",
-            body: "The program template will be removed. Workouts you've already logged using it will be kept in your history.",
-            consequences: deleteProgramConsequences,
-            onConfirm: {
-                groupToDelete?.templates.forEach { modelContext.softDelete($0) }
+    }
+
+    private var header: some View {
+        HStack {
+            Text("PROGRAMS").font(.archivo(28, weight: .black)).tracking(0.3).foregroundStyle(Color.inkPrimary)
+                .accessibilityIdentifier(AX.programs.screen)
+            Spacer()
+            Button { path.append(ProgramRoute.startFrom) } label: {
+                Text("+").font(.archivo(26)).foregroundStyle(Color.inkPrimary).frame(width: 44, height: 44)
+                    .background(Color.surf, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color.ruleStrong, lineWidth: 1))
+                    .contentShape(Rectangle())
             }
-        )
-    }
-
-    private var deleteProgramConsequences: [DestructiveConsequence] {
-        guard let group = groupToDelete else { return [] }
-        let days = group.templates.count
-        let exercises = group.totalExercises
-        let sessions = group.templates.flatMap(\.liveWorkouts).count
-        return [
-            DestructiveConsequence(value: "\(days)", label: "workout days"),
-            DestructiveConsequence(value: "\(exercises)", label: "exercises"),
-            DestructiveConsequence(value: "\(sessions)", label: "past sessions kept"),
-        ]
-    }
-
-    // MARK: Custom Programs Header
-
-    private var programsHeader: some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .center) {
-                Text("PROGRAMS")
-                    .font(.archivo(26, weight: .black))
-                    .tracking(0.5)
-                    .foregroundStyle(Color.inkPrimary)
-                    .accessibilityIdentifier(AX.programs.screen)
-
-                Spacer()
-
-                Button {
-                    showPresetPicker = true
-                } label: {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.oreAccent)
-                        .overlay { AccentFill().clipShape(RoundedRectangle(cornerRadius: 10)) }
-                        .frame(width: 34, height: 34)
-                        .overlay(
-                            Image(systemName: "plus")
-                                .font(.mono(16, weight: .medium))
-                                .foregroundStyle(.white)
-                        )
-                }
-                .buttonStyle(PressScaleButtonStyle())
-                .accessibilityLabel("Add program")
-                .accessibilityIdentifier(AX.programs.add)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 2)
-            .padding(.bottom, 10)
-
-            Rectangle().fill(Color.dsHairLine).frame(height: 1)
+            .buttonStyle(PressScaleButtonStyle()).accessibilityLabel("New program").accessibilityIdentifier(AX.programs.add)
         }
-        .background(Color.canvasBg)
+        .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 12)
     }
-
-    // MARK: Empty State
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Spacer().frame(height: 60)
-            Text("NO PROGRAMS")
-                .font(.archivo(32, weight: .black))
-                .tracking(1)
-                .foregroundStyle(Color.inkFaint)
-                .accessibilityIdentifier(AX.programs.empty)
-            Text("Tap + to add a preset or build your own.")
-                .font(.archivo(13))
-                .foregroundStyle(Color.inkMuted)
-                .multilineTextAlignment(.center)
-            Spacer().frame(height: 20)
+        VStack(spacing: 14) {
+            Spacer().frame(height: 56)
+            Text("NO PROGRAMS").font(.archivo(32, weight: .black)).tracking(1).foregroundStyle(Color.inkFaint).accessibilityIdentifier(AX.programs.empty)
+            Text("Tap + to start a program: workouts that take turns on your training days.").font(.archivo(13)).foregroundStyle(Color.inkMuted).multilineTextAlignment(.center)
         }
-        .padding()
+        .padding(.horizontal, 24).frame(maxWidth: .infinity)
     }
 
-    // MARK: New Program Button (dashed)
+    // MARK: UP NEXT
 
-    private var newProgramButton: some View {
-        Button {
-            showCreateBlank = true
-        } label: {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [5]))
-                    .foregroundStyle(Color.inkFaint)
-                HStack(spacing: 6) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .medium))
-                    Text("NEW PROGRAM")
-                        .font(.spaceMono(10))
-                        .tracking(1.5)
-                }
-                .foregroundStyle(Color.inkMuted)
+    private func upNextCard(_ up: ProgramPlan.UpNext) -> some View {
+        let (p, index, t, empty): (ProgramSummary, Int, WorkoutTemplate, Bool) = {
+            switch up { case .workout(let p, let i, let t): (p, i, t, false); case .allEmpty(let p, let i, let t): (p, i, t, true) }
+        }()
+        let when = ProgramPlan.nextTrainingDay(from: Date(), days: p.days, trainedToday: Self.trainedToday(p))
+        let whenText = when.map { $0.isToday ? "TODAY" : (ProgramPlan.weekdayNames[$0.weekday] ?? "") } ?? ""
+        var meta = "DAY \(index + 1) OF \(p.workouts.count) · \(t.templateExercises.count) EXERCISE\(t.templateExercises.count == 1 ? "" : "S")"
+        if let avg = ProgramPlan.averageMinutes(for: t) { meta += " · AVG \(avg) MIN" }
+        let names = t.templateExercises.sorted { $0.order < $1.order }.map { $0.exerciseName.exerciseTitleCase }
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("UP NEXT" + (whenText.isEmpty ? "" : " · \(whenText)")).font(.spaceMono(9, weight: .bold)).tracking(2).foregroundStyle(Color.accentInk)
+                Spacer()
+                Text(p.name.uppercased()).font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted).lineLimit(1)
             }
-            .frame(height: 52)
-            .contentShape(RoundedRectangle(cornerRadius: 10))
+            VStack(alignment: .leading, spacing: 6) {
+                Text(t.name.uppercased()).font(.archivo(26, weight: .black)).tracking(0.3).foregroundStyle(Color.inkPrimary).lineLimit(2)
+                Text(meta).font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkMuted)
+            }
+            if !names.isEmpty {
+                Text(names.joined(separator: " · ")).font(.archivo(13)).foregroundStyle(Color.inkSecondary).lineLimit(3).fixedSize(horizontal: false, vertical: true)
+            }
+            Button {
+                if empty { path.append(ProgramRoute.workout(t.id, edit: true)) } else { onStartFromTemplate(t) }
+            } label: {
+                HStack {
+                    Text(empty ? "ADD EXERCISES" : "START WORKOUT").font(.archivo(16, weight: .black)).tracking(0.6)
+                    Spacer()
+                    Text("›").font(.archivo(22, weight: .black))
+                }
+                .foregroundStyle(.white).padding(.horizontal, 18).frame(height: 52).frame(maxWidth: .infinity)
+                .background { AccentFill(priority: 5) }
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(PressOpacityButtonStyle()).accessibilityIdentifier(AX.programs.upNextStart)
         }
-        .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.97))
-        .accessibilityIdentifier(AX.programs.newProgram)
+        .padding(14)
+        .background(Color.surf, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.dsHairLine, lineWidth: 1))
         .padding(.horizontal, 16)
-        .padding(.top, 16)
+        .accessibilityElement(children: .contain).accessibilityIdentifier(AX.programs.upNext)
     }
 
-    // MARK: Quick Start Section
+    private static func trainedToday(_ p: ProgramSummary) -> Bool {
+        p.workouts.flatMap(\.liveWorkouts).contains { Calendar.current.isDateInToday($0.date) }
+    }
 
-    private var quickStartSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("QUICK START")
-                .font(.spaceMono(9))
-                .tracking(1.5)
-                .foregroundStyle(Color.inkMuted)
-                .padding(.horizontal, 16)
-                .padding(.top, 20)
-                .padding(.bottom, 10)
+    // MARK: YOUR PROGRAMS
 
-            ForEach(Array(recentWorkouts.prefix(3).enumerated()), id: \.element.id) { idx, workout in
-                VStack(spacing: 0) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text((workout.template?.name ?? "Workout").uppercased())
-                                .font(.archivo(15, weight: .semibold))
-                                .foregroundStyle(Color.inkPrimary)
-                            Text(relativeDate(workout.date))
-                                .font(.spaceMono(9))
-                                .foregroundStyle(Color.inkMuted)
-                        }
-                        Spacer()
-                        Button {
-                            if let template = workout.template {
-                                onStartFromTemplate(template)
-                            }
-                        } label: {
-                            Text("START")
-                                .font(.archivo(13, weight: .black))
-                                .tracking(1)
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 16)
-                                .frame(height: 32)
-                                .background { AccentFill() }
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                        }
-                        .buttonStyle(PressScaleButtonStyle())
-                        .disabled(workout.template == nil)
-                        .opacity(workout.template == nil ? 0.4 : 1)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-
-                    if idx < min(recentWorkouts.count, 3) - 1 {
-                        Rectangle().fill(Color.dsHairLine).frame(height: 1)
-                    }
+    private func programRow(_ p: ProgramSummary) -> some View {
+        var meta = ProgramPlan.metaLine(workouts: p.workouts.count, days: p.days.count)
+        if let used = ProgramPlan.lastUsed(p) { meta += " · \(SocialAge.short(used) == "NOW" ? "JUST NOW" : SocialAge.short(used) + " AGO")" }
+        return Button { path.append(ProgramRoute.program(p.id)) } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(p.name.uppercased()).font(.archivo(17, weight: .bold)).foregroundStyle(Color.inkPrimary).lineLimit(1)
+                    Text(meta).font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkMuted).lineLimit(1)
+                    ProgramMiniWeek(days: p.days)
                 }
+                Spacer(minLength: 0)
+                Text("›").font(.spaceMono(16, weight: .bold)).foregroundStyle(Color.inkGhost)
+            }
+            .padding(.horizontal, 16).padding(.vertical, 14).contentShape(Rectangle())
+            .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+        }
+        .buttonStyle(OreRowPressStyle())
+        .accessibilityIdentifier(AX.programs.row(p.name))
+    }
+
+    // MARK: Destinations
+
+    @ViewBuilder private func destination(_ route: ProgramRoute) -> some View {
+        switch route {
+        case .startFrom:
+            StartFromView(onBack: { path.removeLast() }, onPick: { choice in path.append(ProgramRoute.newProgram(choice: choice)) })
+        case .newProgram(let choice):
+            ProgramFormView(draft: ProgramTemplates.all.first { $0.id == choice }?.draft() ?? ProgramDraft(),
+                            title: (ProgramTemplates.all.first { $0.id == choice }?.name ?? "Blank").uppercased(),
+                            onBack: { path.removeLast() },
+                            onSaved: { id in path = NavigationPath(); path.append(ProgramRoute.program(id)) },
+                            onDeleted: {})
+        case .editProgram(let id):
+            if let p = programs.first(where: { $0.id == id }) {
+                ProgramFormView(draft: ProgramStore.draft(for: p), onBack: { path.removeLast() },
+                                onSaved: { _ in path.removeLast() },
+                                onDeleted: { path = NavigationPath() })
+            }
+        case .program(let id):
+            if let p = programs.first(where: { $0.id == id }) {
+                ProgramDetailView(program: p, onBack: { path.removeLast() },
+                                  onEdit: { path.append(ProgramRoute.editProgram(id)) },
+                                  onOpenWorkout: { t, edit in path.append(ProgramRoute.workout(t.id, edit: edit)) },
+                                  onStart: onStartFromTemplate)
+            }
+        case .workout(let id, let edit):
+            if let t = templates.first(where: { $0.id == id }) {
+                ProgramWorkoutView(template: t, program: programs.first { $0.id == t.programId }, startsEditing: edit || t.templateExercises.isEmpty,
+                                   onBack: { path.removeLast() }, onAddExercises: { path.append(ProgramRoute.addExercises(workout: id)) }, onStart: onStartFromTemplate)
+            }
+        case .addExercises(let id):
+            if let t = templates.first(where: { $0.id == id }) {
+                ProgramAddExercisesView(template: t, onBack: { path.removeLast() }, onDone: { path.removeLast() })
             }
         }
-    }
-
-    private func relativeDate(_ date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: date, relativeTo: Date()).uppercased()
     }
 }
-
-// MARK: - Program Group Row

@@ -74,6 +74,7 @@ enum TutorialStep: Int, CaseIterable {
     case pickExercise
     case pickVariant
     case rir
+    case rirOn
     case enterSet
     case plates
     case setType
@@ -95,7 +96,7 @@ enum TutorialStep: Int, CaseIterable {
         case .enterSet, .logSet, .swipeSet: "Logging"
         case .plates: "Plates"
         case .setType, .pickSetType: "Set types"
-        case .rir: "RIR"
+        case .rir, .rirOn: "RIR"
         case .searchPull, .searchFind, .searchJump, .logNext: "Search"
         case .scrollTop: "Scroll"
         case .leave, .discard: "Finish"
@@ -109,6 +110,7 @@ enum TutorialStep: Int, CaseIterable {
         case .pickExercise: "Pick a lift"
         case .pickVariant: "Choose a variant"
         case .rir: "Reps in reserve"
+        case .rirOn: "Turn RIR on"
         case .enterSet: "Enter your numbers"
         case .plates: "Plate calculator"
         case .setType: "Set types"
@@ -131,7 +133,8 @@ enum TutorialStep: Int, CaseIterable {
         case .addExercise: "Tap + at the top to add an exercise without scrolling to the bottom. The ADD EXERCISE button at the end of the list does the same."
         case .pickExercise: "Tap the first lift. Lifts with several versions open a list to choose from."
         case .pickVariant: "Tap ADD on the version you're doing today."
-        case .rir: "RIR is how many reps you had left in the tank. Tap RIR on the first exercise to add a column for it."
+        case .rir: "RIR is how many reps you had left in the tank. Tap ··· on the first exercise to see its options."
+        case .rirOn: "Tap RIR column to add a column for it."
         case .enterSet: "Type the weight and reps, and with RIR on, how many reps you had left. We'll fill these in for you this time."
         case .plates: "On barbell lifts, tap PLATES to see which plates to load on each side for this weight."
         case .setType: "Tap the + chip on a set to change its type: warm-up, drop set, to failure and more."
@@ -172,7 +175,8 @@ enum TutorialStep: Int, CaseIterable {
         case .plates: "tutorial.plates-toggle"
         case .setType: "tutorial.set-type-chip"
         case .pickSetType: "tutorial.set-type-warmup"
-        case .rir: "tutorial.rir-toggle"
+        case .rir: "tutorial.exercise-menu"
+        case .rirOn: "tutorial.rir-row"
         case .logSet, .logNext: "tutorial.set-check"
         case .searchPull: "tutorial.pull-zone"
         case .searchFind: "tutorial.search-panel"
@@ -189,7 +193,8 @@ enum TutorialStep: Int, CaseIterable {
         case .plates: .appears("tutorial.plates-view")
         case .setType: .appears("tutorial.set-type-warmup")
         case .pickSetType: .disappears("tutorial.set-type-warmup")
-        case .rir: .appears("tutorial.rir-header")
+        case .rir: .appears("tutorial.rir-row")
+        case .rirOn: .appears("tutorial.rir-header")
         case .searchPull: .appears("tutorial.search-field")
         case .searchJump: .disappears("tutorial.search-field")
         default: .nextTarget
@@ -213,7 +218,7 @@ enum TutorialStep: Int, CaseIterable {
     /// Which exercise's row the walkthrough is on (matched by name), for steps that work on one row.
     var focusExercise: String? {
         switch self {
-        case .rir, .enterSet, .plates, .setType, .pickSetType, .logSet, .swipeSet: TutorialMode.firstExercise
+        case .rir, .rirOn, .enterSet, .plates, .setType, .pickSetType, .logSet, .swipeSet: TutorialMode.firstExercise
         case .searchJump, .logNext: TutorialMode.farExercise
         default: nil
         }
@@ -233,7 +238,7 @@ enum TutorialStep: Int, CaseIterable {
         case .plates: .center                             // between "PLATES · 60KG" and "SHOW"
         case .setType: .center                            // the small + chip
         case .pickSetType: UnitPoint(x: 0.78, y: 0.5)     // right of "Warmup / Excluded from volume"
-        case .rir: .center
+        case .rir, .rirOn: .center
         case .logSet, .logNext: .center                   // the circle has no text
         case .swipeSet: UnitPoint(x: 0.9, y: 0.5)         // over the check, with room to slide left
         case .searchPull: UnitPoint(x: 0.5, y: 0.08)      // the top of the list: the pull starts here and slides down the whole zone

@@ -39,29 +39,38 @@ struct ProgramsPage {
 
     func row(_ name: String) -> XCUIElement { t.el(AX.programs.row(name)) }
 
-    /// `exerciseSearch` adds an exercise from the New Program screen's own picker.
-    func createProgram(name: String, days: Int, exerciseSearch: String? = nil) {
-        t.tapID(AX.programs.newProgram)
+    /// + → Blank → a name → CREATE PROGRAM. Lands on the new program's page (its first workout is empty).
+    func createBlankProgram(name: String, days: Int? = nil) {
+        t.tapID(AX.programs.add)
+        t.tapID(AX.programs.template("blank"))
         t.type(name, into: AX.programs.createName)
         t.dismissKeyboard()
-        t.tapID(AX.programs.createDays(days))
-        if let exerciseSearch { addExercise(buttonID: AX.programs.createAddExercise, search: exerciseSearch) }
+        if let days { t.tapID(AX.programs.createDays(days)) }
         t.tapID(AX.programs.createSave)
-        t.require(t.el(AX.programs.screen), "Programs list after saving")
+        t.require(t.el(AX.programs.editProgram), "the new program's page")
     }
 
-    /// Opens the picker from `buttonID`, searches and takes the first result.
-    func addExercise(buttonID: String, search: String) {
+    /// From a workout's edit mode: ADD EXERCISE, search, the first result's + ADD, then the docked ADD button.
+    func addExercises(search: String) {
         t.dismissKeyboard()
-        t.tapID(buttonID)
-        t.type(search, into: AX.picker.search)
-        let first = t.app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'picker.row.'")).firstMatch
-        t.tap(first, "first picker result for '\(search)'")
+        t.tapID(AX.programs.workoutAddExercise)
+        t.type(search, into: AX.programs.pickSearch)
+        let add = t.app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'programs.pick.add.'")).firstMatch
+        if !add.waitForExistence(timeout: 4) {
+            // The lift has types ("5 TYPES ›"): open the group, then pick one.
+            let group = t.app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'programs.pick.row.'")).firstMatch
+            t.tap(group, "the first group for '\(search)'")
+        }
+        t.tap(add, "the first + ADD for '\(search)'")
+        t.tapID(AX.programs.pickDock)
     }
 
-    func swipeToDelete(_ name: String) {
-        t.require(row(name), "program row \(name)").swipeLeft()
-        t.tapID(AX.swipeDelete)
+    /// Open the program, EDIT, DELETE PROGRAM, confirm.
+    func deleteProgram(_ name: String) {
+        t.tap(row(name), "program row \(name)")
+        t.tapID(AX.programs.editProgram)
+        t.scrollTo(t.el(AX.programs.deleteProgram))
+        t.tapID(AX.programs.deleteProgram)
         t.tapID(AX.modal.confirm)
     }
 }

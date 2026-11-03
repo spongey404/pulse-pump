@@ -75,7 +75,7 @@ struct WorkoutModalModifier: ViewModifier {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 40)
-                        .background { AccentFill() }
+                        .background { if primaryDestructive { Color.oreAccent } else { AccentFill(priority: 10) } }
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                         .shadow(
                             color: Color.oreAccent.opacity(0.33),

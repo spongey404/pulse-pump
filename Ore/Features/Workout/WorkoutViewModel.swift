@@ -84,6 +84,7 @@ class WorkoutViewModel {
                 )
                 entry.apply(exercise)
                 entry.restSeconds = templateExercise.restSeconds
+                entry.rirOn = templateExercise.targetRIR != nil
                 exerciseEntries.append(entry)
             }
         }
@@ -176,6 +177,10 @@ class WorkoutViewModel {
             applyGhostValues(exerciseIndex: exerciseIndex, setIndex: setIndex, modelContext: ctx)
             exerciseEntries[exerciseIndex].sets[setIndex].usedSuggestion = suggested
         }
+        solidifySubs(exerciseIndex: exerciseIndex, setIndex: setIndex)
+        if exerciseEntries[exerciseIndex].sets[setIndex].setType == .failureSet, exerciseEntries[exerciseIndex].rirOn {
+            exerciseEntries[exerciseIndex].sets[setIndex].rir = "0"      // to failure: RIR is locked at 0 and saved as 0
+        }
         exerciseEntries[exerciseIndex].sets[setIndex].isCompleted = true
         restTimer.clearCompletion()
 
@@ -248,7 +253,7 @@ class WorkoutViewModel {
         return (weight: Self.kgText(kg), reps: previous?.reps ?? "")
     }
 
-    private func previousSessionGhost(for exerciseId: UUID, setIndex: Int, modelContext: ModelContext) -> (weight: String, reps: String)? {
+    func previousSessionGhost(for exerciseId: UUID, setIndex: Int, modelContext: ModelContext) -> (weight: String, reps: String)? {
         guard let previousLog = modelContext.finalLogs(forExercise: exerciseId, limit: 1).first else { return nil }
         let sorted = previousLog.sets.sorted(by: { $0.order < $1.order })
         guard setIndex < sorted.count else { return nil }
@@ -304,8 +309,8 @@ class WorkoutViewModel {
             prsOnSuggested += working.filter { $0.usedSuggestion && $0.isPR }.count
 
             guard let exercise = exerciseById[entry.exerciseId] else { continue }
-            let weights = working.map { parseDecimal($0.weight) ?? 0 }
-            let reps = working.map { parseWholeNumber($0.reps) ?? 0 }
+            let weights = working.map(\.loggedWeightKg)
+            let reps = working.map(\.loggedReps)
             let bestWeight = weights.max() ?? 0
 
             let previousSets = exercise.finalLogs
@@ -372,8 +377,8 @@ class WorkoutViewModel {
                 name: entry.exerciseName,
                 sets: completed.map { s in
                     FeedSetLog(
-                        weight: parseDecimal(s.weight) ?? 0,
-                        reps: parseWholeNumber(s.reps) ?? 0,
+                        weight: s.loggedWeightKg,
+                        reps: s.loggedReps,
                         duration: Int(parseDecimal(s.duration) ?? 0),
                         distance: parseDecimal(s.distance) ?? 0,
                         setType: s.setType.rawValue,
@@ -515,8 +520,8 @@ class WorkoutViewModel {
         let entry = exerciseEntries[exerciseIndex]
         let set = entry.sets[setIndex]
         guard set.setType != .warmup else { return }
-        let weight = parseDecimal(set.weight) ?? 0
-        let reps = parseWholeNumber(set.reps) ?? 0
+        let weight = set.loggedWeightKg
+        let reps = set.loggedReps
 
         guard weight > 0 || reps > 0 else { return }
 
@@ -746,6 +751,12 @@ struct ExerciseEntry: Identifiable {
     var notes: String = ""
     /// The persisted `ExerciseLog` this entry maps to (draft persistence / resume).
     var logId: UUID?
+    /// RIR column on for this exercise (··· menu). Off by default.
+    var rirOn = false
+    /// Superset group letter (A, B…): this exercise is paired with its neighbours in the group, drawn with an accent rail.
+    var supersetGroup: String?
+    /// The exercise this card was swapped away from, so the replace list keeps its family and allows swapping back.
+    var familyName: String?
 
     /// Copies the catalogue traits (type, unilateral, equipment, compound) from `exercise`.
     mutating func apply(_ exercise: Exercise?) {
@@ -775,6 +786,8 @@ struct SetEntry: Identifiable {
     var targetRIR: Int?
     /// The persisted `SetLog` this completed set maps to (draft persistence / resume).
     var logId: UUID?
+    /// Lines under the set: drops (D1, D2…), rest-pause rounds (R1…) or LEFT / RIGHT. They log as ONE set: reps add up.
+    var subs: [SubLine] = []
 
     init(order: Int, weight: String = "", reps: String = "", rir: String = "",
          duration: String = "", distance: String = "",
@@ -790,6 +803,37 @@ struct SetEntry: Identifiable {
         self.side = side
         self.targetReps = targetReps
         self.targetRIR = targetRIR
+    }
+}
+
+/// One line under a set. `weight` is a kg string (drop sets only), `reps` a whole number; empty = the grey prefill (`ghost*`).
+struct SubLine: Identifiable, Equatable {
+    init(weight: String = "", reps: String = "", ghostWeight: String = "", ghostReps: String = "") {
+        self.weight = weight; self.reps = reps; self.ghostWeight = ghostWeight; self.ghostReps = ghostReps
+    }
+    let id = UUID()
+    var weight = ""
+    var reps = ""
+    var ghostWeight = ""
+    var ghostReps = ""
+
+    var shownWeight: String { weight.isEmpty ? ghostWeight : weight }
+    var shownReps: String { reps.isEmpty ? ghostReps : reps }
+}
+
+extension SetEntry {
+    /// The weight this set is stored with (kg): for a drop set the rep-weighted average of its lines, so volume stays exact.
+    var loggedWeightKg: Double {
+        let main = parseDecimal(weight) ?? 0
+        guard setType == .dropset, !subs.isEmpty else { return main }
+        let mainReps = parseWholeNumber(reps) ?? 0
+        return LoggerMath.averageKg(mainKg: main, mainReps: mainReps,
+                                    drops: subs.map { (kg: parseDecimal($0.shownWeight) ?? 0, reps: parseWholeNumber($0.shownReps) ?? 0) })
+    }
+
+    /// The reps this set is stored with: drops and rounds add up; left + right for a unilateral set.
+    var loggedReps: Int {
+        LoggerMath.totalReps(main: parseWholeNumber(reps) ?? 0, subs: subs.map { parseWholeNumber($0.shownReps) ?? 0 }, type: setType)
     }
 }
 

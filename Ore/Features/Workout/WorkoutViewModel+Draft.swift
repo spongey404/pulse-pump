@@ -78,8 +78,8 @@ extension WorkoutViewModel {
                 }
                 keptSetIds.insert(setLog.id)
                 setLog.order = j
-                setLog.weight = parseDecimal(entry.weight) ?? 0
-                setLog.reps = parseWholeNumber(entry.reps) ?? 0
+                setLog.weight = entry.loggedWeightKg
+                setLog.reps = entry.loggedReps
                 setLog.rir = parseWholeNumber(entry.rir)
                 setLog.duration = parseDecimal(entry.duration).map { TimeInterval($0) }
                 setLog.distance = parseDecimal(entry.distance)
@@ -142,6 +142,7 @@ extension WorkoutViewModel {
             var entry = ExerciseEntry(exerciseId: exercise.id, exerciseName: exercise.name, sets: sets, notes: log.notes)
             entry.apply(exercise)
             entry.restSeconds = target?.restSeconds
+            entry.rirOn = sets.contains { !$0.rir.isEmpty || $0.targetRIR != nil }
             entry.logId = log.id
             exerciseEntries.append(entry)
         }

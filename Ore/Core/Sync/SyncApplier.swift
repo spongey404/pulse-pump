@@ -180,6 +180,10 @@ final class SyncApplier {
         t.name = SyncValue.string(f["name"]) ?? ""
         t.notes = SyncValue.string(f["notes"]) ?? ""
         t.splitDays = SyncValue.array(f["splitDays"]).compactMap { $0 as? String }
+        t.programId = SyncValue.string(f["programId"]).flatMap { UUID(uuidString: $0) }
+        t.programName = SyncValue.string(f["programName"])
+        t.programDays = SyncValue.array(f["programDays"]).compactMap { SyncValue.int($0) }
+        t.programOrder = SyncValue.int(f["programOrder"]) ?? 0
         t.templateExercises = SyncValue.maps(f["exercises"]).enumerated().map { i, e in
             let name = SyncValue.string(e["exerciseName"]) ?? ""
             let ex = resolveExerciseNoCreate(id: SyncValue.string(e["exerciseId"]), name: name)
@@ -189,6 +193,7 @@ final class SyncApplier {
                 order: SyncValue.int(e["order"]) ?? i,
                 targetSets: SyncValue.int(e["targetSets"]) ?? 3,
                 targetReps: SyncValue.int(e["targetReps"]),
+                targetRepsHigh: SyncValue.int(e["targetRepsHigh"]),
                 targetRIR: SyncValue.int(e["targetRIR"]),
                 restSeconds: SyncValue.int(e["restSeconds"]),
                 notes: SyncValue.string(e["notes"])

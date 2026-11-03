@@ -1,214 +1,124 @@
 import SwiftUI
-import SwiftData
 
-struct InlinePlateView: View {
-    let entry: ExerciseEntry
-    let equipmentType: EquipmentType
+/// The plate calculator under the next unlogged set of a barbell exercise (Ore Logger 1a / 2d): `PLATES · 60 KG ▴ HIDE`. Open: EACH SIDE
+/// kg, the whole bar drawn to scale (both sleeves, no text on the plates), TAKE OFF (red) / PUT ON (blue) tags against the previous set,
+/// then the bar tiles BARBELL 20 · EZ 7.5 · TRAP 25 · SAFETY 32 · LIGHT 15.
+struct LoggerPlateSection: View {
+    let setNumber: Int
+    /// This set's weight and the previous set's, both kg (nil = an empty bar).
+    let kg: Double
+    let previousKg: Double?
+    @Binding var isOpen: Bool
+    @Binding var barKg: Double
+    let exerciseIndex: Int
+    /// The tutorial spotlights the toggle, then the open calculator.
+    var tutorial = false
     @Environment(\.weightUnit) private var unit
 
-    /// Bar in kg (20 kg / 45 lb Olympic, EZ 10 kg / 15 lb nominal).
-    private var barKg: Double { equipmentType == .ezBar ? unit.kg(fromDisplay: unit == .kg ? 10 : 15) : unit.olympicBarKg }
-
-    private var currentWeightKg: Double? {
-        let weights = entry.sets.compactMap { parseDecimal($0.weight) }.filter { $0 > 0 }   // SetEntry.weight is kg
-        return weights.last
+    private var plates: [PlateMath.Plate] { PlateMath.load(targetKg: kg, barKg: barKg, platesKg: PlateMath.storedPlatesKg(unit: unit), unit: unit).plates }
+    private var previousPlates: [PlateMath.Plate] {
+        guard let previousKg else { return [] }
+        return PlateMath.load(targetKg: previousKg, barKg: barKg, platesKg: PlateMath.storedPlatesKg(unit: unit), unit: unit).plates
     }
-
-    private var load: PlateMath.Load? {
-        guard let target = currentWeightKg, target > barKg else { return nil }
-        return PlateMath.load(targetKg: target, barKg: barKg, platesKg: PlateMath.storedPlatesKg(unit: unit), unit: unit)
-    }
-
-    var body: some View {
-        if let load, !load.plates.isEmpty {
-            let counts = Dictionary(grouping: load.plates, by: \.display).sorted { $0.key > $1.key }
-            HStack(spacing: 6) {
-                Image(systemName: "scalemass").font(.mono(9)).foregroundStyle(Color.inkMuted)
-                Text("PER SIDE:")
-                    .font(Font.mono(9)).foregroundStyle(Color.inkMuted).tracking(0.5)
-                ForEach(counts, id: \.key) { size, plates in
-                    plateChip(plate: plates[0], count: plates.count, size: size)
-                }
-                Spacer()
-            }
-        }
-    }
-
-    private func plateChip(plate: PlateMath.Plate, count: Int, size: Double) -> some View {
-        Text("\(UnitPreference.trim(size))×\(count)")
-            .font(Font.mono(10))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(plateColor(plate.kg))
-            .clipShape(Capsule())
-    }
-
-    private func plateColor(_ kg: Double) -> Color {
-        switch PlateMath.tier(forKg: kg) {
-        case .red:    return Color(hex: "#c0341a")
-        case .blue:   return Color(hex: "#1a5ca8")
-        case .yellow: return Color(hex: "#b8a200")
-        case .green:  return Color(hex: "#1a7a1a")
-        case .black:  return Color(hex: "#2a2a2a")
-        case .grey:   return Color(hex: "#888888")
-        case .light:  return Color(hex: "#bbbbbb")
-        }
-    }
-}
-
-// MARK: - Inline Plate Calculator
-
-struct InlinePlateCalculatorView: View {
-    /// Both in kg (stored); everything shown and loaded is in the user's unit.
-    let targetWeight: Double
-    @Binding var barWeight: Double
-    @Environment(\.weightUnit) private var unit
-
-    private var load: PlateMath.Load {
-        PlateMath.load(targetKg: targetWeight, barKg: barWeight,
-                       platesKg: PlateMath.storedPlatesKg(unit: unit), unit: unit)
-    }
-    private var perSideStack: [PlateMath.Plate] { load.plates }
-    private var remainder: Double { load.remainder }
-
-    private func plateColor(_ kg: Double) -> (bg: Color, fg: Color) {
-        switch PlateMath.tier(forKg: kg) {
-        case .red:    return (Color(hex: "#e51b1b"), .white)
-        case .blue:   return (Color(hex: "#1f4ea3"), .white)
-        case .yellow: return (Color(hex: "#c98a17"), .white)
-        case .green:  return (Color(hex: "#1f8f5a"), .white)
-        case .black:  return (Color(hex: "#1f1c19"), Color(hex: "#f0efeb"))
-        case .grey:   return (Color(hex: "#a3a39a"), Color(hex: "#1f1c19"))
-        case .light:  return (Color(hex: "#d6d2c4"), Color(hex: "#1f1c19"))
-        }
-    }
-
-    private func plateHeight(_ kg: Double) -> CGFloat {
-        32 + min(kg, 25) * 0.9
-    }
-
-    private func plateWidth(_ kg: Double) -> CGFloat {
-        kg >= 18 ? 9 : kg >= 9 ? 7 : kg >= 4.5 ? 6 : 5
-    }
+    private var change: LoggerMath.PlateChange { LoggerMath.plateChange(from: previousPlates.map(\.display), to: plates.map(\.display)) }
+    private var perSide: Double { max(0, (unit.display(kg) - unit.display(barKg)) / 2) }
 
     var body: some View {
         VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 8) {
-                // Header row
-                HStack(alignment: .firstTextBaseline) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("PLATE CALCULATOR")
-                            .font(.spaceMono(9))
-                            .tracking(1.2)
-                            .foregroundStyle(Color.inkMuted)
-                        HStack(alignment: .firstTextBaseline, spacing: 5) {
-                            Text(unit.number(targetWeight))
-                                .font(.archivo(30, weight: .black))
-                                .foregroundStyle(Color.inkPrimary)
-                                .monospacedDigit()
-                            Text("\(unit.label) · BAR \(unit.number(barWeight))")
-                                .font(.spaceMono(10))
-                                .foregroundStyle(Color.inkMuted)
-                        }
-                    }
+            Button { withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) { isOpen.toggle() } } label: {
+                HStack {
+                    Text("PLATES · \(unit.number(kg)) \(unit.label)").font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
+                    Spacer()
+                    Text(isOpen ? "▴ HIDE" : "▾ SHOW").font(.spaceMono(8, weight: .bold)).tracking(1.5).foregroundStyle(Color.inkSecondary)
                 }
-
-                // Visual plate bar
-                plateBarView
-
-                // Plate chips
-                if perSideStack.isEmpty {
-                    Text("BAR ONLY")
-                        .font(.spaceMono(10))
-                        .foregroundStyle(Color.inkMuted)
-                        .frame(maxWidth: .infinity)
-                } else {
-                    HStack(spacing: 6) {
-                        Spacer()
-                        ForEach(Array(perSideStack.enumerated()), id: \.offset) { _, p in
-                            let c = plateColor(p.kg)
-                            Text(UnitPreference.trim(p.display))
-                                .font(.spaceMono(9, weight: .bold))
-                                .foregroundStyle(c.fg)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(c.bg)
-                                .clipShape(RoundedRectangle(cornerRadius: 3))
-                        }
-                        if remainder > 0.01 {
-                            Text("+\(UnitPreference.trim(remainder))\(unit.label) OFF")
-                                .font(.spaceMono(9))
-                                .foregroundStyle(Color.accentInk)
-                        }
-                        Spacer()
-                    }
-                }
-
-                // Bar type selector
-                Rectangle().fill(Color.dsHairLine).frame(height: 1)
-                HStack(spacing: 4) {
-                    ForEach(PlateMath.barOptions, id: \.name) { bt in
-                        let bar = bt.weightKg(unit)
-                        let selected = PlateMath.sameBar(barWeight, bar)
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.15)) { barWeight = bar }
-                        } label: {
-                            VStack(spacing: 2) {
-                                Text(bt.name)
-                                    .font(.spaceMono(8, weight: .bold))
-                                    .tracking(0.5)
-                                Text(bt.label(unit))
-                                    .font(.spaceMono(7))
-                                    .opacity(0.7)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 5)
-                            .background(selected ? Color.oreAccent : Color.clear)
-                            .foregroundStyle(selected ? Color.white : Color.inkMuted)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .strokeBorder(selected ? Color.clear : Color.dsHairLine, lineWidth: 1)
-                            )
-                        }
-                        .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.95))
-                    }
-                }
-                .padding(.top, 4)
+                .padding(.leading, 10).padding(.trailing, 12).frame(minHeight: 34).contentShape(Rectangle())
             }
-            .padding(12)
+            .buttonStyle(.plain).accessibilityIdentifier(AX.workout.platesToggle(ex: exerciseIndex, setNumber))
+            .tutorialTarget("tutorial.plates-toggle", enabled: tutorial)
+            if isOpen { openBody.tutorialTarget("tutorial.plates-view", enabled: tutorial) }
         }
+        .background(Color.surf2)
+        .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+        .overlay(alignment: .leading) { Rectangle().fill(Color.accentInk).frame(width: 2) }
     }
 
-    private var plateBarView: some View {
-        HStack(spacing: 0) {
-            Spacer()
-            // Left plates (reversed)
-            HStack(alignment: .center, spacing: 1) {
-                ForEach(Array(perSideStack.reversed().enumerated()), id: \.offset) { _, p in
-                    let c = plateColor(p.kg)
-                    RoundedRectangle(cornerRadius: 1.5)
-                        .fill(c.bg)
-                        .frame(width: plateWidth(p.kg), height: plateHeight(p.kg))
+    private var openBody: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                LoggerLabel(text: "EACH SIDE")
+                Spacer()
+                HStack(spacing: 4) {
+                    Text(LoggerMath.trim(perSide)).font(.spaceMono(13, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                    Text(unit.label).font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
                 }
             }
-            // Bar sleeve
-            Rectangle()
-                .fill(Color(hex: "#8a857c"))
-                .frame(width: 60, height: 4)
-            // Right plates
-            HStack(alignment: .center, spacing: 1) {
-                ForEach(Array(perSideStack.enumerated()), id: \.offset) { _, p in
-                    let c = plateColor(p.kg)
-                    RoundedRectangle(cornerRadius: 1.5)
-                        .fill(c.bg)
-                        .frame(width: plateWidth(p.kg), height: plateHeight(p.kg))
+            bar.frame(height: 72)
+            VStack(spacing: 0) {
+                if !change.takeOff.isEmpty { changeRow("TAKE OFF", color: .signalDown, sizes: change.takeOff) }
+                if !change.putOn.isEmpty { changeRow("PUT ON", color: .accentInk, sizes: change.putOn) }
+                if change.none {
+                    Text("SAME AS LAST SET · NOTHING TO CHANGE").font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
+                        .frame(maxWidth: .infinity, minHeight: 30, alignment: .leading).overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
                 }
             }
-            Spacer()
+            .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+            LoggerLabel(text: previousKg.map { "FROM SET \(String(format: "%02d", setNumber - 1)) · \(unit.number($0)) \(unit.label)" } ?? "FROM AN EMPTY BAR")
+            barTiles
         }
-        .frame(height: 64)
+        .padding(.leading, 10).padding(.trailing, 12).padding(.bottom, 12)
+    }
+
+    // MARK: Bar drawing
+
+    private func plateView(_ p: PlateMath.Plate) -> some View {
+        let tier = PlateMath.tier(forKg: p.kg), st = PlatePalette.style(tier), sz = PlatePalette.size(tier)
+        return RoundedRectangle(cornerRadius: 3).fill(st.shape).frame(width: sz.width, height: sz.height)
+            .overlay { if let b = st.border { RoundedRectangle(cornerRadius: 3).strokeBorder(b, lineWidth: 1) } }
+    }
+
+    private var bar: some View {
+        HStack(spacing: 0) {
+            Rectangle().fill(Color.gray.opacity(0.5)).frame(width: 14, height: 8)
+            HStack(spacing: 2) { ForEach(Array(plates.enumerated().reversed()), id: \.offset) { _, p in plateView(p) } }
+            RoundedRectangle(cornerRadius: 1).fill(Color.inkSecondary).frame(width: 5, height: 20).padding(.horizontal, 1)
+            Rectangle().fill(Color.gray.opacity(0.5)).frame(maxWidth: 110).frame(height: 8)
+            RoundedRectangle(cornerRadius: 1).fill(Color.inkSecondary).frame(width: 5, height: 20).padding(.horizontal, 1)
+            HStack(spacing: 2) { ForEach(Array(plates.enumerated()), id: \.offset) { _, p in plateView(p) } }
+            Rectangle().fill(Color.gray.opacity(0.5)).frame(width: 14, height: 8)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement().accessibilityLabel("Bar loaded with \(unit.number(kg)) \(unit.label)")
+    }
+
+    private func changeRow(_ title: String, color: Color, sizes: [Double]) -> some View {
+        HStack(alignment: .center, spacing: 8) {
+            Text(title).font(.spaceMono(8, weight: .bold)).tracking(1.5).foregroundStyle(color).frame(width: 72, alignment: .leading)
+            FlowLayout(spacing: 4) {
+                ForEach(Array(sizes.enumerated()), id: \.offset) { _, size in PlateTag(label: LoggerMath.trim(size), kg: unit.kg(fromDisplay: size)) }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(minHeight: 30).overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+    }
+
+    private var barTiles: some View {
+        HStack(spacing: 4) {
+            ForEach(PlateMath.barOptions, id: \.name) { bt in
+                let bar = bt.weightKg(unit), on = PlateMath.sameBar(barKg, bar)
+                Button { withAnimation(.easeInOut(duration: 0.15)) { barKg = bar } } label: {
+                    VStack(spacing: 2) {
+                        Text(bt.name).font(.spaceMono(9, weight: .bold)).tracking(0.8)
+                        Text("\(UnitPreference.trim(unit == .kg ? bt.kgValue : bt.lbValue)) \(unit.label)").font(.spaceMono(8)).tracking(1).opacity(on ? 0.85 : 1)
+                            .foregroundStyle(on ? Color.white : Color.inkMuted)
+                    }
+                    .foregroundStyle(on ? Color.white : Color.inkPrimary)
+                    .frame(maxWidth: .infinity).frame(height: 44)
+                    .background(on ? Color.oreAccent : Color.clear, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(on ? Color.oreAccent : Color.ruleStrong, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 }
 
@@ -219,5 +129,3 @@ extension Double {
         return (self * divisor).rounded() / divisor
     }
 }
-
-// MARK: - SetRowView (legacy alias kept for build compatibility)

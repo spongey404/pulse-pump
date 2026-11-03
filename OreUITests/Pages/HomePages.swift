@@ -63,8 +63,19 @@ struct WorkoutPage {
 
     /// Types weight/reps into set `n` (1-based) of exercise card `ex`. `weight` is in the user's display unit.
     func fillSet(ex: Int = 0, _ n: Int, weight: String, reps: String) {
-        t.type(weight, into: AX.workout.setWeight(ex: ex, n))
-        t.type(reps, into: AX.workout.setReps(ex: ex, n))
+        // The keypad: tap the number, type on the keys, NEXT moves to reps, DONE puts the keypad away.
+        t.tapID(AX.workout.setWeight(ex: ex, n))
+        t.require(t.el(AX.keypad.root), "the keypad")
+        keys(weight)
+        t.tapID(AX.keypad.next)
+        keys(reps)
+        t.tapID(AX.keypad.done)
+        t.waitUntilGone(t.el(AX.keypad.root), "the keypad")
+    }
+
+    /// Types digits (and a decimal point) on the keypad.
+    func keys(_ text: String) {
+        for ch in text { t.tapID(AX.keypad.key(ch == "." ? "dot" : String(ch))) }
     }
 
     /// Taps the set's check circle. The unlogged circle is a stroked ring with no contentShape, so only the 2pt
@@ -80,6 +91,7 @@ struct WorkoutPage {
     /// The number pad has no return key and covers the FINISH bar. Opening an exercise note switches to the text
     /// keyboard, whose "Done" button resigns focus for good.
     func closeNumberPad() {
+        if t.el(AX.keypad.root).exists, t.el(AX.keypad.done).exists { t.tapID(AX.keypad.done); t.waitUntilGone(t.el(AX.keypad.root), "the keypad") }
         guard t.app.keyboards.firstMatch.exists else { return }
         let note = t.app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'exercise note'")).firstMatch
         guard note.exists else { return }
@@ -106,6 +118,7 @@ struct WorkoutPage {
     func addExerciseViaPicker(search: String, pick row: String) {
         t.dismissKeyboard()
         t.scrollTo(t.el(AX.workout.addExercise))
+        RunLoop.current.run(until: Date().addingTimeInterval(0.7))      // let the list settle: a tap during momentum only stops it
         t.tapID(AX.workout.addExercise)
         t.type(search, into: AX.picker.search)
         t.tapID(AX.picker.row(row))

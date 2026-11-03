@@ -36,7 +36,7 @@ struct ChangeUsernameSheet: View {
                     Group { if isSaving { ProgressView().tint(.white) } else { Text("SAVE") } }
                         .font(.archivo(19, weight: .black)).tracking(2).foregroundStyle(.white)
                         .frame(maxWidth: .infinity).frame(height: 52)
-                        .background(canSave(input) ? Color.oreAccent : Color.inkFaint)
+                        .background { if canSave(input) { AccentFill(priority: 10) } else { Color.inkFaint } }
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.plain)

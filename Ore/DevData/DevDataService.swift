@@ -89,6 +89,8 @@ enum DevDataService {
             ctx.insert(t); templates[day] = t
         }
         summary.templates = templates.count
+        try? ctx.save()
+        ProgramMigration.run(modelContext: ctx)
 
         // Bodyweight log (App Group) — a gentle cut with noise.
         let days = 60

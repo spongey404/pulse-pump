@@ -11,56 +11,44 @@ final class ProgramsExercisesUITests: UITestCase {
         newUser()
         let programs = ProgramsPage(t: self)
         programs.open()
-        programs.createProgram(name: "Smoke", days: 3)
+        programs.createBlankProgram(name: "Smoke", days: 3)
 
-        tap(programs.row("Smoke"), "the new Smoke program")
-        require(el(AX.programs.detailTitle), "program detail")
-        waitForLabel(el(AX.programs.detailTitle), matching: "CONTAINS[c]", "Smoke")
+        // The first workout is empty: + EXERCISES opens it straight into edit mode.
+        tapID(AX.programs.workoutStart(0))
+        require(el(AX.programs.workoutAddExercise), "the empty workout opens in edit mode")
+        programs.addExercises(search: "Pec Deck")
+        require(el(AX.programs.exerciseRow(0)), "the exercise added to the workout")
 
-        // Edit: add a second exercise, then finish editing.
-        tapID(AX.programs.detailEdit)
-        programs.addExercise(buttonID: AX.programs.detailAddExercise, search: "Pec Deck")
-        tapID(AX.programs.detailDone)
-        require(labelContaining("PEC DECK"), "the exercise added while editing")
+        // Its targets: tap the row, step SETS.
+        tap(app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "REST")).firstMatch, "the exercise row")
+        tapID(AX.programs.exerciseField(0, "sets", plus: true))
+        require(labelContaining("4 × 8–12"), "the new default 3 × 8–12 became 4 sets")
+        tapID(AX.programs.workoutDone)
 
         // Start a session from it.
-        tapID(AX.programs.detailStart)
-        require(el(AX.workout.sessionTitle), "logger opened from the program")
-        waitForLabel(el(AX.workout.sessionTitle), matching: "CONTAINS[c]", "Smoke")
+        tapID(AX.programs.workoutStartDock)
+        require(el(AX.workout.sessionTitle), "logger opened from the workout")
+        waitForLabel(el(AX.workout.sessionTitle), matching: "CONTAINS[c]", "Workout A")
         XCTAssertTrue(el(AX.workout.exerciseName(0)).exists)
     }
 
-    func testSwipingAProgramRowDeletesItAfterConfirmation() {
+    /// The seeded Push / Pull / Leg days are three workouts of one program, "Push Pull Legs".
+    func testDeletingAProgramFromItsEditPageShowsTheEmptyState() {
         newUser()
         let programs = ProgramsPage(t: self)
         programs.open()
-        require(programs.row("Pull Day"), "seeded Pull Day program")
-        programs.swipeToDelete("Pull Day")
-        waitUntilGone(programs.row("Pull Day"), "deleted program row")
-        require(programs.row("Push Day"), "the other seeded programs are untouched")
-    }
-
-    func testDeletingEveryProgramShowsTheEmptyState() {
-        newUser()
-        let programs = ProgramsPage(t: self)
-        programs.open()
-        for name in ["Push Day", "Pull Day", "Leg Day"] {
-            programs.swipeToDelete(name)
-            waitUntilGone(programs.row(name), "deleted \(name)")
-        }
+        require(programs.row("Push Pull Legs"), "the seeded Push / Pull / Legs workouts are one program")
+        programs.deleteProgram("Push Pull Legs")
+        waitUntilGone(programs.row("Push Pull Legs"), "deleted program row")
         require(el(AX.programs.empty), "NO PROGRAMS empty state")
     }
 
-    /// QUARANTINED. Tapping ADD EXERCISE on the New Program screen freezes the app: XCUITest reports "App event
-    /// loop idle notification not received" and every later UI query times out (about 4 minutes per attempt), while
-    /// the same picker opened from a program's detail screen (previous test) works. Un-skip once the hang is fixed.
-    func testAddingAnExerciseOnTheNewProgramScreen() throws {
-        throw XCTSkip("App hangs when the exercise picker is opened from New Program (CreateTemplateView); see doc comment")
+    func testUpNextIsTheOnlyAccentActionAndStartsTheNextWorkout() {
         newUser()
-        let programs = ProgramsPage(t: self)
-        programs.open()
-        programs.createProgram(name: "Pick", days: 2, exerciseSearch: "Pec Deck")
-        require(programs.row("Pick"), "program saved with the picked exercise")
+        ProgramsPage(t: self).open()
+        require(el(AX.programs.upNext), "the UP NEXT card")
+        tapID(AX.programs.upNextStart)
+        require(el(AX.workout.sessionTitle), "the logger opens from UP NEXT")
     }
 
     func testGlobalSearchFindsAnExerciseAndOpensItsDetail() {

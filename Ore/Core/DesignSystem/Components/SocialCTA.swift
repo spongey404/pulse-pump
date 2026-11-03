@@ -5,21 +5,9 @@ import SwiftUI
 /// (JOIN, INVITE, ACCEPT), as the design's sdCta* / sdJoin do. The Stardust is mounted only while the view is on screen.
 struct SocialStardustFill: View {
     var variant = "cta"
-    @State private var visible = false
 
     var body: some View {
-        ZStack {
-            Color.oreAccent
-            if AccentStore.shared.stardustEnabled && visible {
-                StardustView(variant: variant, budget: .more,
-                             overrides: StardustParams.Overrides(palette: AccentStore.shared.starPalette, density: variant == "cta" ? 1600 : 1200,
-                                                                  gold: 0.4, sparkle: 0.55, fps: 30))
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
-            }
-        }
-        .onAppear { visible = true }
-        .onDisappear { visible = false }
+        AccentFill(priority: variant == "cta" ? 10 : 5, variant: variant, density: variant == "cta" ? 1600 : 1200, gold: 0.4, sparkle: 0.55, fps: 30)
     }
 }
 

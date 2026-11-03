@@ -246,26 +246,10 @@ struct EquipmentProfilesView: View {
             .frame(width: w, height: h)
     }
 
-    /// Colour by physical size (plates are stored in kg; a 45 lb plate colours like a 20 kg one).
-    private func plateColor(_ plate: Double) -> Color {
-        switch PlateMath.tier(forKg: plate) {
-        case .red:    return Color(hex: "#e51b1b")
-        case .blue:   return Color(hex: "#1f4ea3")
-        case .yellow: return Color(hex: "#c98a17")
-        case .green:  return Color(hex: "#1f8f5a")
-        case .black:  return Color(hex: "#1f1c19")
-        case .grey:   return Color(hex: "#a3a39a")
-        case .light:  return Color(hex: "#b8b4a6")
-        }
-    }
+    /// Colour by physical size (plates are stored in kg; a 45 lb plate colours like a 20 kg one): the IPF tokens in `PlatePalette`.
+    private func plateColor(_ plate: Double) -> Color { PlatePalette.style(forKg: plate).fill }
 
-    private func plateTextColor(_ plate: Double) -> Color {
-        switch PlateMath.tier(forKg: plate) {
-        case .black: return Color(hex: "#F4F0E6")
-        case .grey, .light: return Color(hex: "#1F1C19")
-        default: return .white
-        }
-    }
+    private func plateTextColor(_ plate: Double) -> Color { PlatePalette.style(forKg: plate).text }
 
     /// Plate stored in kg, shown as its nominal size in the user's unit ("45", "2.5").
     private func formatPlate(_ plate: Double) -> String {

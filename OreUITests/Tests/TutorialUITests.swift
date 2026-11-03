@@ -62,14 +62,17 @@ final class TutorialUITests: SeededUITestCase {
         // RIR is switched on first, so the numbers the tutorial types include it.
         waitForCard("Reps in reserve")
         shot("05-rir")
-        app.buttons[AX.workout.rirToggle(0)].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        app.buttons[AX.workout.exerciseMenu(0)].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        waitForCard("Turn RIR on")
+        shot("05a-rir-row")
+        app.buttons[AX.workout.menuRow("RIR column")].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
 
         // The tutorial types weight, reps and RIR itself, then walks through the plates.
         waitForCard("Enter your numbers")
         shot("05b-enter")
         waitForCard("Plate calculator")
-        XCTAssertEqual(app.textFields[AX.workout.setWeight(ex: 0, 1)].value as? String, "60", "weight was typed in for the user")
-        XCTAssertEqual(app.textFields[AX.workout.setRIR(ex: 0, 1)].value as? String, "2", "and so was the RIR, since the column is on")
+        XCTAssertEqual(app.descendants(matching: .any)[AX.workout.setWeight(ex: 0, 1)].firstMatch.label, "60", "weight was typed in for the user")
+        XCTAssertEqual(app.descendants(matching: .any)[AX.workout.setRIR(ex: 0, 1)].firstMatch.label, "2", "and so was the RIR, since the column is on")
         shot("05c-plates")
         app.buttons[AX.workout.platesToggle(ex: 0, 1)].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
 
@@ -96,10 +99,8 @@ final class TutorialUITests: SeededUITestCase {
         waitForCard("Search your workout")
         shot("08-search-pull")
         // Only a drag counts here: a tap on a control inside the spotlight does nothing.
-        let rir = app.buttons[AX.workout.rirToggle(0)]
-        XCTAssertEqual(rir.label, "RIR ON")
-        rir.tap()
-        XCTAssertEqual(rir.label, "RIR ON", "a tap inside the pull zone is ignored")
+        app.buttons[AX.workout.exerciseMenu(0)].tap()
+        XCTAssertFalse(app.buttons[AX.workout.menuRow("RIR column")].waitForExistence(timeout: 1.5), "a tap inside the pull zone is ignored")
         pullDownFromTheTopOfTheList()
 
         // No tap on the bar: the tutorial keeps the keyboard away and types the word as soon as the panel opens.
@@ -116,7 +117,7 @@ final class TutorialUITests: SeededUITestCase {
         shot("09-log-next")
         let rowName = app.staticTexts[AX.workout.exerciseName(4)]
         XCTAssertLessThan(rowName.frame.minY, app.windows.firstMatch.frame.height * 0.5, "the list jumped to Barbell Row")
-        XCTAssertEqual(app.textFields[AX.workout.setWeight(ex: 4, 1)].value as? String, "40", "its set was filled in")
+        XCTAssertEqual(app.descendants(matching: .any)[AX.workout.setWeight(ex: 4, 1)].firstMatch.label, "40", "its set was filled in")
         app.buttons[AX.workout.setCheck(ex: 4, 1)].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
 
         // Back to the top: iOS scrolls the list up when the status bar (the clock) is tapped.

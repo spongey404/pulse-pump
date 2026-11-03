@@ -419,7 +419,7 @@ struct CoachMarkOverlay: View {
                         .font(.archivo(18, weight: .black)).tracking(2)
                         .foregroundStyle(Color.onAccent)
                         .frame(maxWidth: .infinity).frame(height: 58)
-                        .background(Color.oreAccent)
+                        .background { AccentFill(priority: 10) }
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .buttonStyle(.plain)

@@ -223,17 +223,11 @@ struct OrePageCTA: View {
     let title: String
     var disabled = false
     let action: () -> Void
-    @State private var visible = false
 
     var body: some View {
         Button(action: action) {
             ZStack {
-                Color.oreAccent
-                if AccentStore.shared.stardustEnabled && visible {
-                    StardustView(variant: "cta", budget: .more,
-                                 overrides: StardustParams.Overrides(palette: AccentStore.shared.starPalette, density: 1600, gold: 0.4, sparkle: 0.55, fps: 30))
-                        .allowsHitTesting(false)
-                }
+                AccentFill(priority: 10, variant: "cta", density: 1600, gold: 0.4, sparkle: 0.55, fps: 30)
                 HStack {
                     Text(title).font(.archivo(15, weight: .black)).tracking(1)
                     Spacer()
@@ -248,8 +242,6 @@ struct OrePageCTA: View {
         }
         .buttonStyle(PressOpacityButtonStyle())
         .disabled(disabled)
-        .onAppear { visible = true }
-        .onDisappear { visible = false }
         .accessibilityIdentifier(AX.row(title))
     }
 }

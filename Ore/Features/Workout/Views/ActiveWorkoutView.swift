@@ -5,6 +5,8 @@ struct ActiveWorkoutView: View {
     @Bindable var viewModel: WorkoutViewModel
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.weightUnit) private var unit
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var showExercisePicker = false
     @State private var showSearch = false
@@ -18,15 +20,13 @@ struct ActiveWorkoutView: View {
     /// Whether this pull already opened the search (a pull opens it once; letting go re-arms it).
     @State private var pullArmed = true
     @State private var showIncompleteFinishConfirmation = false
-    @State private var showRestModal = false
-    @State private var draggingIdx: Int? = nil
-    @State private var dragOffset: CGFloat = 0
     @State private var setTypeTarget: SetTypeTarget? = nil   // which (exerciseIdx, setIdx) is being edited
-    @State private var exerciseMenuIdx: Int? = nil
-    @State private var exerciseMenuAnchor: CGRect = .zero
-    @State private var restOverrideIdx: Int? = nil
-    @State private var globalRestOverrideSeconds: Int = 90
-    @State private var replaceExerciseIdx: Int? = nil
+    @State private var sheet: LoggerSheetKind?
+    @State private var reordering = false
+    @State private var keypad: KeypadTarget?
+    @State private var keypadBuffer: String?
+    @State private var keypadHeight: CGFloat = 330
+    @State private var progressionDraft = LoggerMath.ProgressionConfig.off
 
     private struct SetTypeTarget: Identifiable {
         let id = UUID()
@@ -34,35 +34,22 @@ struct ActiveWorkoutView: View {
         let setIdx: Int
     }
 
-    private var totalSets: Int {
-        viewModel.exerciseEntries.flatMap(\.sets).count
-    }
-    private var doneSets: Int {
-        viewModel.exerciseEntries.flatMap(\.sets).filter(\.isCompleted).count
-    }
-    private var incompleteSetsCount: Int {
-        totalSets - doneSets
-    }
-    private var incompleteExercisesCount: Int {
-        viewModel.exerciseEntries.filter { $0.sets.contains { !$0.isCompleted } }.count
-    }
-    private var fillFraction: Double {
-        guard totalSets > 0 else { return 0 }
-        return Double(doneSets) / Double(totalSets)
+    /// The sheets that open over the logger.
+    private enum LoggerSheetKind: Equatable {
+        case rest(Int?)
+        case progression(Int)
+        case replace(Int)
     }
 
-    private var dragTargetIdx: Int? {
-        guard let d = draggingIdx else { return nil }
-        return max(0, min(viewModel.exerciseEntries.count - 1, d + Int(round(dragOffset / 190))))
-    }
+    private var totalSets: Int { viewModel.totalSetCount }
+    private var doneSets: Int { totalSets - viewModel.unloggedSetCount }
+    private var incompleteSetsCount: Int { viewModel.unloggedSetCount }
+    private var fillFraction: Double { LoggerMath.fill(done: doneSets, total: totalSets) }
 
-    private func cardVisualOffset(for idx: Int) -> CGFloat {
-        guard let d = draggingIdx else { return 0 }
-        if idx == d { return dragOffset }
-        let target = max(0, min(viewModel.exerciseEntries.count - 1, d + Int(round(dragOffset / 190))))
-        if d < target && idx > d && idx <= target { return -190 }
-        if d > target && idx >= target && idx < d { return 190 }
-        return 0
+    /// The next set to log in the whole workout: the one active row.
+    private var activeSet: (exercise: Int, set: Int)? {
+        for (i, e) in viewModel.exerciseEntries.enumerated() { if let j = e.sets.firstIndex(where: { !$0.isCompleted }) { return (i, j) } }
+        return nil
     }
 
     var body: some View {
@@ -74,99 +61,36 @@ struct ActiveWorkoutView: View {
                 ScrollView {
                     VStack(spacing: 10) {
                         Color.clear.frame(height: 0).id("loggerTop")
-                        ForEach(Array(viewModel.exerciseEntries.enumerated()), id: \.element.id) { idx, shown in
-                            ExerciseCardView(
-                                // Bounds-guarded: while the screen dismisses after Discard / Finish the entries are
-                                // already cleared and a stale card must not index past the end (was a crash).
-                                entry: Binding(
-                                    get: { viewModel.exerciseEntries.indices.contains(idx) ? viewModel.exerciseEntries[idx] : shown },
-                                    set: { if viewModel.exerciseEntries.indices.contains(idx) { viewModel.exerciseEntries[idx] = $0 } }
-                                ),
-                                exerciseIndex: idx,
-                                viewModel: viewModel,
-                                onSetTypeTap: { setIdx in
-                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                                        setTypeTarget = SetTypeTarget(exerciseIdx: idx, setIdx: setIdx)
-                                    }
-                                },
-                                onMenuTap: { frame in
-                                    exerciseMenuAnchor = frame
-                                    withAnimation(.spring(response: 0.22, dampingFraction: 0.82)) { exerciseMenuIdx = idx }
-                                },
-                                onDragChanged: { delta in
-                                    draggingIdx = idx
-                                    dragOffset = delta
-                                },
-                                onDragEnded: { delta in
-                                    let estimatedCardHeight: CGFloat = 190
-                                    let steps = Int(round(delta / estimatedCardHeight))
-                                    let newIdx = max(0, min(viewModel.exerciseEntries.count - 1, idx + steps))
-                                    if newIdx != idx {
-                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                            viewModel.moveExercise(from: IndexSet(integer: idx), to: newIdx > idx ? newIdx + 1 : newIdx)
-                                        }
-                                    }
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                        draggingIdx = nil
-                                        dragOffset = 0
-                                    }
-                                }
-                            )
-                            .overlay {
-                                // A brief outline on the card a search just jumped to.
-                                RoundedRectangle(cornerRadius: 14)
-                                    .strokeBorder(Color.accentInk, lineWidth: 2)
-                                    .opacity(flashEntryId == shown.id ? 1 : 0)
-                                    .animation(.easeOut(duration: 0.7), value: flashEntryId)
-                                    .allowsHitTesting(false)
+                        if reordering {
+                            reorderHeader
+                            ReorderList(entries: viewModel.exerciseEntries) { from, to in
+                                withAnimation(.easeOut(duration: 0.2)) { viewModel.moveExercise(from: IndexSet(integer: from), to: to > from ? to + 1 : to) }
                             }
-                            .offset(y: cardVisualOffset(for: idx))
-                            .scaleEffect(draggingIdx == idx ? 1.02 : 1.0)
-                            .zIndex(draggingIdx == idx ? 10 : 0)
-                            .animation(.spring(response: 0.25, dampingFraction: 0.8), value: dragTargetIdx)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: draggingIdx == idx)
-                        }
-
-                        // Add Exercise button
-                        Button { showExercisePicker = true } label: {
-                            HStack(spacing: 8) {
-                                Text("+")
-                                    .font(.spaceMono(14))
-                                    .foregroundStyle(Color.inkMuted)
-                                Text("ADD EXERCISE")
-                                    .font(.spaceMono(10))
-                                    .foregroundStyle(Color.inkMuted)
-                                    .tracking(1.5)
+                        } else {
+                            ForEach(Array(viewModel.exerciseEntries.enumerated()), id: \.element.id) { idx, shown in
+                                if shown.supersetGroup != nil, idx == 0 || viewModel.exerciseEntries[idx - 1].supersetGroup != shown.supersetGroup { supersetLabel(shown.supersetGroup ?? "") }
+                                card(idx, shown)
                             }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 36)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4]))
-                                    .foregroundStyle(Color.inkFaint)
-                            )
+                            addExerciseButton
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier(AX.workout.addExercise)
-                        .tutorialTarget("tutorial.add-exercise")
-                        .padding(.top, 4)
-                        .id("addExerciseButton")
-
                         Color.clear.frame(height: 4)
                     }
                     // Dragging the list down past its top opens the search.
                     .background(ScrollPullObserver(onChange: { handlePull($0) }, onDepth: { scrollDepth.note($0) }))
-                    .padding(.horizontal, 10)
+                    .padding(.horizontal, 12)
                     .padding(.top, 2)
-                    .padding(.bottom, 118 + jumpPad)
+                    .padding(.bottom, keypad == nil ? 118 + jumpPad : 10 + jumpPad)
                     // While the tutorial asks for the pull-down only a drag counts: the cards ignore taps (the
                     // scroll view underneath still takes the drag).
                     .allowsHitTesting(!(TutorialMode.isRunning && TutorialFocus.shared.dragOnly))
                 }
                 .scrollBounceBehavior(.always, axes: .vertical)
+                .scrollDismissesKeyboard(.interactively)
                 // The pinned masthead (48pt) plus a gap. As an inset rather than padding inside the list, so
                 // scrolling a card "to the top" puts its name just below the masthead, not behind it.
                 .safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: 56) }
+                // The keypad covers the bottom: shrink the list's window to what is above it (+10 pt) so a set can sit just over it.
+                .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: keypad == nil ? 0 : keypadHeight + 10) }
                 .onReceive(NotificationCenter.default.publisher(for: .loggerScrollTo)) { note in
                     // Eases out to a stop (no overshoot), so it lands on the card instead of jolting into it.
                     withAnimation(.timingCurve(0.25, 0.1, 0.2, 1, duration: 0.6)) {
@@ -184,7 +108,7 @@ struct ActiveWorkoutView: View {
                     withAnimation(.easeInOut(duration: 1.0)) {
                         switch note.object as? String {
                         case "tutorial.add-exercise": proxy.scrollTo("addExerciseButton", anchor: .center)
-                        case "tutorial.set-row", "tutorial.set-check", "tutorial.rir-toggle", "tutorial.set-type-chip", "tutorial.plates-toggle":
+                        case "tutorial.set-row", "tutorial.set-check", "tutorial.exercise-menu", "tutorial.set-type-chip", "tutorial.plates-toggle":
                             // The exercise the tutorial is working on.
                             if let name = TutorialFocus.shared.exerciseName,
                                let entry = viewModel.exerciseEntries.first(where: { $0.exerciseName == name }) {
@@ -203,18 +127,30 @@ struct ActiveWorkoutView: View {
                         }
                     }
                 }
+                .onChange(of: keypad) { old, new in
+                    // Opening the keypad on another set scrolls that row to ~10 pt above it.
+                    guard let new, old?.exerciseIndex != new.exerciseIndex || old?.setIndex != new.setIndex,
+                          viewModel.exerciseEntries.indices.contains(new.exerciseIndex),
+                          viewModel.exerciseEntries[new.exerciseIndex].sets.indices.contains(new.setIndex) else { return }
+                    let id = "row-\(viewModel.exerciseEntries[new.exerciseIndex].sets[new.setIndex].id.uuidString)"
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                        withAnimation(.easeOut(duration: 0.3)) { proxy.scrollTo(id, anchor: .bottom) }
+                    }
+                }
             }
 
             // Masthead — pinned at top
             mastheadView
                 .background(Color.canvasBg)
 
-            // Bottom bar — pinned at bottom
-            VStack {
-                Spacer()
-                bottomBarView
+            // Bottom bar — pinned at bottom (the keypad covers it)
+            if keypad == nil {
+                VStack {
+                    Spacer()
+                    bottomBarView
+                }
+                .ignoresSafeArea(edges: .bottom)
             }
-            .ignoresSafeArea(edges: .bottom)
 
             // Tutorial spotlight for "pull down to search": the list from under the header to a little above
             // the middle of the screen, which is where a thumb starts the pull.
@@ -242,64 +178,45 @@ struct ActiveWorkoutView: View {
                 .zIndex(30)
             }
 
-            // Set Type Sheet overlay
+            // The keypad
+            if let target = keypad, viewModel.exerciseEntries.indices.contains(target.exerciseIndex) {
+                keypadView(target)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { keypadHeight = $0 }
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+                    .transition(.move(edge: .bottom))
+                    .zIndex(8)
+            }
+
+            // Set Type Sheet overlay (dimmed, never blurred)
             if let target = setTypeTarget {
-                SetTypeSheetView(
-                    currentType: viewModel.exerciseEntries[target.exerciseIdx].sets[target.setIdx].setType,
-                    onPick: { newType in
-                        viewModel.exerciseEntries[target.exerciseIdx].sets[target.setIdx].setType = newType
-                        withAnimation(.easeInOut(duration: 0.18)) { setTypeTarget = nil }
-                    },
-                    onClose: { withAnimation(.easeInOut(duration: 0.18)) { setTypeTarget = nil } }
-                )
-                .transition(.opacity)
-                .ignoresSafeArea()
-                .zIndex(10)
-            }
-
-            // Rest Timer Modal overlay
-            if showRestModal {
-                RestTimerModalView(restTimer: viewModel.restTimer, onClose: {
-                    withAnimation(.easeInOut(duration: 0.18)) { showRestModal = false }
-                })
-                .transition(.opacity)
-                .ignoresSafeArea()
-                .zIndex(10)
-            }
-
-            // Global exercise menu overlay
-            if let menuIdx = exerciseMenuIdx, menuIdx < viewModel.exerciseEntries.count {
-                globalExerciseMenuOverlay(for: menuIdx)
-                    .transition(.opacity)
-                    .zIndex(20)
-            }
-
-            // Global rest override modal overlay
-            if let overrideIdx = restOverrideIdx, overrideIdx < viewModel.exerciseEntries.count {
-                globalRestOverrideModalOverlay(for: overrideIdx)
-                    .transition(.opacity)
-                    .zIndex(20)
-            }
-        }
-        .fullScreenCover(isPresented: Binding(get: { replaceExerciseIdx != nil }, set: { if !$0 { replaceExerciseIdx = nil } })) {
-            if let idx = replaceExerciseIdx, idx < viewModel.exerciseEntries.count {
-                let otherIds = Set(viewModel.exerciseEntries.enumerated()
-                    .filter { $0.offset != idx }
-                    .map { $0.element.exerciseId })
-                ExercisePickerView(title: "REPLACE EXERCISE", excludedIds: otherIds) { exercises in
-                    if let first = exercises.first {
-                        viewModel.replaceExercise(at: idx, with: first)
-                    }
-                    replaceExerciseIdx = nil
+                ZStack {
+                    LoggerDim.color.ignoresSafeArea().onTapGesture { withAnimation(.easeInOut(duration: 0.18)) { setTypeTarget = nil } }
+                    SetTypeSheetView(
+                        currentType: viewModel.exerciseEntries[target.exerciseIdx].sets[target.setIdx].setType,
+                        onPick: { newType in
+                            viewModel.setSetType(newType, exerciseIndex: target.exerciseIdx, setIndex: target.setIdx, modelContext: modelContext, unit: unit)
+                            withAnimation(.easeInOut(duration: 0.18)) { setTypeTarget = nil }
+                        },
+                        onClose: { withAnimation(.easeInOut(duration: 0.18)) { setTypeTarget = nil } }
+                    )
+                    .ignoresSafeArea()
                 }
+                .transition(.opacity)
+                .zIndex(10)
             }
+
+            // Sheets
+            if let sheet { sheetView(sheet).zIndex(20) }
         }
+        .animation(.easeInOut(duration: 0.22), value: keypad)
+        .animation(.easeInOut(duration: 0.22), value: sheet)
         .workoutModal(isPresented: $showIncompleteFinishConfirmation,
-            title: "Finish with unlogged sets?",
-            message: "\(incompleteSetsCount) unlogged \(incompleteSetsCount == 1 ? "set" : "sets") across \(incompleteExercisesCount) \(incompleteExercisesCount == 1 ? "exercise" : "exercises") will be removed.",
-            primaryLabel: "REMOVE + FINISH",
+            title: "Finish workout?",
+            message: LoggerMath.finishMessage(unlogged: incompleteSetsCount),
+            primaryLabel: "FINISH WORKOUT",
             primaryDestructive: false,
-            onPrimary: { viewModel.completeWorkout(modelContext: modelContext) }
+            onPrimary: { viewModel.completeWorkout(modelContext: modelContext) },
+            secondaryLabel: "KEEP GOING"
         )
         .workoutModal(isPresented: $viewModel.showCancelConfirmation,
             title: "Discard current workout?",
@@ -319,6 +236,185 @@ struct ActiveWorkoutView: View {
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .background { viewModel.saveDraft() }
             if newPhase == .active { viewModel.restTimer.refresh() }
+        }
+    }
+
+    // MARK: - Cards
+
+    private func card(_ idx: Int, _ shown: ExerciseEntry) -> some View {
+        let active = activeSet
+        let grouped = shown.supersetGroup != nil
+        return HStack(spacing: 0) {
+            if grouped { Rectangle().fill(Color.accentInk).frame(width: 2).padding(.trailing, 8) }
+            ExerciseCardView(
+                // Bounds-guarded: while the screen dismisses after Discard / Finish the entries are
+                // already cleared and a stale card must not index past the end (was a crash).
+                entry: Binding(
+                    get: { viewModel.exerciseEntries.indices.contains(idx) ? viewModel.exerciseEntries[idx] : shown },
+                    set: { if viewModel.exerciseEntries.indices.contains(idx) { viewModel.exerciseEntries[idx] = $0 } }
+                ),
+                exerciseIndex: idx,
+                viewModel: viewModel,
+                keypad: keypad,
+                activeSetIndex: active?.exercise == idx ? active?.set : nil,
+                onSetTypeTap: { setIdx in
+                    closeKeypad()
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { setTypeTarget = SetTypeTarget(exerciseIdx: idx, setIdx: setIdx) }
+                },
+                onTapField: { setIdx, field in openKeypad(idx, setIdx, field) },
+                onStartReorder: { closeKeypad(); withAnimation(.easeInOut(duration: 0.2)) { reordering = true } },
+                onOpenProgression: { progressionDraft = viewModel.progressionConfig(exerciseIndex: idx); sheet = .progression(idx) },
+                onOpenRest: { sheet = .rest(idx) },
+                onOpenReplace: { sheet = .replace(idx) },
+                onRemove: { withAnimation(nil) { viewModel.removeExercise(at: idx) } },
+                onLogSet: { setIdx in logSet(idx, setIdx) }
+            )
+            .id(shown.id)
+        }
+        .overlay {
+            // A brief outline on the card a search just jumped to.
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(Color.accentInk, lineWidth: 2)
+                .opacity(flashEntryId == shown.id ? 1 : 0)
+                .animation(.easeOut(duration: 0.7), value: flashEntryId)
+                .allowsHitTesting(false)
+        }
+    }
+
+    private func supersetLabel(_ group: String) -> some View {
+        HStack(spacing: 8) {
+            Text("SUPERSET \(group)").font(.spaceMono(8, weight: .bold)).tracking(2).foregroundStyle(Color.accentInk)
+            Text("· ALTERNATE SETS").font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
+            Spacer()
+        }
+        .padding(.horizontal, 2).padding(.top, 2)
+    }
+
+    private var addExerciseButton: some View {
+        Button { showExercisePicker = true } label: {
+            Text("+ ADD EXERCISE").font(.spaceMono(9, weight: .bold)).tracking(1.5).foregroundStyle(Color.inkSecondary)
+                .frame(maxWidth: .infinity).frame(height: 44)
+                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.ruleStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(AX.workout.addExercise)
+        .tutorialTarget("tutorial.add-exercise")
+        .id("addExerciseButton")
+    }
+
+    private var reorderHeader: some View {
+        HStack {
+            Text("REORDER").font(.spaceMono(9, weight: .bold)).tracking(2).foregroundStyle(Color.inkPrimary)
+            Spacer()
+            Button { withAnimation(.easeInOut(duration: 0.2)) { reordering = false } } label: {
+                Text("DONE").font(.spaceMono(9, weight: .bold)).tracking(1.5).foregroundStyle(Color.accentInk).padding(.vertical, 6).padding(.leading, 12)
+            }
+            .buttonStyle(.plain).accessibilityIdentifier(AX.workout.reorderDone)
+        }
+        .padding(.horizontal, 4).padding(.vertical, 6)
+    }
+
+    // MARK: - Logging and the keypad
+
+    private func logSet(_ exerciseIdx: Int, _ setIdx: Int) {
+        // Save ghost values first (empty fields showing placeholders), then PR-check them.
+        viewModel.applyGhostValues(exerciseIndex: exerciseIdx, setIndex: setIdx, modelContext: modelContext)
+        viewModel.checkPR(exerciseIndex: exerciseIdx, setIndex: setIdx, modelContext: modelContext)
+        viewModel.logSet(exerciseIndex: exerciseIdx, setIndex: setIdx, modelContext: modelContext)
+    }
+
+    private func closeKeypad() { keypad = nil; keypadBuffer = nil }
+
+    private func openKeypad(_ e: Int, _ s: Int, _ field: LoggerField) {
+        setTypeTarget = nil
+        keypad = KeypadTarget(exerciseIndex: e, setIndex: s, field: field)
+        keypadBuffer = nil
+    }
+
+    /// The fields the keypad walks through for an exercise before it logs: weight, reps, (RIR).
+    private func fields(for entry: ExerciseEntry) -> [LoggerField] {
+        switch entry.exerciseType {
+        case .timeBased: return [.duration]
+        case .distanceBased: return [.distance]
+        default: return entry.rirOn ? [.weight, .reps, .rir] : [.weight, .reps]
+        }
+    }
+
+    private func keypadView(_ t: KeypadTarget) -> some View {
+        let entry = viewModel.exerciseEntries[t.exerciseIndex]
+        let load = LoggerMath.load(equipment: entry.equipmentType, exerciseType: entry.exerciseType, name: entry.exerciseName)
+        let fs = fields(for: entry), idx = fs.firstIndex(of: t.field) ?? 0
+        let isLast = idx == fs.count - 1
+        let title: String = switch t.field {
+        case .weight: load.header(unit: unit.label)
+        case .reps: "REPS"
+        case .rir: "RIR"
+        case .duration: "SEC"
+        case .distance: "DIST"
+        }
+        let nextName: String = isLast ? "LOG SET" : "NEXT " + { () -> String in
+            switch fs[idx + 1] { case .weight: return "WEIGHT"; case .reps: return "REPS"; case .rir: return "RIR"; case .duration: return "SEC"; case .distance: return "DIST" } }()
+        let steps: [(label: String, delta: Double)] = t.field == .weight
+            ? { let s = LoggerMath.kgStep(unit), f = LoggerMath.kgStep(unit, fine: true)
+                return [("−\(LoggerMath.trim(s))", -s), ("−\(LoggerMath.trim(f))", -f), ("+\(LoggerMath.trim(f))", f), ("+\(LoggerMath.trim(s))", s)] }()
+            : [("−2", -2), ("−1", -1), ("+1", 1), ("+2", 2)]
+        let setEntry = entry.sets.indices.contains(t.setIndex) ? entry.sets[t.setIndex] : SetEntry(order: 0)
+        return LoggerKeypad(
+            fieldTitle: title, field: t.field, nextTitle: nextName, nextGlyph: isLast ? "✓" : "›", stepLabels: steps,
+            selectedRir: t.field == .rir ? (setEntry.rir.isEmpty ? nil : Int(setEntry.rir)) : nil,
+            onKey: { pressKey($0, t) },
+            onBackspace: { pressKey("⌫", t) },
+            onStep: { delta in
+                keypadBuffer = nil
+                viewModel.step(t.field, by: delta, exerciseIndex: t.exerciseIndex, setIndex: t.setIndex, modelContext: modelContext, unit: unit)
+            },
+            onRir: { v in viewModel.setValue(.rir, Double(v), exerciseIndex: t.exerciseIndex, setIndex: t.setIndex) },
+            onNext: {
+                if isLast { logSet(t.exerciseIndex, t.setIndex); closeKeypad() }
+                else { keypad = KeypadTarget(exerciseIndex: t.exerciseIndex, setIndex: t.setIndex, field: fs[idx + 1]); keypadBuffer = nil }
+            },
+            onDone: { closeKeypad() }
+        )
+    }
+
+    private func pressKey(_ key: String, _ t: KeypadTarget) {
+        guard viewModel.exerciseEntries.indices.contains(t.exerciseIndex),
+              viewModel.exerciseEntries[t.exerciseIndex].sets.indices.contains(t.setIndex) else { return }
+        let b = KeypadBuffer.apply(key, to: keypadBuffer ?? "", allowsDecimal: t.field != .reps && t.field != .rir)
+        keypadBuffer = b
+        let text = KeypadBuffer.value(b) == nil ? "" : b
+        switch t.field {
+        case .weight: viewModel.exerciseEntries[t.exerciseIndex].sets[t.setIndex].weight = text.isEmpty ? "" : unit.kgString(displayText: text)
+        case .reps: viewModel.exerciseEntries[t.exerciseIndex].sets[t.setIndex].reps = text
+        case .duration: viewModel.exerciseEntries[t.exerciseIndex].sets[t.setIndex].duration = text
+        case .distance: viewModel.exerciseEntries[t.exerciseIndex].sets[t.setIndex].distance = text
+        case .rir: break
+        }
+    }
+
+    // MARK: - Sheets
+
+    @ViewBuilder private func sheetView(_ kind: LoggerSheetKind) -> some View {
+        switch kind {
+        case .rest(let idx):
+            let entries = viewModel.exerciseEntries
+            let i = idx ?? activeSet?.exercise ?? 0
+            let e = entries.indices.contains(i) ? entries[i] : nil
+            RestSheet(restTimer: viewModel.restTimer, exerciseId: e?.exerciseId, exerciseName: e?.exerciseName ?? "", isCompound: e?.isCompound ?? true,
+                      templateSeconds: e?.restSeconds, onClose: { sheet = nil })
+        case .progression(let idx):
+            if viewModel.exerciseEntries.indices.contains(idx) {
+                ProgressionSheet(exerciseName: viewModel.exerciseEntries[idx].exerciseName,
+                                 config: Binding(get: { progressionDraft }, set: { progressionDraft = $0; viewModel.setProgression($0, exerciseIndex: idx, modelContext: modelContext) }),
+                                 onClose: { sheet = nil })
+            }
+        case .replace(let idx):
+            if viewModel.exerciseEntries.indices.contains(idx) {
+                ReplaceSheet(entry: viewModel.exerciseEntries[idx], currentExerciseIds: Set(viewModel.exerciseEntries.map(\.exerciseId)),
+                             onPick: { ex in viewModel.replaceExerciseKeepingData(at: idx, with: ex); sheet = nil },
+                             onClose: { sheet = nil })
+            }
         }
     }
 
@@ -388,7 +484,7 @@ struct ActiveWorkoutView: View {
             .tutorialTarget("tutorial.add-top")
 
             // Rest timer pill
-            Button { withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { showRestModal = true } } label: {
+            Button { withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { sheet = .rest(nil) } } label: {
                 restPillView
             }
             .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.93))
@@ -459,284 +555,64 @@ struct ActiveWorkoutView: View {
         )
     }
 
-    // MARK: - Finish Button Label (shared between two masked layers)
+    // MARK: - Finish Button (fills left to right as sets are logged; Stardust in the filled part for members)
 
-    private var finishButtonLabel: some View {
+    private var finishLabel: some View {
         HStack {
-            Text("FINISH WORKOUT")
-                .font(.archivo(17, weight: .black))
-                .tracking(1.5)
+            Text("FINISH WORKOUT").font(.archivo(19, weight: .black)).tracking(1)
             Spacer()
-            if incompleteSetsCount > 0 {
-                Text("\(incompleteSetsCount) LEFT")
-                    .font(.spaceMono(9, weight: .bold))
-                    .tracking(0.8)
-                    .contentTransition(.numericText())
-            } else {
-                Text("DONE ›")
-                    .font(.spaceMono(9, weight: .bold))
-                    .tracking(0.8)
-            }
+            Text(LoggerMath.leftLabel(done: doneSets, total: totalSets)).font(.spaceMono(10, weight: .bold)).tracking(1.5).contentTransition(.numericText())
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 20)
     }
-
-    // MARK: - Bottom Bar
 
     private var bottomBarView: some View {
         VStack(spacing: 0) {
-            Rectangle().fill(Color.inkPrimary.opacity(0.14)).frame(height: 1)
+            Rectangle().fill(Color.dsHairLine).frame(height: 1)
 
-            Button {
-                if incompleteSetsCount > 0 {
-                    showIncompleteFinishConfirmation = true
-                } else {
-                    viewModel.completeWorkout(modelContext: modelContext)
-                }
-            } label: {
+            Button { showIncompleteFinishConfirmation = true } label: {
                 GeometryReader { geo in
                     let fillWidth = geo.size.width * fillFraction
                     ZStack(alignment: .leading) {
-                        // Cream base
                         RoundedRectangle(cornerRadius: 12).fill(Color.surf2)
-
-                        // Orange fill from left
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.oreAccent)
-                            .frame(width: fillWidth)
-                            .animation(.spring(response: 0.4, dampingFraction: 0.75), value: fillFraction)
-
-                        // Dark text — masked to unfilled (right) portion
-                        finishButtonLabel
-                            .foregroundStyle(Color.inkPrimary)
+                        finishFill(width: fillWidth, height: geo.size.height)
+                        // Dark text on the unfilled part
+                        finishLabel.foregroundStyle(Color.inkPrimary)
                             .frame(width: geo.size.width, height: geo.size.height, alignment: .leading)
-                            .mask(alignment: .trailing) {
-                                Rectangle()
-                                    .frame(width: max(0, geo.size.width - fillWidth))
-                                    .animation(.spring(response: 0.4, dampingFraction: 0.75), value: fillFraction)
-                            }
-
-                        // White text — masked to filled (left) portion
-                        finishButtonLabel
-                            .foregroundStyle(Color.white)
+                            .mask(alignment: .trailing) { Rectangle().frame(width: max(0, geo.size.width - fillWidth)).animation(.easeInOut(duration: 0.45), value: fillFraction) }
+                        // White text on the filled part
+                        finishLabel.foregroundStyle(Color.white)
                             .frame(width: geo.size.width, height: geo.size.height, alignment: .leading)
-                            .mask(alignment: .leading) {
-                                Rectangle()
-                                    .frame(width: fillWidth)
-                                    .animation(.spring(response: 0.4, dampingFraction: 0.75), value: fillFraction)
-                            }
+                            .mask(alignment: .leading) { Rectangle().frame(width: fillWidth).animation(.easeInOut(duration: 0.45), value: fillFraction) }
                     }
                 }
-                .frame(height: 56)
+                .frame(height: 60)
             }
             .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.98))
             .accessibilityLabel("Finish workout")
             .accessibilityIdentifier(AX.workout.finish)
-            .padding(.horizontal, 12)
-            .padding(.top, 12)
-            .padding(.bottom, 32)
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+            .padding(.bottom, 30)
         }
         .background(Color.canvasBg)
     }
 
-    // MARK: - Global Exercise Menu Overlay
-
-    private var windowSafeAreaTop: CGFloat {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first?.keyWindow?.safeAreaInsets.top ?? 0
-    }
-
-    private func globalExerciseMenuOverlay(for idx: Int) -> some View {
-        let screenHeight = UIScreen.main.bounds.height
-        let menuHeight: CGFloat = 156  // 3 rows × 52
-        let safeTop = windowSafeAreaTop
-        // Convert button frame from screen coords to ZStack-relative coords
-        let buttonBottomY = exerciseMenuAnchor.maxY - safeTop
-        let buttonTopY = exerciseMenuAnchor.minY - safeTop
-        // Open below if it fits, otherwise flip above
-        let fitsBelow = buttonBottomY + 6 + menuHeight <= screenHeight - 40
-        let topPadding = fitsBelow
-            ? buttonBottomY + 6
-            : max(safeTop, buttonTopY - menuHeight - 6)
-        let scaleAnchor: UnitPoint = fitsBelow ? .top : .bottom
-        return ZStack(alignment: .top) {
-            Color.black.opacity(0.28)
-                .ignoresSafeArea()
-                .onTapGesture {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) { exerciseMenuIdx = nil }
-                }
-
-            VStack(spacing: 0) {
-                menuActionRow(icon: "arrow.triangle.2.circlepath", label: "Replace Exercise", destructive: false) {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) { exerciseMenuIdx = nil }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { replaceExerciseIdx = idx }
-                }
-                Rectangle().fill(Color.dsHairLine).frame(height: 1)
-                menuActionRow(icon: "timer", label: "Rest Timer Override", destructive: false) {
-                    globalRestOverrideSeconds = RestTimerService.perExerciseOverride(exerciseId: viewModel.exerciseEntries[idx].exerciseId) ?? 90
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) { exerciseMenuIdx = nil }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                        withAnimation(.spring(response: 0.22, dampingFraction: 0.82)) { restOverrideIdx = idx }
-                    }
-                }
-                Rectangle().fill(Color.dsHairLine).frame(height: 1)
-                menuActionRow(icon: "trash", label: "Remove Exercise", destructive: true) {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) { exerciseMenuIdx = nil }
-                    withAnimation(nil) { viewModel.removeExercise(at: idx) }
-                }
-            }
-            .background(Color.surf)
-            .clipShape(RoundedRectangle(cornerRadius: 18))
-            .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(Color.dsHairLine, lineWidth: 1))
-            .frame(width: UIScreen.main.bounds.width - 48)
-            .padding(.top, topPadding)
-            .padding(.horizontal, 24)
-            .transition(.scale(scale: 0.88, anchor: scaleAnchor).combined(with: .opacity))
+    /// The accent fill. With Stardust on, each logged set adds stars and a little more gradient (like the sign-up screens): the field is
+    /// remounted at a denser setting as the bar fills, capped at 30 fps and frozen with Reduce Motion.
+    @ViewBuilder private func finishFill(width: CGFloat, height: CGFloat) -> some View {
+        let store = AccentStore.shared
+        let tier = Int((fillFraction * 6).rounded(.up))
+        ZStack {
+            // Every logged set adds stars (the field is remounted denser as the bar fills) and a little more gradient; the limiter keeps at
+            // most four Stardust buttons animating, this docked one first.
+            AccentFill(priority: 10, density: store.stardustEnabled && fillFraction > 0 ? 500 + Double(tier) * 450 : 0, gold: 0.35, sparkle: 0.5, fps: 30)
+                .id(tier)
+            LinearGradient(colors: [.clear, Color.white.opacity(0.18 * fillFraction)], startPoint: .leading, endPoint: .trailing)
         }
-    }
-
-    private func menuActionRow(icon: String, label: String, destructive: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 14) {
-                Image(systemName: icon)
-                    .font(.system(size: 16, weight: .medium))
-                    .frame(width: 24)
-                    .foregroundStyle(destructive ? Color.signalDown : Color.inkPrimary)
-                Text(label)
-                    .font(.archivo(16))
-                    .foregroundStyle(destructive ? Color.signalDown : Color.inkPrimary)
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-            .frame(height: 52)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(PressOpacityButtonStyle())
-    }
-
-    private func globalRestOverrideModalOverlay(for idx: Int) -> some View {
-        let exerciseName = viewModel.exerciseEntries[idx].exerciseName
-        let exerciseId = viewModel.exerciseEntries[idx].exerciseId
-        return ZStack {
-            Color.black.opacity(0.28)
-                .ignoresSafeArea()
-                .onTapGesture {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) { restOverrideIdx = nil }
-                }
-
-            VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("REST TIMER OVERRIDE")
-                        .font(.spaceMono(10, weight: .bold))
-                        .tracking(1.5)
-                        .foregroundStyle(Color.inkMuted)
-                    Text("Custom rest for \(exerciseName)")
-                        .font(.archivo(15, weight: .semibold))
-                        .foregroundStyle(Color.inkPrimary)
-                }
-
-                HStack(spacing: 0) {
-                    Button {
-                        globalRestOverrideSeconds = max(15, globalRestOverrideSeconds - 15)
-                    } label: {
-                        Text("−15")
-                            .font(.spaceMono(12, weight: .bold))
-                            .foregroundStyle(Color.inkMuted)
-                            .frame(width: 48, height: 44)
-                            .background(Color.surf2)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.dsHairLine, lineWidth: 1))
-                    }
-                    .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.93))
-
-                    Spacer()
-
-                    VStack(spacing: 2) {
-                        Text("\(globalRestOverrideSeconds)")
-                            .font(.spaceMono(36, weight: .bold))
-                            .foregroundStyle(Color.inkPrimary)
-                            .contentTransition(.numericText())
-                        Text("SECONDS")
-                            .font(.spaceMono(9))
-                            .tracking(1.2)
-                            .foregroundStyle(Color.inkMuted)
-                    }
-
-                    Spacer()
-
-                    Button {
-                        globalRestOverrideSeconds += 15
-                    } label: {
-                        Text("+15")
-                            .font(.spaceMono(12, weight: .bold))
-                            .foregroundStyle(Color.inkMuted)
-                            .frame(width: 48, height: 44)
-                            .background(Color.surf2)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.dsHairLine, lineWidth: 1))
-                    }
-                    .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.93))
-                }
-                .padding(.vertical, 4)
-
-                VStack(spacing: 8) {
-                    Button {
-                        RestTimerService.setPerExerciseOverride(exerciseId: exerciseId, seconds: globalRestOverrideSeconds)
-                        withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) { restOverrideIdx = nil }
-                    } label: {
-                        Text("SAVE")
-                            .font(.archivo(15, weight: .black))
-                            .tracking(1.5)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 48)
-                            .background { AccentFill() }
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                    }
-                    .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.97))
-
-                    HStack(spacing: 8) {
-                        Button {
-                            RestTimerService.setPerExerciseOverride(exerciseId: exerciseId, seconds: nil)
-                            withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) { restOverrideIdx = nil }
-                        } label: {
-                            Text("RESET")
-                                .font(.archivo(13, weight: .semibold))
-                                .tracking(0.5)
-                                .foregroundStyle(Color.signalDown)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 40)
-                                .background(Color.signalDown.opacity(0.08))
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.signalDown.opacity(0.25), lineWidth: 1))
-                        }
-                        .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.97))
-
-                        Button {
-                            withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) { restOverrideIdx = nil }
-                        } label: {
-                            Text("CANCEL")
-                                .font(.archivo(13, weight: .semibold))
-                                .tracking(0.5)
-                                .foregroundStyle(Color.inkMuted)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 40)
-                                .background(Color.surf2)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.dsHairLine, lineWidth: 1))
-                        }
-                        .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.97))
-                    }
-                }
-            }
-            .padding(20)
-            .frame(width: UIScreen.main.bounds.width - 40)
-            .background(Color.surf)
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Color.dsHairLine, lineWidth: 1))
-            .transition(.scale(scale: 0.88).combined(with: .opacity))
-        }
+        .frame(width: width, height: height)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .animation(.easeInOut(duration: 0.45), value: fillFraction)
     }
 }
 

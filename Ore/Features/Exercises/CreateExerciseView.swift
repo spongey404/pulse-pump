@@ -106,7 +106,7 @@ struct CreateExerciseView: View {
                                 Image(systemName: "chevron.right")
                             }
                             .frame(maxWidth: .infinity, minHeight: 50)
-                            .background(canAdvance ? Color.oreAccent : Color.inkFaint)
+                            .background { if canAdvance { AccentFill(priority: 10) } else { Color.inkFaint } }
                             .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                         }

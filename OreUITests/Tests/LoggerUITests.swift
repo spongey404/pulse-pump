@@ -103,7 +103,7 @@ final class LoggerUITests: SeededUITestCase {
         startWorkout()
         let chip = AX.workout.setType(ex: 0, 1)
         XCTAssertTrue(app.buttons[chip].waitForExistence(timeout: 5))
-        let before = (chip: frame(chip), number: frame(AX.workout.setNumber(ex: 0, 1)), weight: frame(AX.workout.setWeight(ex: 0, 1)))
+        let before = (chip: frame(chip), weight: frame(AX.workout.setWeight(ex: 0, 1)))
 
         app.buttons[chip].tap()
         let row = app.buttons[AX.workout.setTypeRow("Warmup")]
@@ -115,12 +115,11 @@ final class LoggerUITests: SeededUITestCase {
         RunLoop.current.run(until: Date().addingTimeInterval(0.5))
         shot("c1-chip-after")
 
-        let after = (chip: frame(chip), number: frame(AX.workout.setNumber(ex: 0, 1)), weight: frame(AX.workout.setWeight(ex: 0, 1)))
-        XCTAssertEqual(after.chip.minX, before.chip.minX, accuracy: 1, "the tag starts where the dashed box started")
-        XCTAssertEqual(after.chip.height, before.chip.height, accuracy: 1, "and is as tall")
-        XCTAssertGreaterThanOrEqual(after.chip.width + 1, before.chip.width, "and is not narrower")
-        XCTAssertLessThanOrEqual(after.chip.width, 37, "and fits the TYPE column")
-        XCTAssertEqual(after.number.minX, before.number.minX, accuracy: 1, "the set number did not move")
+        // The # cell shows the set-type pill in place of the number; the columns do not move.
+        let after = (chip: frame(chip), weight: frame(AX.workout.setWeight(ex: 0, 1)))
+        XCTAssertEqual(after.chip.minX, before.chip.minX, accuracy: 6, "the pill starts where the number started")
+        XCTAssertEqual(after.chip.midY, before.chip.midY, accuracy: 1, "on the same line")
+        XCTAssertLessThanOrEqual(after.chip.width, 44, "and fits the # column")
         XCTAssertEqual(after.weight.minX, before.weight.minX, accuracy: 1, "the weight column did not move")
     }
 
@@ -133,6 +132,7 @@ final class LoggerUITests: SeededUITestCase {
             RunLoop.current.run(until: Date().addingTimeInterval(0.8))
             row.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.5)).tap()
             waitUntil("the sheet to close after \(name)") { !row.exists }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.5))      // the dim fades out before the next tap
         }
     }
 
@@ -148,7 +148,7 @@ final class LoggerUITests: SeededUITestCase {
 
     // MARK: - The exercise header
 
-    /// With a name that wraps to two lines the "01" used to hang at the first line; it stays beside the middle.
+    /// With a name that wraps to two lines the "01" stays beside the first line (Ore Logger 1a).
     func testTheExerciseNumberStaysCentredBesideAWrappedName() {
         startWorkout()
         let before = exerciseCount
@@ -170,7 +170,8 @@ final class LoggerUITests: SeededUITestCase {
         XCTAssertTrue(name.waitForExistence(timeout: 5) && number.exists)
         shot("c2-wrapped-header")
         XCTAssertGreaterThan(name.frame.height, 28, "the name wraps to two lines")
-        XCTAssertEqual(number.frame.midY, name.frame.midY, accuracy: 3, "the number sits beside the middle of the name")
+        // Ore Logger 1a: the index is top-aligned with the first line of the name (a 4 pt nudge), not centred.
+        XCTAssertLessThan(number.frame.midY, name.frame.minY + 22, "the number sits beside the first line of the name")
     }
 
     // MARK: - Back to the top

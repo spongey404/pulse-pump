@@ -395,7 +395,7 @@ struct TutorialViewModelTests {
         var seen: [(exercise: String?, weight: String?, reps: String?, rir: String?)] = []
         vm.fillSet = { seen.append(($0, $1, $2, $3)) }
         vm.start()
-        vm.currentStep = .rir              // the RIR column is switched on first…
+        vm.currentStep = .rirOn            // the RIR column is switched on first…
         vm.targetTapped()                  // …and the tap moves on to the numbers
         try await Task.sleep(for: .milliseconds(7000))
         let unit = UnitPreference.current
@@ -444,7 +444,7 @@ struct TutorialViewModelTests {
     }
 
     @Test func stepCountIsNineteen() {
-        #expect(TutorialStep.allCases.count == 18)
+        #expect(TutorialStep.allCases.count == 19)
     }
 
     @Test func eachStepWorksOnTheRightExercise() {
@@ -512,6 +512,7 @@ struct TutorialViewModelTests {
         }
         #expect(TutorialStep.plates.success == .appears("tutorial.plates-view"))
         #expect(TutorialStep.pickSetType.success == .disappears("tutorial.set-type-warmup"))
-        #expect(TutorialStep.rir.success == .appears("tutorial.rir-header"))
+        #expect(TutorialStep.rir.success == .appears("tutorial.rir-row"))
+        #expect(TutorialStep.rirOn.success == .appears("tutorial.rir-header"))
     }
 }

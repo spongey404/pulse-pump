@@ -29,10 +29,8 @@ struct ContentView: View {
     private var shell: some View {
         ZStack {
             TabView(selection: $selectedTab) {
-                NavigationStack {
-                    ProgramsTabView(onStartFromTemplate: startFromTemplate)
-                }
-                .tag(0)
+                ProgramsTabView(onStartFromTemplate: startFromTemplate)    // owns its own navigation
+                    .tag(0)
 
                 SocialTabView()
                 .tag(1)

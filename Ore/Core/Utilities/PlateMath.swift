@@ -54,10 +54,10 @@ enum PlateMath {
 
     static let barOptions: [BarOption] = [
         BarOption(name: "BARBELL", kgValue: 20, lbValue: 45),
-        BarOption(name: "WOMEN'S", kgValue: 15, lbValue: 35),
         BarOption(name: "EZ", kgValue: 7.5, lbValue: 15),
         BarOption(name: "TRAP", kgValue: 25, lbValue: 55),
         BarOption(name: "SAFETY", kgValue: 32, lbValue: 65),
+        BarOption(name: "LIGHT", kgValue: 15, lbValue: 35),
     ]
 
     /// Equality for bar weights stored as kg doubles.
@@ -78,17 +78,18 @@ enum PlateMath {
         if let data = try? JSONEncoder().encode(plates) { defaults.set(data, forKey: platesKey(unit)) }
     }
 
-    /// Colour bucket by physical size (kg), shared by plate chips so lb plates colour like their kg twins.
-    enum Tier { case red, blue, yellow, green, black, grey, light }
+    /// IPF colour by physical size (kg), shared by plate chips so lb plates colour like their kg twins:
+    /// 25 red, 20 blue, 15 yellow, 10 green, 5 white, 2.5 black, 1.25 chrome.
+    enum Tier { case red, blue, yellow, green, white, black, chrome }
     static func tier(forKg kg: Double) -> Tier {
         switch kg {
         case 24...: .red
         case 18..<24: .blue
         case 12..<18: .yellow
         case 9..<12: .green
-        case 4.5..<9: .black
-        case 2.2..<4.5: .grey
-        default: .light
+        case 4.5..<9: .white
+        case 2.2..<4.5: .black
+        default: .chrome
         }
     }
 }

@@ -3,7 +3,7 @@ import SwiftData
 
 // MARK: - Group Definitions
 
-private let exerciseGroupDefinitions: [(name: String, exerciseNames: [String])] = [
+let exerciseGroupDefinitions: [(name: String, exerciseNames: [String])] = [
     ("Bench Press",          ["Barbell Bench Press", "Dumbbell Bench Press", "Smith Machine Bench Press", "Machine Chest Press"]),
     ("Incline Bench Press",  ["Incline Barbell Bench Press", "Incline Dumbbell Bench Press", "Smith Machine Incline Press"]),
     ("Decline Bench Press",  ["Decline Barbell Bench Press", "Decline Dumbbell Bench Press"]),
@@ -453,7 +453,7 @@ private struct ExerciseRow: View {
                         .foregroundStyle(.white)
                         .frame(height: 30)
                         .padding(.horizontal, 14)
-                        .background { AccentFill() }
+                        .background(Color.oreAccent)      // under 32 pt: plain, no Stardust
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 } else {
                     HStack(spacing: 4) {
