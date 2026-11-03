@@ -1,0 +1,415 @@
+{
+  "background" : {
+    "base" : "#1AA7FF",
+    "glowA" : "rgba(15,90,190,0.30)",
+    "glowB" : "rgba(190,215,240,0.20)",
+    "glowRadius" : 0.55,
+    "gradient" : [
+      "#1A7FE0",
+      "#3DB8FF",
+      "#9FDDFF"
+    ],
+    "topGlowAlpha" : 0.26,
+    "topGlowMidAlpha" : 0.07,
+    "topGlowRGB" : [
+      190,
+      230,
+      255
+    ],
+    "topGlowRadiusBase" : 0.7,
+    "topGlowRadiusPerLevel" : 0.8
+  },
+  "bar" : {
+    "boostSpeed" : 6,
+    "fillMs" : 450,
+    "flashDecay" : 0.06,
+    "flashProb" : 0.004,
+    "goldShare" : 0.35,
+    "height" : 6,
+    "silverShare" : 0.4,
+    "sizeMax" : 1.05,
+    "sizeMin" : 0.35,
+    "specks" : 90,
+    "speedMax" : 0.026,
+    "speedMin" : 0.006
+  },
+  "bullet" : {
+    "choiceSize" : 13,
+    "glowAlpha" : 0.85,
+    "glowRadius" : 3,
+    "logOffset" : 0.37,
+    "logSize" : 12,
+    "opacityMin" : 0.85,
+    "paywallOffset" : 0.41,
+    "paywallSize" : 14,
+    "rotateMax" : 8,
+    "scaleMax" : 1.08,
+    "scaleMin" : 0.82,
+    "seconds" : 2.6,
+    "setupBase" : 0.2,
+    "setupOffset" : 0.53,
+    "setupSize" : 12
+  },
+  "stars" : {
+    "blue" : 0.2,
+    "blueRGB" : [
+      210,
+      238,
+      255
+    ],
+    "boostAlpha" : 0.3,
+    "boostAnswer" : 1,
+    "boostApple" : 1,
+    "boostDecay" : 0.94,
+    "boostDone" : 1.6,
+    "boostEmail" : 0.6,
+    "boostRise" : 0.5,
+    "count" : 420,
+    "flareArm" : 4,
+    "flareFlashArm" : 5,
+    "flareGoldRGB" : [
+      255,
+      214,
+      100
+    ],
+    "flareMinSize" : 1.1,
+    "flareRGB" : [
+      235,
+      245,
+      255
+    ],
+    "flareThreshold" : 0.85,
+    "flareWidth" : 0.7,
+    "flashDecay" : 0.05,
+    "flashProb" : 0.002,
+    "flickerMin" : 0.35,
+    "flickerSpeed" : 0.02,
+    "fps" : 30,
+    "gold" : 0.35,
+    "goldRGB" : [
+      255,
+      200,
+      61
+    ],
+    "levelEase" : 0.06,
+    "riseBase" : 0.01,
+    "risePerW" : 0.012,
+    "riseScale" : 0.6,
+    "silver" : 0.35,
+    "silverRGB" : [
+      226,
+      232,
+      240
+    ],
+    "sizeBase" : 0.5,
+    "sizeGold" : 1.9,
+    "sizeOther" : 1.5,
+    "streakLength" : 2.2,
+    "streakThreshold" : 0.08,
+    "streakWidth" : 0.8,
+    "swayBase" : 3,
+    "swayPerSize" : 2,
+    "swaySpeed" : 0.0012,
+    "twinkleMax" : 0.007,
+    "twinkleMin" : 0.002,
+    "visibleBase" : 0.25,
+    "visibleCurve" : 0.75,
+    "whiteRGB" : [
+      255,
+      255,
+      255
+    ]
+  },
+  "steps" : [
+    {
+      "cardHeight" : 0,
+      "choices" : [
+
+      ],
+      "key" : "email",
+      "kind" : "email",
+      "label" : "EMAIL",
+      "placeholder" : "you@example.com",
+      "prefix" : "›",
+      "prompt" : "Enter your email.",
+      "suffix" : "",
+      "units" : [
+
+      ],
+      "uppercaseChoices" : false
+    },
+    {
+      "cardHeight" : 0,
+      "choices" : [
+
+      ],
+      "key" : "password",
+      "kind" : "password",
+      "label" : "PASSWORD",
+      "placeholder" : "At least 8 characters",
+      "prefix" : "›",
+      "prompt" : "Create a password.",
+      "suffix" : "",
+      "units" : [
+
+      ],
+      "uppercaseChoices" : false
+    },
+    {
+      "cardHeight" : 0,
+      "choices" : [
+
+      ],
+      "key" : "confirm",
+      "kind" : "confirm",
+      "label" : "CONFIRM PASSWORD",
+      "placeholder" : "Type it again",
+      "prefix" : "›",
+      "prompt" : "Confirm your password.",
+      "suffix" : "",
+      "units" : [
+
+      ],
+      "uppercaseChoices" : false
+    },
+    {
+      "cardHeight" : 0,
+      "choices" : [
+
+      ],
+      "key" : "name",
+      "kind" : "name",
+      "label" : "NAME",
+      "placeholder" : "First name",
+      "prefix" : "›",
+      "prompt" : "What should we call you?",
+      "suffix" : "",
+      "units" : [
+
+      ],
+      "uppercaseChoices" : false
+    },
+    {
+      "cardHeight" : 0,
+      "choices" : [
+
+      ],
+      "key" : "username",
+      "kind" : "username",
+      "label" : "USERNAME",
+      "placeholder" : "casey.lifts",
+      "prefix" : "@",
+      "prompt" : "Pick your username.",
+      "suffix" : "",
+      "units" : [
+
+      ],
+      "uppercaseChoices" : false
+    },
+    {
+      "cardHeight" : 0,
+      "choices" : [
+
+      ],
+      "key" : "weight",
+      "kind" : "weight",
+      "label" : "WEIGHT",
+      "placeholder" : "0",
+      "prefix" : "›",
+      "prompt" : "How much do you weigh, {name}?",
+      "suffix" : "",
+      "units" : [
+        "KG",
+        "LB"
+      ],
+      "uppercaseChoices" : false
+    },
+    {
+      "cardHeight" : 0,
+      "choices" : [
+
+      ],
+      "key" : "height",
+      "kind" : "height",
+      "label" : "HEIGHT",
+      "placeholder" : "0",
+      "prefix" : "›",
+      "prompt" : "How tall are you?",
+      "suffix" : "",
+      "units" : [
+        "CM",
+        "FT / IN"
+      ],
+      "uppercaseChoices" : false
+    },
+    {
+      "cardHeight" : 0,
+      "choices" : [
+
+      ],
+      "key" : "age",
+      "kind" : "age",
+      "label" : "AGE",
+      "placeholder" : "0",
+      "prefix" : "›",
+      "prompt" : "How old are you?",
+      "suffix" : "YRS",
+      "units" : [
+
+      ],
+      "uppercaseChoices" : false
+    },
+    {
+      "cardHeight" : 0,
+      "choices" : [
+        {
+          "label" : "Male",
+          "meta" : "",
+          "value" : "male"
+        },
+        {
+          "label" : "Female",
+          "meta" : "",
+          "value" : "female"
+        },
+        {
+          "label" : "Non-binary",
+          "meta" : "",
+          "value" : "nonBinary"
+        },
+        {
+          "label" : "Other",
+          "meta" : "",
+          "value" : "other"
+        },
+        {
+          "label" : "Prefer not to say",
+          "meta" : "",
+          "value" : "preferNotToSay"
+        }
+      ],
+      "key" : "gender",
+      "kind" : "choice",
+      "label" : "GENDER",
+      "placeholder" : "",
+      "prefix" : "›",
+      "prompt" : "Which best describes you?",
+      "suffix" : "",
+      "units" : [
+
+      ],
+      "uppercaseChoices" : false
+    },
+    {
+      "cardHeight" : 0,
+      "choices" : [
+        {
+          "label" : "New to lifting",
+          "meta" : "UNDER 1 YR",
+          "value" : "beginner"
+        },
+        {
+          "label" : "Some experience",
+          "meta" : "1–3 YRS",
+          "value" : "intermediate"
+        },
+        {
+          "label" : "Advanced lifter",
+          "meta" : "3+ YRS",
+          "value" : "experienced"
+        }
+      ],
+      "key" : "exp",
+      "kind" : "choice",
+      "label" : "EXPERIENCE",
+      "placeholder" : "",
+      "prefix" : "›",
+      "prompt" : "How long have you been lifting?",
+      "suffix" : "",
+      "units" : [
+
+      ],
+      "uppercaseChoices" : false
+    },
+    {
+      "cardHeight" : 0,
+      "choices" : [
+        {
+          "label" : "Push / Pull / Legs",
+          "meta" : "6 DAYS/WK",
+          "value" : "ppl"
+        },
+        {
+          "label" : "Upper / Lower",
+          "meta" : "4 DAYS/WK",
+          "value" : "upperLower"
+        },
+        {
+          "label" : "Full Body",
+          "meta" : "3 DAYS/WK",
+          "value" : "fullBody"
+        },
+        {
+          "label" : "Bro Split",
+          "meta" : "5 DAYS/WK",
+          "value" : "broSplit"
+        },
+        {
+          "label" : "Custom",
+          "meta" : "YOUR OWN",
+          "value" : "custom"
+        },
+        {
+          "label" : "No fixed split",
+          "meta" : "LOG FREELY",
+          "value" : "none"
+        }
+      ],
+      "key" : "split",
+      "kind" : "choice",
+      "label" : "PROGRAM",
+      "placeholder" : "",
+      "prefix" : "›",
+      "prompt" : "How do you structure your training?",
+      "suffix" : "",
+      "units" : [
+
+      ],
+      "uppercaseChoices" : true
+    }
+  ],
+  "typing" : {
+    "choiceStaggerMs" : 60,
+    "msPerChar" : 32,
+    "riseMs" : 250,
+    "risePt" : 6,
+    "setupLineMs" : 650,
+    "setupStartMs" : 350
+  },
+  "validation" : {
+    "age" : [
+      13,
+      100
+    ],
+    "emailPattern" : "^[^@\\s]+@[^@\\s]+\\.[^@\\s]{2,}$",
+    "heightCm" : [
+      120,
+      230
+    ],
+    "heightFt" : [
+      4,
+      7
+    ],
+    "passwordMin" : 8,
+    "passwordStrong" : 12,
+    "usernameDebounceMs" : 300,
+    "weightKg" : [
+      30,
+      300
+    ],
+    "weightLb" : [
+      66,
+      660
+    ]
+  }
+}

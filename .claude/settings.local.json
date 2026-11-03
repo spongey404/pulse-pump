@@ -14,7 +14,7 @@
       "mcp__XcodeBuildMCP__build_sim",
       "Bash(git merge:*)",
       "Bash(git stash:*)",
-      "Bash(plutil -p /Users/vasanth.santosh/Documents/Apps/Pump/PulsePump/Info.plist)",
+      "Bash(plutil -p /Users/vasanth.santosh/Documents/Apps/Ore/Ore/Info.plist)",
       "Bash(git commit *)"
     ]
   }

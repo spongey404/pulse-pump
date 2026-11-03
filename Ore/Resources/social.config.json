@@ -1,0 +1,9 @@
+{
+  "heart": { "size": 104, "durationMs": 1000, "doubleTapMs": 350, "doubleTapSlop": 40 },
+  "like": { "popMs": 380, "popScale": 1.25, "starsMin": 18, "starsMax": 26 },
+  "burst": { "starSize": 11, "lightStarBonus": 1.25, "darkGold": "#FFC83D", "darkWhite": "#FFFFFF", "lightGold": "#F2A900", "lightEdge": "#E8A200" },
+  "meter": { "bars": 5, "barWidth": 3, "barHeight": 16, "barRadius": 1.5, "gap": 2, "idleAlpha": 0.15, "loopMinS": 0.55, "loopMaxS": 0.9, "holdMs": 20, "settleMs": 550, "colorFadeMs": 450 },
+  "song": { "previewSeconds": 30, "artSize": 36, "playSize": 32 },
+  "card": { "radius": 14, "avatar": 36, "slideHeight": 400, "swapTileWidth": 86, "swapTileHeight": 124, "previewRows": 3, "menuWidth": 210, "menuRowHeight": 48 },
+  "star": { "loopS": 2.6 }
+}

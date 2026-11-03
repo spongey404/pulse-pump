@@ -1,0 +1,128 @@
+import Foundation
+
+/// Every Stardust tunable, in one typed value. No number lives in the renderer or the engine.
+///
+/// The defaults are the file `stardust.config.json` (the same JSON an Android build reads), decoded at launch;
+/// `StardustConfig.fallback` is the copy used if the file is missing or invalid. `StardustConfigStore` merges
+/// a remote override on top (a hook for Remote Config, see there), so values can change without a release.
+struct StardustConfig: Codable, Equatable {
+    struct Sway: Codable, Equatable { var base: Double; var perSize: Double }
+    struct Flash: Codable, Equatable { var prob: Double; var decay: Double }
+    struct Flare: Codable, Equatable { var minSize: Double; var length: Double; var flashLength: Double; var width: Double }
+    struct FPS: Codable, Equatable { var paywall: Int; var paywallIdle: Int; var more: Int }
+    struct Palette: Codable, Equatable {
+        /// [deep, accent, light]
+        var stops: [String]
+        var blob: String
+        var veil: String
+    }
+    struct Variant: Codable, Equatable {
+        enum Mode: String, Codable { case full, compact }
+        var mode: Mode? = nil
+        /// A "Mini": no glow blobs, a compact gradient, finer flicker; for small views (tag, avatar, row icon, card).
+        var mini: Bool? = nil
+        var speedScale: Double? = nil
+        var sizeScale: Double? = nil
+        var min: Int? = nil
+        /// Absolute gold-pull radius in pt (0 = none). Wins over `pullScale`.
+        var pull: Double? = nil
+        var pullScale: Double? = nil
+    }
+
+    var density: Double
+    var minParticles: Int
+    var speed: Double
+    var gold: Double
+    var sparkle: Double
+    var goldPull: Double
+    var sway: Sway
+    var flash: Flash
+    var flare: Flare
+    var fps: FPS
+    var idleAfterMs: Double
+    var settleAfterMs: Double
+    var palettes: [String: Palette]
+    var defaultPalette: String
+    var variants: [String: Variant]
+
+    static let referenceArea: Double = 390 * 844
+
+    func variant(_ key: String) -> Variant { variants[key] ?? Variant() }
+
+    /// The shipped values, used when the bundled JSON can't be read.
+    static let fallback = StardustConfig(
+        density: 1600, minParticles: 40, speed: 1.1, gold: 0.40, sparkle: 0.55, goldPull: 180,
+        sway: .init(base: 6, perSize: 5), flash: .init(prob: 0.0015, decay: 0.04),
+        flare: .init(minSize: 1.1, length: 4, flashLength: 5, width: 0.7),
+        fps: .init(paywall: 30, paywallIdle: 30, more: 30), idleAfterMs: 10_000, settleAfterMs: 0,
+        palettes: ["sky": .init(stops: ["#1A7FE0", "#3DB8FF", "#9FDDFF"], blob: "rgba(15,90,190,0.30)", veil: "rgba(10,70,140,0.05)")],
+        defaultPalette: "sky",
+        variants: [
+            "paywall": .init(mode: .full),
+            "banner": .init(mode: .compact, pullScale: 0.45),
+            "tag": .init(mini: true, speedScale: 0.2, sizeScale: 0.5, min: 26, pullScale: 0.12),
+            "avatar": .init(mini: true, speedScale: 0.35, sizeScale: 0.8, min: 30, pull: 0),
+            "rowIcon": .init(mini: true, speedScale: 0.3, sizeScale: 0.6, min: 18, pull: 0),
+            "recapCard": .init(mini: true, speedScale: 0.6, sizeScale: 0.9, min: 120, pull: 0),
+            "button": .init(mini: true, speedScale: 0.5, sizeScale: 0.7, min: 14, pull: 0),
+            "homeKey": .init(mini: true, speedScale: 0.3, sizeScale: 0.6, min: 24, pull: 0),
+            "body": .init(mini: true, speedScale: 0.45, sizeScale: 0.7, min: 90, pull: 0),
+            "cta": .init(mini: true, speedScale: 0.6, sizeScale: 0.9, min: 60, pull: 0),
+            "toggle": .init(mini: true, speedScale: 0.3, sizeScale: 0.6, min: 18, pull: 0),
+        ])
+
+    static func load(from data: Data) -> StardustConfig? {
+        guard let c = try? JSONDecoder().decode(StardustConfig.self, from: data), c.isUsable else { return nil }
+        return c
+    }
+
+    /// Remote JSON is untrusted: a non-finite or absurd number must not reach the engine (`Int(.infinity)` traps; a huge density
+    /// allocates millions of particles). Anything outside these bounds rejects the whole file and the last good config stays.
+    var isUsable: Bool {
+        func ok(_ v: Double, _ r: ClosedRange<Double>) -> Bool { v.isFinite && r.contains(v) }
+        return ok(density, 1...6000) && (0...2000).contains(minParticles) && ok(speed, 0...10) && ok(gold, 0...1) && ok(sparkle, 0...1)
+            && ok(goldPull, 0...2000) && ok(sway.base, 0...100) && ok(sway.perSize, 0...100) && ok(flash.prob, 0...1) && ok(flash.decay, 0...1)
+            && ok(flare.minSize, 0...100) && ok(flare.length, 0...100) && ok(flare.flashLength, 0...100) && ok(flare.width, 0...20)
+            && [fps.paywall, fps.paywallIdle, fps.more].allSatisfy { (1...120).contains($0) }
+            && ok(idleAfterMs, 0...3_600_000) && ok(settleAfterMs, 0...3_600_000)
+            && !palettes.isEmpty && palettes[defaultPalette] != nil && palettes.values.allSatisfy { $0.stops.count == 3 }
+            && variants.values.allSatisfy { v in
+                ok(v.speedScale ?? 1, 0...10) && ok(v.sizeScale ?? 1, 0...10) && ok(v.pull ?? 0, 0...2000) && ok(v.pullScale ?? 0, 0...10) && (0...2000).contains(v.min ?? 0)
+            }
+    }
+}
+
+/// Where the live config comes from: the bundled JSON, then an override.
+///
+/// `override` is the Remote Config hook: assign a decoded `StardustConfig` (or JSON through `applyRemote(json:)`)
+/// and every Stardust created afterwards uses it. Nothing here depends on Firebase, so no dependency is added
+/// until the remote-values source is chosen (Firebase Remote Config, Statsig, …).
+@MainActor
+final class StardustConfigStore {
+    static let shared = StardustConfigStore()
+    private(set) var base: StardustConfig
+    var override: StardustConfig?
+
+    init(bundle: Bundle = .main) {
+        if let url = bundle.url(forResource: "stardust.config", withExtension: "json"),
+           let data = try? Data(contentsOf: url), let config = StardustConfig.load(from: data) {
+            base = config
+        } else {
+            base = .fallback
+        }
+    }
+
+    var current: StardustConfig { override ?? base }
+
+    /// Applies remote JSON; an invalid payload is ignored (the previous values stay).
+    @discardableResult
+    func applyRemote(json: Data) -> Bool {
+        guard var config = StardustConfig.load(from: json) else { return false }
+        // A payload written before a variant or palette existed (an old `starfield_config`) must not turn it into a default field:
+        // whatever it doesn't define comes from the bundled config.
+        for (key, value) in base.variants where config.variants[key] == nil { config.variants[key] = value }
+        for (key, value) in base.palettes where config.palettes[key] == nil { config.palettes[key] = value }
+        override = config
+        return true
+    }
+}

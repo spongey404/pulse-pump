@@ -1,0 +1,348 @@
+/*
+ * PULSE DESIGN SYSTEM
+ * colors_and_type.css
+ *
+ * Two fonts: Archivo (display/UI) + Space Mono (all numbers + labels)
+ * Warm cream palette. Dense. Analog. "Bloomberg Terminal meets workshop manual."
+ *
+ * Usage: @import url('./colors_and_type.css') in any HTML prototype.
+ */
+
+/*
+ * LOCAL FONTS (from spongey404/pulse-pump develop branch)
+ * These are the actual production font files used by the app.
+ * Variable font covers all weights 100–900.
+ * Fallback: Google Fonts CDN (comment out if using local)
+ */
+@font-face {
+  font-family: 'Archivo';
+  src: url('fonts/Archivo-VariableFont.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Archivo';
+  src: url('fonts/Archivo-Italic-VariableFont.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Space Mono';
+  src: url('fonts/SpaceMono-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Space Mono';
+  src: url('fonts/SpaceMono-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Space Mono';
+  src: url('fonts/SpaceMono-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Space Mono';
+  src: url('fonts/SpaceMono-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+/* CDN fallback (used when local paths aren't resolved) */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,300;0,400;0,600;0,700;0,900;1,300;1,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+
+:root {
+
+  /* ----------------------------------------------------------
+     TYPOGRAPHY
+     ---------------------------------------------------------- */
+
+  --font-ui:   'Archivo', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+
+  /* Type scale — use font shorthand: weight size/line-height family */
+
+  /* Numbers & data */
+  --text-hero:        700 68px/1    var(--font-mono);   /* 64-72px hero number */
+  --text-number-xl:   700 24px/1    var(--font-mono);   /* large inline number */
+  --text-number-lg:   700 20px/1    var(--font-mono);   /* set row weight/reps */
+  --text-number-md:   700 16px/1    var(--font-mono);   /* inline stats */
+  --text-number-sm:   400 13px/1    var(--font-mono);   /* compact data */
+  --text-ticker:      400 10px/1    var(--font-mono);   /* ticker strip */
+  --text-ticker-val:  700 10px/1    var(--font-mono);   /* ticker values */
+
+  /* Labels — ALL-CAPS, Space Mono, 1.5px tracking */
+  --text-label-lg:    400 12px/1    var(--font-mono);
+  --text-label-md:    400 11px/1    var(--font-mono);
+  --text-label-sm:    400 10px/1    var(--font-mono);
+  --letter-label:     1.5px;
+
+  /* UI / Display — Archivo */
+  --text-display:     700 30px/1.1  var(--font-ui);     /* section headers */
+  --text-heading:     700 20px/1.2  var(--font-ui);     /* card headers */
+  --text-subheading:  600 16px/1.3  var(--font-ui);
+  --text-onboarding:  300 28px/1.3  var(--font-ui);     /* onboarding warmth */
+  --text-cta:         900 20px/1    var(--font-ui);     /* CTA buttons */
+  --letter-cta:       2px;
+  --text-body:        400 14px/1.55 var(--font-ui);
+  --text-body-sm:     400 13px/1.5  var(--font-ui);
+  --text-caption:     400 12px/1.4  var(--font-ui);
+  --text-footnote:    400 11px/1.4  var(--font-ui);
+
+  /* ----------------------------------------------------------
+     COLORS — LIGHT MODE (default)
+     ---------------------------------------------------------- */
+
+  /* Backgrounds */
+  --bg-canvas:          #fbf8f2;
+  --bg-elevated:        #f4f0e6;
+  --bg-sunken:          #ece7d8;
+  --bg-active-pump:     rgba(200, 85,  61,  0.07);
+  --bg-active-fuel:     rgba(122, 155, 110, 0.07);
+
+  /* Text */
+  --text-primary:       #1f1c19;
+  --text-secondary:     rgba(31, 28, 25, 0.50);
+  --text-faint:         rgba(31, 28, 25, 0.13);   /* ghost text — never auto-fill */
+
+  /* Rules & dividers */
+  --rule:               rgba(31, 28, 25, 0.08);
+  --rule-strong:        rgba(31, 28, 25, 0.20);
+
+  /* Accent — Pump (terracotta) */
+  --accent-pump:        #c8553d;
+  --accent-pump-soft:   rgba(200, 85, 61, 0.07);
+  --accent-pump-border: #c8553d;                  /* 2px active-row left border */
+
+  /* Accent — Fuel (sage green) */
+  --accent-fuel:        #7a9b6e;
+  --accent-fuel-soft:   rgba(122, 155, 110, 0.10);
+
+  /* Accent — Stride (TBD placeholder) */
+  --accent-stride:      #4a7fb5;
+  --accent-stride-soft: rgba(74, 127, 181, 0.10);
+
+  /* Ticker strip — ALWAYS dark regardless of color mode */
+  --ticker-bg:          #1a1816;
+  --ticker-fg:          #ece5d6;
+  --ticker-fg-dim:      rgba(236, 229, 214, 0.60);
+  --ticker-sep:         rgba(236, 229, 214, 0.25);
+
+  /* Signals */
+  --signal-up:          #1f8f5a;
+  --signal-down:        #c0341a;
+  --signal-warn:        #c9892e;   /* amber — weekly over-target ONLY */
+  --signal-pr:          #c9892e;   /* same amber for PR highlights */
+
+  /* Macro colors (Fuel) */
+  --macro-protein:      #4087f5;
+  --macro-carbs:        #f7ba27;
+  --macro-fat:          #f77f27;
+
+  /* ----------------------------------------------------------
+     SPACING
+     ---------------------------------------------------------- */
+
+  --space-xs:           4px;
+  --space-s:            8px;
+  --space-m:            16px;
+  --space-l:            24px;
+  --space-xl:           32px;
+  --space-screen-edge:  16px;   /* horizontal screen margin */
+  --space-card-pad:     12px;   /* card internal padding */
+  --row-height-min:     44px;   /* iOS tap target minimum */
+  --row-height-std:     48px;   /* standard row height */
+
+  /* ----------------------------------------------------------
+     CORNER RADII
+     ---------------------------------------------------------- */
+
+  --radius-chip:        5px;    /* set-type chips */
+  --radius-day:         8px;    /* day selector pills — NOT full pill */
+  --radius-card:        12px;   /* cards, CTA buttons */
+  --radius-card-lg:     14px;   /* larger panels */
+  --radius-filter:      999px;  /* filter chips — full pill */
+
+  /* ----------------------------------------------------------
+     ELEVATION  (no shadows — bg tint only)
+     ---------------------------------------------------------- */
+
+  /* Use background tokens: canvas → elevated → sunken */
+  /* No box-shadow. No drop-shadow. Not even subtle. */
+
+  /* ----------------------------------------------------------
+     ANIMATION
+     ---------------------------------------------------------- */
+
+  --ease-default:       cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-default:        250ms;  /* all standard transitions */
+  --dur-sheet:          350ms;  /* bottom sheet / modal */
+  /* No spring/bounce. ease-in-out only. */
+}
+
+/* ============================================================
+   DARK MODE
+   ============================================================ */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-canvas:          #1a1816;
+    --bg-elevated:        #252220;
+    --bg-sunken:          #2e2a26;
+    --bg-active-pump:     rgba(220, 125, 74, 0.10);
+    --bg-active-fuel:     rgba(122, 155, 110, 0.10);
+
+    --text-primary:       #ece5d6;
+    --text-secondary:     rgba(236, 229, 214, 0.50);
+    --text-faint:         rgba(236, 229, 214, 0.13);
+
+    --rule:               rgba(236, 229, 214, 0.08);
+    --rule-strong:        rgba(236, 229, 214, 0.20);
+
+    --accent-pump:        #dc7d4a;
+    --accent-pump-soft:   rgba(220, 125, 74, 0.10);
+
+    --signal-up:          #3fb777;
+    --signal-pr:          #d4a03c;
+    /* signal-down and signal-warn unchanged */
+
+    /* ticker-bg and ticker-fg never change — always dark */
+  }
+}
+
+/* ============================================================
+   SEMANTIC UTILITY CLASSES
+   ============================================================ */
+
+/* Typography */
+.t-hero         { font: var(--text-hero); color: var(--text-primary); }
+.t-display      { font: var(--text-display); color: var(--text-primary); }
+.t-heading      { font: var(--text-heading); color: var(--text-primary); }
+.t-subheading   { font: var(--text-subheading); color: var(--text-primary); }
+.t-onboarding   { font: var(--text-onboarding); color: var(--text-primary); }
+.t-cta          { font: var(--text-cta); letter-spacing: var(--letter-cta); text-transform: uppercase; }
+.t-body         { font: var(--text-body); color: var(--text-primary); }
+.t-body-sm      { font: var(--text-body-sm); color: var(--text-primary); }
+.t-caption      { font: var(--text-caption); color: var(--text-secondary); }
+.t-footnote     { font: var(--text-footnote); color: var(--text-secondary); }
+
+/* Numbers */
+.t-number-xl    { font: var(--text-number-xl); color: var(--text-primary); }
+.t-number-lg    { font: var(--text-number-lg); color: var(--text-primary); }
+.t-number-md    { font: var(--text-number-md); color: var(--text-primary); }
+.t-number-sm    { font: var(--text-number-sm); color: var(--text-primary); }
+
+/* Labels */
+.t-label        { font: var(--text-label-md); letter-spacing: var(--letter-label); text-transform: uppercase; color: var(--text-secondary); }
+.t-label-lg     { font: var(--text-label-lg); letter-spacing: var(--letter-label); text-transform: uppercase; color: var(--text-secondary); }
+.t-label-sm     { font: var(--text-label-sm); letter-spacing: var(--letter-label); text-transform: uppercase; color: var(--text-secondary); }
+
+/* Ticker */
+.t-ticker       { font: var(--text-ticker); color: var(--ticker-fg); }
+.t-ticker-val   { font: var(--text-ticker-val); color: var(--ticker-fg); }
+
+/* Color utilities */
+.c-primary      { color: var(--text-primary); }
+.c-secondary    { color: var(--text-secondary); }
+.c-faint        { color: var(--text-faint); }
+.c-accent-pump  { color: var(--accent-pump); }
+.c-accent-fuel  { color: var(--accent-fuel); }
+.c-up           { color: var(--signal-up); }
+.c-down         { color: var(--signal-down); }
+.c-warn         { color: var(--signal-warn); }
+.c-pr           { color: var(--signal-pr); }
+
+/* Background utilities */
+.bg-canvas      { background: var(--bg-canvas); }
+.bg-elevated    { background: var(--bg-elevated); }
+.bg-sunken      { background: var(--bg-sunken); }
+
+/* Rule */
+.rule           { border: none; border-top: 1px solid var(--rule); margin: 0; }
+.rule-strong    { border: none; border-top: 1px solid var(--rule-strong); margin: 0; }
+
+/* Active row */
+.active-row-pump {
+  border-left: 2px solid var(--accent-pump);
+  background: var(--bg-active-pump);
+  padding-left: calc(var(--space-m) - 2px);
+}
+.active-row-fuel {
+  border-left: 2px solid var(--accent-fuel);
+  background: var(--bg-active-fuel);
+  padding-left: calc(var(--space-m) - 2px);
+}
+
+/* CTA button */
+.btn-cta-pump {
+  display: flex; align-items: center; justify-content: center;
+  height: 54px;
+  background: var(--accent-pump);
+  border-radius: var(--radius-card);
+  font: var(--text-cta);
+  letter-spacing: var(--letter-cta);
+  color: #fff;
+  border: none; cursor: pointer;
+  text-transform: uppercase;
+  width: 100%;
+  transition: opacity var(--dur-default) var(--ease-default);
+}
+.btn-cta-pump:active { opacity: 0.85; }
+
+.btn-cta-fuel {
+  display: flex; align-items: center; justify-content: center;
+  height: 54px;
+  background: var(--accent-fuel);
+  border-radius: var(--radius-card);
+  font: var(--text-cta);
+  letter-spacing: var(--letter-cta);
+  color: #fff;
+  border: none; cursor: pointer;
+  text-transform: uppercase;
+  width: 100%;
+  transition: opacity var(--dur-default) var(--ease-default);
+}
+.btn-cta-fuel:active { opacity: 0.85; }
+
+/* Chip */
+.chip {
+  display: inline-flex; align-items: center;
+  padding: 3px 7px;
+  border-radius: var(--radius-chip);
+  font: var(--text-label-sm);
+  letter-spacing: var(--letter-label);
+  text-transform: uppercase;
+}
+.chip-pump  { background: var(--accent-pump-soft); color: var(--accent-pump); }
+.chip-fuel  { background: var(--accent-fuel-soft); color: var(--accent-fuel); }
+.chip-muted { background: var(--bg-sunken); color: var(--text-secondary); }
+.chip-filter { border-radius: var(--radius-filter); }
+
+/* Day pill */
+.day-pill {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 10px;
+  border-radius: var(--radius-day);
+  min-width: 36px;
+  cursor: pointer;
+  transition: background var(--dur-default) var(--ease-default);
+}
+.day-pill.selected-pump { background: #1a1816; }
+.day-pill.selected-pump .day-num { color: #ece5d6; }
+.day-pill.selected-fuel { background: var(--accent-fuel); }
+.day-pill.selected-fuel .day-num { color: #fff; }
+.day-pill .day-label { font: var(--text-label-sm); letter-spacing: 0.5px; color: var(--text-secondary); text-transform: uppercase; }
+.day-pill .day-num   { font: var(--text-number-md); color: var(--text-primary); }
+.day-pill .day-dot   { width: 4px; height: 4px; border-radius: 50%; background: var(--accent-pump); }
