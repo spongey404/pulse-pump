@@ -124,7 +124,6 @@ struct LiftHistoryView: View {
                     Text(bestEver.map { unit.number($0.bestWeight) } ?? "—")
                         .font(.archivo(26, weight: .black)).lineSpacing(0)
                         .foregroundStyle(Color.prGold)
-                        .shadow(color: Color.prGold.opacity(0.45), radius: 5)
                     if let reps = bestEver?.bestSet?.reps {
                         Text("×\(reps)").font(.archivo(14, weight: .black)).foregroundStyle(Color.inkMuted)
                     }
@@ -215,7 +214,6 @@ struct LiftHistoryView: View {
                         Text("PR")
                             .font(Font.spaceMono(8, weight: .bold)).tracking(1.2)
                             .foregroundStyle(Color.prGold)
-                            .shadow(color: Color.prGold.opacity(0.5), radius: 4)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -223,7 +221,6 @@ struct LiftHistoryView: View {
                 Text(session.bestSet.map { setValueLabel($0) } ?? "—")
                     .font(Font.spaceMono(14, weight: .bold))
                     .foregroundStyle(session.isPR ? Color.prGold : Color.inkPrimary)
-                    .shadow(color: session.isPR ? Color.prGold.opacity(0.5) : .clear, radius: 4)
                     .frame(width: 70, alignment: .trailing)
 
                 Text(volumeLabel(session))

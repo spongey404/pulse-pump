@@ -21,7 +21,8 @@ struct HomePage {
 
     /// Numeric value of a KPI tile ("0" when the tile shows an empty state).
     func kpi(_ id: String) -> Int {
-        Int(t.require(t.el(id), id).label) ?? -1
+        let label = t.require(t.el(id), id).label
+        return label == "—" ? 0 : (Int(label) ?? -1)      // "—": nothing counted yet
     }
 
     var streak: Int { kpi(AX.home.kpiStreak) }
@@ -45,7 +46,14 @@ struct HomePage {
         t.require(t.el(AX.workout.sessionTitle), "resumed workout screen")
     }
 
+    /// The week ledger shows once there is history (its header carries `AX.home.recent`).
     var hasRecentTable: Bool { t.el(AX.home.recent).waitForExistence(timeout: 3) }
+
+    /// The ledger rows of finished days are buttons (they open the workout); planned, rest and empty days are not.
+    var doneRows: XCUIElementQuery { t.app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'home.ledger.'")) }
+
+    /// What the finished rows say, joined: changes when a workout is added, removed or edited.
+    var doneRowsSignature: String { doneRows.allElementsBoundByIndex.map(\.label).joined(separator: "|") }
 
     func openSearch() {
         t.tapID(AX.home.searchButton)

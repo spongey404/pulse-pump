@@ -61,7 +61,7 @@ struct BodyFigureView: View {
             }
         }
         .aspectRatio(BodyFigureGeometry.artSize.width / BodyFigureGeometry.artSize.height, contentMode: .fit)
-        .task { geometry = await BodyMapGeometry.figure(side) }
+        .task(id: side) { geometry = nil; geometry = await BodyMapGeometry.figure(side) }   // never draw one side with the other's shapes
         .task(id: token) { await playReveal() }
         .onAppear { visible = true }
         .onDisappear { visible = false }
@@ -115,15 +115,18 @@ struct BodyFigureView: View {
         TimelineView(.animation(minimumInterval: 1.0 / Double(max(1, config.fps)), paused: starsPaused)) { timeline in
             Canvas { ctx, size in
                 guard let g = geometry else { return }
-                if runner.engine == nil || runner.engineKey != token {
+                // The engine holds indices into this side's muscles, so it is rebuilt whenever the side (geometry) changes too.
+                let key = "\(side.rawValue)|\(g.muscles.count)|" + token
+                if runner.engine == nil || runner.engineKey != key {
                     runner.engine = BodyStardustEngine(shapes: g.muscles, levels: levels, config: config, seed: UInt64.random(in: 1...UInt64.max),
                                                        now: runner.ms(timeline.date))
-                    runner.engineKey = token
+                    runner.engineKey = key
                 }
                 // One still frame (Low Power Mode, Reduce Motion) well into the reveal.
                 let now = (lowPower || still) ? runner.t0 + 6000 : runner.ms(timeline.date)
                 runner.engine?.step(now: now, t0: runner.t0)
                 guard let muscles = runner.engine?.muscles else { return }
+                guard muscles.allSatisfy({ $0.shapeIndex < g.muscles.count }) else { return }   // geometry changed mid-frame: skip it
                 for m in muscles where !m.drawn.isEmpty {
                     var layer = ctx
                     var clipLayer = layer

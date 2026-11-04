@@ -9,7 +9,8 @@ struct EquipmentProfilesView: View {
     @Query(filter: #Predicate<EquipmentProfile> { $0.deletedAt == nil }, sort: \EquipmentProfile.name) private var profiles: [EquipmentProfile]
     @State private var showCreate = false
     @State private var selectedId: UUID? = nil
-    @State private var showEditEquipment = false
+    /// The profile whose name and equipment are being edited (a profile row, an equipment row or + Add Equipment).
+    @State private var editing: EquipmentProfile?
 
     private var selectedProfile: EquipmentProfile? {
         if let id = selectedId { return profiles.first { $0.id == id } }
@@ -29,7 +30,7 @@ struct EquipmentProfilesView: View {
                     }
                     ForEach(profiles) { profile in
                         OreSelectRow(label: profile.name, description: summary(profile),
-                                     tag: profile.id == selectedProfile?.id ? "ACTIVE" : "", selected: false) { selectedId = profile.id }
+                                     tag: profile.id == selectedProfile?.id ? "ACTIVE" : "", selected: false) { selectedId = profile.id; editing = profile }
                     }
                     Button { showCreate = true } label: {
                         Text("+ ADD PROFILE").font(.spaceMono(9, weight: .bold)).tracking(1.5).foregroundStyle(Color.inkMuted)
@@ -54,6 +55,9 @@ struct EquipmentProfilesView: View {
         .navigationBarHidden(true)
         .sheet(isPresented: $showCreate) {
             CreateEquipmentProfileView()
+        }
+        .sheet(item: $editing) { profile in
+            EditEquipmentProfileView(profile: profile)
         }
         .onAppear {
             if selectedId == nil { selectedId = profiles.first?.id }
@@ -141,6 +145,7 @@ struct EquipmentProfilesView: View {
                 .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
 
             ForEach(profile.availableEquipment.sorted(by: { $0.displayName < $1.displayName }), id: \.self) { eq in
+                Button { editing = profile } label: {
                 VStack(spacing: 0) {
                     HStack(spacing: 10) {
                         Text("✓")
@@ -159,6 +164,9 @@ struct EquipmentProfilesView: View {
                     .frame(height: 44)
                     Rectangle().fill(Color.dsHairLine).frame(height: 1)
                 }
+                .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -259,7 +267,7 @@ struct EquipmentProfilesView: View {
     // MARK: - Add equipment button
 
     private var addEquipmentButton: some View {
-        DashedAdd(title: "Add Equipment", height: 40) { }
+        DashedAdd(title: "Add Equipment", height: 40) { editing = selectedProfile }
             .padding(.horizontal, 16)
             .padding(.top, 14)
     }
@@ -376,6 +384,52 @@ struct CreateEquipmentProfileView: View {
                         dismiss()
                     }
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+    }
+}
+
+
+/// Edits a profile: its name and which equipment it has (a check per type). Changes are saved as you make them.
+struct EditEquipmentProfileView: View {
+    @Bindable var profile: EquipmentProfile
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Name") {
+                    TextField("Name", text: $profile.name)
+                        .onChange(of: profile.name) { _, _ in profile.markUpdated() }
+                }
+                Section("Available Equipment") {
+                    ForEach(EquipmentType.allCases) { equipment in
+                        Button {
+                            if let i = profile.availableEquipment.firstIndex(of: equipment) {
+                                profile.availableEquipment.remove(at: i)
+                            } else {
+                                profile.availableEquipment.append(equipment)
+                            }
+                            profile.markUpdated()
+                        } label: {
+                            HStack {
+                                Text(equipment.displayName).foregroundStyle(.primary)
+                                Spacer()
+                                if profile.availableEquipment.contains(equipment) {
+                                    Image(systemName: "checkmark").foregroundStyle(Color.accentInk)
+                                }
+                            }
+                        }
+                        .accessibilityIdentifier(AX.row("equipment-" + equipment.rawValue))
+                    }
+                }
+            }
+            .navigationTitle("Edit Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }.disabled(profile.name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
         }

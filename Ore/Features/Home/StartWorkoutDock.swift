@@ -4,7 +4,8 @@ import FirebaseAuth
 
 struct StartWorkoutDock: View {
     @Bindable var viewModel: WorkoutViewModel
-    var overrideName: String? = nil
+    /// The workout Home has chosen (the program's next, or the one picked with NOT TODAY?).
+    var overrideTemplate: WorkoutTemplate? = nil
     var onRequestDiscard: ((Workout) -> Void)? = nil
     @Environment(\.modelContext) private var modelContext
     @Query private var users: [User]
@@ -111,68 +112,30 @@ struct StartWorkoutDock: View {
     // MARK: Start state
 
     private func startDock(user: User) -> some View {
-        let predictionName = overrideName ?? viewModel.predictNextWorkout(user: user, modelContext: modelContext)
-        let allTemplates: [WorkoutTemplate] = (try? modelContext.fetch(FetchDescriptor<WorkoutTemplate>(predicate: #Predicate { $0.deletedAt == nil }))) ?? []
-        let predictedTemplate = predictionName.flatMap { name in
-            allTemplates.first { $0.name.lowercased() == name.lowercased() }
-        }
-        let splitLbl = detectSplitLabel(modelContext: modelContext)
-        let estMins = predictedTemplate.flatMap { t -> Int? in
-            var workoutDescriptor = FetchDescriptor<Workout>(
-                predicate: #Predicate { !$0.isDraft && $0.deletedAt == nil },
-                sortBy: [SortDescriptor(\Workout.date, order: .reverse)]
-            )
-            workoutDescriptor.fetchLimit = 60   // the last time you did this program is somewhere recent
-            let recentWorkouts = (try? modelContext.fetch(workoutDescriptor)) ?? []
-            guard let last = recentWorkouts.first(where: { $0.template?.name == t.name }),
-                  last.duration > 60 else { return nil }
-            return Int(last.duration / 60)
-        } ?? 55
-
+        let template = overrideTemplate
         return Button {
             if TutorialMode.isRunning {
                 viewModel.startTutorialWorkout(modelContext: modelContext, user: user)
             } else {
-                viewModel.startWorkout(modelContext: modelContext, user: user, template: predictedTemplate)
+                viewModel.startWorkout(modelContext: modelContext, user: user, template: template)
             }
         } label: {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.oreAccent)
-                    .overlay { AccentFill().clipShape(RoundedRectangle(cornerRadius: 12)) }
-                    .shadow(color: Color.oreAccent.opacity(0.35), radius: 8, y: 3)
-
-                HStack {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("TODAY · \(splitLbl)")
-                            .font(.spaceMono(8))
-                            .tracking(1.5)
-                            .foregroundStyle(Color.white.opacity(0.60))
-                        Text((predictionName ?? "WORKOUT").uppercased())
-                            .font(.archivo(20, weight: .black))
-                            .foregroundStyle(.white)
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 1) {
-                        Text("~\(estMins) MIN")
-                            .font(.spaceMono(8))
-                            .foregroundStyle(Color.white.opacity(0.60))
-                        Text("START WORKOUT ›")
-                            .font(.archivo(16, weight: .black))
-                            .tracking(1)
-                            .foregroundStyle(.white)
-                    }
-                }
-                .padding(.horizontal, 16)
+            // 60pt, the label on the left and a ›; it does not repeat the workout's name (Ore Home Final).
+            HStack {
+                Text("START WORKOUT").font(.archivo(19, weight: .black)).tracking(0.6).foregroundStyle(.white)
+                Spacer(minLength: 0)
+                Text("›").font(.archivo(26, weight: .black)).foregroundStyle(.white)
             }
-            .frame(height: 54)
+            .padding(.horizontal, 22)
+            .frame(height: 60)
+            .background { AccentFill(priority: 10) }
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.97))
         .accessibilityIdentifier(AX.home.startWorkout)
         .tutorialTarget("tutorial.start-workout")
         .padding(.horizontal, 16)
-        .padding(.top, 12)
-        .padding(.bottom, 28)
+        .padding(.vertical, 12)
     }
 
     private func detectSplitLabel(modelContext: ModelContext) -> String {

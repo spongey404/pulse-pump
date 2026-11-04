@@ -27,7 +27,8 @@ struct MoreTabView: View {
     @State private var social = SocialViewModel.shared
 
     private var user: User? { users.first }
-    private var streak: Int { StreakCalculator.currentStreak(from: workouts.map(\.date)) }
+    /// Weeks in a row with a workout: the same number Home and its ticker show.
+    private var weekStreak: Int { HomeWeekStats(workouts: workouts, templates: []).weekStreak }
 
     var body: some View {
         ZStack {
@@ -81,7 +82,7 @@ struct MoreTabView: View {
         case .settings: SettingsView(onBack: { screen = .hub })
         case .equipment: EquipmentProfilesView(onBack: { screen = .hub })
         case .weeklyRecap: WeeklyRecapView(onBack: { screen = .hub })
-        case .cloudSync: CloudSyncView(onBack: { screen = .hub })
+        case .cloudSync: CloudSyncView(isMember: !isFree, onBack: { screen = .hub })
         case .dataImport: DataImportScreen(onBack: { screen = .hub })
         case .privacy:   PrivacyLegalView(onBack: { screen = .hub })
         case .widgets:   WidgetsView(onBack: { screen = .hub })
@@ -207,7 +208,7 @@ struct MoreTabView: View {
             SocialServices.localName = user?.name
             await social.loadMyProfile()
             await social.loadGraph()
-            await social.syncOwnStats(streak: streak, totalWorkouts: workouts.count)
+            await social.syncOwnStats(streak: weekStreak, totalWorkouts: workouts.count)
         }
     }
 
@@ -242,6 +243,7 @@ struct MoreTabView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(AX.more.profile)
     }
 
     private var memberHandle: String {
@@ -272,9 +274,9 @@ struct MoreTabView: View {
     private var statsRow: some View {
         let stats: [(String, String)] = [
             ("\(workouts.count)", "WORKOUTS"),
-            ("\(streak)D", "STREAK"),
+            ("\(weekStreak) WK", "STREAK"),
             ("\(social.friendCount)", "FRIENDS"),
-            ("\(social.fanCount)", "FANS"),
+            ("\(social.fanCount)", "FOLLOWERS"),
         ]
         return HStack(spacing: 0) {
             ForEach(Array(stats.enumerated()), id: \.offset) { i, k in

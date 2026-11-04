@@ -5,6 +5,8 @@ import SwiftUI
 struct ActivityView: View {
     @Bindable var viewModel: SocialViewModel
     @Environment(\.dismiss) private var dismiss
+    /// The person whose name was tapped: their profile opens over this screen.
+    @State private var openedPerson: (uid: String, handle: String, name: String)?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -30,7 +32,7 @@ struct ActivityView: View {
 
                     ForEach(viewModel.fanRequests) { fan in
                         needsYouRow(
-                            name: fan.shownName,
+                            name: fan.shownName, uid: fan.uid, handle: fan.username,
                             title: "\(fan.shownName) wants to follow you",
                             detail: fan.username.isEmpty ? nil : "@\(fan.username)",
                             decline: "IGNORE", accept: "ACCEPT",
@@ -41,7 +43,7 @@ struct ActivityView: View {
                     ForEach(viewModel.pendingChallengeInvites) { invite in
                         let from = invite.fromUsername.isEmpty ? "Someone" : invite.fromUsername
                         needsYouRow(
-                            name: from,
+                            name: from, uid: invite.fromUid, handle: invite.fromUsername,
                             title: "\(from) invited you",
                             detail: invite.challengeName,
                             decline: "DECLINE", accept: "JOIN",
@@ -83,6 +85,11 @@ struct ActivityView: View {
         }
         .background(Color.canvasBg)
         .navigationBarBackButtonHidden(true)
+        .sheet(isPresented: Binding(get: { openedPerson != nil }, set: { if !$0 { openedPerson = nil } })) {
+            if let p = openedPerson {
+                NavigationStack { FriendProfileView(uid: p.uid, handle: p.handle, name: p.name, viewModel: viewModel) }
+            }
+        }
         .task {
             await viewModel.loadGraph()
             await viewModel.loadInvites()
@@ -113,20 +120,27 @@ struct ActivityView: View {
     }
 
     /// A request or invite: initial tile, title (16 bold) and detail (12 muted) left; a 32 pt outlined decline and a filled accept right.
-    private func needsYouRow(name: String, title: String, detail: String?, decline: String, accept: String,
+    private func needsYouRow(name: String, uid: String, handle: String, title: String, detail: String?, decline: String, accept: String,
                              onAccept: @escaping () -> Void, onDecline: @escaping () -> Void) -> some View {
         HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.surf2)
-                .frame(width: 36, height: 36)
-                .overlay(Text(name.prefix(1).uppercased()).font(.archivo(15, weight: .black)).foregroundStyle(Color.inkSecondary))
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title).font(.archivo(16, weight: .bold)).foregroundStyle(Color.inkPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                if let detail {
-                    Text(detail).font(.archivo(12)).foregroundStyle(Color.inkMuted).lineLimit(1)
+            Button { openedPerson = (uid, handle, name) } label: {
+                HStack(spacing: 12) {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.surf2)
+                        .frame(width: 36, height: 36)
+                        .overlay(Text(name.prefix(1).uppercased()).font(.archivo(15, weight: .black)).foregroundStyle(Color.inkSecondary))
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(title).font(.archivo(16, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if let detail {
+                            Text(detail).font(.archivo(12)).foregroundStyle(Color.inkMuted).lineLimit(1)
+                        }
+                    }
+                    Spacer(minLength: 4)
                 }
+                .contentShape(Rectangle())
             }
-            Spacer(minLength: 4)
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open \(name)'s profile")
             HStack(spacing: 6) {
                 Button(action: onDecline) {
                     Text(decline).font(.spaceMono(9, weight: .bold)).tracking(1.5).foregroundStyle(Color.inkMuted)

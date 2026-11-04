@@ -116,12 +116,23 @@ struct TrainedSidesFigures: View {
 
 /// The full workout view: opened from a post, a profile's recent workouts, and (the exercise part) the summary. Your own workout has
 /// a ··· with Edit post / Delete post; a friend's has none.
+struct LocalWorkoutMenuItem: Identifiable {
+    let id = UUID()
+    let title: String
+    var destructive = false
+    let action: () -> Void
+}
+
 struct FeedSessionSheet: View {
     @Environment(\.weightUnit) private var unit
     @Environment(\.dismiss) private var dismiss
     let item: WorkoutFeedItem
     var viewModel: SocialViewModel
     var onEdit: ((WorkoutFeedItem) -> Void)? = nil
+    /// A local workout (History, Home, the calendar): no reactions and no post menu, there is no post.
+    var local = false
+    /// The ··· menu of a local workout (Edit, Duplicate, Delete); the caller does the work.
+    var localMenu: [LocalWorkoutMenuItem] = []
 
     @State private var menuOpen = false
     @State private var confirmDelete = false
@@ -129,7 +140,7 @@ struct FeedSessionSheet: View {
     @State private var showEdit = false
 
     private var current: WorkoutFeedItem { viewModel.post(id: item.id, fallback: item) }
-    private var isMine: Bool { item.userId == viewModel.currentUid }
+    private var isMine: Bool { !local && item.userId == viewModel.currentUid }
     private var who: String { isMine ? "YOU" : (item.username.isEmpty ? item.handle : item.username).uppercased() }
     private var member: SocialMemberStyle? { SocialMembership.style(for: item.userId, currentUid: viewModel.currentUid) }
     private var levels: [String: Double] { BodyMapLevels.levels(muscleSets: item.muscleSets) }
@@ -142,9 +153,9 @@ struct FeedSessionSheet: View {
                     if item.includesBodyMap { TrainedSidesFigures(levels: levels, member: member != nil, accentHex: member?.accentHex) }
                     stats
                     WorkoutDocumentExercises(exercises: item.exercises, prExerciseIds: WorkoutDocumentExercises.prIds(item.exercises, prCount: item.prCount))
-                    SocialReactRow(liked: current.likedByMe, likeCount: current.likeCount, commentCount: current.commentCount,
+                    if !local { SocialReactRow(liked: current.likedByMe, likeCount: current.likeCount, commentCount: current.commentCount,
                                    onLike: { Task { await viewModel.toggleLike(postId: item.id) } }, onComment: { showComments = true })
-                        .padding(.vertical, 12)
+                        .padding(.vertical, 12) }
                 }
             }
         }
@@ -166,10 +177,21 @@ struct FeedSessionSheet: View {
             .buttonStyle(.plain).accessibilityLabel("Back").accessibilityIdentifier(AX.nav.back)
             VStack(alignment: .leading, spacing: 5) {
                 Text((item.templateName ?? "WORKOUT").uppercased()).font(.archivo(24, weight: .black)).tracking(0.3).foregroundStyle(Color.inkPrimary).lineLimit(1)
-                Text("\(who) · \(PostTime.duration(item.durationSeconds)) · \(PostTime.ago(item.date))")
+                    .accessibilityIdentifier(local ? AX.detail.title : "")
+                Text(local ? Self.localSubtitle(item) : "\(who) · \(PostTime.duration(item.durationSeconds)) · \(PostTime.ago(item.date))")
                     .font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkMuted)
             }
             Spacer(minLength: 0)
+            if local && !localMenu.isEmpty {
+                Menu {
+                    ForEach(localMenu) { m in
+                        Button(role: m.destructive ? .destructive : nil, action: m.action) { Text(m.title) }
+                    }
+                } label: {
+                    Text("···").font(.spaceMono(16, weight: .bold)).foregroundStyle(Color.inkSecondary).frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("Workout actions").accessibilityIdentifier(AX.detail.menu)
+            }
             if isMine {
                 Button { menuOpen = true } label: {
                     Text("···").font(.spaceMono(16, weight: .bold)).foregroundStyle(Color.inkSecondary).frame(width: 44, height: 44)
@@ -185,6 +207,13 @@ struct FeedSessionSheet: View {
         }
         .padding(.horizontal, 16).padding(.top, 6).padding(.bottom, 12)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+    }
+
+    /// "WED 4 NOV · 69 MIN · 17 SETS".
+    static func localSubtitle(_ item: WorkoutFeedItem) -> String {
+        let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "EEE d MMM"
+        let sets = item.workingSetCount
+        return "\(f.string(from: item.date).uppercased()) · \(item.durationSeconds / 60) MIN · \(sets) \(sets == 1 ? "SET" : "SETS")"
     }
 
     private var stats: some View {

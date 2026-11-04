@@ -164,7 +164,6 @@ struct DestructiveModalModifier: ViewModifier {
                         .frame(height: 44)
                         .background(Color.signalDown)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .shadow(color: Color.signalDown.opacity(0.33), radius: 8, y: 4)
                 }
                 .buttonStyle(.plain)
                 .disabled(!confirmEnabled || isWorking)

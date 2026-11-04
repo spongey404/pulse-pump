@@ -136,12 +136,11 @@ struct ProfileView: View {
     // MARK: - Stats
 
     private var statsSection: some View {
-        let streak = StreakCalculator.currentStreak(from: workouts.map(\.date))
         let cells: [(String, String)] = [
             ("\(workouts.count)", "WORKOUTS"),
-            ("\(streak)D", "STREAK"),
+            ("\(HomeWeekStats(workouts: workouts, templates: []).weekStreak) WK", "STREAK"),
             ("\(social.friendCount)", "FRIENDS"),
-            ("\(social.fanCount)", "FANS"),
+            ("\(social.fanCount)", "FOLLOWERS"),
         ]
         return HStack(spacing: 0) {
             ForEach(Array(cells.enumerated()), id: \.offset) { i, c in
@@ -197,7 +196,7 @@ struct ProfileView: View {
                         Text(friend.displayName)
                             .font(.archivo(14, weight: .semibold))
                             .foregroundStyle(Color.inkPrimary)
-                        Text("\(friend.totalWorkouts) WORKOUTS · \(friend.currentStreak)D STREAK")
+                        Text("\(friend.totalWorkouts) WORKOUTS · \(friend.currentStreak) WK STREAK")
                             .font(.spaceMono(8))
                             .tracking(1)
                             .foregroundStyle(Color.inkMuted)

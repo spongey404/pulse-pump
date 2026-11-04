@@ -102,52 +102,76 @@ struct HomeTabView: View {
         return "~\(mins) MIN"
     }
 
-    private var recentWorkouts: [Workout] { Array(workouts.prefix(3)) }
+    // MARK: - Redesigned Home (Ore Home Final)
 
-    // MARK: - Week number helper (relative to user's join date, so week 1 = first week)
-    private var currentWeekNumber: Int { stats.currentWeekNumber(userCreatedAt: user?.createdAt) }
+    @Environment(\.weightUnit) private var unit
+    @Environment(\.colorScheme) private var scheme
+    @State private var snap = HomeSnapshot.empty
+    @State private var openedWorkout: Workout?
+
+    private var week: HomeWeekStats { HomeWeekStats(workouts: workouts, templates: templates) }
+
+    /// What is up next: the manual pick, else the program's next workout, else the pattern prediction.
+    private var heroTemplate: WorkoutTemplate? {
+        if let manualOverrideTemplate { return manualOverrideTemplate }
+        let programs = ProgramPlan.programs(from: templates)
+        if case .workout(_, _, let t)? = ProgramPlan.upNext(programs) { return t }
+        return predictedTemplate
+    }
+
+    private var heroName: String? { heroTemplate?.name ?? predictedTemplateName }
 
     var body: some View {
+        let w = week
         VStack(spacing: 0) {
-            // Only show ticker when there is real volume data
-            let tickerItems = buildTickerItems()
-            if !tickerItems.isEmpty {
-                TickerStripView(items: tickerItems)
+            OreMasthead(markID: AX.home.mark) {
+                HStack(spacing: 4) {
+                    Button { showSearch = true } label: {
+                        Image(systemName: "magnifyingglass").font(.system(size: 20, weight: .regular)).foregroundStyle(Color.inkPrimary)
+                            .frame(width: 44, height: 44).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain).accessibilityLabel("Search").accessibilityIdentifier(AX.home.searchButton)
+                    Button { showProfileMenu = true } label: {
+                        Text(user?.name.prefix(1).uppercased() ?? "?").font(.archivo(15, weight: .black)).foregroundStyle(Color.inkPrimary)
+                            .frame(width: 36, height: 36).background(Color.surf2).clipShape(RoundedRectangle(cornerRadius: 10))
+                            .frame(width: 44, height: 44).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain).accessibilityLabel("Profile").accessibilityIdentifier(AX.home.profileButton)
+                }
+                #if DEBUG
+                .onLongPressGesture { workoutViewModel.showPreviewCompletion() }
+                #endif
             }
+            // The ticker shows once there is real data.
+            if snap.hasHistory, !snap.ticker.isEmpty { TickerStripView(items: snap.ticker) }
 
             ScrollView {
                 VStack(spacing: 0) {
-                    // 1. Masthead row — full-width with bottom hairline
-                    mastheadRow
-
-                    // 2. Prediction block — surf background, bottom hairline
-                    if let name = predictedTemplateName {
-                        predictionBlock(name: name)
+                    hero(w)
+                    if snap.hasHistory { statsStrip } else { newUserNote }
+                    weekHeader
+                    ledgerHeader
+                    ForEach(snap.ledger) { row in ledgerRow(row, w) }
+                    if let line = snap.lastWeekLine {
+                        HStack {
+                            Text("LAST WEEK")
+                            Spacer(minLength: 0)
+                            Text(line).foregroundStyle(Color.inkSecondary)
+                        }
+                        .font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
+                        .padding(.horizontal, 16).padding(.vertical, 14)
                     }
-
-                    // 3. KPI 4-up grid — bottom hairline, no outer card
-                    kpiGrid
-
-                    // 4. Week volume bars — bottom hairline
-                    weekBarsSection
-
-                    // 5. Friends trained today banner
                     FriendActivityBanner()
-
-                    // 6. Recent workouts table
-                    if !recentWorkouts.isEmpty {
-                        recentWorkoutsTable
-                    }
-
-                    Color.clear.frame(height: 80)
+                    Color.clear.frame(height: 20)
                 }
             }
+            .scrollBounceBehavior(.basedOnSize)
         }
         .background(Color.canvasBg.ignoresSafeArea())
         .safeAreaInset(edge: .bottom) {
             StartWorkoutDock(
                 viewModel: workoutViewModel,
-                overrideName: predictedTemplateName,
+                overrideTemplate: heroTemplate,
                 onRequestDiscard: { draft in
                     pendingDiscardDraft = draft
                     showDiscardConfirmation = true
@@ -155,17 +179,21 @@ struct HomeTabView: View {
             )
         }
         // The numbers on this screen are worked out here, when the workouts change, instead of in the body.
-        .task(id: kpisKey) {
+        .task(id: "\(kpisKey)|\(unit.rawValue)|\(templates.count)") {
             // SwiftData loads a record's fields the first time they are read, one database round trip each, so
             // reading every set of a long history is thousands of them. Load the logs and sets in two bulk fetches
             // first (and keep them alive while the numbers are worked out): the reads then come from memory.
             let logs = (try? modelContext.fetch(FetchDescriptor<ExerciseLog>())) ?? []
             let sets = (try? modelContext.fetch(FetchDescriptor<SetLog>())) ?? []
             kpis = HomeKPIs(onePassOver: stats)
+            snap = HomeSnapshot(HomeWeekStats(workouts: workouts, templates: templates), unit: unit)
             withExtendedLifetime((logs, sets)) {}
         }
         .fullScreenCover(isPresented: $showSearch) {
             GlobalSearchView()
+        }
+        .fullScreenCover(item: $openedWorkout) { w in
+            LocalWorkoutFullView(workout: w)
         }
         .sheet(isPresented: $showDayPicker) {
             WorkoutDayPickerSheet(templates: templates) { selected in
@@ -188,7 +216,7 @@ struct HomeTabView: View {
         )
         .overlay {
             if showProfileMenu {
-                Color.black.opacity(0.20)
+                Color(red: 21 / 255, green: 26 / 255, blue: 33 / 255).opacity(0.35)      // dim, never blur
                     .ignoresSafeArea()
                     .onTapGesture {
                         withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
@@ -200,9 +228,154 @@ struct HomeTabView: View {
             }
         }
         .animation(.spring(response: 0.28, dampingFraction: 0.82), value: showProfileMenu)
-        .onAppear {
-            withAnimation(.spring(response: 0.55, dampingFraction: 0.8).delay(0.15)) {
-                barsAppeared = true
+    }
+
+    // MARK: Hero
+
+    private func hero(_ w: HomeWeekStats) -> some View {
+        let template = heroTemplate
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(w.dateLine).font(.spaceMono(9, weight: .bold)).tracking(1.5).foregroundStyle(Color.inkPrimary).monoLine(9)
+                Spacer(minLength: 0)
+                if let line = template.flatMap({ w.programLine(upNext: $0) }) {
+                    Text(line).font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted).monoLine(8)
+                }
+            }
+            HStack(alignment: .bottom, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(w.heroLabel).font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted).monoLine(8).accessibilityIdentifier(AX.home.heroLabel)
+                    Text((heroName ?? "NO WORKOUT").uppercased()).font(.archivo(40, weight: .black)).tracking(0.3).foregroundStyle(Color.inkPrimary)
+                        .lineLimit(2).minimumScaleFactor(0.6).fixedSize(horizontal: false, vertical: true)
+                        .cssLineHeight(fontName: "Archivo-Black", size: 40, multiple: 0.95)
+                        .accessibilityIdentifier(AX.home.predictedName)
+                }
+                Spacer(minLength: 0)
+                VStack(alignment: .trailing, spacing: 6) {
+                    Text(snap.hasHistory ? "\(snap.weekStreak)" : "—").font(.spaceMono(40, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                        .frame(height: 36)
+                        .accessibilityIdentifier(AX.home.kpiStreak)
+                    Text("WK STREAK").font(.spaceMono(7)).tracking(1.5).foregroundStyle(Color.inkMuted).monoLine(7)
+                }
+            }
+            if let template {
+                let meta = w.metaLine(for: template)
+                if !meta.isEmpty { Text(meta).font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkMuted).monoLine(9) }
+                let ex = w.exerciseLine(for: template)
+                if !ex.isEmpty { Text(ex).font(.archivo(13)).foregroundStyle(Color.inkSecondary).fixedSize(horizontal: false, vertical: true)
+                    .cssLineHeight(fontName: "Archivo-Regular", size: 13, multiple: 1.45) }
+            }
+            Button { showDayPicker = true } label: {
+                Text("NOT TODAY? ›").font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkSecondary).monoLine(9)
+                    .frame(minHeight: 44, alignment: .leading).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain).accessibilityIdentifier(AX.home.notToday)
+        }
+        .padding(.horizontal, 16).padding(.top, 16).padding(.bottom, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.surf)
+        .overlay(alignment: .top) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+    }
+
+    // MARK: Stats strip + new user
+
+    private var statsStrip: some View {
+        let s = snap.strip
+        return HStack(spacing: 0) {
+            statCell("SETS", "\(s.sets)", DeltaText.count(s.setsDelta), id: AX.home.kpiSets, first: true)
+            statCell("VOLUME", unit.compactVolume(s.volumeKg), DeltaText.percent(s.volumeDelta), id: AX.home.kpiVolume, first: false)
+            statCell("PRS", "\(s.prs)", "", id: AX.home.kpiPRs, first: false)
+        }
+        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+    }
+
+    private func statCell(_ label: String, _ value: String, _ delta: String, id: String, first: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(label).font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted).monoLine(8)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(value).font(.spaceMono(22, weight: .bold)).foregroundStyle(Color.inkPrimary).lineLimit(1).minimumScaleFactor(0.6)
+                    .accessibilityIdentifier(id)
+                Text(delta).font(.spaceMono(10, weight: .bold)).foregroundStyle(deltaColor(delta)).lineLimit(1).fixedSize()
+            }
+        }
+        .padding(.horizontal, 14).padding(.vertical, 12).frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .leading) { if !first { Rectangle().fill(Color.dsHairLine).frame(width: 1) } }
+    }
+
+    private func deltaColor(_ text: String) -> Color {
+        switch DeltaText.sign(of: text) { case .up: .signalUp; case .down: .signalDown; case .flat: .inkMuted }
+    }
+
+    private var newUserNote: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("No workouts yet.").font(.archivo(15, weight: .semibold)).foregroundStyle(Color.inkPrimary)
+            Text("Streak, sets and PRs start counting after your first session.").font(.archivo(13)).foregroundStyle(Color.inkSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16).frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+        .accessibilityElement(children: .combine).accessibilityIdentifier(AX.home.newUserNote)
+    }
+
+    // MARK: Week ledger
+
+    private var weekHeader: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text("THIS WEEK · PROGRAM WK \(snap.weekNumber)")
+            Spacer(minLength: 0)
+            Text("\(snap.doneText) DONE").font(.spaceMono(9, weight: .bold)).foregroundStyle(Color.inkPrimary)
+        }
+        .font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkMuted)
+        .padding(.horizontal, 16).padding(.top, 20).padding(.bottom, 8)
+    }
+
+    private var ledgerHeader: some View {
+        HStack(spacing: 10) {
+            Text("DAY").frame(width: 40, alignment: .leading)
+            Text("WORKOUT").frame(maxWidth: .infinity, alignment: .leading)
+            Text("SETS").frame(width: 40, alignment: .trailing)
+            Text("VOL").frame(width: 52, alignment: .trailing)
+        }
+        .font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
+        .padding(.horizontal, 16).padding(.vertical, 8).background(Color.surf2)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(snap.hasHistory ? AX.home.recent : AX.home.ledgerHeader)
+    }
+
+    private func ledgerRow(_ r: HomeWeekStats.LedgerRow, _ w: HomeWeekStats) -> some View {
+        let done = r.workout != nil
+        let nameFont: Font = r.isToday ? .archivo(20, weight: .black) : done ? .archivo(15, weight: .semibold) : .archivo(15)
+        let nameColor: Color = r.isToday || done ? .inkPrimary : r.isRest ? Color.inkPrimary.opacity(scheme == .dark ? 0.18 : 0.13) : .inkMuted
+        let content = VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                Text(r.day).font(.spaceMono(9, weight: .bold)).tracking(1.5)
+                    .foregroundStyle(r.isToday ? Color.inkPrimary : done ? Color.inkSecondary : Color.inkMuted).frame(width: 40, alignment: .leading)
+                Text(r.name.uppercased()).font(nameFont).foregroundStyle(nameColor).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                Text(r.sets.map { "\($0)" } ?? "").font(.spaceMono(13, weight: .bold)).foregroundStyle(Color.inkPrimary).frame(width: 40, alignment: .trailing)
+                Text(r.volumeText).font(.spaceMono(11, weight: .bold)).foregroundStyle(deltaColor(r.volumeText)).frame(width: 52, alignment: .trailing)
+            }
+            .frame(minHeight: 46)
+            if r.isToday, let t = heroTemplate, !done {
+                VStack(alignment: .leading, spacing: 6) {
+                    let meta = w.metaLine(for: t)
+                    if !meta.isEmpty { Text(meta).font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted) }
+                    let ex = w.exerciseLine(for: t)
+                    if !ex.isEmpty { Text(ex).font(.archivo(13)).foregroundStyle(Color.inkSecondary).lineSpacing(3).fixedSize(horizontal: false, vertical: true) }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading).padding(.leading, 50).padding(.bottom, 12)
+            }
+        }
+        .padding(.leading, 14).padding(.trailing, 16)
+        .background(r.isToday ? Color.oreAccent.opacity(0.08) : Color.clear)
+        .overlay(alignment: .leading) { Rectangle().fill(r.isToday ? Color.oreAccent : Color.clear).frame(width: 2) }
+        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
+        return Group {
+            if let workout = r.workout {
+                Button { openedWorkout = workout } label: { content.contentShape(Rectangle()) }
+                    .buttonStyle(.plain).accessibilityIdentifier(AX.home.ledgerRow(r.id))
+            } else {
+                content.accessibilityIdentifier(AX.home.ledgerRow(r.id))
             }
         }
     }
@@ -256,7 +429,6 @@ struct HomeTabView: View {
                         .frame(height: 40)
                         .background(Color.signalDown)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .shadow(color: Color.signalDown.opacity(0.33), radius: 8, y: 4)
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier(AX.home.signOut)
@@ -267,363 +439,6 @@ struct HomeTabView: View {
         .background(Color.surf)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.inkPrimary.opacity(0.13), lineWidth: 1))
-        .shadow(color: Color.black.opacity(0.10), radius: 20, y: 6)
     }
 
-    // MARK: - 1. Masthead Row
-
-    private var mastheadRow: some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .center, spacing: 0) {
-                // Left: accent rect + "ORE" monospaced
-                HStack(spacing: 8) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color.oreAccent)
-                        .frame(width: 14, height: 14)
-                    Text("ORE")
-                        .font(.spaceMono(10, weight: .bold))
-                        .tracking(2)
-                        .foregroundStyle(Color.inkPrimary)
-                }
-                #if DEBUG
-                .onLongPressGesture { workoutViewModel.showPreviewCompletion() }
-                #endif
-                Spacer()
-                // Right: search icon + avatar
-                HStack(spacing: 10) {
-                    Button { showSearch = true } label: {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(Color.inkPrimary)
-                    }
-                    .accessibilityLabel("Search")
-                    .accessibilityIdentifier(AX.home.searchButton)
-                    Button { showProfileMenu = true } label: {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.surf2)
-                            .frame(width: 30, height: 30)
-                            .overlay(
-                                Text(user?.name.prefix(1).uppercased() ?? "?")
-                                    .font(.archivo(13, weight: .black))
-                                    .foregroundStyle(Color.inkPrimary)
-                            )
-                    }
-                    .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.92))
-                    .accessibilityLabel("Profile")
-                    .accessibilityIdentifier(AX.home.profileButton)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 6)
-
-            Rectangle().fill(Color.dsHairLine).frame(height: 1)
-        }
-    }
-
-    // MARK: - 2. Prediction Block
-
-    private func predictionBlock(name: String) -> some View {
-        VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("PREDICTED TODAY · \(splitLabel.uppercased())")
-                            .font(.spaceMono(9))
-                            .tracking(1.5)
-                            .foregroundStyle(Color.accentInk)
-                        Text(name.uppercased())
-                            .font(.archivo(28, weight: .black))
-                            .foregroundStyle(Color.inkPrimary)
-                            .lineLimit(1)
-                            .accessibilityIdentifier(AX.home.predictedName)
-                        HStack(spacing: 8) {
-                            if !lastDoneLabel.isEmpty {
-                                Text(lastDoneLabel)
-                                    .font(.spaceMono(9)).tracking(0.5).foregroundStyle(Color.inkMuted)
-                            }
-                            Text(estDuration)
-                                .font(.spaceMono(9)).tracking(0.5).foregroundStyle(Color.inkMuted)
-                        }
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 4) {
-                        HStack(spacing: 3) {
-                            ForEach(0..<5, id: \.self) { i in
-                                RoundedRectangle(cornerRadius: 1)
-                                    .fill(i < confidenceDots ? Color.oreAccent : Color.inkFaint)
-                                    .frame(width: 5, height: 5)
-                            }
-                        }
-                        Text(confidenceLabel)
-                            .font(Font.mono(8))
-                            .multilineTextAlignment(.trailing)
-                            .foregroundStyle(Color.inkMuted)
-                            .tracking(0.5)
-                    }
-                    .padding(.top, 20)
-                }
-
-                // Exercise chips — wrapping flow layout
-                if let template = predictedTemplate {
-                    ChipFlowLayout(spacing: 6) {
-                        ForEach(template.templateExercises.sorted(by: { $0.order < $1.order })) { ex in
-                            Text(ex.exerciseName.uppercased())
-                                .font(.spaceMono(8))
-                                .foregroundStyle(Color.inkMuted)
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 4)
-                                .background(Color.surf2)
-                                .clipShape(RoundedRectangle(cornerRadius: 5))
-                        }
-                        Button {
-                            showDayPicker = true
-                        } label: {
-                            Text("NOT TODAY? ›")
-                                .font(.spaceMono(9))
-                                .tracking(0.5)
-                                .foregroundStyle(Color.accentInk.opacity(0.8))
-                                .padding(.vertical, 4)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier(AX.home.notToday)
-                    }
-                    .padding(.top, 2)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(Color.surf)
-
-            Rectangle().fill(Color.dsHairLine).frame(height: 1)
-        }
-    }
-
-    // MARK: - 3. KPI 4-up Grid
-
-    private var kpiGrid: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                kpiCell(
-                    label: "STREAK",
-                    value: "\(currentStreak)",
-                    sub: "DAYS",
-                    valueColor: Color.accentInk,
-                    id: AX.home.kpiStreak
-                )
-                Rectangle().fill(Color.dsHairLine).frame(width: 1)
-                kpiCell(
-                    label: "IMPROVED",
-                    value: "\(weekImproved)",
-                    sub: "THIS WK",
-                    valueColor: Color.inkPrimary,
-                    id: AX.home.kpiImproved
-                )
-                Rectangle().fill(Color.dsHairLine).frame(width: 1)
-                kpiCell(
-                    label: "PRs",
-                    value: "\(weekPRs)",
-                    sub: "THIS WK",
-                    valueColor: Color.inkPrimary,
-                    id: AX.home.kpiPRs
-                )
-                Rectangle().fill(Color.dsHairLine).frame(width: 1)
-                kpiCell(
-                    label: "SETS",
-                    value: "\(weekSets)",
-                    sub: "THIS WK",
-                    valueColor: Color.inkPrimary,
-                    id: AX.home.kpiSets
-                )
-            }
-            .frame(maxWidth: .infinity)
-
-            Rectangle().fill(Color.dsHairLine).frame(height: 1)
-        }
-    }
-
-    private func kpiCell(label: String, value: String, sub: String, valueColor: Color, id: String) -> some View {
-        VStack(spacing: 2) {
-            Text(label)
-                .font(.spaceMono(8))
-                .tracking(1.5)
-                .textCase(.uppercase)
-                .foregroundStyle(Color.inkMuted)
-            Text(value)
-                .font(.spaceMono(24, weight: .bold))
-                .foregroundStyle(valueColor)
-                .contentTransition(.numericText())
-                .accessibilityIdentifier(id)
-            Text(sub)
-                .font(.spaceMono(7))
-                .tracking(1.5)
-                .foregroundStyle(Color.inkMuted)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 9)
-        .padding(.horizontal, 10)
-    }
-
-    // MARK: - 4. Week Volume Bars
-
-    private var weekBarsSection: some View {
-        let bars = weekDayBars
-        let maxVal = max(bars.max() ?? 1, 1)
-        let labels = ["M", "T", "W", "T", "F", "S", "S"]
-        let today = todayDayIndex
-        let totalSets = bars.reduce(0, +)
-
-        return VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 8) {
-                // Header row
-                HStack {
-                    Text("WEEKLY VOLUME · SETS")
-                        .font(.spaceMono(9))
-                        .tracking(1.5)
-                        .foregroundStyle(Color.accentInk)
-                    Spacer()
-                    Text("WK \(currentWeekNumber) · \(totalSets) TOTAL")
-                        .font(.spaceMono(9))
-                        .tracking(0.5)
-                        .foregroundStyle(Color.inkMuted)
-                }
-
-                // 7 bars
-                HStack(alignment: .bottom, spacing: 4) {
-                    ForEach(0..<7, id: \.self) { i in
-                        let v = bars[i]
-                        let isPast = i < today
-                        let isToday = i == today
-                        let pct = v > 0 ? Double(v) / Double(maxVal) : 0
-                        let barH = max(pct * 40, v > 0 ? 4 : 3)
-                        let animH = barsAppeared ? max(barH, 3) : 3
-
-                        VStack(spacing: 3) {
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(
-                                    isToday ? Color.oreAccent :
-                                    (isPast && v > 0 ? Color.oreAccent.opacity(0.70) :
-                                     Color.inkFaint.opacity(0.15))
-                                )
-                                .frame(height: animH)
-                                .frame(maxWidth: .infinity)
-                                .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(Double(i) * 0.04), value: barsAppeared)
-                            Text(labels[i])
-                                .font(Font.mono(7))
-                                .foregroundStyle(isToday ? Color.accentInk : Color.inkMuted)
-                                .fontWeight(isToday ? .bold : .regular)
-                        }
-                    }
-                }
-                .frame(height: 50)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-            .padding(.bottom, 8)
-
-            Rectangle().fill(Color.dsHairLine).frame(height: 1)
-        }
-    }
-
-    // MARK: - 5. Recent Workouts Table
-
-    private var recentWorkoutsTable: some View {
-        VStack(spacing: 0) {
-            // Header row — surf2 background
-            HStack(spacing: 0) {
-                Text("RECENT")
-                    .font(.spaceMono(9))
-                    .tracking(1.5)
-                    .foregroundStyle(Color.accentInk)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityIdentifier(AX.home.recent)
-                Text("SETS")
-                    .font(.spaceMono(8))
-                    .tracking(1.5)
-                    .foregroundStyle(Color.inkMuted)
-                    .frame(width: 56, alignment: .center)
-                Text("IMPR")
-                    .font(.spaceMono(8))
-                    .tracking(1.5)
-                    .foregroundStyle(Color.inkMuted)
-                    .frame(width: 56, alignment: .center)
-                Text("VOL▲")
-                    .font(.spaceMono(8))
-                    .tracking(1.5)
-                    .foregroundStyle(Color.inkMuted)
-                    .frame(width: 56, alignment: .trailing)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 5)
-            .background(Color.surf2)
-
-            Rectangle().fill(Color.dsHairLine).frame(height: 1)
-
-            // Workout rows
-            ForEach(Array(recentWorkouts.enumerated()), id: \.element.id) { idx, workout in
-                VStack(spacing: 0) {
-                    HStack(spacing: 0) {
-                        // Name + date column
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text((workout.template?.name ?? "Workout").uppercased())
-                                .font(.archivo(15, weight: .semibold))
-                                .foregroundStyle(Color.inkPrimary)
-                                .lineLimit(1)
-                            Text(relativeDate(workout.date))
-                                .font(.spaceMono(8))
-                                .foregroundStyle(Color.inkMuted)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                        // Worked out with the other KPIs, not here: it compares against the whole history.
-                        let row = idx < kpis.recentRows.count ? kpis.recentRows[idx] : nil
-                        let sets = row?.sets ?? 0
-                        let improvedCount = row?.improved ?? 0
-                        let totalExercises = row?.exerciseCount ?? 1
-
-                        Text("\(sets)")
-                            .font(.spaceMono(11, weight: .bold))
-                            .foregroundStyle(Color.inkMuted)
-                            .frame(width: 56, alignment: .center)
-
-                        Text("\(improvedCount)/\(totalExercises)")
-                            .font(.spaceMono(11, weight: .bold))
-                            .foregroundStyle(Color.accentInk)
-                            .frame(width: 56, alignment: .center)
-
-                        let volDelta = row?.volumeDelta ?? "—"
-                        Text(volDelta)
-                            .font(.spaceMono(11, weight: .bold))
-                            .foregroundStyle(volDelta.hasPrefix("▲") ? Color.signalUp : (volDelta == "—" ? Color.inkMuted : Color.signalDown))
-                            .frame(width: 56, alignment: .trailing)
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityIdentifier(AX.home.recentRow(idx))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-
-                    if idx < recentWorkouts.count - 1 {
-                        Rectangle().fill(Color.dsHairLine).frame(height: 1)
-                    }
-                }
-            }
-        }
-    }
-
-    private func relativeDate(_ date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: date, relativeTo: Date()).uppercased()
-    }
-
-    private func volumeDelta(for workout: Workout) -> String { stats.volumeDelta(for: workout) }
-
-    private func improvedExercises(in workout: Workout) -> Int { stats.improvedExercises(in: workout) }
-
-    // MARK: - Ticker Data
-
-    private func buildTickerItems() -> [TickerItem] {
-        kpis.tickerRows.map { TickerItem(label: $0.label, value: $0.value, direction: $0.up ? .up : .down) }
-    }
 }
-
-// MARK: - Friend Activity Banner

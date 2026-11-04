@@ -41,11 +41,6 @@ struct SupernovaBanner: View {
             TimelineView(.animation(minimumInterval: nil, paused: !transition.isAnimating)) { tl in
                 let text = transition.sourceText(.paywall, at: tl.date)
                 HStack(spacing: 12) {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(.white.opacity(0.18))
-                        .frame(width: 36, height: 36)
-                        .overlay { Image(systemName: "bolt").font(.system(size: 18, weight: .regular)).foregroundStyle(.white) }
-                        .opacity(text[0].opacity).offset(y: text[0].offset)
                     VStack(alignment: .leading, spacing: 2) {
                         SupernovaWordmark(size: 18, tracking: 0.6, prefix: "GO ", nameOpacity: text[1].opacity,
                                           nameOffsetY: text[1].offset, asteriskHidden: transition.bannerAsteriskHidden)

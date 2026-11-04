@@ -10,6 +10,12 @@ struct WorkoutDetailView: View {
     @State private var supernovaService = SupernovaService()
     @State private var postDraft = false
 
+    /// `startEditing` opens it straight in edit mode (from the full workout view's ··· › Edit).
+    init(workout: Workout, startEditing: Bool = false) {
+        self.workout = workout
+        _isEditing = State(initialValue: startEditing)
+    }
+
     private var totalSets: Int { workout.workingSetCount }
     private var totalExercises: Int { workout.exerciseLogs.count }
 
@@ -217,7 +223,13 @@ struct WorkoutDetailView: View {
         return "\(m)M"
     }
 
-    private func duplicateWorkout() {
+    private func duplicateWorkout() { modelContext.duplicate(workout) }
+}
+
+extension ModelContext {
+    /// A draft copy of a finished workout (same exercises and sets), to train it again.
+    func duplicate(_ workout: Workout) {
+        let modelContext = self
         let newWorkout = Workout(isDraft: true)
         newWorkout.user = workout.user
         newWorkout.template = workout.template

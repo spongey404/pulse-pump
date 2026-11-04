@@ -17,7 +17,8 @@ struct SocialTabView: View {
             await viewModel.restorePrivacy()
         }
         .task(id: workouts.count) {
-            await viewModel.syncOwnStats(streak: StreakCalculator.currentStreak(from: workouts.map(\.date)),
+            await viewModel.syncOwnStats(streak: HomeWeekStats(workouts: workouts, templates: []).weekStreak,      // weeks, like everywhere else
+                                         
                                          totalWorkouts: workouts.count)
         }
         .alert("Social", isPresented: Binding(get: { viewModel.lastError != nil }, set: { if !$0 { viewModel.lastError = nil } })) {

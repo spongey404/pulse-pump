@@ -26,6 +26,7 @@ struct MoreScreenHeader<Trailing: View>: View {
                         .frame(width: 36, height: 36)
                         .background(Color.surf2)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .frame(width: 44, height: 44).contentShape(Rectangle())      // the 44 pt hit area; the drawn tile stays 36
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Back")

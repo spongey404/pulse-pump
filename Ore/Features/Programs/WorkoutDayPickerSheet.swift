@@ -7,6 +7,14 @@ struct WorkoutDayPickerSheet: View {
     let onSelect: (WorkoutTemplate) -> Void
     @Environment(\.dismiss) private var dismiss
 
+    /// "5 EXERCISES · AVG 52 MIN" (the average only when there is history), as on the Programs list.
+    static func meta(_ t: WorkoutTemplate) -> String {
+        let n = t.templateExercises.count
+        var parts = ["\(n) EXERCISE\(n == 1 ? "" : "S")"]
+        if let m = ProgramPlan.averageMinutes(durations: t.liveWorkouts.map { ($0.date, $0.duration) }, editedAt: .distantPast) { parts.append("AVG \(m) MIN") }
+        return parts.joined(separator: " · ")
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -15,6 +23,7 @@ struct WorkoutDayPickerSheet: View {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color.surf)
                         .frame(width: 34, height: 34)
+                        .frame(width: 44, height: 44).contentShape(Rectangle())
                         .overlay(
                             Image(systemName: "xmark")
                                 .font(.system(size: 13, weight: .semibold))
@@ -22,6 +31,7 @@ struct WorkoutDayPickerSheet: View {
                         )
                 }
                 .buttonStyle(PressScaleButtonStyle())
+                .accessibilityLabel("Close").accessibilityIdentifier(AX.home.pickerClose)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("WHAT'S TODAY?")
@@ -57,37 +67,29 @@ struct WorkoutDayPickerSheet: View {
                             Button {
                                 onSelect(template)
                             } label: {
-                                HStack(spacing: 14) {
-                                    ZStack {
-                                        Circle()
-                                            .fill(Color.oreAccent.opacity(0.10))
-                                            .frame(width: 40, height: 40)
-                                        Text(String(template.name.prefix(1)).uppercased())
-                                            .font(.archivo(16, weight: .black))
-                                            .foregroundStyle(Color.accentInk)
-                                    }
-                                    VStack(alignment: .leading, spacing: 3) {
+                                HStack(spacing: 12) {
+                                    VStack(alignment: .leading, spacing: 4) {
                                         Text(template.name.uppercased())
-                                            .font(.archivo(16, weight: .semibold))
+                                            .font(.archivo(18, weight: .bold))
                                             .foregroundStyle(Color.inkPrimary)
-                                        Text("\(template.templateExercises.count) EXERCISES")
+                                            .lineLimit(1)
+                                        Text(Self.meta(template))
                                             .font(.spaceMono(9))
-                                            .tracking(0.8)
+                                            .tracking(1.5)
                                             .foregroundStyle(Color.inkMuted)
                                     }
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 11, weight: .medium))
-                                        .foregroundStyle(Color.inkFaint)
+                                    Spacer(minLength: 0)
+                                    Text("›").font(.spaceMono(16, weight: .bold)).foregroundStyle(Color.inkMuted)
                                 }
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 14)
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(PressScaleButtonStyle(scaleAmount: 0.98))
+                            .accessibilityIdentifier(AX.home.pickerRow(idx))
 
                             if idx < templates.count - 1 {
-                                Rectangle().fill(Color.dsHairLine).frame(height: 1).padding(.leading, 70)
+                                Rectangle().fill(Color.dsHairLine).frame(height: 1).padding(.leading, 16)
                             }
                         }
                         Color.clear.frame(height: 40)

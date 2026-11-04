@@ -110,7 +110,15 @@ enum AX {
         static let signOut = "home.signOut"
         static let profileCancel = "home.profileCancel"
         static let predictedName = "home.predictedName"
+        static let mark = "home.mark"
+        static let ledgerHeader = "home.ledger.header"
+        static let newUserNote = "home.newUserNote"
+        static let kpiVolume = "home.kpi.volume"
+        static func ledgerRow(_ i: Int) -> String { "home.ledger.\(i)" }
         static let notToday = "home.notToday"
+        static let heroLabel = "home.heroLabel"
+        static func pickerRow(_ i: Int) -> String { "home.picker.row.\(i)" }
+        static let pickerClose = "home.picker.close"
         static let kpiStreak = "home.kpi.streak"
         static let kpiImproved = "home.kpi.improved"
         static let kpiPRs = "home.kpi.prs"
@@ -199,6 +207,22 @@ enum AX {
         static let postNoBodyMap = "completion.menu.postNoBodyMap"
     }
 
+    /// The shared calendar (History fullscreen, Body modal).
+    enum calendar {
+        static let root = "calendar.root"
+        static let prev = "calendar.prev"
+        static let next = "calendar.next"
+        static let title = "calendar.title"
+        static func week(_ n: Int) -> String { "calendar.week.\(n)" }
+        /// `key` is "yyyy-MM-dd".
+        static func day(_ key: String) -> String { "calendar.day.\(key)" }
+        static let card = "calendar.card"
+        static let cardOpen = "calendar.card.open"
+        static let showOnMap = "calendar.showOnMap"
+        static let modal = "calendar.modal"
+        static let close = "calendar.close"
+    }
+
     enum history {
         static let screen = "history.screen"
         static let empty = "history.empty"
@@ -229,6 +253,11 @@ enum AX {
         static let search = "search.field"
         static func searchRow(_ name: String) -> String { "search.row." + slug(name) }
         static func searchPill(_ label: String) -> String { "search.pill." + slug(label) }
+    }
+
+    enum cloudSync {
+        static let locked = "cloudSync.locked"
+        static let lockedCTA = "cloudSync.locked.cta"
     }
 
     enum programs {
@@ -287,11 +316,21 @@ enum AX {
         static let muscleSheet = "body.muscleSheet"
         static let modeVolume = "body.mode.volume"
         static let modeRecency = "body.mode.recency"
+        static let modeFrequency = "body.mode.recency"
+        static let focusChip = "body.focusChip"
+        static let mapSwap = "body.map.swap"
+        static let dayNote = "body.dayNote"
+        static let locked = "body.locked"
+        static let lockedCTA = "body.locked.cta"
+        static let statGroups = "body.stat.groups"
+        static let statMuscles = "body.stat.muscles"
+        static func row(_ id: String) -> String { "body.row.\(id)" }
     }
 
     enum more {
         static let screen = "more.screen"
         static let userName = "more.userName"
+        static let profile = "more.profile"
         static let signOutCancel = "more.signout.cancel"
         static let signOutConfirm = "more.signout.confirm"
     }

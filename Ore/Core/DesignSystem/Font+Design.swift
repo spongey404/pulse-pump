@@ -84,3 +84,9 @@ extension View {
         modifier(CardLabelStyle(size: size))
     }
 }
+
+extension View {
+    /// A line box like CSS `line-height: normal` for Space Mono (ascent 1.12 + descent 0.361 = 1.481 em). SwiftUI's own line is shorter, so
+    /// stacks of mono labels came out a point or two tighter than the design.
+    func monoLine(_ size: CGFloat) -> some View { frame(minHeight: (size * 1.481).rounded(.up)) }
+}

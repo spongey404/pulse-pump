@@ -141,6 +141,7 @@ struct SupernovaMemberPage: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             ZStack {
+                // The one blur left in the app: the member page's glass card (Supernova Member Flow design). Everything else dims, never blurs.
                 Rectangle().fill(.ultraThinMaterial.opacity(0.6)).environment(\.colorScheme, .dark)
                 LinearGradient(colors: [.white.opacity(0.22), .white.opacity(0.08)], startPoint: .topLeading, endPoint: .bottomTrailing)
             }

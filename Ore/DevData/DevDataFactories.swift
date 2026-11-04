@@ -47,8 +47,8 @@ enum DevDay: String, CaseIterable {
         }
     }
 
-    /// Weekday (1 = Sun … 7 = Sat, `Calendar` convention) → day. Push/Pull/Legs twice a week.
-    static let schedule: [Int: DevDay] = [2: .push, 3: .pull, 4: .legs, 6: .push, 7: .pull, 1: .legs]
+    /// Weekday (1 = Sun … 7 = Sat, `Calendar` convention) → day. Push/Pull/Legs twice a week, Mon–Sat, Sunday off: the same days the program gets (`ProgramPlan.spread(6)`), so Home's ledger agrees.
+    static let schedule: [Int: DevDay] = [2: .push, 3: .pull, 4: .legs, 5: .push, 6: .pull, 7: .legs]
 }
 
 enum DevDataFactory {

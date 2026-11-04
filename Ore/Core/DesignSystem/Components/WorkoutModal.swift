@@ -77,10 +77,6 @@ struct WorkoutModalModifier: ViewModifier {
                         .frame(height: 40)
                         .background { if primaryDestructive { Color.oreAccent } else { AccentFill(priority: 10) } }
                         .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .shadow(
-                            color: Color.oreAccent.opacity(0.33),
-                            radius: 8, y: 4
-                        )
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier(AX.modal.primary)
@@ -92,7 +88,6 @@ struct WorkoutModalModifier: ViewModifier {
         .background(Color.surf)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.inkPrimary.opacity(0.13), lineWidth: 1))
-        .shadow(color: Color.black.opacity(0.10), radius: 20, y: 6)
     }
 }
 

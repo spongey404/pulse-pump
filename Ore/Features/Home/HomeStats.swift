@@ -126,7 +126,7 @@ struct HomeStats {
         // glued to the number) matching the ticker's own arrow-to-value gap.
         if pct > 0 { return "▲ \(pct)%" }
         if pct < 0 { return "▼ \(abs(pct))%" }
-        return "▲ 0%"
+        return "—"
     }
 
     /// How many of the workout's exercises beat their best set volume from every earlier session. One pass over

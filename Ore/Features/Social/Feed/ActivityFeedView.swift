@@ -47,7 +47,7 @@ struct ActivityFeedView: View {
                             Circle().fill(Color.oreAccent).frame(width: 8, height: 8)
                         }
                     }
-                    .frame(width: 44, height: 32)
+                    .frame(width: 44, height: 44).padding(.vertical, -6)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Activity")
@@ -57,6 +57,7 @@ struct ActivityFeedView: View {
                     YourProfileView(viewModel: viewModel)
                 } label: {
                     Avatar(initial: viewModel.myName, size: 32, showBorder: false)
+                        .frame(width: 44, height: 44).contentShape(Rectangle()).padding(.vertical, -6)
                 }
                 .accessibilityLabel("Your profile")
                 .accessibilityIdentifier(AX.social.profile)
@@ -76,7 +77,7 @@ struct ActivityFeedView: View {
                             .font(Font.spaceMono(10, weight: .bold))
                             .tracking(1)
                             .foregroundStyle(isActive ? Color.inkPrimary : Color.inkMuted)
-                            .padding(.vertical, 10)
+                            .padding(.vertical, 14)
                             .padding(.bottom, 2)
                             .overlay(alignment: .bottom) {
                                 Rectangle().fill(isActive ? Color.oreAccent : Color.clear).frame(height: 2)

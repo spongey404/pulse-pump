@@ -13,7 +13,9 @@ struct CommentsView: View {
     @State private var newCommentText = ""
     @State private var isLoading = false
     @State private var isPosting = false
+    /// The commenter whose name or tile was tapped: their profile opens over the comments.
     @State private var commentToReport: FeedComment?
+    @State private var profileOf: FeedComment?
     @Environment(\.dismiss) private var dismiss
 
     private var comments: [FeedComment] { viewModel.comments[item.id] ?? [] }
@@ -37,7 +39,6 @@ struct CommentsView: View {
             .background(Color.canvasBg)
 
             Color(hex: "#151A21").opacity(0.45)
-                .background(.ultraThinMaterial)
                 .ignoresSafeArea()
                 .onTapGesture { dismiss() }
 
@@ -79,7 +80,13 @@ struct CommentsView: View {
             .padding(.top, 170)
             .ignoresSafeArea(.container, edges: .bottom)   // the keyboard still pushes the composer up
         }
-        .background(Color.canvasBg.ignoresSafeArea())
+        .background(
+            Color.canvasBg.ignoresSafeArea()
+                // on the background so the profile sheet and the options dialog below are not two presentations on one view
+                .sheet(item: $profileOf) { c in
+                    NavigationStack { FriendProfileView(uid: c.userId, handle: c.handle, name: c.username, viewModel: viewModel) }
+                }
+        )
         .task {
             isLoading = true
             await viewModel.loadComments(postId: item.id)
@@ -122,10 +129,16 @@ struct CommentsView: View {
 
     private func commentRow(_ comment: FeedComment) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            tile(comment.username, size: 32, radius: 9, fill: Color.surf2, ink: Color.inkSecondary, font: 13)
+            Button { if comment.userId != viewModel.currentUid { profileOf = comment } } label: {
+                tile(comment.username, size: 32, radius: 9, fill: Color.surf2, ink: Color.inkSecondary, font: 13)
+            }
+            .buttonStyle(.plain).accessibilityLabel("Open \(comment.username)'s profile")
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(comment.username).font(.archivo(15, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                    Button { if comment.userId != viewModel.currentUid { profileOf = comment } } label: {
+                        Text(comment.username).font(.archivo(15, weight: .bold)).foregroundStyle(Color.inkPrimary)
+                    }
+                    .buttonStyle(.plain)
                     Text(SocialAge.short(comment.date)).font(.spaceMono(8)).tracking(1.5).foregroundStyle(Color.inkMuted)
                 }
                 Text(comment.text).font(.archivo(14)).foregroundStyle(Color.inkPrimary)
@@ -138,11 +151,13 @@ struct CommentsView: View {
                     }
                     Button { reply(to: comment) } label: {
                         Text("REPLY").font(.spaceMono(9, weight: .bold)).tracking(1.5).foregroundStyle(Color.inkMuted)
+                            .frame(minWidth: 44, alignment: .leading).contentShape(Rectangle().inset(by: -16))   // a 44 pt hit area, the row's height unchanged
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Reply to \(comment.username)")
                     Button { commentToReport = comment } label: {
                         Text("···").font(.spaceMono(9, weight: .bold)).tracking(1.5).foregroundStyle(Color.inkMuted)
+                            .frame(minWidth: 44).contentShape(Rectangle().inset(by: -16))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Comment options")

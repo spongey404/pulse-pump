@@ -75,9 +75,14 @@ final class WorkoutUITests: UITestCase {
         waitForLabel(el(AX.home.kpiSets), matching: "==", "\(setsBefore + 1)")
 
         home.openSearch()
-        type(String(exercise.lowercased().split(separator: " ").first ?? ""), into: AX.exercise.search)   // multi-word queries find nothing in Global Search today
-        // The last word alone ("up") matches several lifts, so take the row of the exercise that was logged.
+        // Global Search lists three rows a group, so a word shared by many lifts ("barbell") may not show the logged one: try each word.
         let hit = app.descendants(matching: .any)[AX.exercise.searchRow(exercise)].firstMatch
+        var found = false
+        for word in exercise.lowercased().split(separator: " ").map(String.init) {      // multi-word queries find nothing today
+            replaceText(in: AX.exercise.search, with: word)
+            if hit.waitForExistence(timeout: 4) { found = true; break }
+        }
+        XCTAssertTrue(found, "the logged exercise \(exercise) is found by one of its words")
         tap(hit, "exercise search result")
         require(el(AX.exercise.detailProgress), "exercise progress section")
         require(labelContaining("300"), "the new 300 weight PR")

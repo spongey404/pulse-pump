@@ -36,7 +36,7 @@ struct CustomTabBar: View {
             }
         }
         .frame(height: 56)
-        .background(.regularMaterial)
+        .background(Color.canvasBg)
         .overlay(alignment: .top) {
             Rectangle().fill(Color.dsHairLine).frame(height: 0.5)
         }

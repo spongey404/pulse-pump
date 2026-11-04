@@ -82,12 +82,6 @@ struct BodyPage {
 
     var totalSets: Int { Int(t.require(t.el(AX.body.totalSets), "hero total").label) ?? -1 }
 
-    /// Taps inside the front figure where the chest is drawn: the artwork is 1640 x 2360 and fills the element; the chest
-    /// spans x 603..1037, y 693..882 (BodyMap geometry), so (700, 790) is on a pec.
-    func tapChestOnFrontFigure() {
-        let figure = t.require(t.el(AX.body.figureFront), "front body map")
-        figure.coordinate(withNormalizedOffset: CGVector(dx: 700.0 / 1640, dy: 790.0 / 2360)).tap()
-    }
 }
 
 struct SettingsPage {

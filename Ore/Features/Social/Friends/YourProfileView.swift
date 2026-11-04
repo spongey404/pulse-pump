@@ -7,6 +7,7 @@ struct YourProfileView: View {
     @Bindable var viewModel: SocialViewModel
     @Environment(\.dismiss) private var dismiss
     @Query private var users: [User]
+    @Query(filter: #Predicate<Workout> { !$0.isDraft && $0.deletedAt == nil }, sort: \Workout.date, order: .reverse) private var workouts: [Workout]
     private var localUser: User? { users.first }
 
     @State private var showFindFriends = false
@@ -57,7 +58,7 @@ struct YourProfileView: View {
                     .padding(16)
 
                     HStack(spacing: 6) {
-                        ProfileFigure(label: "STREAK", value: "\(viewModel.myProfile?.currentStreak ?? 0)D")
+                        ProfileFigure(label: "STREAK", value: "\(HomeWeekStats(workouts: workouts, templates: []).weekStreak) WK")
                         ProfileFigure(label: "WORKOUTS", value: "\(viewModel.myProfile?.totalWorkouts ?? 0)")
                         ProfileFigure(label: "FOLLOWERS", value: "\(followersCount)")
                         ProfileFigure(label: "FOLLOWING", value: "\(following.count)")

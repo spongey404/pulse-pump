@@ -4,18 +4,21 @@ import SwiftData
 struct WorkoutHistoryView: View {
     var onBack: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var scheme
     @Environment(\.modelContext) private var modelContext
     @Query(filter: #Predicate<Workout> { !$0.isDraft && $0.deletedAt == nil }, sort: \Workout.date, order: .reverse)
     private var workouts: [Workout]
 
+    @Query(filter: #Predicate<WorkoutTemplate> { $0.deletedAt == nil }) private var templates: [WorkoutTemplate]
+    #if DEBUG
+    // `-debugHistoryMode calendar` opens the calendar view for visual checks.
+    @State private var viewMode: HistoryViewMode = UserDefaults.standard.string(forKey: "debugHistoryMode") == "calendar" ? .calendar : .list
+    #else
     @State private var viewMode: HistoryViewMode = .list
-    @State private var selectedDate = Date()
-    @State private var calendarMonth: Date = {
-        let c = Calendar.current
-        return c.date(from: c.dateComponents([.year, .month], from: Date())) ?? Date()
-    }()
+    #endif
+    @State private var calendarSelection: CalendarSelection = .day(Date())
+    @State private var openedWorkout: Workout?
     @State private var workoutToDelete: Workout?
-    @State private var selectedWorkout: Workout?
 
     // MARK: - Helpers
 
@@ -39,8 +42,8 @@ struct WorkoutHistoryView: View {
         }
         .background(Color.canvasBg.ignoresSafeArea())
         .navigationBarHidden(true)
-        .navigationDestination(item: $selectedWorkout) { w in
-            WorkoutDetailView(workout: w)
+        .navigationDestination(item: $openedWorkout) { w in
+            LocalWorkoutFullView(workout: w, editable: true).navigationBarHidden(true)
         }
         .confirmationDialog("Delete Workout?", isPresented: .init(
             get: { workoutToDelete != nil },
@@ -54,209 +57,57 @@ struct WorkoutHistoryView: View {
         }
     }
 
-    // MARK: - Header
+    // MARK: - Header (Ore History Calendar Final)
 
     private var header: some View {
-        MoreScreenHeader(title: "HISTORY", onBack: { (onBack ?? { dismiss() })() }) {
+        HStack(spacing: 12) {
+            Button { (onBack ?? { dismiss() })() } label: {
+                Text("‹").font(.archivo(22)).foregroundStyle(Color.inkPrimary)
+                    .frame(width: 44, height: 44).background(Color.surf2)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+            .buttonStyle(.plain).accessibilityLabel("Back").accessibilityIdentifier(AX.nav.back)
+            Text("HISTORY").font(.archivo(28, weight: .black)).tracking(0.3).foregroundStyle(Color.inkPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading).accessibilityIdentifier(AX.nav.title("HISTORY"))
             HStack(spacing: 2) {
                 ForEach(HistoryViewMode.allCases, id: \.self) { mode in
                     let active = viewMode == mode
                     Button { withAnimation(.easeInOut(duration: 0.15)) { viewMode = mode } } label: {
-                        Image(systemName: mode == .list ? "list.bullet" : "calendar")
-                            .font(.system(size: 13, weight: .medium))
+                        historyIcon(mode)
+                            .stroke(style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
+                            .frame(width: 20, height: 20)
                             .foregroundStyle(active ? Color.accentInk : Color.inkMuted)
-                            .frame(width: 36, height: 30)
-                            .background(active ? Color.canvasBg : Color.clear)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .frame(width: 44, height: 36)
+                        .background(active ? (scheme == .dark ? Color.surf : Color.white) : Color.clear)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(mode == .list ? "List view" : "Calendar view")
                     .accessibilityIdentifier(mode == .list ? AX.history.modeList : AX.history.modeCalendar)
                 }
             }
-            .padding(3)
-            .background(Color.surf2)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .padding(3).background(Color.surf2).clipShape(RoundedRectangle(cornerRadius: 10))
         }
+        .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 12)
+        .padding(.bottom, 1)
+        .overlay(alignment: .bottom) { Rectangle().fill(Color.dsHairLine).frame(height: 1) }
     }
 
-    // MARK: - Calendar
+    private func historyIcon(_ mode: HistoryViewMode) -> AnyShape {
+        mode == .list ? AnyShape(HistoryListIcon()) : AnyShape(HistoryCalendarIcon())
+    }
+
+    // MARK: - Calendar (the shared component, fullscreen)
 
     private var calendarContent: some View {
         ScrollView {
-            VStack(spacing: 0) {
-                calendarGrid
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-
-                Rectangle().fill(Color.dsHairLine).frame(height: 1)
-
-                workoutPreviewSection
-                    .padding(.horizontal, 16)
-                    .padding(.top, 14)
-            }
+            OreCalendarView(mode: .fullscreen, source: calendarData, selection: $calendarSelection, cardAction: .openWorkout,
+                            onOpenWorkout: { s in openedWorkout = workouts.first { $0.id == s.id } })
         }
+        .scrollIndicators(.hidden)
     }
 
-    private var calendarGrid: some View {
-        VStack(spacing: 0) {
-            // Month nav
-            HStack {
-                Button { shiftMonth(-1) } label: {
-                    Text("‹")
-                        .font(.spaceMono(18))
-                        .foregroundStyle(Color.inkMuted)
-                        .frame(width: 32, height: 32)
-                }
-                .buttonStyle(.plain)
-
-                Text(monthYearLabel(calendarMonth))
-                    .font(.archivo(20, weight: .black))
-                    .foregroundStyle(Color.inkPrimary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-
-                Button { shiftMonth(1) } label: {
-                    Text("›")
-                        .font(.spaceMono(18))
-                        .foregroundStyle(Color.inkMuted)
-                        .frame(width: 32, height: 32)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.bottom, 10)
-
-            // Day letter headers
-            HStack(spacing: 0) {
-                ForEach(["M","T","W","T","F","S","S"], id: \.self) { d in
-                    Text(d)
-                        .font(.spaceMono(9))
-                        .tracking(0.8)
-                        .foregroundStyle(Color.inkMuted)
-                        .frame(maxWidth: .infinity)
-                }
-            }
-            .padding(.bottom, 6)
-
-            // Fixed 6-row grid (always 42 cells)
-            let cols = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
-            let days = calendarDays()
-            LazyVGrid(columns: cols, spacing: 4) {
-                ForEach(0..<42, id: \.self) { i in
-                    if i < days.count {
-                        calCell(days[i])
-                    } else {
-                        Color.clear.aspectRatio(1, contentMode: .fit)
-                    }
-                }
-            }
-        }
-    }
-
-    private func calCell(_ day: CalDay) -> some View {
-        let isSelected = day.date.map { Calendar.current.isDate($0, inSameDayAs: selectedDate) } ?? false
-        let isToday    = day.date.map { Calendar.current.isDateInToday($0) } ?? false
-        let hasWorkout = day.date.map { workoutDateSet.contains(dateKey($0)) } ?? false
-
-        let bg: Color = isSelected ? Color.oreAccent
-                      : hasWorkout ? Color.accentSoft
-                      : Color.clear
-        let border: Color = isSelected ? Color.accentInk
-                          : hasWorkout ? Color.accentInk.opacity(0.35)
-                          : day.date != nil ? Color.dsHairLine
-                          : Color.clear
-        let numColor: Color = isSelected ? .white
-                            : hasWorkout || isToday ? Color.accentInk
-                            : Color.inkMuted
-
-        return Button {
-            if let date = day.date { selectedDate = date }
-        } label: {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(bg)
-                    .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(border, lineWidth: 1))
-
-                VStack(spacing: 2) {
-                    if let d = day.day {
-                        Text("\(d)")
-                            .font(.spaceMono(11, weight: hasWorkout || isSelected || isToday ? .bold : .regular))
-                            .foregroundStyle(numColor)
-                        if hasWorkout && !isSelected {
-                            Circle()
-                                .fill(Color.oreAccent)
-                                .frame(width: 4, height: 4)
-                        } else if isSelected {
-                            Circle()
-                                .fill(Color.white)
-                                .frame(width: 4, height: 4)
-                        } else {
-                            Color.clear.frame(width: 4, height: 4)
-                        }
-                    }
-                }
-            }
-            .aspectRatio(1, contentMode: .fit)
-        }
-        .buttonStyle(.plain)
-        .disabled(day.date == nil)
-    }
-
-    @ViewBuilder
-    private var workoutPreviewSection: some View {
-        let dayWorkouts = workoutsOn(selectedDate)
-        if dayWorkouts.isEmpty {
-            VStack(spacing: 6) {
-                Spacer().frame(height: 24)
-                Text("NO WORKOUT")
-                    .font(.archivo(20, weight: .black))
-                    .foregroundStyle(Color.inkFaint)
-                Text("No workout logged on this date.")
-                    .font(.archivo(13))
-                    .foregroundStyle(Color.inkMuted)
-                Spacer().frame(height: 24)
-            }
-            .frame(maxWidth: .infinity)
-        } else {
-            VStack(spacing: 10) {
-                ForEach(dayWorkouts) { workout in
-                    Button { selectedWorkout = workout } label: {
-                        calWorkoutCard(workout)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-
-    private func calWorkoutCard(_ workout: Workout) -> some View {
-        let sets = workout.workingSetCount
-        let mins = Int(workout.duration) / 60
-        let secs = Int(workout.duration) % 60
-        let dateLabel = calDateLabel(workout.date)
-        return VStack(alignment: .leading, spacing: 6) {
-            Text(dateLabel)
-                .font(.spaceMono(8))
-                .tracking(1.3)
-                .foregroundStyle(Color.inkMuted)
-            Text((workout.template?.name ?? "Workout").uppercased())
-                .font(.archivo(20, weight: .black))
-                .foregroundStyle(Color.inkPrimary)
-            HStack(spacing: 8) {
-                Text("\(sets) SETS")
-                    .font(.spaceMono(9))
-                    .foregroundStyle(Color.inkMuted)
-                Text("·").font(.spaceMono(9)).foregroundStyle(Color.inkFaint)
-                Text(String(format: "%d:%02d", mins, secs))
-                    .font(.spaceMono(9))
-                    .foregroundStyle(Color.inkMuted)
-            }
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.surf)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.dsHairLine, lineWidth: 1))
-    }
+    private var calendarData: WorkoutCalendarData { WorkoutCalendarData(workouts: workouts, templates: templates) }
 
     // MARK: - List
 
@@ -272,7 +123,7 @@ struct WorkoutHistoryView: View {
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
                     ForEach(group.workouts) { workout in
-                        Button { selectedWorkout = workout } label: {
+                        Button { openedWorkout = workout } label: {
                             listRow(workout)
                         }
                         .buttonStyle(OreRowPressStyle())
@@ -313,12 +164,12 @@ struct WorkoutHistoryView: View {
         }
     }
 
-    /// Row: the workout's name, then "Sat 25 Oct · 62 min · 24 sets" (real numbers only) and a ›.
+    /// Row: the workout's name, then "SAT 25 OCT · 62 MIN · 24 SETS" in Space Mono caps (real numbers only) and a ›.
     private func listRow(_ workout: Workout) -> some View {
         let sets = workout.workingSetCount
         let mins = Int(workout.duration) / 60
-        let f = DateFormatter(); f.dateFormat = "EEE d MMM"
-        let detail = "\(f.string(from: workout.date)) · \(mins) min · \(sets) \(sets == 1 ? "set" : "sets")"
+        let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "EEE d MMM"
+        let detail = "\(f.string(from: workout.date).uppercased()) · \(mins) MIN · \(sets) \(sets == 1 ? "SET" : "SETS")"
         return VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 16) {
                 Text(workout.template?.name ?? "Workout")
@@ -326,8 +177,7 @@ struct WorkoutHistoryView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text("›").font(.spaceMono(16)).foregroundStyle(Color.inkGhost)
             }
-            Text(detail).font(.archivo(12)).foregroundStyle(Color.inkMuted)
-                .cssLineHeight(fontName: "Archivo-Regular", size: 12, multiple: 1.4)
+            Text(detail).font(.spaceMono(9)).tracking(1.5).foregroundStyle(Color.inkMuted)
         }
         .padding(.vertical, 14).padding(.horizontal, 16)
         .frame(minHeight: 44).frame(maxWidth: .infinity, alignment: .leading)
@@ -353,17 +203,6 @@ struct WorkoutHistoryView: View {
     }
 
     // MARK: - Calendar helpers
-
-    private typealias CalDay = MonthGridDay
-
-    private func calendarDays() -> [CalDay] { MonthGrid.days(for: calendarMonth) }
-
-    private func shiftMonth(_ delta: Int) {
-        let cal = Calendar.current
-        if let newMonth = cal.date(byAdding: .month, value: delta, to: calendarMonth) {
-            calendarMonth = newMonth
-        }
-    }
 
     private func monthYearLabel(_ date: Date) -> String {
         let f = DateFormatter(); f.dateFormat = "MMMM yyyy"
@@ -431,5 +270,31 @@ struct HistoryWorkoutRow: View {
             .padding(.vertical, 12)
             Rectangle().fill(Color.dsHairLine).frame(height: 1)
         }
+    }
+}
+
+
+/// The History view switch's icons, drawn on a 24-unit grid like the design's (Lucide: list, calendar).
+struct HistoryListIcon: Shape {
+    func path(in r: CGRect) -> Path {
+        let k = r.width / 24
+        var p = Path()
+        for y in [6.0, 12, 18] {
+            p.move(to: CGPoint(x: 8 * k, y: y * k)); p.addLine(to: CGPoint(x: 21 * k, y: y * k))
+            p.move(to: CGPoint(x: 3 * k, y: y * k)); p.addLine(to: CGPoint(x: 3.01 * k, y: y * k))
+        }
+        return p
+    }
+}
+
+struct HistoryCalendarIcon: Shape {
+    func path(in r: CGRect) -> Path {
+        let k = r.width / 24
+        var p = Path()
+        p.addRoundedRect(in: CGRect(x: 3 * k, y: 4 * k, width: 18 * k, height: 18 * k), cornerSize: CGSize(width: 2 * k, height: 2 * k))
+        p.move(to: CGPoint(x: 16 * k, y: 2 * k)); p.addLine(to: CGPoint(x: 16 * k, y: 6 * k))
+        p.move(to: CGPoint(x: 8 * k, y: 2 * k)); p.addLine(to: CGPoint(x: 8 * k, y: 6 * k))
+        p.move(to: CGPoint(x: 3 * k, y: 10 * k)); p.addLine(to: CGPoint(x: 21 * k, y: 10 * k))
+        return p
     }
 }

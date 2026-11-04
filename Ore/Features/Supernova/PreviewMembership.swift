@@ -1,11 +1,11 @@
 import SwiftUI
 
-/// A switch between "Supernova member" and "free" for comparing the two experiences on a test build. It exists only when the
-/// build defines `PREVIEW_TOOLS` (or is DEBUG): a normal Release or App Store build has no toggle and `forced` is always nil.
+/// A switch between "Supernova member" and "free" for comparing the two experiences on a test build. It exists only in DEBUG
+/// builds: any Release or App Store build has no toggle and `forced` is always nil.
 enum PreviewMembership {
     static let key = "previewMembership"   // "member" | "free" | absent (= the real state)
 
-    #if DEBUG || PREVIEW_TOOLS
+    #if DEBUG
     static let isAvailable = true
     /// The membership this build is pretending to have, or nil to use the real StoreKit state.
     static var forced: Bool? {

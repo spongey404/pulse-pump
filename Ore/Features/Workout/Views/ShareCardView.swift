@@ -25,7 +25,6 @@ struct ShareCardView: View {
         .padding(20)
         .background(Color(.systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
     }
 
     @ViewBuilder

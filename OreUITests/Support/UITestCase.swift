@@ -223,6 +223,19 @@ class UITestCase: XCTestCase {
         app.swipeDown()
     }
 
+    /// Polls until `condition` holds; false when it doesn't within the time (a non-failing wait).
+    func waitUntil(timeout: TimeInterval = 10, _ condition: () -> Bool) -> Bool {
+        let end = Date().addingTimeInterval(timeout)
+        while !condition() {
+            if Date() > end { return false }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        return true
+    }
+
+    /// Scrolls the nearest scroll view back up.
+    func scrollUp(swipes: Int = 4) { for _ in 0..<swipes { app.swipeDown() } }
+
     /// Scrolls the nearest scroll view until the element is hittable.
     func scrollTo(_ element: XCUIElement, maxSwipes: Int = 8, file: StaticString = #filePath, line: UInt = #line) {
         var swipes = 0
