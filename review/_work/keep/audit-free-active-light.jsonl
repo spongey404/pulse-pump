@@ -1,0 +1,42 @@
+{"depth":"0","key":"home","parent":"","path":"[{\"h\":0,\"id\":\"tab.home\",\"kind\":\"button\",\"label\":\"home\",\"scrolls\":0,\"w\":0,\"x\":0,\"y\":0}]","shot":"01-home-free-active-light.png","title":"home","type":"screen","via":"tab"}
+{"depth":"0","key":"programs","parent":"","path":"[{\"h\":0,\"id\":\"tab.programs\",\"kind\":\"button\",\"label\":\"programs\",\"scrolls\":0,\"w\":0,\"x\":0,\"y\":0}]","shot":"02-programs-free-active-light.png","title":"programs","type":"screen","via":"tab"}
+{"depth":"0","key":"body","parent":"","path":"[{\"h\":0,\"id\":\"tab.body\",\"kind\":\"button\",\"label\":\"body\",\"scrolls\":0,\"w\":0,\"x\":0,\"y\":0}]","shot":"03-body-free-active-light.png","title":"body","type":"screen","via":"tab"}
+{"depth":"1","key":"body>calendar","parent":"body","path":"[{\"h\":0,\"id\":\"tab.body\",\"kind\":\"button\",\"label\":\"body\",\"scrolls\":0,\"w\":0,\"x\":0,\"y\":0},{\"h\":44,\"id\":\"body.calendar\",\"kind\":\"button\",\"label\":\"Calendar\",\"scrolls\":0,\"w\":44,\"x\":355,\"y\":83}]","shot":"04-calendar-body-free-active-light.png","title":"BODY","type":"screen","via":"Calendar"}
+{"destination":"","element":"Profile","id":"home.profile","kind":"button","note":"tap changed nothing on screen","screen":"home","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"Search","id":"home.search","kind":"button","note":"tap changed nothing on screen","screen":"home","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"NOT TODAY? ›","id":"home.notToday","kind":"button","note":"looks tappable but nothing happens","screen":"home","shot":"","status":"FAKE AFFORDANCE","type":"entry"}
+{"destination":"","element":"MON, PUSH DAY, 16, ▲ 5%","id":"home.ledger.0","kind":"button","note":"tap changed nothing on screen","screen":"home","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"TUE, PULL DAY, 17, ▼ 2%","id":"home.ledger.1","kind":"button","note":"tap changed nothing on screen","screen":"home","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"START WORKOUT, ›","id":"home.startWorkout","kind":"button","note":"not tapped: ends the session, deletes, spends, posts or leaves the app","screen":"home","shot":"","status":"SKIPPED","type":"entry"}
+{"destination":"","element":"(unlabelled button)","id":"","kind":"button","note":"tap changed nothing on screen","screen":"home","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"(unlabelled button)","id":"","kind":"button","note":"tap changed nothing on screen","screen":"home","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"Close","id":"xmark","kind":"button","note":"tap changed nothing on screen","screen":"programs","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"L, LEG DAY, 5 EXERCISES","id":"","kind":"button","note":"tap changed nothing on screen","screen":"programs","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"P, PULL DAY, 5 EXERCISES","id":"","kind":"button","note":"tap changed nothing on screen","screen":"programs","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"P, PUSH DAY, 5 EXERCISES","id":"","kind":"button","note":"tap changed nothing on screen","screen":"programs","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"Calendar","id":"body.calendar","kind":"button","note":"changed in place (110 labels)","screen":"body>calendar","shot":"","status":"OK","type":"entry"}
+{"destination":"","element":"Close calendar","id":"calendar.close","kind":"button","note":"tap changed nothing on screen","screen":"body>calendar","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"Previous month","id":"calendar.prev","kind":"button","note":"tap changed nothing on screen","screen":"body>calendar","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"Next month","id":"calendar.next","kind":"button","note":"changed in place (42 labels)","screen":"body>calendar","shot":"","status":"OK","type":"entry"}
+{"destination":"","element":"Week 44","id":"calendar.week.44","kind":"button","note":"tap changed nothing on screen","screen":"body>calendar","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"1 LEGS 17","id":"calendar.day.2026-11-1","kind":"button","note":"tap changed nothing on screen","screen":"body>calendar","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"2 PUSH 16","id":"calendar.day.2026-11-2","kind":"button","note":"tap changed nothing on screen","screen":"body>calendar","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"Week 45","id":"calendar.week.45","kind":"button","note":"tap changed nothing on screen","screen":"body>calendar","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"WEEK 45, WHOLE WEEK, 3 SESSIONS · 50 SETS, SHOW ON MAP ›","id":"calendar.card","kind":"button","note":"looks tappable but nothing happens","screen":"body>calendar","shot":"","status":"FAKE AFFORDANCE","type":"entry"}
+{"destination":"","element":"(unlabelled button)","id":"","kind":"button","note":"changed in place (31 labels)","screen":"body>calendar","shot":"","status":"OK","type":"entry"}
+{"destination":"","element":"(unlabelled button)","id":"","kind":"button","note":"changed in place (22 labels)","screen":"body>calendar","shot":"","status":"OK","type":"entry"}
+{"destination":"BODY","element":"Calendar","id":"body.calendar","kind":"button","note":"no way back found from BODY","screen":"body","shot":"04-calendar-body-free-active-light.png","status":"TRAP","type":"entry"}
+{"destination":"","element":"FREQUENCY, *","id":"body.mode.recency","kind":"button","note":"changed in place (42 labels)","screen":"body","shot":"","status":"OK","type":"entry"}
+{"destination":"","element":"VOLUME","id":"body.mode.volume","kind":"button","note":"changed in place (42 labels)","screen":"body","shot":"","status":"OK","type":"entry"}
+{"destination":"","element":"M, 16","id":"body.day.0","kind":"button","note":"tap changed nothing on screen","screen":"body","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"T, 17","id":"body.day.1","kind":"button","note":"tap changed nothing on screen","screen":"body","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"WEEK, 50","id":"body.week.all","kind":"button","note":"tap changed nothing on screen","screen":"body","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"Show back view","id":"body.map.swap","kind":"button","note":"tap changed nothing on screen","screen":"body","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"(unlabelled button)","id":"","kind":"button","note":"changed in place (47 labels)","screen":"body","shot":"","status":"OK","type":"entry"}
+{"destination":"","element":"(unlabelled button)","id":"","kind":"button","note":"changed in place (22 labels)","screen":"body","shot":"","status":"OK","type":"entry"}
+{"destination":"","element":"▸, CHEST, 7 \/ 16","id":"body.row.chest","kind":"button","note":"tap changed nothing on screen","screen":"body","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"▸, BACK, 14 \/ 42","id":"body.row.back","kind":"button","note":"tap changed nothing on screen","screen":"body","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"▸, SHOULDERS, 9 \/ 26","id":"body.row.shoulders","kind":"button","note":"tap changed nothing on screen","screen":"body","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"▸, ARMS, 6 \/ 26","id":"body.row.arms","kind":"button","note":"tap changed nothing on screen","screen":"body","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"▸, CORE, 0 \/ 18","id":"body.row.core","kind":"button","note":"tap changed nothing on screen","screen":"body","shot":"","status":"DEAD END","type":"entry"}
+{"destination":"","element":"▸, LEGS, 17 \/ 58","id":"body.row.legs","kind":"button","note":"tap changed nothing on screen","screen":"body","shot":"","status":"DEAD END","type":"entry"}

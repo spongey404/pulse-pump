@@ -1,0 +1,90 @@
+[
+ {
+  "severity": "Blocking",
+  "status": "FIXED",
+  "where": "Core/BodyMap/BodyMapView.swift (starLayer), Body tab",
+  "what": "App crashed for Supernova members when swapping the Body map between front and back",
+  "note": "Index out of range: the Stardust engine kept the old side's muscle indices after the geometry switched. Found by the review (crash report 14:35). Fixed: engine is rebuilt per side, old geometry cleared, frame skipped if they disagree. Regression test: HistoryHomeBodyUITests.testMemberCanSwapTheMapBackAndForthWithoutCrashing (passes).",
+  "shot": ""
+ },
+ {
+  "severity": "Visible",
+  "status": "OFF-SYSTEM",
+  "where": "Core/DesignSystem/Components/WorkoutModal.swift:80,95",
+  "what": "Drop shadows on the workout modal",
+  "note": "Design system: no shadows or glows, elevation by tint only. Two .shadow calls on the finish/discard modal.",
+  "shot": ""
+ },
+ {
+  "severity": "Visible",
+  "status": "OFF-SYSTEM",
+  "where": "Core/DesignSystem/Components/DestructiveModal.swift:167",
+  "what": "Drop shadow on the destructive modal",
+  "note": "Same rule: no shadows.",
+  "shot": ""
+ },
+ {
+  "severity": "Minor",
+  "status": "OFF-SYSTEM",
+  "where": "Features/Social/Feed/LiftHistoryView.swift:127,218,226",
+  "what": "Gold glow shadows on PR markers",
+  "note": "PR is meant to be a treatment (ink text + underline), not a coloured glow.",
+  "shot": ""
+ },
+ {
+  "severity": "Minor",
+  "status": "OFF-SYSTEM",
+  "where": "Features/Workout/Views/ShareCardView.swift:28",
+  "what": "Drop shadow on the share card",
+  "note": "No shadows rule.",
+  "shot": ""
+ },
+ {
+  "severity": "Visible",
+  "status": "OFF-SYSTEM",
+  "where": "Core/DesignSystem/Components/CustomTabBar.swift:39",
+  "what": "Tab bar uses a blurred material",
+  "note": "Rule: sheets and modals dim, never blur. The tab bar is not a sheet, but it is the one blur on the main screens; the design may want a flat canvas fill.",
+  "shot": ""
+ },
+ {
+  "severity": "Visible",
+  "status": "OFF-SYSTEM",
+  "where": "Features/Social/Feed/CommentsView.swift:40",
+  "what": "Comments composer uses ultraThinMaterial",
+  "note": "Blur on a sheet-like surface; rule says dim, never blur.",
+  "shot": ""
+ },
+ {
+  "severity": "Minor",
+  "status": "OFF-SYSTEM",
+  "where": "Features/Supernova/Member/SupernovaMemberPage.swift:144",
+  "what": "Member page uses ultraThinMaterial",
+  "note": "Blur; the member design uses a glass card, so this may be intended. Needs a decision.",
+  "shot": ""
+ },
+ {
+  "severity": "Minor",
+  "status": "INCONSISTENT",
+  "where": "Home ticker strip",
+  "what": "Ticker is 26 pt tall, the Home design measures about 31 pt",
+  "note": "Left as is on purpose: the brief says reuse the one ticker component and do not restyle it.",
+  "shot": "01-home-free-active-light.png"
+ },
+ {
+  "severity": "Minor",
+  "status": "INCONSISTENT",
+  "where": "Features/BodyMap/MuscleDetailSheet.swift",
+  "what": "Old muscle detail sheet is now unreferenced",
+  "note": "Replaced by the Body muscle tree. Dead code; safe to delete. Not removed because it is outside sections 1 to 6.",
+  "shot": ""
+ },
+ {
+  "severity": "Visible",
+  "status": "OFF-SYSTEM",
+  "where": "Home \u00b7 hero",
+  "what": "NOT TODAY? \u203a is 13 pt tall; the Search icon is 19 pt, Profile 36 pt",
+  "note": "Touch targets under Apple's 44 pt minimum, measured from the element frames. Both still work (NOT TODAY? opens the WHAT'S TODAY? picker); they are just hard to hit.",
+  "shot": "verify-home-notToday.png"
+ }
+]

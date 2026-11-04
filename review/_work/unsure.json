@@ -1,0 +1,34 @@
+[
+ {
+  "what": "Body design file was cut off at the 256 KiB read limit",
+  "choice": "Built the Body page from the markup that did load plus the written spec, so Body logic details (exact interactions, edge cases) come from the spec, not the design's script."
+ },
+ {
+  "what": "Sets credited per muscle",
+  "choice": "A set counts once for each muscle it works (primary muscles; exercises that name sub-regions credit only those heads). The design's numbers are placeholders."
+ },
+ {
+  "what": "Weekly and daily targets in the muscle tree",
+  "choice": "The design gives none for real data, so targets are an invented table; a day's target is half the week's."
+ },
+ {
+  "what": "Home hero and ledger source",
+  "choice": "Uses the active program's rotation (UP NEXT) and falls back to the old pattern prediction only when there is no program."
+ },
+ {
+  "what": "Streak",
+  "choice": "Weekly streak (consecutive weeks with at least one session), shown big on Home."
+ },
+ {
+  "what": "Change figures",
+  "choice": "Compared with the same point of last week; zero change shows as an em dash, never \u25b2 0%."
+ },
+ {
+  "what": "Dark mode",
+  "choice": "Not reviewed by request: only features and Supernova differences were checked."
+ },
+ {
+  "what": "Logger and workout flows",
+  "choice": "Not crawled by tapping (the crawler skips Start Workout, Finish and Discard); the sheets are shown by a targeted run instead."
+ }
+]
